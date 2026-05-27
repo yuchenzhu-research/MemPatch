@@ -1,0 +1,10 @@
+# Placeholder config for prompt-based relation verification.
+relation_labels:
+  - SUPPORT
+  - SUPERSEDE
+  - BLOCK
+  - CONDITION
+  - NONE
+  - UNCERTAIN
+max_relation_context_items: 8
+fail_closed_label: UNCERTAIN

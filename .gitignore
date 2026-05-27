@@ -1,0 +1,14 @@
+# Local reference clones are intentionally kept out of the project history.
+reference/
+
+# Runtime and generated outputs.
+outputs/
+.pycache_compile/
+__pycache__/
+*.py[cod]
+
+# Local environments and editor state.
+.venv/
+venv/
+.env
+.DS_Store
