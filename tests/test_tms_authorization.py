@@ -163,3 +163,58 @@ def test_uncertain_relation_removes_default_without_creating_replacement() -> No
     assert decision.reason == "uncertain"
     assert basis == []
     assert belief_ids_after == belief_ids_before == {address.id}
+
+
+def test_toy_revision_cases_from_fixture() -> None:
+    import json
+    import os
+    from retracemem.memory.episode_ledger import EpisodeLedger
+    from retracemem.schemas import EpisodicEvidence
+
+    fixture_path = os.path.join(os.path.dirname(__file__), "fixtures", "toy_revision_cases.jsonl")
+    with open(fixture_path, "r", encoding="utf-8") as f:
+        cases = [json.loads(line) for line in f if line.strip()]
+
+    for case in cases:
+        category = case["category"]
+        ledger = EpisodeLedger()
+        store = BeliefStore()
+
+        for ev_data in case["evidences"]:
+            ev = EpisodicEvidence(
+                id=ev_data["id"],
+                timestamp=ev_data["timestamp"],
+                text=ev_data["text"],
+                source_id=ev_data["source_id"],
+            )
+            ledger.append(ev)
+
+        for b_data in case["beliefs"]:
+            b = Belief(
+                id=b_data["id"],
+                proposition=b_data["proposition"],
+                supported_by=b_data["supported_by"],
+            )
+            store.add_belief(b)
+
+        for r_data in case["relations"]:
+            rel_type = RelationType(r_data["relation"])
+            rel = RelationPrediction(
+                relation=rel_type,
+                evidence_id=r_data.get("evidence_id"),
+                belief_id=r_data.get("belief_id"),
+                target_belief_id=r_data.get("target_belief_id"),
+                condition=r_data.get("condition"),
+            )
+            store.add_relation(rel)
+
+        engine = AuthorizationEngine(store, ledger)
+        for cutoff_ev, expected_states in case["expected"].items():
+            for belief_id, expected_auth in expected_states.items():
+                belief = store.get_belief(belief_id)
+                dec = engine.decide(belief, at_evidence_id=cutoff_ev)
+                assert dec.authorized == expected_auth, (
+                    f"Category {category} failed: at cutoff {cutoff_ev}, "
+                    f"belief {belief_id} expected authorized={expected_auth}, got {dec.authorized}"
+                )
+
