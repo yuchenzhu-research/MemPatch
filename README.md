@@ -21,6 +21,7 @@ part of the local implementation.
 - `docs/coding_contract.md`: coding rules for all future agents.
 - `docs/agent_handoff.md`: short handoff instructions for Gemini/Opus/Codex.
 - `docs/today_execution_plan.md`: concrete first-version completion plan.
+- `docs/implementation_status.md`: total first-version plan and completed work.
 - `docs/code_direction.md`: code direction from the paper blueprint.
 - `docs/reference_integration_map.md`: how cloned references map into local
   modules.
