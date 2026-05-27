@@ -17,6 +17,10 @@ part of the local implementation.
 ## Current Documents
 
 - `implementation_plan.md`: execution plan and milestone ownership.
+- `docs/project_logic.md`: research alignment and method boundaries.
+- `docs/coding_contract.md`: coding rules for all future agents.
+- `docs/agent_handoff.md`: short handoff instructions for Gemini/Opus/Codex.
+- `docs/today_execution_plan.md`: concrete first-version completion plan.
 - `docs/code_direction.md`: code direction from the paper blueprint.
 - `docs/reference_integration_map.md`: how cloned references map into local
   modules.
