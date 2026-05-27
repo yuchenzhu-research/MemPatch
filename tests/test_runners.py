@@ -187,10 +187,21 @@ def test_memora_runner_without_data_exits_zero(tmp_path) -> None:
 
 
 def _run_script(script: str, *args: str) -> subprocess.CompletedProcess[str]:
+    import os
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(REPO_ROOT / "src")
     return subprocess.run(
         [sys.executable, script, *args],
         cwd=REPO_ROOT,
+        env=env,
         check=False,
         text=True,
         capture_output=True,
     )
+
+
+def test_run_retrace_internal_dev_script() -> None:
+    result = _run_script("scripts/run_retrace_internal_dev.py")
+    assert result.returncode == 0, result.stderr
+    assert "All Dev Cases Passed Cleanly!" in result.stdout
+
