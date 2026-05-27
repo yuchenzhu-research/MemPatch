@@ -137,7 +137,6 @@ class AuthorizationStatus(str, Enum):
     AUTHORIZED = "AUTHORIZED"
     BLOCKED = "BLOCKED"
     SUPERSEDED = "SUPERSEDED"
-    CONDITIONAL = "CONDITIONAL"
     UNRESOLVED = "UNRESOLVED"
 
 
@@ -153,7 +152,7 @@ class AuthorizationRecord:
 class DefeatPathType(str, Enum):
     DIRECT_SUPERSEDE = "DIRECT_SUPERSEDE"
     PREREQUISITE_BLOCK = "PREREQUISITE_BLOCK"
-    ROLLBACK_RELEASE = "ROLLBACK_RELEASE"
+    UNRESOLVED_UNCERTAIN = "UNRESOLVED_UNCERTAIN"
 
 
 @dataclass(frozen=True)
@@ -240,5 +239,154 @@ class ModelCallTrace:
     retries: int = 0
     error_message: str | None = None
     eligible_for_replay: bool = True
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+# ---------------------------------------------------------------------------
+# Canonical Typed Graph Schemas (Refactor Wave 0).
+#
+# These are the only schemas that new ReTrace runtime code (Waves 1+) is
+# allowed to import. The legacy `EpisodicEvidence`, `Belief`,
+# `RelationPrediction`, `AuthorizationDecision`, `EvaluationRecord`, and the
+# Phase-1 `*Record` dataclasses above remain in-tree for one transition wave
+# so existing tests still import; they must not be used by new runtime code.
+#
+# See `docs/refactor_plan_defeat_path.md` for the binding amendments
+# A1-A10 that govern these definitions.
+# ---------------------------------------------------------------------------
+
+
+@dataclass(frozen=True)
+class EvidenceNode:
+    """Immutable raw evidence atom."""
+
+    evidence_id: str
+    session_id: str
+    timestamp: str | None
+    text: str
+    source_dataset: str
+    source_pointer: str
+    is_raw_source: bool = True
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class BeliefNode:
+    """Open-text belief proposition derived from evidence."""
+
+    belief_id: str
+    proposition: str
+    source_evidence_ids: tuple[str, ...] = ()
+    source_span: str | None = None
+    extractor_version: str | None = None
+    confidence: float | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class ConditionNode:
+    """Open-text prerequisite required for current use of a belief.
+
+    Per amendment A7, identity is namespaced by `scope_id` (typically the
+    user id) so identical strings across users do not merge.
+    """
+
+    condition_id: str
+    scope_id: str
+    text: str
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class DependencyEdge:
+    """`belief --REQUIRES--> condition` dependency edge.
+
+    Per amendment A8, provenance is first-class:
+    `inducer`, `supporting_evidence_ids`, `model_call_trace_id`,
+    `confidence`, and `rationale` are not metadata.
+    """
+
+    edge_id: str
+    belief_id: str
+    condition_id: str
+    inducer: str
+    edge_type: str = "REQUIRES"
+    supporting_evidence_ids: tuple[str, ...] = ()
+    model_call_trace_id: str | None = None
+    confidence: float | None = None
+    rationale: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+class EvidenceEdgeType(str, Enum):
+    BLOCKS = "BLOCKS"            # target_kind = "condition"
+    RELEASES = "RELEASES"        # target_kind = "condition"
+    SUPERSEDES = "SUPERSEDES"    # target_kind = "belief"; replacement_belief_id required
+    REAFFIRMS = "REAFFIRMS"      # target_kind = "belief"
+    UNCERTAIN = "UNCERTAIN"      # target_kind = "belief"
+
+
+@dataclass(frozen=True)
+class EvidenceEdge:
+    """`evidence --(edge_type)--> (condition | belief)` update edge.
+
+    Per amendment A1, `SUPERSEDES` edges must populate
+    `replacement_belief_id` so the typed graph preserves both the defeated
+    prior belief and the current replacement.
+    """
+
+    edge_id: str
+    edge_type: EvidenceEdgeType
+    evidence_id: str
+    target_kind: str
+    target_id: str
+    verifier: str
+    replacement_belief_id: str | None = None
+    valid_from: str | None = None
+    valid_until: str | None = None
+    confidence: float | None = None
+    rationale: str | None = None
+    span: str | None = None
+    model_call_trace_id: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class DefeatPath:
+    """A fully auditable accepted defeat path produced by DPA.
+
+    Per amendment A5, an authorized belief produces an
+    `AuthorizationTrace` whose `accepted_defeat_path` is `None`; only
+    actually defeating paths are represented here.
+    """
+
+    path_id: str
+    path_type: DefeatPathType
+    target_belief_id: str
+    supporting_dependency_edge_ids: tuple[str, ...] = ()
+    supporting_evidence_edge_ids: tuple[str, ...] = ()
+    replacement_belief_id: str | None = None
+    as_of_time: str | None = None
+    as_of_evidence_id: str | None = None
+    metadata: dict[str, Any] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class AuthorizationTrace:
+    """Final authorization decision for a single belief.
+
+    Produced exclusively by `DefeatPathAuthorizationAlgorithm` (Wave 1).
+    Verifiers may not produce this object directly.
+    """
+
+    trace_id: str
+    belief_id: str
+    status: AuthorizationStatus
+    accepted_defeat_path: DefeatPath | None = None
+    considered_defeat_paths: tuple[DefeatPath, ...] = ()
+    supporting_evidence_ids: tuple[str, ...] = ()
+    query_id: str | None = None
+    as_of_time: str | None = None
+    as_of_evidence_id: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
