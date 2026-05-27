@@ -197,3 +197,74 @@ class MemoraAdapter:
         session_id = session.get("session_id")
         session_number = session_id if isinstance(session_id, int) else 0
         return (session_number, str(session.get("date") or ""))
+
+    def load_as_records(self, period: str, persona_id: str) -> tuple[list[EvidenceRecord], list[QueryRecord]]:
+        """Load Memora sessions and evaluation questions, returning typed EvidenceRecord and QueryRecord lists."""
+        from retracemem.schemas import EvidenceRecord, QueryRecord
+
+        sessions = self.load_sessions(period, persona_id)
+        questions = self.load_evaluation_questions(period, persona_id)
+
+        evidence_records: list[EvidenceRecord] = []
+        for s in sessions:
+            s_id = s.get("session_id")
+            conv = s.get("conversation") or []
+            text_turns = []
+            for turn in conv:
+                if isinstance(turn, dict):
+                    speaker = turn.get("speaker") or "unknown"
+                    msg = turn.get("message") or ""
+                    text_turns.append(f"{speaker}: {msg}")
+                elif isinstance(turn, str):
+                    text_turns.append(turn)
+                else:
+                    text_turns.append(str(turn))
+            text = "\n".join(text_turns)
+
+            source_path = s["metadata"].get("source_path", "")
+            evidence_id = f"{persona_id}_{period}_session_{s_id}"
+            session_id = f"{persona_id}_{period}_session_{s_id}"
+
+            evidence_records.append(
+                EvidenceRecord(
+                    evidence_id=evidence_id,
+                    session_id=session_id,
+                    timestamp=s.get("date"),
+                    text=text,
+                    source_dataset="memora",
+                    source_pointer=f"{source_path}#session_{s_id}",
+                    is_raw_source=True,
+                    metadata={
+                        "persona_id": s.get("persona_id"),
+                        "period": s.get("period"),
+                        "session_type": s.get("session_type"),
+                        "operation": s.get("operation"),
+                        "operation_details": s.get("operation_details"),
+                        "original_session": s,
+                    }
+                )
+            )
+
+        query_records: list[QueryRecord] = []
+        for q in questions:
+            q_id = q.get("question_id")
+            query_records.append(
+                QueryRecord(
+                    query_id=f"{persona_id}_{period}_{q_id}",
+                    query_text=q.get("question", ""),
+                    timestamp=q.get("question_date"),
+                    metadata={
+                        "persona_id": q.get("persona_id"),
+                        "period": q.get("period"),
+                        "task_bucket": q.get("task_bucket"),
+                        "memory_evidence": q.get("memory_evidence"),
+                        "forgetting_evidence": q.get("forgetting_evidence"),
+                        "evaluation": q.get("evaluation"),
+                        "rubric": q.get("rubric"),
+                        "original_question": q,
+                    }
+                )
+            )
+
+        return evidence_records, query_records
+

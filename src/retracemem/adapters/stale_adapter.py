@@ -123,3 +123,79 @@ class StaleAdapter:
             value = raw_queries.get(key, record.get(key, ""))
             queries[key] = value if isinstance(value, str) else ""
         return queries
+
+    def load_as_records(self, path: Optional[Union[str, Path]] = None) -> tuple[list[EvidenceRecord], list[QueryRecord]]:
+        """Load STALE main files and return typed EvidenceRecord and QueryRecord lists."""
+        from retracemem.schemas import EvidenceRecord, QueryRecord
+
+        samples = self.load_records(path)
+        evidence_records: list[EvidenceRecord] = []
+        query_records: list[QueryRecord] = []
+
+        for sample in samples:
+            sample_id = sample["sample_id"]
+            sessions = sample["sessions"]
+            timestamps = sample["timestamps"]
+            probing_queries = sample["probing_queries"]
+            query_time = sample["query_time"]
+            source_path = sample["metadata"].get("source_path", "")
+
+            # 1. Map haystack_session to EvidenceRecord
+            for idx, session_item in enumerate(sessions):
+                if isinstance(session_item, list):
+                    text_parts = []
+                    for turn in session_item:
+                        if isinstance(turn, str):
+                            text_parts.append(turn)
+                        elif isinstance(turn, list):
+                            text_parts.append(" ".join(str(t) for t in turn))
+                        else:
+                            text_parts.append(str(turn))
+                    text = "\n".join(text_parts)
+                elif isinstance(session_item, str):
+                    text = session_item
+                else:
+                    text = str(session_item)
+
+                ts = timestamps[idx] if idx < len(timestamps) else None
+                evidence_id = f"{sample_id}_evidence_{idx}"
+                session_id = f"{sample_id}_session_{idx}"
+
+                evidence_records.append(
+                    EvidenceRecord(
+                        evidence_id=evidence_id,
+                        session_id=session_id,
+                        timestamp=ts,
+                        text=text,
+                        source_dataset="stale",
+                        source_pointer=f"{source_path}#sample_{sample_id}_session_{idx}",
+                        is_raw_source=True,
+                        metadata={
+                            "sample_id": sample_id,
+                            "index": idx,
+                            "original_session": session_item,
+                        }
+                    )
+                )
+
+            # 2. Map probing_queries to QueryRecord
+            for dim_key, query_text in probing_queries.items():
+                if not query_text:
+                    continue
+                query_records.append(
+                    QueryRecord(
+                        query_id=f"{sample_id}_{dim_key}",
+                        query_text=query_text,
+                        timestamp=query_time,
+                        metadata={
+                            "sample_id": sample_id,
+                            "dimension": dim_key,
+                            "M_old": sample["M_old"],
+                            "M_new": sample["M_new"],
+                            "explanation": sample.get("explanation", ""),
+                        }
+                    )
+                )
+
+        return evidence_records, query_records
+
