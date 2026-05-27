@@ -3,266 +3,344 @@ from __future__ import annotations
 from retracemem.memory.belief_store import BeliefStore
 from retracemem.memory.episode_ledger import EpisodeLedger
 from retracemem.memory.temporal_validity import TemporalValidity
-from retracemem.schemas import AuthorizationDecision, Belief, BeliefStatus, RelationPrediction, RelationType
-from retracemem.tms.gate import RevisionGate
+from retracemem.schemas import (
+    AuthorizationStatus,
+    AuthorizationTrace,
+    DefeatPath,
+    DefeatPathType,
+    DependencyEdge,
+    EvidenceEdge,
+    EvidenceEdgeType,
+)
 
 
-class AuthorizationEngine:
-    """Compute whether a belief may govern current answers using temporal state machine."""
+class DefeatPathAuthorizationAlgorithm:
+    """Deterministic Defeat-Path Authorization (DPA) over a typed graph.
 
-    def __init__(
-        self,
-        store: BeliefStore,
-        ledger: EpisodeLedger | None = None,
-        disable_gate: bool = False,
-        disable_temporal: bool = False,
-    ) -> None:
+    The algorithm consumes only admitted typed edges from a ``BeliefStore``
+    and the ordering provided by ``TemporalValidity`` over an
+    ``EpisodeLedger``. It never invokes verifiers and never inspects flat
+    ``RelationPrediction`` objects.
+
+    **Precedence** (refactor plan section 4 + amendment A1 / A2 / A3 / A5):
+
+        SUPERSEDES  >  PREREQUISITE_BLOCK  >  UNRESOLVED_UNCERTAIN  >  AUTHORIZED
+
+    **Critical semantic clarification**:
+
+        ``AUTHORIZED`` means the belief is *eligible* to participate in the
+        current authorized basis. It does **not** mean the system has
+        newly verified that the belief is presently true. Therefore:
+
+        - ``RELEASES`` clears a blocker and may make an older belief
+          eligible again. ``RELEASES`` never creates a new assertion that
+          the belief is currently true.
+        - A later ``SUPERSEDES`` edge still defeats an old belief even if
+          an older blocker was previously released.
+
+    **Tie-breaking** is fully deterministic by
+    ``(evidence_timestamp, ledger_index, edge_id)``; see
+    ``TemporalValidity.edge_recency_key``.
+
+    No mock ledger is ever fabricated. If an edge references an evidence
+    atom that the ledger does not know about, the underlying
+    ``TemporalValidity`` raises ``MissingEvidenceError`` rather than
+    inventing a position.
+    """
+
+    def __init__(self, store: BeliefStore, ledger: EpisodeLedger) -> None:
         self.store = store
         self.ledger = ledger
-        self.gate = RevisionGate()
-        self.disable_gate = disable_gate
-        self.disable_temporal = disable_temporal
+        self.temporal = TemporalValidity(ledger)
 
-    def _ensure_mock_ledger(self) -> None:
-        if self.ledger is not None:
-            return
-        from retracemem.memory.episode_ledger import EpisodeLedger
-        from retracemem.schemas import EpisodicEvidence
-        self.ledger = EpisodeLedger()
-        for idx, rel in enumerate(self.store.all_relations()):
-            if rel.evidence_id and rel.evidence_id not in self.ledger:
-                ts = getattr(rel, "valid_from", None) or f"2026-05-27T00:{idx:02d}:00Z"
-                try:
-                    mock_ev = EpisodicEvidence(
-                        id=rel.evidence_id,
-                        timestamp=ts,
-                        text=f"Mock evidence {rel.evidence_id}",
-                        source_id="mock",
-                    )
-                    self.ledger.append(mock_ev)
-                except Exception:
-                    pass
+    # ------------------------------------------------------------------
+    # Public entry point
+    # ------------------------------------------------------------------
 
-    def _is_before_cutoff(
-        self, ev_id: str, cutoff_ts: str | None, cutoff_ev_id: str | None, evidence_order: dict[str, int]
-    ) -> bool:
-        if not ev_id:
-            return True
-        if ev_id not in evidence_order:
-            return False
-
-        ev = self.ledger.get(ev_id)
-        ev_ts = ev.timestamp or ""
-        ev_idx = evidence_order[ev_id]
-
-        if cutoff_ev_id and cutoff_ev_id in evidence_order:
-            limit_ev = self.ledger.get(cutoff_ev_id)
-            limit_ts = limit_ev.timestamp or ""
-            limit_idx = evidence_order[cutoff_ev_id]
-            if (ev_ts, ev_idx) > (limit_ts, limit_idx):
-                return False
-
-        if cutoff_ts:
-            if ev_ts > cutoff_ts:
-                return False
-
-        return True
-
-    def _is_cond_blocked_ablated(
-        self, cond_name: str, valid_rels: list[RelationPrediction], at_evidence_id: str | None
-    ) -> bool:
-        if self.disable_temporal:
-            return any(r.condition == cond_name and r.relation == RelationType.BLOCK for r in valid_rels)
-        temp_validity = TemporalValidity(self.ledger)
-        return temp_validity.is_condition_blocked(cond_name, valid_rels, at_evidence_id=at_evidence_id)
-
-    def decide(
+    def authorize(
         self,
-        belief: Belief,
-        at_time: str | None = None,
-        at_evidence_id: str | None = None,
-    ) -> AuthorizationDecision:
-        self._ensure_mock_ledger()
+        belief_id: str,
+        as_of_time: str | None = None,
+        as_of_evidence_id: str | None = None,
+        query_id: str | None = None,
+    ) -> AuthorizationTrace:
+        """Compute the ``AuthorizationTrace`` for ``belief_id`` at the cutoff.
 
-        assert self.ledger is not None
-        evidence_order = {ev.id: idx for idx, ev in enumerate(self.ledger.all())}
+        ``as_of_time`` and ``as_of_evidence_id`` are both accepted and
+        combined as a logical AND (see ``TemporalValidity.edges_valid_at``).
+        ``query_id`` is recorded on the resulting trace for downstream
+        provenance hydration but does not influence the algorithm.
+        """
+        belief = self.store.get_belief(belief_id)
+        trace_id = self._trace_id(belief_id, as_of_time, as_of_evidence_id, query_id)
 
-        cutoff_ts = None
-        cutoff_ev_id = at_evidence_id
-        if at_time:
-            if at_time in evidence_order:
-                cutoff_ev_id = at_time
-            else:
-                cutoff_ts = at_time
+        # 1. Direct supersession (highest precedence).
+        super_trace = self._check_supersession(
+            belief_id=belief_id,
+            as_of_time=as_of_time,
+            as_of_evidence_id=as_of_evidence_id,
+            trace_id=trace_id,
+            query_id=query_id,
+        )
+        if super_trace is not None:
+            return super_trace
 
-        # Filter relations with optional ablation gate/temporal
-        valid_rels: list[RelationPrediction] = []
-        for r in self.store.all_relations():
-            if not self.disable_gate:
-                if not self.gate.accept_local_relation(r):
-                    continue
-            else:
-                if r.relation == RelationType.NONE:
-                    continue
+        # 2. Conditional defeat through an accepted REQUIRES dependency
+        #    whose latest evidence update is BLOCKS.
+        blocked_trace = self._check_prerequisite_block(
+            belief_id=belief_id,
+            as_of_time=as_of_time,
+            as_of_evidence_id=as_of_evidence_id,
+            trace_id=trace_id,
+            query_id=query_id,
+        )
+        if blocked_trace is not None:
+            return blocked_trace
 
-            if not self.disable_temporal:
-                if r.evidence_id and not self._is_before_cutoff(
-                    r.evidence_id, cutoff_ts, cutoff_ev_id, evidence_order
-                ):
-                    continue
-            valid_rels.append(r)
+        # 3. Belief-level uncertainty, possibly cleared by a later REAFFIRMS.
+        unresolved_trace = self._check_belief_status(
+            belief_id=belief_id,
+            as_of_time=as_of_time,
+            as_of_evidence_id=as_of_evidence_id,
+            trace_id=trace_id,
+            query_id=query_id,
+        )
+        if unresolved_trace is not None:
+            return unresolved_trace
 
-        # Check explicit status
-        status_decision = self._decision_from_status(belief)
-        if status_decision is not None:
-            return status_decision
-
-        # 1. Supersede
-        supersede_rels = [
-            r for r in valid_rels if r.relation == RelationType.SUPERSEDE and r.belief_id == belief.id
-        ]
-        if supersede_rels:
-            if self.disable_temporal:
-                latest_supersede = supersede_rels[-1]
-            else:
-                temp_validity = TemporalValidity(self.ledger)
-                sorted_supersedes = temp_validity.get_chronological_relations(supersede_rels)
-                latest_supersede = sorted_supersedes[-1]
-            return AuthorizationDecision(
-                belief_id=belief.id,
-                authorized=False,
-                reason="superseded",
-                justification_path=[self._relation_ref(latest_supersede)],
-            )
-
-        # 2. Uncertain
-        uncertain_rels = [
-            r for r in valid_rels if r.relation == RelationType.UNCERTAIN and r.belief_id == belief.id
-        ]
-        if uncertain_rels:
-            if self.disable_temporal:
-                latest_unc = uncertain_rels[-1]
-            else:
-                temp_validity = TemporalValidity(self.ledger)
-                sorted_uncs = temp_validity.get_chronological_relations(uncertain_rels)
-                latest_unc = sorted_uncs[-1]
-            return AuthorizationDecision(
-                belief_id=belief.id,
-                authorized=False,
-                reason="uncertain",
-                justification_path=[self._relation_ref(latest_unc)],
-            )
-
-        # 3. Direct Block
-        direct_block_rels = [
-            r for r in valid_rels if r.relation == RelationType.BLOCK and r.belief_id == belief.id
-        ]
-        if direct_block_rels:
-            temp_validity = TemporalValidity(self.ledger)
-            for d_rel in direct_block_rels:
-                if d_rel.condition:
-                    if self._is_cond_blocked_ablated(d_rel.condition, valid_rels, at_evidence_id=cutoff_ev_id):
-                        return AuthorizationDecision(
-                            belief_id=belief.id,
-                            authorized=False,
-                            reason="blocked",
-                            justification_path=[self._relation_ref(d_rel)],
-                        )
-                else:
-                    if self.disable_temporal:
-                        direct_blocks = [
-                            r
-                            for r in valid_rels
-                            if r.belief_id == belief.id and not r.condition and r.relation == RelationType.BLOCK
-                        ]
-                        if direct_blocks:
-                            return AuthorizationDecision(
-                                belief_id=belief.id,
-                                authorized=False,
-                                reason="blocked",
-                                justification_path=[self._relation_ref(direct_blocks[-1])],
-                            )
-                    else:
-                        direct_status_rels = [
-                            r
-                            for r in valid_rels
-                            if r.belief_id == belief.id
-                            and not r.condition
-                            and r.relation in {RelationType.BLOCK, RelationType.SUPPORT}
-                        ]
-                        sorted_direct = temp_validity.get_chronological_relations(direct_status_rels)
-                        if sorted_direct and sorted_direct[-1].relation == RelationType.BLOCK:
-                            return AuthorizationDecision(
-                                belief_id=belief.id,
-                                authorized=False,
-                                reason="blocked",
-                                justification_path=[self._relation_ref(sorted_direct[-1])],
-                            )
-
-        # 4. Prerequisite Condition Block (REQUIRED_BY)
-        required_relations = [
-            r for r in valid_rels if r.relation == RelationType.REQUIRED_BY and r.belief_id == belief.id
-        ]
-        for req_rel in required_relations:
-            cond_name = req_rel.condition
-            if not cond_name:
-                continue
-            if self._is_cond_blocked_ablated(cond_name, valid_rels, at_evidence_id=cutoff_ev_id):
-                cond_blocks = [
-                    r for r in valid_rels if r.condition == cond_name and r.relation == RelationType.BLOCK
-                ]
-                if self.disable_temporal:
-                    latest_block = cond_blocks[-1] if cond_blocks else req_rel
-                else:
-                    temp_validity = TemporalValidity(self.ledger)
-                    sorted_blocks = temp_validity.get_chronological_relations(cond_blocks)
-                    latest_block = sorted_blocks[-1] if sorted_blocks else req_rel
-
-                return AuthorizationDecision(
-                    belief_id=belief.id,
-                    authorized=False,
-                    reason="blocked",
-                    justification_path=[self._relation_ref(latest_block)],
-                )
-
-        return AuthorizationDecision(
-            belief_id=belief.id,
-            authorized=True,
-            reason="supported",
-            justification_path=list(belief.supported_by),
+        # 4. No accepted defeat path: authorized (eligibility only).
+        return AuthorizationTrace(
+            trace_id=trace_id,
+            belief_id=belief_id,
+            status=AuthorizationStatus.AUTHORIZED,
+            accepted_defeat_path=None,
+            considered_defeat_paths=(),
+            supporting_evidence_ids=tuple(belief.source_evidence_ids),
+            query_id=query_id,
+            as_of_time=as_of_time,
+            as_of_evidence_id=as_of_evidence_id,
         )
 
-    @staticmethod
-    def _decision_from_status(belief: Belief) -> AuthorizationDecision | None:
-        if belief.status == BeliefStatus.AUTHORIZED:
+    # ------------------------------------------------------------------
+    # Step 1: SUPERSEDES
+    # ------------------------------------------------------------------
+
+    def _check_supersession(
+        self,
+        *,
+        belief_id: str,
+        as_of_time: str | None,
+        as_of_evidence_id: str | None,
+        trace_id: str,
+        query_id: str | None,
+    ) -> AuthorizationTrace | None:
+        belief_edges = self.store.evidence_edges_for_belief(belief_id)
+        super_edges = [e for e in belief_edges if e.edge_type == EvidenceEdgeType.SUPERSEDES]
+        valid_super = self.temporal.edges_valid_at(
+            super_edges,
+            as_of_time=as_of_time,
+            as_of_evidence_id=as_of_evidence_id,
+        )
+        if not valid_super:
             return None
-        if belief.status == BeliefStatus.BLOCKED:
-            return AuthorizationDecision(
-                belief_id=belief.id,
-                authorized=False,
-                reason="blocked",
-                justification_path=list(belief.supported_by),
+        latest = self.temporal.latest_edge(valid_super)
+        assert latest is not None  # non-empty list guarantees a winner
+        path = DefeatPath(
+            path_id=f"path_super_{trace_id}",
+            path_type=DefeatPathType.DIRECT_SUPERSEDE,
+            target_belief_id=belief_id,
+            supporting_dependency_edge_ids=(),
+            supporting_evidence_edge_ids=(latest.edge_id,),
+            replacement_belief_id=latest.replacement_belief_id,
+            as_of_time=as_of_time,
+            as_of_evidence_id=as_of_evidence_id,
+        )
+        return AuthorizationTrace(
+            trace_id=trace_id,
+            belief_id=belief_id,
+            status=AuthorizationStatus.SUPERSEDED,
+            accepted_defeat_path=path,
+            considered_defeat_paths=(path,),
+            supporting_evidence_ids=(),
+            query_id=query_id,
+            as_of_time=as_of_time,
+            as_of_evidence_id=as_of_evidence_id,
+        )
+
+    # ------------------------------------------------------------------
+    # Step 2: PREREQUISITE_BLOCK
+    # ------------------------------------------------------------------
+
+    def _check_prerequisite_block(
+        self,
+        *,
+        belief_id: str,
+        as_of_time: str | None,
+        as_of_evidence_id: str | None,
+        trace_id: str,
+        query_id: str | None,
+    ) -> AuthorizationTrace | None:
+        dependencies = self.store.dependencies_of(belief_id)
+        if not dependencies:
+            return None
+
+        edge_lookup: dict[str, EvidenceEdge] = {
+            e.edge_id: e for e in self.store.all_evidence_edges()
+        }
+        blocking_paths: list[DefeatPath] = []
+
+        for dep in dependencies:
+            cond_edges = self.store.evidence_edges_for_condition(dep.condition_id)
+            # Only BLOCKS / RELEASES updates participate in the latest-edge
+            # contest for a condition. Other edge types cannot target a
+            # condition under the schema, but we filter defensively.
+            cond_updates = [
+                e
+                for e in cond_edges
+                if e.edge_type in (EvidenceEdgeType.BLOCKS, EvidenceEdgeType.RELEASES)
+            ]
+            valid_updates = self.temporal.edges_valid_at(
+                cond_updates,
+                as_of_time=as_of_time,
+                as_of_evidence_id=as_of_evidence_id,
             )
-        if belief.status == BeliefStatus.UNRESOLVED:
-            return AuthorizationDecision(
-                belief_id=belief.id,
-                authorized=False,
-                reason="unresolved",
-                justification_path=list(belief.supported_by),
+            latest = self.temporal.latest_edge(valid_updates)
+            if latest is None:
+                continue
+            if latest.edge_type != EvidenceEdgeType.BLOCKS:
+                # ``RELEASES`` clears the prior blocker; it does not
+                # itself assert truth, but for this dependency there is
+                # no active defeating evidence.
+                continue
+            blocking_paths.append(
+                self._build_prerequisite_block_path(
+                    dependency=dep,
+                    blocking_edge=latest,
+                    trace_id=trace_id,
+                    as_of_time=as_of_time,
+                    as_of_evidence_id=as_of_evidence_id,
+                )
             )
-        if belief.status == BeliefStatus.HISTORICAL:
-            return AuthorizationDecision(
-                belief_id=belief.id,
-                authorized=False,
-                reason="historical",
-                justification_path=list(belief.supported_by),
-            )
-        return None
+
+        if not blocking_paths:
+            return None
+
+        chosen = self.temporal.latest_path(blocking_paths, edge_lookup)
+        assert chosen is not None  # non-empty list guarantees a winner
+        return AuthorizationTrace(
+            trace_id=trace_id,
+            belief_id=belief_id,
+            status=AuthorizationStatus.BLOCKED,
+            accepted_defeat_path=chosen,
+            considered_defeat_paths=tuple(blocking_paths),
+            supporting_evidence_ids=(),
+            query_id=query_id,
+            as_of_time=as_of_time,
+            as_of_evidence_id=as_of_evidence_id,
+        )
+
+    def _build_prerequisite_block_path(
+        self,
+        *,
+        dependency: DependencyEdge,
+        blocking_edge: EvidenceEdge,
+        trace_id: str,
+        as_of_time: str | None,
+        as_of_evidence_id: str | None,
+    ) -> DefeatPath:
+        return DefeatPath(
+            path_id=f"path_block_{trace_id}_{dependency.edge_id}",
+            path_type=DefeatPathType.PREREQUISITE_BLOCK,
+            target_belief_id=dependency.belief_id,
+            supporting_dependency_edge_ids=(dependency.edge_id,),
+            supporting_evidence_edge_ids=(blocking_edge.edge_id,),
+            replacement_belief_id=None,
+            as_of_time=as_of_time,
+            as_of_evidence_id=as_of_evidence_id,
+        )
+
+    # ------------------------------------------------------------------
+    # Step 3: UNCERTAIN vs REAFFIRMS
+    # ------------------------------------------------------------------
+
+    def _check_belief_status(
+        self,
+        *,
+        belief_id: str,
+        as_of_time: str | None,
+        as_of_evidence_id: str | None,
+        trace_id: str,
+        query_id: str | None,
+    ) -> AuthorizationTrace | None:
+        belief_edges = self.store.evidence_edges_for_belief(belief_id)
+        status_edges = [
+            e
+            for e in belief_edges
+            if e.edge_type in (EvidenceEdgeType.UNCERTAIN, EvidenceEdgeType.REAFFIRMS)
+        ]
+        valid_status = self.temporal.edges_valid_at(
+            status_edges,
+            as_of_time=as_of_time,
+            as_of_evidence_id=as_of_evidence_id,
+        )
+        latest = self.temporal.latest_edge(valid_status)
+        if latest is None or latest.edge_type != EvidenceEdgeType.UNCERTAIN:
+            # No status edge, or the latest one is REAFFIRMS (which clears
+            # any prior UNCERTAIN). Either way, this stage does not defeat
+            # the belief.
+            return None
+        path = DefeatPath(
+            path_id=f"path_unresolved_{trace_id}",
+            path_type=DefeatPathType.UNRESOLVED_UNCERTAIN,
+            target_belief_id=belief_id,
+            supporting_dependency_edge_ids=(),
+            supporting_evidence_edge_ids=(latest.edge_id,),
+            replacement_belief_id=None,
+            as_of_time=as_of_time,
+            as_of_evidence_id=as_of_evidence_id,
+        )
+        return AuthorizationTrace(
+            trace_id=trace_id,
+            belief_id=belief_id,
+            status=AuthorizationStatus.UNRESOLVED,
+            accepted_defeat_path=path,
+            considered_defeat_paths=(path,),
+            supporting_evidence_ids=(),
+            query_id=query_id,
+            as_of_time=as_of_time,
+            as_of_evidence_id=as_of_evidence_id,
+        )
+
+    # ------------------------------------------------------------------
+    # Trace-id construction
+    # ------------------------------------------------------------------
 
     @staticmethod
-    def _relation_ref(relation: object) -> str:
-        evidence_id = getattr(relation, "evidence_id", None) or "unknown_evidence"
-        belief_id = getattr(relation, "belief_id", None) or "unknown_belief"
-        relation_type = getattr(relation, "relation", None)
-        relation_name = getattr(relation_type, "value", str(relation_type))
-        return f"{evidence_id}:{relation_name}:{belief_id}"
+    def _trace_id(
+        belief_id: str,
+        as_of_time: str | None,
+        as_of_evidence_id: str | None,
+        query_id: str | None,
+    ) -> str:
+        """Deterministic, human-readable trace id.
+
+        Format: ``trace::<belief>::<time>::<ev>::<query>`` with ``-`` as a
+        placeholder for absent components. The same inputs always produce
+        the same trace id, which keeps cassette-style fixtures stable.
+        """
+        return "trace::{b}::{t}::{e}::{q}".format(
+            b=belief_id,
+            t=as_of_time or "-",
+            e=as_of_evidence_id or "-",
+            q=query_id or "-",
+        )
+
+
+# Legacy import alias. ``retracemem.tms.__init__`` re-exports the name
+# ``AuthorizationEngine`` so downstream packages (verifier, retrieval,
+# generation, backends) that have not yet been migrated to Wave 1A keep
+# importing the package without ImportError at module load time. The
+# alias only preserves the *name*; the underlying behavior is the new
+# typed-graph DPA, and the legacy ``decide(Belief, ...)`` method does
+# not exist on this class.
+AuthorizationEngine = DefeatPathAuthorizationAlgorithm
