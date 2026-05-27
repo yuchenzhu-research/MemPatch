@@ -14,7 +14,7 @@ from retracemem.verifier.base import RelationVerifier
 
 
 class ReTraceBackend:
-    """End-to-end local backend for ReTrace belief authorization experiments."""
+    """End-to-End ReTrace backend with support for ablation configurations."""
 
     def __init__(
         self,
@@ -24,6 +24,9 @@ class ReTraceBackend:
         client: CachedLLMClient | None = None,
         model_id: str = "gemini-pro",
         provider: str = "google",
+        disable_ledger: bool = False,
+        disable_gate: bool = False,
+        disable_temporal: bool = False,
     ) -> None:
         self.ledgers: dict[str, EpisodeLedger] = {}
         self.stores: dict[str, BeliefStore] = {}
@@ -33,6 +36,9 @@ class ReTraceBackend:
         self.client = client
         self.model_id = model_id
         self.provider = provider
+        self.disable_ledger = disable_ledger
+        self.disable_gate = disable_gate
+        self.disable_temporal = disable_temporal
 
         if self.verifier is None and self.client is not None:
             from retracemem.verifier.prompt_verifier import PromptRelationVerifier
@@ -60,7 +66,6 @@ class ReTraceBackend:
         ledger = self.ledgers[user_id]
         store = self.stores[user_id]
 
-        # 1. Parse EpisodicEvidence
         ev_id = session.get("id") or session.get("evidence_id") or session.get("session_id") or f"ev-{len(ledger)}"
         timestamp = session.get("timestamp") or ""
         text = session.get("text") or session.get("content") or ""
@@ -75,18 +80,17 @@ class ReTraceBackend:
             source_id=source_id,
             metadata=session.get("metadata", {}),
         )
+        # In ablation "disable_ledger", we still keep ledger instance locally
+        # for API compatibility, but we might ignore it during query decision.
         ledger.append(evidence)
 
-        # 2. Extract beliefs
         extracted_beliefs = self.extractor.extract(evidence)
         for belief in extracted_beliefs:
             store.add_belief(belief)
 
-        # 3. Retrieve prior candidates and predict relations
         if self.verifier is not None:
             candidates = self.retriever.retrieve_candidates(evidence, store.all_beliefs())
             for candidate in candidates:
-                # Do not verify new beliefs against themselves if they were just extracted in this session
                 if candidate.id in {b.id for b in extracted_beliefs}:
                     continue
 
@@ -104,9 +108,14 @@ class ReTraceBackend:
         self._ensure_user(user_id)
 
         store = self.stores[user_id]
-        ledger = self.ledgers[user_id]
+        ledger = None if self.disable_ledger else self.ledgers[user_id]
 
-        engine = AuthorizationEngine(store, ledger)
+        engine = AuthorizationEngine(
+            store,
+            ledger,
+            disable_gate=self.disable_gate,
+            disable_temporal=self.disable_temporal,
+        )
         basis: list[dict[str, Any]] = []
 
         for belief in store.all_beliefs():
