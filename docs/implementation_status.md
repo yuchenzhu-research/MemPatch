@@ -115,12 +115,15 @@ env PYTHONPYCACHEPREFIX=.pycache_compile python3 -m compileall -q retracemem tes
 
 ### Research Alignment
 
+- Added `AGENTS.md`.
+- Added `docs/model_context_index.md`.
 - Added `docs/project_logic.md`.
 - Added `docs/coding_contract.md`.
 - Added `docs/agent_handoff.md`.
 - Added `docs/today_execution_plan.md`.
 - Added `docs/reference_integration_map.md`.
 - Added `docs/code_direction.md`.
+- Added raw source materials under `docs/source_materials/`.
 
 ### Core Data Contracts
 
@@ -217,4 +220,3 @@ passed
 
 - `pytest` is not installed in the current environment, so pytest execution was
   not used for final verification.
-
