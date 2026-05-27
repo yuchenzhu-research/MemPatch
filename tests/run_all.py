@@ -13,6 +13,8 @@ def run_all() -> None:
     src_path = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src"))
     if src_path not in sys.path:
         sys.path.insert(0, src_path)
+    os.environ["PYTHONPATH"] = src_path + (os.pathsep + os.environ.get("PYTHONPATH", "") if os.environ.get("PYTHONPATH") else "")
+
 
     test_dir = os.path.dirname(__file__)
     test_files = glob.glob(os.path.join(test_dir, "test_*.py"))
