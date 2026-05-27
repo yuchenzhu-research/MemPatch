@@ -16,6 +16,8 @@ part of the local implementation.
 
 ## Current Documents
 
+- `AGENTS.md`: first-read instructions for any coding model.
+- `docs/model_context_index.md`: multi-model reading order and authority rules.
 - `implementation_plan.md`: execution plan and milestone ownership.
 - `docs/project_logic.md`: research alignment and method boundaries.
 - `docs/coding_contract.md`: coding rules for all future agents.
@@ -25,6 +27,7 @@ part of the local implementation.
 - `docs/code_direction.md`: code direction from the paper blueprint.
 - `docs/reference_integration_map.md`: how cloned references map into local
   modules.
+- `docs/source_materials/`: raw source blueprint and companion handoff files.
 
 ## Verification
 
