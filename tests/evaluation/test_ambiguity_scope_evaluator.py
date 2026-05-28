@@ -209,4 +209,38 @@ class TestRunnerScriptShape:
         )
         text = open(script_path, encoding="utf-8").read()
         assert "Internal development diagnostic only" in text
-        assert "Refusing live execution" in text
+        assert "Refusing live execution without --live-approved" in text
+
+    def test_runner_supports_pilot_selection_and_review_artifact(self):
+        script_path = os.path.join(
+            os.path.dirname(__file__),
+            os.pardir,
+            os.pardir,
+            "scripts",
+            "run_ambiguity_scope_ab_dev.py",
+        )
+        text = open(script_path, encoding="utf-8").read()
+        assert "PILOT_CASE_IDS" in text
+        assert "--pilot-only" in text
+        assert "--case-ids" in text
+        assert "--write-review-table" in text
+        assert "possible_bias_or_ambiguity" in text
+
+    def test_pilot_case_ids_cover_categories(self, cases):
+        import importlib.util
+
+        script_path = os.path.join(
+            os.path.dirname(__file__),
+            os.pardir,
+            os.pardir,
+            "scripts",
+            "run_ambiguity_scope_ab_dev.py",
+        )
+        spec = importlib.util.spec_from_file_location("run_ambiguity_scope_ab_dev", script_path)
+        assert spec is not None and spec.loader is not None
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        pilot_ids = set(module.PILOT_CASE_IDS)
+        pilot_cases = [case for case in cases if case.case.case_id in pilot_ids]
+        assert len(pilot_cases) == 8
+        assert {case.category for case in pilot_cases} == set(REQUIRED_CATEGORIES)
