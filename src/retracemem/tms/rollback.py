@@ -105,7 +105,7 @@ class RollbackDiagnostics:
 
         # Deterministic processing order: ledger insertion order for
         # evidence atoms.
-        sorted_ev_ids = [ev.id for ev in self.ledger.all()]
+        sorted_ev_ids = [ev.evidence_id for ev in self.ledger.all()]
 
         for belief in beliefs:
             states: list[tuple[str, bool]] = []
