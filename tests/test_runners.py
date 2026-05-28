@@ -1,4 +1,5 @@
 import json
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -7,6 +8,107 @@ from retracemem.evaluation import read_jsonl
 
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
+
+
+def test_env_example_exists_without_real_secret() -> None:
+    env_example = REPO_ROOT / ".env.example"
+    text = env_example.read_text(encoding="utf-8")
+
+    assert "SILICONFLOW_API_KEY=" in text
+    assert "RETRACE_LIVE_PROVIDER=siliconflow" in text
+    assert "RETRACE_LIVE_MODEL=" in text
+    assert "RETRACE_LIVE_MAX_CALLS=24" in text
+    assert "RETRACE_LIVE_MAX_TOKENS=60000" in text
+    assert "sk-" not in text
+    assert "Bearer " not in text
+
+
+def test_env_file_remains_gitignored() -> None:
+    gitignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
+    assert any(line.strip() == ".env" for line in gitignore.splitlines())
+
+
+def test_ambiguity_scope_runner_reads_env_defaults_without_serializing_secret(tmp_path) -> None:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(REPO_ROOT / "src")
+    env["SILICONFLOW_API_KEY"] = "test-secret-should-not-appear"
+    env["RETRACE_LIVE_PROVIDER"] = "siliconflow"
+    env["RETRACE_LIVE_MODEL"] = "MiniMax-env-model"
+    env["RETRACE_LIVE_MAX_CALLS"] = "0"
+    env["RETRACE_LIVE_MAX_TOKENS"] = "1234"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_ambiguity_scope_ab_dev.py",
+            "--mode",
+            "live-dev",
+            "--live-approved",
+            "--pilot-only",
+            "--output-dir",
+            str(tmp_path),
+        ],
+        cwd=REPO_ROOT,
+        env=env,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    combined = result.stdout + result.stderr
+    assert "provider=siliconflow, model=MiniMax-env-model" in combined
+    assert "max_calls=0, max_tokens=1234" in combined
+    report_text = (tmp_path / "ambiguity_scope_report.json").read_text(encoding="utf-8")
+    manifest_text = (tmp_path / "ambiguity_scope_manifest.json").read_text(encoding="utf-8")
+    assert "test-secret-should-not-appear" not in combined
+    assert "test-secret-should-not-appear" not in report_text
+    assert "test-secret-should-not-appear" not in manifest_text
+
+
+def test_ambiguity_scope_runner_cli_overrides_env_defaults(tmp_path) -> None:
+    env = os.environ.copy()
+    env["PYTHONPATH"] = str(REPO_ROOT / "src")
+    env["SILICONFLOW_API_KEY"] = "test-secret-should-not-appear"
+    env["RETRACE_LIVE_PROVIDER"] = "siliconflow"
+    env["RETRACE_LIVE_MODEL"] = "MiniMax-env-model"
+    env["RETRACE_LIVE_MAX_CALLS"] = "3"
+    env["RETRACE_LIVE_MAX_TOKENS"] = "1234"
+
+    result = subprocess.run(
+        [
+            sys.executable,
+            "scripts/run_ambiguity_scope_ab_dev.py",
+            "--mode",
+            "live-dev",
+            "--live-approved",
+            "--pilot-only",
+            "--provider",
+            "siliconflow",
+            "--model",
+            "MiniMax-cli-model",
+            "--max-calls",
+            "0",
+            "--max-tokens",
+            "2345",
+            "--output-dir",
+            str(tmp_path),
+        ],
+        cwd=REPO_ROOT,
+        env=env,
+        check=False,
+        text=True,
+        capture_output=True,
+    )
+
+    combined = result.stdout + result.stderr
+    assert "provider=siliconflow, model=MiniMax-cli-model" in combined
+    assert "max_calls=0, max_tokens=2345" in combined
+    assert "MiniMax-env-model" not in combined
+    report_text = (tmp_path / "ambiguity_scope_report.json").read_text(encoding="utf-8")
+    manifest_text = (tmp_path / "ambiguity_scope_manifest.json").read_text(encoding="utf-8")
+    assert "test-secret-should-not-appear" not in combined
+    assert "test-secret-should-not-appear" not in report_text
+    assert "test-secret-should-not-appear" not in manifest_text
 
 
 def test_boundary_audit_retrieval_baseline_writes_jsonl(tmp_path) -> None:

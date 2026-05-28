@@ -18,7 +18,12 @@ import uuid
 from pathlib import Path
 from typing import Any
 
+from dotenv import load_dotenv
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.pardir, "src"))
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(REPO_ROOT / ".env", override=False)
 
 from retracemem.evaluation.ambiguity_scope import (
     compute_metrics,
@@ -188,12 +193,12 @@ def main() -> None:
     )
     parser.add_argument(
         "--provider",
-        default="openai",
+        default=os.getenv("RETRACE_LIVE_PROVIDER", "openai"),
         help="Live provider name (used only with --mode live-dev).",
     )
     parser.add_argument(
         "--model",
-        default="gpt-4o-mini",
+        default=os.getenv("RETRACE_LIVE_MODEL", "gpt-4o-mini"),
         help="Live model id (used only with --mode live-dev).",
     )
     parser.add_argument("--api-key", default=None, help="Explicit API key for live-dev; otherwise provider env var is used.")
@@ -201,8 +206,8 @@ def main() -> None:
     parser.add_argument("--live-approved", action="store_true", help="Required explicit approval flag for live-dev API calls.")
     parser.add_argument("--case-ids", default="", help="Comma-separated case ids to run without editing the dataset.")
     parser.add_argument("--pilot-only", action="store_true", help="Run the fixed 8-case human-review pilot subset.")
-    parser.add_argument("--max-calls", type=int, default=24, help="Hard live-dev total call cap across both stages.")
-    parser.add_argument("--max-tokens", type=int, default=60000, help="Hard live-dev total token cap across both stages.")
+    parser.add_argument("--max-calls", type=int, default=int(os.getenv("RETRACE_LIVE_MAX_CALLS", "24")), help="Hard live-dev total call cap across both stages.")
+    parser.add_argument("--max-tokens", type=int, default=int(os.getenv("RETRACE_LIVE_MAX_TOKENS", "60000")), help="Hard live-dev total token cap across both stages.")
     parser.add_argument("--write-review-table", action="store_true", help="Write the compact human-review markdown artifact and exit.")
     parser.add_argument(
         "--review-output",
