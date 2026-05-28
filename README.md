@@ -113,3 +113,14 @@ task explicitly authorizes and validates it.
 
 This is not an official Memora benchmark result unless a later frozen evaluation
 task explicitly authorizes and validates it.
+
+### Run Memora Oracle-Conditioned Authorization Diagnostic
+```bash
+.venv/bin/python scripts/run_memora_development_eval.py --mode replay --limit-questions 2
+```
+
+`run_memora_development_eval.py` is a development diagnostic runner, not official
+evaluation. Candidate beliefs originate from Memora evaluation annotations, not
+end-to-end memory extraction. Do not interpret output as a paper result until
+official end-to-end non-oracle integration and FAMA evaluator wiring are
+complete.
