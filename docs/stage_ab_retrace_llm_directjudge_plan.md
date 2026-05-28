@@ -93,7 +93,38 @@ EvidenceNode
   → answer (using usable beliefs as basis)
 ```
 
-## 4. Fairness Protocol
+## 4. Evaluation Tracks
+
+### Primary: Controlled Authorization-Only Track
+
+Stage A and Stage B receive the **same precomputed `SharedCandidateView`**,
+which fixes evidence context, query, candidate beliefs, candidate replacement
+beliefs, and candidate conditions. Neither method performs its own extraction
+or retrieval in this track.
+
+- **Stage A** predicts typed local edges from the view, then feeds them to
+  deterministic DPA to authorize or exclude each candidate belief.
+- **Stage B** directly predicts a `USABLE / NOT_USABLE / UNCERTAIN` verdict
+  for each candidate belief in the same view.
+- Primary metrics evaluate **authorization decisions**, not answer-generation
+  text.
+
+### Secondary: End-to-End Track
+
+Compares full extraction → retrieval → authorization → answer pathways.
+Reported separately because extraction and retrieval introduce additional
+confounds beyond the authorization step.
+
+### Primary Metrics
+
+- authorization accuracy
+- obsolete-memory misuse rate
+- unsupported revision rate
+- protected-belief preservation
+- rollback recovery
+- tokens, calls, latency
+
+## 4a. Fairness Protocol
 
 What must be held fixed between Stage A and Stage B so the comparison
 attributes gains to structure rather than model strength:
@@ -102,7 +133,7 @@ attributes gains to structure rather than model strength:
 |-----------|-----------|
 | Model family & revision | Same `model_id` and `model_revision_or_api_version` |
 | Frozen instances | Same `boundary_audit_dev.jsonl` / `boundary_audit_eval.jsonl` cases |
-| Candidate-belief view | Same extraction output (shared preprocessing) or clearly justified shared protocol |
+| Candidate-belief view | Same `SharedCandidateView` (primary controlled track) |
 | Token/call budget | Comparable total tokens; Stage B may use fewer calls but same total budget ceiling |
 | Answer generation | Same answer-generation pathway wherever attribution requires it |
 | Temperature/seed | Same `temperature=0.0`, same `seed` if supported |
@@ -112,7 +143,7 @@ attributes gains to structure rather than model strength:
 
 When end-to-end extraction differs from controlled authorization-only
 attribution, report both:
-- **Controlled**: shared extraction, compare only authorization step.
+- **Controlled**: shared `SharedCandidateView`, compare only authorization step.
 - **End-to-end**: full pipeline from evidence to answer.
 
 ## 5. No-Leakage Protocol
@@ -134,31 +165,49 @@ attribution, report both:
 
 ## 6. Implementation Waves
 
-### Wave AB-0: Contracts, Prompt Schema, Cache/Manifests, Dev Tests
+### Wave AB-0: Contracts, Prompt Schema, Mock/Replay Tests
+
+AB-0 does **not** add real provider SDK dependencies. It reuses
+`BaseLLMProvider`, `MockLLMProvider`, `CachedLLMClient`, `JSONLCache`, and
+`CostAccounting` unchanged. Real provider adapters are deferred until the
+offline contracts and controlled comparison are approved.
+
+The primary controlled A/B comparison uses a shared `SharedCandidateView`
+and does not introduce method-specific LLM or embedding retrieval.
 
 **Files to create:**
-- `src/retracemem/verifier/prompt_typed_belief_extractor.py`
-  (stub implementing `TypedBeliefExtractor`, gated by `CachedLLMClient`)
-- `src/retracemem/verifier/prompt_requirement_inducer.py`
-  (stub implementing `RequirementInducer`, gated by `CachedLLMClient`)
-- `src/retracemem/verifier/prompt_evidence_edge_verifier.py`
-  (stub implementing `EvidenceEdgeVerifier`, gated by `CachedLLMClient`)
+- `src/retracemem/methods/__init__.py`
+- `src/retracemem/methods/contracts.py`
+  (`SharedCandidateView`, `DirectUsabilityStatus`, `DirectUsabilityVerdict`,
+  `ControlledMethodResult`)
 - `src/retracemem/methods/directjudge.py`
-  (DirectJudge-LLM method path, not an `EvidenceEdgeVerifier`)
-- `configs/retrace_prompt_typed.yaml`
-  (typed edge labels: BLOCKS, RELEASES, SUPERSEDES, REAFFIRMS, UNCERTAIN)
-- `configs/directjudge_prompt.yaml`
-  (DirectJudge prompt config)
-
-**Files to modify:**
-- `pyproject.toml` — add optional `api` dependency group
-  (e.g. `google-generativeai`, `openai`, `anthropic`).
+  (DirectJudge-LLM sibling method, not an `EvidenceEdgeVerifier`)
+- `src/retracemem/verifier/prompt_typed_belief_extractor.py`
+  (implements `TypedBeliefExtractor` via `CachedLLMClient`)
+- `src/retracemem/verifier/prompt_requirement_inducer.py`
+  (implements `RequirementInducer` via `CachedLLMClient`)
+- `src/retracemem/verifier/prompt_evidence_edge_verifier.py`
+  (implements `EvidenceEdgeVerifier` via `CachedLLMClient`)
+- `prompts/retrace_llm/belief_extraction_v0.txt`
+- `prompts/retrace_llm/requirement_induction_v0.txt`
+- `prompts/retrace_llm/evidence_edge_prediction_v0.txt`
+- `prompts/directjudge/direct_usability_v0.txt`
 
 **Tests to create:**
-- `tests/method_contract/test_prompt_extractor_contract.py`
-- `tests/method_contract/test_prompt_inducer_contract.py`
-- `tests/method_contract/test_prompt_edge_verifier_contract.py`
-- `tests/method_contract/test_directjudge_contract.py`
+- `tests/method_contract/__init__.py`
+- `tests/method_contract/test_shared_candidate_view.py`
+- `tests/method_contract/test_prompt_typed_belief_extractor.py`
+- `tests/method_contract/test_prompt_requirement_inducer.py`
+- `tests/method_contract/test_prompt_evidence_edge_verifier.py`
+- `tests/method_contract/test_directjudge.py`
+- `tests/method_contract/test_controlled_ab_fairness.py`
+
+**Forbidden modifications in AB-0:**
+- `src/retracemem/schemas.py`
+- `src/retracemem/memory/**`, `src/retracemem/tms/**`
+- `src/retracemem/backends/**`, `src/retracemem/pipeline.py`
+- `src/retracemem/retrieval/**`, `src/retracemem/adapters/**`
+- `scripts/**`, `configs/**`, `pyproject.toml`, `reference/**`
 
 **No file ownership conflicts with existing code.**
 
