@@ -36,6 +36,28 @@ def _load_prompt_template() -> str:
         return f.read()
 
 
+def _cost_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
+    """Compute per-instance cost by subtracting cumulative snapshots."""
+    tokens_before = before.get("tokens", {})
+    tokens_after = after.get("tokens", {})
+    calls_before = before.get("calls", {})
+    calls_after = after.get("calls", {})
+    return {
+        "latency_ms": after.get("latency_ms", 0.0) - before.get("latency_ms", 0.0),
+        "tokens": {
+            "prompt": tokens_after.get("prompt", 0) - tokens_before.get("prompt", 0),
+            "completion": tokens_after.get("completion", 0) - tokens_before.get("completion", 0),
+            "total": tokens_after.get("total", 0) - tokens_before.get("total", 0),
+        },
+        "calls": {
+            k: calls_after.get(k, 0) - calls_before.get(k, 0)
+            for k in set(calls_after) | set(calls_before)
+        },
+        "cache_hits": after.get("cache_hits", 0) - before.get("cache_hits", 0),
+        "cache_misses": after.get("cache_misses", 0) - before.get("cache_misses", 0),
+    }
+
+
 class DirectJudgeLLM:
     """Stage B: matched same-model direct usability adjudication.
 
@@ -57,6 +79,7 @@ class DirectJudgeLLM:
 
     def judge(self, view: SharedCandidateView) -> ControlledMethodResult:
         """Run direct usability adjudication on the shared candidate view."""
+        cost_before = self.client.cost_accountant.to_dict()
 
         evidence_str = "\n".join(
             f"  - [{e.evidence_id}] {e.text}" for e in view.evidence_context
@@ -70,7 +93,7 @@ class DirectJudgeLLM:
             for b in view.candidate_replacement_beliefs
         ) or "  (none)"
         conditions_str_parts: list[str] = []
-        for bid, conds in view.candidate_conditions_by_belief.items():
+        for bid, conds in view.candidate_conditions_by_belief:
             for c in conds:
                 conditions_str_parts.append(f"  - [{bid}] {c.condition_id}: \"{c.text}\"")
         conditions_str = "\n".join(conditions_str_parts) or "  (none)"
@@ -107,7 +130,8 @@ class DirectJudgeLLM:
         authorized = tuple(v.belief_id for v in verdicts if v.status == DirectUsabilityStatus.USABLE)
         excluded = tuple(v.belief_id for v in verdicts if v.status != DirectUsabilityStatus.USABLE)
 
-        cost = self.client.cost_accountant.to_dict()
+        cost_after = self.client.cost_accountant.to_dict()
+        instance_cost = _cost_delta(cost_before, cost_after)
 
         return ControlledMethodResult(
             method_name="directjudge_llm",
@@ -117,11 +141,12 @@ class DirectJudgeLLM:
             excluded_belief_ids=excluded,
             verdicts=tuple(verdicts),
             model_call_trace_ids=(trace.call_id,),
-            cost=cost,
+            cost=instance_cost,
             provenance={
                 "prompt_version": _PROMPT_VERSION,
                 "model_id": self.model_id,
                 "provider": self.provider,
+                "view_fingerprint": view.view_fingerprint,
             },
         )
 
