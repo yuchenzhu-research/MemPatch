@@ -499,6 +499,153 @@ def compute_authorization_diagnostic_metrics(
     return metrics
 
 
+def analyze_stage_a_failure_modes(report: dict[str, Any]) -> dict[str, Any]:
+    rows = report.get("rows", [])
+    false_positives: list[dict[str, Any]] = []
+    correctly_excluded_forgetting: list[dict[str, Any]] = []
+    removed_memory_presence: list[dict[str, Any]] = []
+    aggregate = {
+        "forgetting_false_positive_total": 0,
+        "no_edge_proposed": 0,
+        "uncertain_proposed": 0,
+        "blocks_proposed": 0,
+        "releases_proposed": 0,
+        "supersedes_proposed": 0,
+        "reaffirms_proposed": 0,
+        "rejected_edge": 0,
+        "admitted_edge_but_final_authorized": 0,
+    }
+
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, dict):
+            continue
+        roles = row.get("candidate_roles", {})
+        stage = row.get("stage_a", {})
+        if not isinstance(roles, dict) or not isinstance(stage, dict) or stage.get("error"):
+            continue
+        authorized = set(stage.get("authorized_belief_ids", []))
+        excluded = set(stage.get("excluded_belief_ids", []))
+        provenance = stage.get("provenance", {})
+        if not isinstance(provenance, dict):
+            provenance = {}
+        statuses = provenance.get("fine_grained_statuses", {})
+        if not isinstance(statuses, dict):
+            statuses = {}
+        proposals = provenance.get("edge_proposals", [])
+        if not isinstance(proposals, list):
+            proposals = []
+        defeat_paths = provenance.get("defeat_paths", [])
+        if not isinstance(defeat_paths, list):
+            defeat_paths = []
+
+        for belief_id, role in roles.items():
+            if role == "forgetting_absence" and belief_id in authorized:
+                summary = stage_a_belief_provenance_summary(
+                    row, belief_id, statuses, proposals, defeat_paths,
+                )
+                false_positives.append(summary)
+                aggregate["forgetting_false_positive_total"] += 1
+                update_stage_a_failure_aggregate(aggregate, summary)
+            elif role == "forgetting_absence" and belief_id in excluded:
+                correctly_excluded_forgetting.append({
+                    "question_id": row.get("question_id"),
+                    "persona": row.get("persona"),
+                    "belief_id": belief_id,
+                    "final_status": statuses.get(belief_id),
+                })
+            elif role == "memory_presence" and belief_id in excluded:
+                removed_memory_presence.append({
+                    "question_id": row.get("question_id"),
+                    "persona": row.get("persona"),
+                    "belief_id": belief_id,
+                    "final_status": statuses.get(belief_id),
+                })
+
+    return {
+        **DIAGNOSTIC_SCORING_LABELS,
+        "analysis_type": "stage_a_forgetting_false_positive_provenance",
+        "source_questions_executed": report.get("questions_executed"),
+        "source_errors": len(report.get("errors", [])) if isinstance(report.get("errors", []), list) else None,
+        "aggregate": aggregate,
+        "false_positives": false_positives,
+        "correctly_excluded_forgetting": correctly_excluded_forgetting,
+        "removed_memory_presence": removed_memory_presence,
+        "manual_annotation_schema": {
+            "belief_id": "required",
+            "classification": [
+                "NO_DEFEAT_EVIDENCE_IN_VIEW",
+                "DEFEAT_EVIDENCE_PRESENT_BUT_NO_EDGE_PREDICTED",
+                "EDGE_PREDICTED_BUT_REJECTED_BY_GATE",
+                "EDGE_ADMITTED_BUT_DPA_PRESERVED",
+                "NOT_AUTHORIZATION_TARGET",
+            ],
+            "notes": "optional; keep private text out of committed artifacts",
+        },
+    }
+
+
+def stage_a_belief_provenance_summary(
+    row: dict[str, Any],
+    belief_id: str,
+    statuses: dict[str, Any],
+    proposals: list[Any],
+    defeat_paths: list[Any],
+) -> dict[str, Any]:
+    relevant = [
+        proposal for proposal in proposals
+        if isinstance(proposal, dict)
+        and (
+            proposal.get("belief_id") == belief_id
+            or proposal.get("target_id") == belief_id
+        )
+    ]
+    edge_types = [str(proposal.get("edge_type")) for proposal in relevant]
+    admitted = [proposal for proposal in relevant if proposal.get("admitted")]
+    rejected = [proposal for proposal in relevant if not proposal.get("admitted")]
+    return {
+        "question_id": row.get("question_id"),
+        "persona": row.get("persona"),
+        "belief_id": belief_id,
+        "final_status": statuses.get(belief_id),
+        "edge_proposal_count": len(relevant),
+        "edge_types": edge_types,
+        "admitted_edge_count": len(admitted),
+        "rejected_edge_count": len(rejected),
+        "rejected_edge_reasons": sorted({
+            str(proposal.get("gate_reason"))
+            for proposal in rejected
+            if proposal.get("gate_reason") is not None
+        }),
+        "defeat_path_count": len([
+            path for path in defeat_paths
+            if isinstance(path, dict) and path.get("belief_id") == belief_id
+        ]),
+    }
+
+
+def update_stage_a_failure_aggregate(
+    aggregate: dict[str, int],
+    summary: dict[str, Any],
+) -> None:
+    edge_types = set(summary.get("edge_types", []))
+    if summary.get("edge_proposal_count") == 0:
+        aggregate["no_edge_proposed"] += 1
+    if "UNCERTAIN" in edge_types:
+        aggregate["uncertain_proposed"] += 1
+    if "BLOCKS" in edge_types:
+        aggregate["blocks_proposed"] += 1
+    if "RELEASES" in edge_types:
+        aggregate["releases_proposed"] += 1
+    if "SUPERSEDES" in edge_types:
+        aggregate["supersedes_proposed"] += 1
+    if "REAFFIRMS" in edge_types:
+        aggregate["reaffirms_proposed"] += 1
+    if summary.get("rejected_edge_count", 0) > 0:
+        aggregate["rejected_edge"] += 1
+    if summary.get("admitted_edge_count", 0) > 0 and summary.get("final_status") == "AUTHORIZED":
+        aggregate["admitted_edge_but_final_authorized"] += 1
+
+
 def progress(
     tag: str, persona: str, qid: str, budget: GlobalBudget, started: float,
 ) -> None:
