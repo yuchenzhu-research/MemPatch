@@ -224,6 +224,7 @@ def run_case(
     client_b: CachedLLMClient | None = None,
     model_id: str = "mock",
     provider: str = "mock",
+    stage_a_prompt_version: str = "evidence_edge_prediction_v0",
 ) -> CaseResult:
     """Execute one internal case through both Stage A and Stage B."""
     result = CaseResult(case_id=case.case_id, case_type=case.case_type)
@@ -253,7 +254,12 @@ def run_case(
             cache_a = JSONLCache(os.path.join(tmp_dir, f"{case.case_id}_a.jsonl"))
             active_client_a = CachedLLMClient(cache=cache_a, provider_client=mock_a)
 
-        verifier = PromptEvidenceEdgeVerifier(client=active_client_a, model_id=model_id, provider=provider)
+        verifier = PromptEvidenceEdgeVerifier(
+            client=active_client_a,
+            model_id=model_id,
+            provider=provider,
+            prompt_version=stage_a_prompt_version,
+        )
         runner_a = ControlledReTraceLLM(edge_verifier=verifier, client=active_client_a)
         result.stage_a_result = runner_a.run(case.view)
     except Exception as exc:

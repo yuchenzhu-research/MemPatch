@@ -21,8 +21,7 @@ from retracemem.schemas import (
 )
 
 _PROMPT_DIR = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir, "prompts", "retrace_llm")
-_PROMPT_FILE = os.path.join(_PROMPT_DIR, "evidence_edge_prediction_v0.txt")
-_PROMPT_VERSION = "evidence_edge_prediction_v0"
+_DEFAULT_PROMPT_VERSION = "evidence_edge_prediction_v0"
 _RESPONSE_SCHEMA_VERSION = "evidence_edge_prediction_response_v0"
 _PARSER_VERSION = "evidence_edge_prediction_parser_v0"
 
@@ -30,8 +29,14 @@ _CONDITION_EDGE_TYPES = {"BLOCKS", "RELEASES"}
 _BELIEF_EDGE_TYPES = {"SUPERSEDES", "REAFFIRMS", "UNCERTAIN"}
 
 
-def _load_prompt_template() -> str:
-    path = os.path.normpath(_PROMPT_FILE)
+def _prompt_file(prompt_version: str) -> str:
+    if prompt_version not in {"evidence_edge_prediction_v0", "evidence_edge_prediction_v1"}:
+        raise ValueError(f"Unsupported evidence-edge prompt version: {prompt_version}")
+    return os.path.join(_PROMPT_DIR, f"{prompt_version}.txt")
+
+
+def _load_prompt_template(prompt_version: str) -> str:
+    path = os.path.normpath(_prompt_file(prompt_version))
     with open(path, encoding="utf-8") as f:
         return f.read()
 
@@ -41,9 +46,10 @@ def _stable_edge_id(
     edge_type: str,
     target_id: str,
     replacement_belief_id: str | None,
+    prompt_version: str,
 ) -> str:
     """Compute deterministic evidence edge_id from grounded inputs."""
-    payload = f"{evidence_id}|{edge_type}|{target_id}|{replacement_belief_id or ''}|{_PROMPT_VERSION}"
+    payload = f"{evidence_id}|{edge_type}|{target_id}|{replacement_belief_id or ''}|{prompt_version}"
     return f"ee-{hashlib.sha256(payload.encode('utf-8')).hexdigest()[:16]}"
 
 
@@ -59,12 +65,14 @@ class PromptEvidenceEdgeVerifier:
         model_id: str = "gemini-pro",
         provider: str = "google",
         model_revision_or_api_version: str | None = None,
+        prompt_version: str = _DEFAULT_PROMPT_VERSION,
     ) -> None:
         self.client = client
         self.model_id = model_id
         self.provider = provider
         self.model_revision_or_api_version = model_revision_or_api_version
-        self._template = _load_prompt_template()
+        self.prompt_version = prompt_version
+        self._template = _load_prompt_template(prompt_version)
         self._template_hash = hashlib.sha256(self._template.encode("utf-8")).hexdigest()
 
     def verify_edges(
@@ -149,7 +157,7 @@ class PromptEvidenceEdgeVerifier:
         return EdgePredictionBatch(
             proposed_edges=tuple(edges),
             model_call_trace_id=trace.call_id,
-            prompt_version=_PROMPT_VERSION,
+            prompt_version=self.prompt_version,
             model_id=self.model_id,
             provider=self.provider,
             model_revision_or_api_version=self.model_revision_or_api_version,
@@ -232,6 +240,7 @@ class PromptEvidenceEdgeVerifier:
 
             edge_id = _stable_edge_id(
                 new_evidence.evidence_id, edge_type_str, target_id, replacement_id,
+                self.prompt_version,
             )
             if edge_id in seen_edge_ids:
                 raise ValueError(
@@ -245,7 +254,7 @@ class PromptEvidenceEdgeVerifier:
                 evidence_id=new_evidence.evidence_id,
                 target_kind=target_kind,
                 target_id=target_id,
-                verifier=_PROMPT_VERSION,
+                verifier=self.prompt_version,
                 replacement_belief_id=replacement_id,
                 confidence=confidence,
                 rationale=item.get("rationale"),
