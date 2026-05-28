@@ -271,16 +271,16 @@ class TestEdgeCases:
         assert len(proposals) == 1
         prop = proposals[0]
         assert prop["edge_type"] == "BLOCKS"
-        assert prop["target_id"] == "c_art_supplies"
+        assert prop["target_id"] == "c_valid_license"
         assert prop["admitted"] is False
         assert prop["gate_reason"] == "replacement_belief_id_only_valid_for_supersedes"
         
         # Stage A status remains AUTHORIZED
-        assert result.stage_a_result.provenance["fine_grained_statuses"]["b_painter"] == "AUTHORIZED"
+        assert result.stage_a_result.provenance["fine_grained_statuses"]["b_drive_to_work"] == "AUTHORIZED"
         
         # Stage B still succeeds
         assert result.stage_b_result is not None
-        assert "b_painter" in result.stage_b_result.authorized_belief_ids
+        assert "b_drive_to_work" in result.stage_b_result.authorized_belief_ids
 
     def test_supersession_case_produces_excluded(self) -> None:
         cases = load_cases(_CASES_PATH)
@@ -364,3 +364,70 @@ class TestAuditHardening:
         assert metrics.parse_errors == 1
         # Cost is aggregated
         assert metrics.stage_a_calls == 1
+
+    def test_failed_instance_cost_and_error_in_report(self) -> None:
+        """Verify that a failed execution serializes cost, error, and parse flags into per-instance report."""
+        cases = load_cases(_CASES_PATH)
+        import copy
+        case = copy.deepcopy(cases[0])
+        case.stage_a_mock_edges = {
+            "b_google_swe": [{"edge_type": "BLOCKS"}]  # missing target_id -> ValueError
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            res = run_case(case, tmp)
+            metrics = compute_metrics([case], [res])
+            report = format_report(metrics, [res])
+
+        # Assert per-instance format
+        entry = report["per_instance"][0]
+        assert "stage_a" in entry
+        assert entry["stage_a"]["error"] is not None
+        assert "ValueError" in entry["stage_a"]["error"]
+        assert entry["stage_a"]["is_parse_error"] is True
+        assert entry["stage_a"]["cost"].get("calls", {}).get("total", 0) == 1
+
+    def test_parse_error_classification(self) -> None:
+        """Verify that parse errors are distinguished from execution ValueErrors."""
+        cases = load_cases(_CASES_PATH)
+        import copy
+        
+        # Scenario 1: Malformed response ValueError (parser error)
+        case_parser_fail = copy.deepcopy(cases[0])
+        case_parser_fail.stage_a_mock_edges = {
+            "b_google_swe": [{"edge_type": "BLOCKS"}]  # missing target_id -> ValueError
+        }
+        with tempfile.TemporaryDirectory() as tmp:
+            res1 = run_case(case_parser_fail, tmp)
+        metrics1 = compute_metrics([case_parser_fail], [res1])
+        assert metrics1.execution_errors == 1
+        assert metrics1.parse_errors == 1
+        
+        # Scenario 2: Provider call ValueError (non-parser error)
+        from retracemem.schemas import DependencyEdge
+        bad_dep = DependencyEdge(
+            edge_id="dep-bad",
+            belief_id="b_bike_commute",
+            condition_id="c_mobility",
+            inducer="",  # empty inducer triggers RevisionGate rejection
+            edge_type="REQUIRES"
+        )
+        case_gate_fail = copy.deepcopy(cases[1])
+        import dataclasses
+        case_gate_fail.view = dataclasses.replace(
+            case_gate_fail.view,
+            dependency_edges_by_belief=(
+                ("b_bike_commute", (bad_dep,)),
+            )
+        )
+        
+        with tempfile.TemporaryDirectory() as tmp:
+            res2 = run_case(case_gate_fail, tmp)
+            
+        assert res2.stage_a_result is None
+        assert res2.stage_a_error is not None
+        assert "rejected by RevisionGate" in res2.stage_a_error
+        
+        metrics2 = compute_metrics([case_gate_fail], [res2])
+        assert metrics2.execution_errors == 1
+        assert metrics2.parse_errors == 0  # Should not be classified as a parse error!
