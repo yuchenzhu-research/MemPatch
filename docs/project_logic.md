@@ -31,18 +31,15 @@ It has these components:
 
 ```text
 incoming session/evidence
-→ EpisodeLedger
-→ BeliefStore
+→ EpisodeLedger (EvidenceNode)
+→ BeliefStore (BeliefNode, ConditionNode, DependencyEdge, EvidenceEdge)
 → candidate prior beliefs
-→ RelationVerifier
+→ RequirementInducer & EvidenceEdgeVerifier
 → RevisionGate
-→ AuthorizationEngine
-→ BasisBuilder
+→ DefeatPathAuthorizationAlgorithm (DPA)
+→ Query-conditioned basis (BasisBuilder)
 → answer model
 ```
-
-The first version must stay small and deterministic enough to run without API
-keys.
 
 ## What ReTrace Is Not
 
@@ -54,9 +51,21 @@ ReTrace is not:
 - a graph database benchmark;
 - a latent memory learner;
 - an RL/GRPO memory action policy;
-- a new benchmark paper.
+- a new benchmark paper;
+- a hand-written rule engine or heuristic pipeline.
 
-Do not add these directions unless a later plan explicitly changes the scope.
+## Methodology & Contributions
+
+ReTrace centers on three paper contributions:
+1. **Reversible authorization formulation**: Dynamic memory revision changes which evidence-grounded beliefs may govern current answers, without deleting historical episodic evidence.
+2. **Defeat-Path Authorization Algorithm**: A belief is blocked or superseded only through admitted typed paths over REQUIRES, BLOCKS, RELEASES, SUPERSEDES, REAFFIRMS, and UNCERTAIN edges.
+3. **Structural attribution evaluation**: Compare `ReTrace-LLM` against a matched `DirectJudge-LLM` baseline and external memory systems, while treating heuristic verifiers only as development fixtures.
+
+Target implementations:
+* **`ReTrace-LLM` (Main method)**: Generic typed-edge prediction by LLM + deterministic DPA.
+* **`DirectJudge-LLM` (Attribution baseline)**: Same model and similar context/call budget deciding final adjudication directly without DPA or local edge restrictions.
+* **`ReTrace-Local` (Enhancement)**: Optional later learned local verifier + deterministic DPA.
+* **Heuristics (Dev-only)**: `HeuristicRequirementInducer` and `HeuristicEvidenceEdgeVerifier` are development-only deterministic fixtures. They must not be used as the paper's main method.
 
 ## Difference From Key References
 
@@ -101,37 +110,33 @@ Do not turn ReTrace into a distillation method.
 Use Graphiti for temporal provenance and valid/invalid time ideas. Do not make
 Paper 1 depend on a graph database or open-world temporal KG discovery.
 
-## Revision Semantics
+## Revision Semantics & DPA Rules
 
-Supported local relation labels:
+### 1. Dependency Graph (`DependencyEdge`)
+*   `REQUIRES`: belief --REQUIRES--> condition. Identifies prerequisites for using a belief.
 
-- `SUPPORT`: later evidence continues to support the belief.
-- `SUPERSEDE`: later evidence replaces an earlier belief.
-- `BLOCK`: later evidence defeats a prerequisite for current use.
-- `CONDITION`: belief remains true but use requires a condition.
-- `NONE`: no authorized revision.
-- `UNCERTAIN`: information is insufficient; do not use the prior belief as a
-  current default.
-- `REQUIRED_BY`: prerequisite relation used by later two-hop versions.
+### 2. Evidence Updates (`EvidenceEdge`)
+*   `BLOCKS`: evidence --BLOCKS--> condition. Defeats a prerequisite.
+*   `RELEASES`: evidence --RELEASES--> condition. Clears a blocker.
+*   `SUPERSEDES`: evidence --SUPERSEDES--> belief. Replaces the prior belief. Requires a real `replacement_belief_id` from candidate beliefs extracted from the new evidence.
+*   `REAFFIRMS`: evidence --REAFFIRMS--> belief. Clears belief-level uncertainty.
+*   `UNCERTAIN`: evidence --UNCERTAIN--> belief. Signals information is insufficient, removing default authorization.
 
-First-version gate rules:
-
-- `NONE` must never revise a belief.
-- `SUPERSEDE` can block the old belief only when it points to a replacement or
-  target belief.
-- `BLOCK` must have a condition or explicit target/prerequisite.
-- `UNCERTAIN` can remove current default authorization but must not invent a new
-  belief.
-- Unrelated beliefs must remain authorized.
+### 3. Core Gate and DPA rules
+- **No mock-ledger fallback**: Decisions are purely structural on the verified-edge graph.
+- **Evidence preservation**: Episodes are append-only and never deleted.
+- **Path-conditioned**: `BLOCKS` and `RELEASES` only affect authorization when they target a condition node linked via `REQUIRES` to a candidate belief.
+- **Supersession Grounding**: A `SUPERSEDES` edge must link to a real replacement belief grounded in the new evidence.
+- **Reversibility**: Releasing a condition blocker or reaffirming an uncertain belief restores its candidate status.
 
 ## First-Version Success Criteria
 
 The first research code version is done when:
 
-1. A small BoundaryAudit set runs end to end.
+1. A small BoundaryAudit set runs end to end under `ReTrace-LLM` and DPA.
 2. STALE and Memora smoke loaders run without API keys.
-3. Retrieval baseline emits unified JSONL.
-4. ReTrace heuristic pipeline emits unified JSONL.
-5. Core TMS cases are covered by tests.
+3. `DirectJudge-LLM` and `ReTrace-LLM` run on identical evaluation budgets.
+4. Core TMS and verifier contract cases are covered by tests.
+5. Heuristic verifiers remain isolated strictly for contract verification.
 6. The code is easy for later agents to extend without changing research scope.
 

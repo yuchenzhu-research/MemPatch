@@ -123,100 +123,46 @@ env PYTHONPYCACHEPREFIX=.pycache_compile python3 -m compileall -q retracemem tes
 - Added `docs/today_execution_plan.md`.
 - Added `docs/reference_integration_map.md`.
 - Added `docs/code_direction.md`.
+- Added `docs/refactor_plan_defeat_path.md`.
 - Added raw source materials under `docs/source_materials/`.
 
-### Core Data Contracts
+### Wave 0 (Refactor Plan & Primitives)
+- Defined locked refactor plan with amendments A1-A10.
+- Implemented canonical typed graph schemas: `EvidenceNode`, `BeliefNode`, `ConditionNode`, `DependencyEdge`, `EvidenceEdge`, `DefeatPath`, `AuthorizationTrace` in `schemas.py`.
+- Added round-trip tests in `tests/test_schema_roundtrip.py`.
 
-- Implemented `retracemem/schemas.py`.
-- Implemented `retracemem/evaluation/jsonl.py`.
-- Implemented `retracemem/evaluation/cost_tracker.py`.
-- Implemented `retracemem/evaluation/records.py`.
+### Wave 1A (Typed Graph Store & DPA Core)
+- Updated `BeliefStore` index collections (in `memory/belief_store.py`) to manage typed nodes and edges.
+- Implemented `RevisionGate` (in `tms/gate.py`) and `DefeatPathAuthorizationAlgorithm` (in `tms/authorization.py`) mapping DPA rules.
+- Created `tests/gate_unit/` verification suite for DPA logic.
 
-### Memory Core
+### Wave 1B (Typed Verifier Contracts)
+- Introduced `RequirementProposal` dataclass and updated contracts protocol signature in `contracts.py`.
+- Implemented `HeuristicRequirementInducer` and `HeuristicEvidenceEdgeVerifier` as development-only deterministic fixtures.
+- Updated `tests/verifier_contract/` verification suite.
 
-- Implemented `retracemem/memory/episode_ledger.py`.
-- Implemented `retracemem/memory/belief_store.py`.
-- Implemented `retracemem/tms/gate.py`.
-- Implemented `retracemem/tms/authorization.py`.
-- Implemented `retracemem/generation/basis_builder.py`.
+### Hotfix and Environment Alignment (Current Status)
+- Aligned `EvidenceEdgeVerifier.verify_edges` signature.
+- Rewrote Heuristic Inducer condition texts to use atomic prerequisite proposition semantics.
+- Recreated project-local `.venv` using Python 3.10.20 and editable install layout.
+- Ignored egg-info and pytest cache metadata.
+- Isolated test cache artifacts to pytest `tmp_path`.
 
-### Verifier Layer
-
-- Implemented `retracemem/verifier/heuristic_verifier.py`.
-- Exported `HeuristicRelationVerifier` from `retracemem/verifier/__init__.py`.
-- Added `tests/test_heuristic_verifier.py`.
-
-### ReTrace Pipeline
-
-- Implemented `retracemem/pipeline.py`.
-- Added `tests/test_pipeline.py`.
-
-### BoundaryAudit Diagnostic Loop
-
-- Added `data/boundary_audit/minimal.jsonl`.
-- Implemented `scripts/run_boundary_audit.py`.
-- Added runner coverage in `tests/test_runners.py`.
-- Verified:
-
-```text
-python3 scripts/run_boundary_audit.py --method retrace_heuristic --output /tmp/retrace_heuristic.jsonl
-cases_total: 20
-relation_correct: 20
-authorization_correct: 20
-protected_beliefs_preserved: 20
-unsupported_revision_count: 0
-```
-
-- Verified retrieval baseline comparison:
-
-```text
-python3 scripts/run_boundary_audit.py --method retrieval_baseline --output /tmp/retrieval_baseline.jsonl
-cases_total: 20
-relation_correct: 0
-authorization_correct: 8
-protected_beliefs_preserved: 20
-unsupported_revision_count: 0
-```
-
-### Benchmark Smoke Runners
-
-- Implemented `scripts/run_stale.py`.
-- Implemented `scripts/run_memora.py`.
-- Verified STALE empty-data behavior against the current reference clone:
-
-```text
-python3 scripts/run_stale.py --limit 3 --method retrieval_baseline --output /tmp/stale_retrieval.jsonl
-No STALE MAIN files found under reference/STALE; nothing to run.
-records_written: 0
-```
-
-- Verified Memora smoke on the current reference clone:
-
-```text
-python3 scripts/run_memora.py --limit 3 --method retrieval_baseline --output /tmp/memora_retrieval.jsonl
-sessions_loaded: 619
-questions_loaded: 3
-records_written: 3
-```
+### Legacy Modules (Remaining Migration Tasks)
+- Pipeline (`retracemem/pipeline.py`), backend clients (`retracemem/backends/retrace_backend.py`), and retrievers (`retracemem/retrieval/`) remain untouched and operate under legacy schemas. They are scheduled for migration in Wave 2.
+- Obsolete HeuristicRelationVerifier pipeline results are archived as prototype-only milestones.
 
 ### Tests And Verification
 
-- Added or retained tests:
-  - `tests/test_adapters.py`
-  - `tests/test_evaluation_helpers.py`
-  - `tests/test_memory_core.py`
-  - `tests/test_retrieval_backend.py`
-  - `tests/test_tms_authorization.py`
-  - `tests/test_heuristic_verifier.py`
-  - `tests/test_pipeline.py`
-  - `tests/test_runners.py`
-
-- Verified no-dependency compile check:
-
-```text
-env PYTHONPYCACHEPREFIX=/Users/yuchenzhu/Desktop/ReTrace/.pycache_compile python3 -m compileall -q retracemem tests scripts
-passed
-```
-
-- `pytest` is not installed in the current environment, so pytest execution was
-  not used for final verification.
+- Passed test suites (with Python 3.10.20 and pytest 9.0.3):
+  * `tests/test_schema_roundtrip.py`
+  * `tests/gate_unit/`
+  * `tests/verifier_contract/`
+- Verified local compile check:
+  ```bash
+  env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src tests scripts
+  ```
+- Command to run verification tests:
+  ```bash
+  .venv/bin/python -m pytest -q tests/test_schema_roundtrip.py tests/gate_unit tests/verifier_contract
+  ```
