@@ -69,6 +69,10 @@ class CaseResult:
     stage_b_result: ControlledMethodResult | None = None
     stage_a_error: str | None = None
     stage_b_error: str | None = None
+    stage_a_cost: dict[str, Any] = field(default_factory=dict)
+    stage_b_cost: dict[str, Any] = field(default_factory=dict)
+    is_stage_a_parse_error: bool = False
+    is_stage_b_parse_error: bool = False
 
 
 @dataclass
@@ -81,12 +85,22 @@ class AggregateMetrics:
     stage_a_total: int = 0
     stage_b_correct: int = 0
     stage_b_total: int = 0
+    stage_a_completed: int = 0
+    stage_b_completed: int = 0
     stage_a_status_breakdown: dict[str, int] = field(default_factory=dict)
     stage_b_verdict_breakdown: dict[str, int] = field(default_factory=dict)
     obsolete_misuse_count: int = 0
     obsolete_misuse_total: int = 0
+    obsolete_misuse_count_a: int = 0
+    obsolete_misuse_total_a: int = 0
+    obsolete_misuse_count_b: int = 0
+    obsolete_misuse_total_b: int = 0
     protected_belief_preserved_count: int = 0
     protected_belief_total: int = 0
+    protected_belief_preserved_count_a: int = 0
+    protected_belief_preserved_count_b: int = 0
+    protected_belief_total_a: int = 0
+    protected_belief_total_b: int = 0
     rollback_recovery_count: int = 0
     rollback_recovery_total: int = 0
     stage_a_calls: int = 0
@@ -208,6 +222,7 @@ def run_case(case: InternalDevCase, tmp_dir: str) -> CaseResult:
     result = CaseResult(case_id=case.case_id, case_type=case.case_type)
 
     # --- Stage A ---
+    client_a = None
     try:
         # Stage A calls the verifier once per candidate belief.
         # We need to provide ordered mock responses for each belief.
@@ -234,8 +249,15 @@ def run_case(case: InternalDevCase, tmp_dir: str) -> CaseResult:
         result.stage_a_result = runner_a.run(case.view)
     except Exception as exc:
         result.stage_a_error = f"{type(exc).__name__}: {exc}"
+        exc_str = str(exc).lower()
+        if isinstance(exc, (json.JSONDecodeError, ValueError)) or "json" in exc_str or "parse" in exc_str or "decoder" in exc_str or "unknown condition" in exc_str:
+            result.is_stage_a_parse_error = True
+    finally:
+        if client_a is not None:
+            result.stage_a_cost = client_a.cost_accountant.to_dict()
 
     # --- Stage B ---
+    client_b = None
     try:
         stage_b_response = _build_stage_b_mock_response(case.stage_b_mock_verdicts)
         mock_b = MockLLMProvider(default_response=stage_b_response)
@@ -245,6 +267,12 @@ def run_case(case: InternalDevCase, tmp_dir: str) -> CaseResult:
         result.stage_b_result = judge.judge(case.view)
     except Exception as exc:
         result.stage_b_error = f"{type(exc).__name__}: {exc}"
+        exc_str = str(exc).lower()
+        if isinstance(exc, (json.JSONDecodeError, ValueError)) or "json" in exc_str or "parse" in exc_str or "decoder" in exc_str or "unknown" in exc_str:
+            result.is_stage_b_parse_error = True
+    finally:
+        if client_b is not None:
+            result.stage_b_cost = client_b.cost_accountant.to_dict()
 
     return result
 
@@ -260,41 +288,44 @@ def compute_metrics(
     for case, res in zip(cases, results):
         if res.stage_a_error:
             m.execution_errors += 1
+            if res.is_stage_a_parse_error:
+                m.parse_errors += 1
         if res.stage_b_error:
             m.execution_errors += 1
+            if res.is_stage_b_parse_error:
+                m.parse_errors += 1
 
         # Stage A metrics
-        if res.stage_a_result is not None:
-            prov = res.stage_a_result.provenance
-            fg = prov.get("fine_grained_statuses", {})
-            for bid, expected_status in case.expected_stage_a_status.items():
-                m.stage_a_total += 1
-                m.total_belief_decisions += 1
+        for bid, expected_status in case.expected_stage_a_status.items():
+            m.stage_a_total += 1
+            m.total_belief_decisions += 1
+            
+            if res.stage_a_result is not None:
+                m.stage_a_completed += 1
+                prov = res.stage_a_result.provenance
+                fg = prov.get("fine_grained_statuses", {})
                 actual = fg.get(bid, "")
                 # Count status breakdown
                 m.stage_a_status_breakdown[actual] = m.stage_a_status_breakdown.get(actual, 0) + 1
                 if actual == expected_status:
                     m.stage_a_correct += 1
+                
                 # Obsolete misuse: expected NOT_USABLE but got AUTHORIZED
                 expected_comp = case.expected_comparable_status.get(bid, "")
                 if expected_comp == "NOT_USABLE":
                     m.obsolete_misuse_total += 1
+                    m.obsolete_misuse_total_a += 1
                     actual_comp = _STATUS_MAP_A_TO_COMPARABLE.get(actual, "")
                     if actual_comp == "USABLE":
                         m.obsolete_misuse_count += 1
-            # Cost accounting
-            cost = res.stage_a_result.cost
-            tokens = cost.get("tokens", {})
-            calls = cost.get("calls", {})
-            m.stage_a_tokens += tokens.get("total", 0)
-            m.stage_a_calls += sum(calls.values()) if calls else 0
-            m.stage_a_cache_hits += cost.get("cache_hits", 0)
-            m.stage_a_latency_ms += cost.get("latency_ms", 0.0)
+                        m.obsolete_misuse_count_a += 1
 
         # Stage B metrics
-        if res.stage_b_result is not None:
-            for bid, expected_status in case.expected_comparable_status.items():
-                m.stage_b_total += 1
+        for bid, expected_status in case.expected_comparable_status.items():
+            m.stage_b_total += 1
+            
+            if res.stage_b_result is not None:
+                m.stage_b_completed += 1
                 # Find actual Stage B verdict
                 actual_b = ""
                 for v in res.stage_b_result.verdicts:
@@ -309,33 +340,55 @@ def compute_metrics(
                 m.stage_b_verdict_breakdown[actual_b] = m.stage_b_verdict_breakdown.get(actual_b, 0) + 1
                 if actual_b == expected_status:
                     m.stage_b_correct += 1
-            # Cost accounting
-            cost = res.stage_b_result.cost
-            tokens = cost.get("tokens", {})
-            calls = cost.get("calls", {})
-            m.stage_b_tokens += tokens.get("total", 0)
-            m.stage_b_calls += sum(calls.values()) if calls else 0
-            m.stage_b_cache_hits += cost.get("cache_hits", 0)
-            m.stage_b_latency_ms += cost.get("latency_ms", 0.0)
+                
+                # Obsolete misuse for Stage B
+                if expected_status == "NOT_USABLE":
+                    m.obsolete_misuse_total_b += 1
+                    if actual_b == "USABLE":
+                        m.obsolete_misuse_count_b += 1
 
         # Protected-belief preservation
         protected = case.annotations.get("protected_beliefs", [])
         for bid in protected:
+            # Stage A
             m.protected_belief_total += 1
+            m.protected_belief_total_a += 1
             if res.stage_a_result is not None:
                 fg = res.stage_a_result.provenance.get("fine_grained_statuses", {})
                 if fg.get(bid) == "AUTHORIZED":
                     m.protected_belief_preserved_count += 1
+                    m.protected_belief_preserved_count_a += 1
 
-        # Rollback recovery
-        if case.annotations.get("rollback_case", False):
-            for bid, expected in case.expected_stage_a_status.items():
-                if expected == "AUTHORIZED":
-                    m.rollback_recovery_total += 1
-                    if res.stage_a_result is not None:
-                        fg = res.stage_a_result.provenance.get("fine_grained_statuses", {})
-                        if fg.get(bid) == "AUTHORIZED":
-                            m.rollback_recovery_count += 1
+            # Stage B
+            m.protected_belief_total_b += 1
+            if res.stage_b_result is not None:
+                actual_b = ""
+                for v in res.stage_b_result.verdicts:
+                    if v.belief_id == bid:
+                        actual_b = v.status.value if hasattr(v.status, "value") else str(v.status)
+                        break
+                if not actual_b:
+                    if bid in res.stage_b_result.authorized_belief_ids:
+                        actual_b = "USABLE"
+                if actual_b == "USABLE":
+                    m.protected_belief_preserved_count_b += 1
+
+        # Cost accounting (from result dicts, handling error cases cleanly)
+        cost_a = res.stage_a_cost
+        tokens_a = cost_a.get("tokens", {})
+        calls_a = cost_a.get("calls", {})
+        m.stage_a_tokens += tokens_a.get("total", 0)
+        m.stage_a_calls += calls_a.get("total", 0)
+        m.stage_a_cache_hits += cost_a.get("cache_hits", 0)
+        m.stage_a_latency_ms += cost_a.get("latency_ms", 0.0)
+
+        cost_b = res.stage_b_cost
+        tokens_b = cost_b.get("tokens", {})
+        calls_b = cost_b.get("calls", {})
+        m.stage_b_tokens += tokens_b.get("total", 0)
+        m.stage_b_calls += calls_b.get("total", 0)
+        m.stage_b_cache_hits += cost_b.get("cache_hits", 0)
+        m.stage_b_latency_ms += cost_b.get("latency_ms", 0.0)
 
     return m
 
@@ -392,11 +445,19 @@ def format_report(
             "total_belief_decisions": metrics.total_belief_decisions,
             "stage_a_accuracy": f"{metrics.stage_a_correct}/{metrics.stage_a_total}",
             "stage_b_accuracy": f"{metrics.stage_b_correct}/{metrics.stage_b_total}",
+            "stage_a_coverage": f"{metrics.stage_a_completed}/{metrics.total_belief_decisions}",
+            "stage_b_coverage": f"{metrics.stage_b_completed}/{metrics.total_belief_decisions}",
             "stage_a_status_breakdown": metrics.stage_a_status_breakdown,
             "stage_b_verdict_breakdown": metrics.stage_b_verdict_breakdown,
-            "obsolete_misuse": f"{metrics.obsolete_misuse_count}/{metrics.obsolete_misuse_total}",
-            "protected_belief_preserved": f"{metrics.protected_belief_preserved_count}/{metrics.protected_belief_total}",
-            "rollback_recovery": f"{metrics.rollback_recovery_count}/{metrics.rollback_recovery_total}",
+            "obsolete_misuse": {
+                "stage_a": f"{metrics.obsolete_misuse_count_a}/{metrics.obsolete_misuse_total_a}",
+                "stage_b": f"{metrics.obsolete_misuse_count_b}/{metrics.obsolete_misuse_total_b}",
+            },
+            "protected_belief_preserved": {
+                "stage_a": f"{metrics.protected_belief_preserved_count_a}/{metrics.protected_belief_total_a}",
+                "stage_b": f"{metrics.protected_belief_preserved_count_b}/{metrics.protected_belief_total_b}",
+            },
+            "rollback_recovery": "NOT YET OPERATIONALIZED in AB-1B. The current fixed-view controlled interface does not preload prior accepted evidence-edge history.",
             "unsupported_revision_rate": "NOT YET OPERATIONALIZED in AB-1B. Requires explicit annotation of valid defeat-path structure in case gold fields and unambiguous denominator definition.",
             "observed_cost": {
                 "stage_a": {

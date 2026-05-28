@@ -3,7 +3,7 @@
 **目标会议：** ICLR 2027 Main Conference
 **方法名：** ReTrace
 **标题候选：** *ReTrace: Evidence-Preserving Reversible Authorization for Evolving Agent Memory*
-**当前工程状态：** `method/retrace-llm-directjudge` 已完成 AB-1A.5。AB-1B 尚未开始。
+**当前工程状态：** `method/retrace-llm-directjudge` 已完成 AB-1B（含 AB-1B.1 语义修复）。AB-1C 尚未开始。
 
 本文档是当前仓库中的中文科学蓝图。旧 blueprint 和旧 source-material
 文件不再是活跃研究决策来源；Git history 已经保留其历史内容。
@@ -317,13 +317,14 @@ Secondary benchmark plans：
 - AB-1A offline controlled attribution harness；
 - AB-1A.5 auditability and comparison-protocol lock。
 
-AB-1A.5 已完成，不是下一步。
+AB-1B 已完成（含语义修复）。回滚恢复（rollback recovery）在 AB-1B 中尚未启用，
+因为 fixed-view controlled interface 不支持 preload prior accepted evidence-edge
+history。
 
-下一步只有在未来明确授权时才是 AB-1B：
+下一步只有在未来明确授权时才是 AB-1C：
 
-- internal development cases；
-- comparison evaluator；
-- replay-only runner。
+- live provider adapter；
+- tiny approved dev-only API calls。
 
 不在当前状态中：
 
@@ -350,7 +351,7 @@ A-MEM、A-MAC、AgeMem、MEM1 等工作的具体代码/集成角色见
 
 ## 13. Go / No-Go 原则
 
-- AB-1B 前不接真实 provider。
+- AB-1C 前不接真实 provider。
 - AB-1C 前不做 live API dev calls。
 - config/prompt freeze 前不跑正式 STALE/Memora evaluation。
 - A/B 结构价值未建立前不训练 Stage C。

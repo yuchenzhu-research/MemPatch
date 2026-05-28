@@ -8,70 +8,54 @@ storytelling document.
 ## Repository State
 
 - Repository: `yuchenzhu-research/ReTrace`
-- Active branch checked before this documentation reset:
-  `method/retrace-llm-directjudge`
-- Local HEAD checked before editing:
-  `20b48b919106959f6d66e882b540525c41046983`
-- Remote branch checked before editing:
-  `origin/method/retrace-llm-directjudge` at
-  `20b48b919106959f6d66e882b540525c41046983`
-- Verified starting commit message:
-  `Implement Stage AB-1A.5 auditability and protocol lock`
-- Working tree before editing: clean.
+- Active branch: `method/retrace-llm-directjudge`
+- AB-1B implementation commit:
+  `aa796f409fbdc8c9edbc48d3ac003b2f4b0baf7d`
+- AB-1B.1 repair: current local HEAD (to be updated after commit).
+- Working tree before repair: clean.
 
 ## Completed
-
-Completed before this documentation reset:
 
 - typed DPA execution spine on `main`;
 - AB-0 offline Stage A/B contracts, versioned prompts, DirectJudge sibling path,
   and mock/replay tests;
 - AB-0.5 fairness and deterministic-grounding hardening;
 - AB-1A offline controlled attribution harness;
-- AB-1A.5 offline auditability and comparison protocol lock.
+- AB-1A.5 offline auditability and comparison protocol lock;
+- AB-1B offline internal development-case evaluator and replay-only runner
+  (repaired in AB-1B.1).
 
-AB-1A.5 completed behavior includes:
-
-- `SharedCandidateView.new_evidence` is mandatory;
-- `view_fingerprint` is derived and hashes first-class controlled-input fields,
-  with metadata excluded;
-- traced Stage A edge-verifier output preserves `model_call_trace_id`, including
-  zero-edge invocations;
-- fixed supplied `DependencyEdge` anchor rejection fails loudly;
-- predicted evidence-edge admitted/rejected decisions and gate reasons are
-  retained in provenance;
-- DirectJudge prompt v1 explicitly identifies current/new evidence;
-- `model_revision_or_api_version` can be recorded in both method paths;
-- the protocol truthfully reports Stage A N calls versus Stage B one call in
-  the current controlled interface.
-
-AB-1B completed behavior includes:
+AB-1B repaired behavior includes:
 
 - 6 internal development controlled authorization cases covering
   direct supersession, prerequisite blocking, protected unrelated belief,
-  uncertainty, release/rollback recovery, and rejected proposal audit;
+  uncertainty, releases smoke, and rejected proposal audit;
 - case deserialization into valid `SharedCandidateView` objects with
   deterministic `view_fingerprint`;
 - replay/mock execution of both Stage A (`ControlledReTraceLLM`) and
   Stage B (`DirectJudgeLLM`) using `MockLLMProvider` — no live API calls;
-- controlled A/B metric computation: authorization accuracy, obsolete-misuse
-  count/rate, protected-belief preservation, rollback recovery, fine-grained
-  status breakdown, verdict breakdown, observed cost (calls/tokens/cache/latency
-  reported separately for each stage);
-- `Unsupported Revision Rate` deliberately deferred — requires explicit
-  annotation of valid defeat-path structure and unambiguous denominator;
-- parser-level and execution errors surfaced in results, not silently dropped;
-- replay-only runner (`scripts/run_controlled_ab_dev.py`) with prominent
-  disclaimers: internal protocol check only, not an official benchmark,
-  not strict call-budget matched, no claim that ReTrace outperforms DirectJudge;
+- observed cost uses `calls.get("total", 0)` not `sum(calls.values())`;
+  cost is captured even on method failure;
+- total annotated belief decisions computed independently of Stage A success;
+  conservative accuracy denominators;
+- rejected proposal audit triggers RevisionGate rejection, not parser failure;
+  provenance records `admitted=false` and stable `gate_reason`;
+- obsolete-memory misuse and protected-belief preservation computed
+  symmetrically for Stage A and Stage B;
+- rollback recovery NOT YET OPERATIONALIZED (fixed-view interface does not
+  preload prior accepted evidence-edge history);
+- `parse_errors` incremented only on actual parse failures;
+- `Unsupported Revision Rate` deliberately deferred;
+- replay-only runner with prominent disclaimers;
 - JSON-compatible per-instance results and aggregate summary;
 - output written to `outputs/controlled_ab_dev/` (gitignored);
-- 25 new tests in `tests/evaluation/test_controlled_ab_evaluator.py`.
+- 27 tests in `tests/evaluation/test_controlled_ab_evaluator.py`.
 
 ## Not Started
 
 Do not treat any of these as implemented:
 
+- AB-1C live provider adapter;
 - real provider integration;
 - live API calls;
 - official STALE or Memora evaluation;
@@ -79,13 +63,13 @@ Do not treat any of these as implemented:
 - Stage C training;
 - learned local typed-edge verifier results.
 
-## Verification From AB-1B
+## Verification From AB-1B.1 Repair
 
 - Compileall: passed with
   `env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src tests scripts`.
-- Pytest: `253 passed` with `.venv/bin/python -m pytest`.
+- Pytest: `255 passed` with `PYTHONPATH=. .venv/bin/pytest`.
 - Replay-only runner: passed with
-  `.venv/bin/python scripts/run_controlled_ab_dev.py`.
+  `PYTHONPATH=. .venv/bin/python scripts/run_controlled_ab_dev.py`.
 - Live API calls: none.
 - Official STALE/Memora evaluation: none.
 - DPA, RevisionGate, schemas, providers, cache, retrieval, backend, pipeline:

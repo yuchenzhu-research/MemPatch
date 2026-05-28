@@ -7,7 +7,7 @@ repository.
 
 Repository branch: `method/retrace-llm-directjudge`.
 
-Stage AB-1A.5 is complete. The repository has an offline, controlled Stage A/B
+Stages AB-1A.5 and AB-1B are complete. The repository has an offline, controlled Stage A/B
 authorization protocol with auditability and comparison-claim safeguards:
 
 - mandatory `SharedCandidateView.new_evidence`;
@@ -21,7 +21,17 @@ authorization protocol with auditability and comparison-claim safeguards:
 - honest reporting that Stage A currently makes N edge-verifier calls and
   Stage B currently makes one direct-adjudication call.
 
-This documentation reset does not begin AB-1B.
+AB-1B replay-only internal evaluation is complete with repaired semantics:
+
+- correct observed cost accounting using calls.get("total", 0);
+- conservative decision denominators independent of Stage A success;
+- gate-rejected proposal provenance (not parser-level rejection);
+- symmetric A/B diagnostic metrics for obsolete misuse and protected-belief
+  preservation;
+- rollback recovery NOT YET OPERATIONALIZED because the fixed-view controlled
+  interface does not preload prior accepted evidence-edge history;
+- honest parse_errors metric incremented only on actual parse failures;
+- no claim that ReTrace outperforms DirectJudge.
 
 ## Canonical Reading Order
 
@@ -113,13 +123,13 @@ work:
 
 ## Safe Next Boundary
 
-The next implementation stage, when explicitly requested later, is AB-1B:
-internal development-case evaluator and replay-only runner. Do not start it
-during documentation cleanup.
+The next implementation stage, when explicitly requested later, is AB-1C:
+one live provider adapter and tiny approved dev-only calls. Do not start it
+without explicit authorization.
 
 Still not started:
 
-- AB-1B internal development-case evaluator;
+- AB-1C live provider adapter;
 - real provider integration;
 - live API calls;
 - official STALE or Memora evaluation;

@@ -225,8 +225,8 @@
     },
     {
       "case_id": "dev_release_01",
-      "case_type": "release_rollback",
-      "description": "Later evidence releases a prior blocker so eligibility can recover.",
+      "case_type": "releases_smoke",
+      "description": "Later evidence releases a condition via a RELEASES edge under a fresh candidate view.",
       "query": "Can the user ride their bicycle?",
       "evidence_context": [
         {
@@ -283,7 +283,7 @@
       "stage_b_mock_verdicts": [
         {"belief_id": "b_cycles_to_work", "status": "USABLE", "rationale": "User has recovered and can cycle again.", "confidence": 0.90}
       ],
-      "annotations": {"protected_beliefs": [], "rollback_case": true}
+      "annotations": {"protected_beliefs": [], "rollback_case": false}
     },
     {
       "case_id": "dev_rejected_edge_01",
@@ -317,13 +317,21 @@
         }
       ],
       "candidate_replacement_beliefs": [],
-      "candidate_conditions_by_belief": [],
-      "dependency_edges_by_belief": [],
+      "candidate_conditions_by_belief": [
+        ["b_painter", [
+          {"condition_id": "c_art_supplies", "scope_id": "user1", "text": "The user has access to art supplies."}
+        ]]
+      ],
+      "dependency_edges_by_belief": [
+        ["b_painter", [
+          {"edge_id": "dep-b_painter-c_art_supplies", "belief_id": "b_painter", "condition_id": "c_art_supplies", "inducer": "internal_dev_fixture", "edge_type": "REQUIRES"}
+        ]]
+      ],
       "expected_stage_a_status": {"b_painter": "AUTHORIZED"},
       "expected_comparable_status": {"b_painter": "USABLE"},
       "stage_a_mock_edges": {
         "b_painter": [
-          {"edge_type": "BLOCKS", "target_id": "c_nonexistent", "rationale": "Hallucinated condition target.", "confidence": 0.40}
+          {"edge_type": "BLOCKS", "target_id": "c_art_supplies", "replacement_belief_id": "b_some_replacement", "rationale": "Hallucinated replacement belief on non-supersedes edge.", "confidence": 0.40}
         ]
       },
       "stage_b_mock_verdicts": [
