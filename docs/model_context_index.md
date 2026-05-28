@@ -149,7 +149,7 @@ Best for:
 Use this prompt skeleton:
 
 ```text
-You are working in ReTrace. First read AGENTS.md and docs/model_context_index.md.
+You are working in ReTrace. First read AGENTS.md, docs/refactor_plan_defeat_path.md, and docs/model_context_index.md.
 Then read the two source documents under docs/source_materials/.
 Follow docs/coding_contract.md and docs/implementation_status.md.
 Implement only the scoped task below.
