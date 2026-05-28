@@ -283,6 +283,7 @@ def validate_dataset_balance(cases: list[AmbiguityScopeCase]) -> None:
     for case in cases:
         if case.review_status not in {
             "model_drafted_pending_human_review",
+            "assistant_screened_pending_user_final_review",
             "human_reviewed_locked",
         }:
             raise ValueError(
