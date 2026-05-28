@@ -28,18 +28,18 @@ REPO_ROOT = Path(__file__).resolve().parents[1]
 load_dotenv(REPO_ROOT / ".env", override=False)
 
 from retracemem.adapters.memora_adapter import MemoraAdapter
+from retracemem.adapters.memora_oracle_diagnostic import build_oracle_diagnostic_view
 from retracemem.cache.jsonl_cache import JSONLCache
 from retracemem.evaluation.cost_accounting import CostAccounting
 from retracemem.evaluation.manifest import RunConfiguration, RunManifest, compute_file_sha256
 from retracemem.generation.answer_generator import PromptAnswerGenerator
 from retracemem.methods.batched_controlled_retrace import BatchedControlledReTraceLLM
-from retracemem.methods.contracts import SharedCandidateView
 from retracemem.methods.controlled_retrace import ControlledReTraceLLM
 from retracemem.methods.directjudge import DirectJudgeLLM
 from retracemem.providers.base import MockLLMProvider
+from retracemem.providers.budget import BudgetWrappedProvider, GlobalBudget
 from retracemem.providers.cached_client import CachedLLMClient
 from retracemem.providers.http_provider import HTTPLLMProvider
-from retracemem.schemas import BeliefNode, EvidenceNode
 from retracemem.verifier.prompt_batched_evidence_edge_verifier import PromptBatchedEvidenceEdgeVerifier
 from retracemem.verifier.prompt_evidence_edge_verifier import PromptEvidenceEdgeVerifier
 
@@ -62,59 +62,6 @@ PERSONAS = [
 
 
 # ---------------------------------------------------------------------------
-# Global shared budget
-# ---------------------------------------------------------------------------
-
-class GlobalBudget:
-    """Single shared budget across all provider calls."""
-
-    def __init__(self, max_calls: int, max_tokens: int) -> None:
-        self.max_calls = max_calls
-        self.max_tokens = max_tokens
-        self.calls = 0
-        self.tokens = 0
-        self.calls_by_stage: dict[str, int] = {}
-        self.tokens_by_stage: dict[str, int] = {}
-
-    def check(self) -> None:
-        if self.calls >= self.max_calls:
-            raise RuntimeError(f"Global call cap reached: {self.calls}/{self.max_calls}")
-        if self.tokens >= self.max_tokens:
-            raise RuntimeError(f"Global token cap reached: {self.tokens}/{self.max_tokens}")
-
-    def record(self, total_tokens: int, stage: str) -> None:
-        self.calls += 1
-        self.tokens += total_tokens
-        self.calls_by_stage[stage] = self.calls_by_stage.get(stage, 0) + 1
-        self.tokens_by_stage[stage] = self.tokens_by_stage.get(stage, 0) + total_tokens
-
-    def summary(self) -> dict[str, Any]:
-        return {
-            "total_calls": self.calls,
-            "total_tokens": self.tokens,
-            "max_calls": self.max_calls,
-            "max_tokens": self.max_tokens,
-            "calls_by_stage": dict(self.calls_by_stage),
-            "tokens_by_stage": dict(self.tokens_by_stage),
-        }
-
-
-class BudgetWrappedProvider:
-    """Wraps an inner provider and tracks against global budget."""
-
-    def __init__(self, inner: Any, budget: GlobalBudget, stage: str) -> None:
-        self.inner = inner
-        self.budget = budget
-        self.stage = stage
-
-    def generate(self, *args: Any, **kwargs: Any) -> Any:
-        self.budget.check()
-        trace = self.inner.generate(*args, **kwargs)
-        self.budget.record(trace.total_tokens, self.stage)
-        return trace
-
-
-# ---------------------------------------------------------------------------
 # Mock providers for replay mode
 # ---------------------------------------------------------------------------
 
@@ -128,136 +75,6 @@ class StageBMockProvider(MockLLMProvider):
         verdicts = [{"belief_id": bid, "status": "USABLE", "rationale": "mock replay"} for bid in belief_ids]
         self.default_response = json.dumps({"verdicts": verdicts})
         return super().generate(prompt, **kwargs)
-
-
-# ---------------------------------------------------------------------------
-# View construction
-# ---------------------------------------------------------------------------
-
-def flatten_values(value: Any) -> list[dict[str, Any]]:
-    items: list[dict[str, Any]] = []
-    if isinstance(value, dict):
-        if "value" in value:
-            items.append(value)
-        else:
-            for child in value.values():
-                items.extend(flatten_values(child))
-    elif isinstance(value, list):
-        for child in value:
-            items.extend(flatten_values(child))
-    return items
-
-
-def evidence_text_for_sessions(
-    sessions: list[dict[str, Any]], session_ids: set[int],
-) -> str:
-    seen_texts: set[str] = set()
-    parts: list[str] = []
-    for session in sessions:
-        sid = session.get("session_id")
-        try:
-            sid_int = int(sid)
-        except Exception:
-            sid_int = -1
-        if sid_int not in session_ids:
-            continue
-        turns: list[str] = []
-        for turn in session.get("conversation", []):
-            if isinstance(turn, dict):
-                speaker = turn.get("speaker") or turn.get("role") or "unknown"
-                message = turn.get("message") or turn.get("content") or ""
-                if message:
-                    turns.append(f"{speaker}: {message}")
-        if turns:
-            block = f"session {sid}: " + "\n".join(turns)
-            if block not in seen_texts:
-                seen_texts.add(block)
-                parts.append(block)
-    return "\n\n".join(parts)
-
-
-def build_view(
-    period: str, persona: str, question: dict[str, Any],
-    sessions: list[dict[str, Any]],
-) -> tuple[SharedCandidateView, dict[str, Any]]:
-    qid = str(question.get("question_id"))
-    memory_items = flatten_values(question.get("memory_evidence", {}))
-    forgetting_items = flatten_values(question.get("forgetting_evidence", {}))
-    session_ids = {
-        int(item.get("session_id"))
-        for item in memory_items + forgetting_items
-        if str(item.get("session_id", "")).isdigit()
-    }
-    context_text = evidence_text_for_sessions(sessions, session_ids)
-    if not context_text:
-        context_text = json.dumps(
-            {"memory_evidence": question.get("memory_evidence"),
-             "forgetting_evidence": question.get("forgetting_evidence")},
-            ensure_ascii=False,
-        )
-    evidence = EvidenceNode(
-        evidence_id=f"memora:{period}:{persona}:{qid}:evidence",
-        session_id=f"{period}:{persona}",
-        timestamp=question.get("question_date"),
-        text=context_text,
-        source_dataset="memora",
-        source_pointer=f"{period}/{persona}/{qid}",
-    )
-    beliefs: list[BeliefNode] = []
-    for idx, item in enumerate(memory_items):
-        val = str(item.get("value") or "").strip()
-        if val:
-            beliefs.append(BeliefNode(
-                belief_id=f"b:{period}:{persona}:{qid}:memory:{idx}",
-                proposition=val,
-                source_evidence_ids=(evidence.evidence_id,),
-                confidence=1.0,
-                metadata={"memora_role": "memory_presence",
-                          "session_id": item.get("session_id"),
-                          "question_date": question.get("question_date")},
-            ))
-    for idx, item in enumerate(forgetting_items):
-        val = str(item.get("value") or "").strip()
-        if val:
-            beliefs.append(BeliefNode(
-                belief_id=f"b:{period}:{persona}:{qid}:forget:{idx}",
-                proposition=val,
-                source_evidence_ids=(evidence.evidence_id,),
-                confidence=1.0,
-                metadata={"memora_role": "forgetting_absence",
-                          "session_id": item.get("session_id"),
-                          "question_date": question.get("question_date")},
-            ))
-    if not beliefs:
-        beliefs.append(BeliefNode(
-            belief_id=f"b:{period}:{persona}:{qid}:fallback",
-            proposition=str(question.get("question") or ""),
-            source_evidence_ids=(evidence.evidence_id,),
-            confidence=0.5,
-            metadata={"memora_role": "fallback",
-                      "question_date": question.get("question_date")},
-        ))
-    view = SharedCandidateView(
-        instance_id=f"memora:{period}:{persona}:{qid}",
-        query_id=f"memora:{period}:{persona}:{qid}",
-        query=str(question.get("question") or ""),
-        evidence_context=(evidence,),
-        new_evidence=evidence,
-        candidate_beliefs=tuple(beliefs),
-        candidate_replacement_beliefs=(),
-        candidate_conditions_by_belief=tuple(
-            (b.belief_id, ()) for b in beliefs
-        ),
-        dependency_edges_by_belief=tuple(
-            (b.belief_id, ()) for b in beliefs
-        ),
-    )
-    view_meta = {
-        "candidate_belief_count": len(beliefs),
-        "evidence_chars": len(context_text),
-        "selected_sessions": len(session_ids),
-    }
-    return view, view_meta
 
 
 # ---------------------------------------------------------------------------
@@ -504,7 +321,7 @@ def main() -> None:
     for persona, sessions, questions in selected:
         for question in questions:
             qid = str(question.get("question_id"))
-            view, view_meta = build_view(
+            view, view_meta = build_oracle_diagnostic_view(
                 args.period, persona, question, sessions,
             )
             row: dict[str, Any] = {
