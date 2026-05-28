@@ -21,20 +21,34 @@ immutable EvidenceNode ledger
 
 ## Current Status
 
-The active branch is `integration/retrace-v1-complete`.
+The active branch for the current feasibility packet is
+`experiment/retrace-ab-feasibility`, created from
+`integration/retrace-v1-complete` @
+`5e8d6e2d1a494d572d6d0fa929595bb198154390`.
 
-Completed through V1-Complete/AB-3:
+Validated so far:
 
 - typed DPA execution spine;
 - offline Stage A/B contracts, prompts, sibling DirectJudge path, and mock/replay tests;
 - fairness and deterministic-grounding hardening;
 - offline controlled attribution harness;
 - auditability and comparison-protocol lock;
-- replay-only internal evaluation;
-- real provider adaptation, budget caps, and run manifest configuration;
-- secondary end-to-end multi-step internal evaluation;
-- official STALE and Memora evaluation adapter runners;
-- Stage C go/no-go deferral report (`docs/stage_c_report.md`).
+- AB-1B replay-only internal development evaluation.
+
+Implemented scaffolding that must not be overclaimed:
+
+- provider/cache/manifest infrastructure;
+- secondary end-to-end development runner;
+- STALE and Memora adapter smoke/dry-run entrypoints;
+- Stage C deferral report (`docs/stage_c_report.md`).
+
+No current repository result establishes:
+
+- Stage A superiority over Stage B;
+- verified live provider performance;
+- official STALE or Memora scores;
+- paper-facing retrieval validity;
+- Stage C training labels.
 
 ## Canonical Docs
 
@@ -61,21 +75,18 @@ env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src t
 .venv/bin/python scripts/run_end_to_end_dev.py
 ```
 
-### Run Official STALE Evaluation
+### Run STALE Adapter Smoke/Dry-Run
 ```bash
-# Offline Mock Evaluation
 .venv/bin/python scripts/run_stale_official_eval.py --limit 1
-
-# Live Evaluation (requires OPENAI_API_KEY)
-.venv/bin/python scripts/run_stale_official_eval.py --live --limit 5
 ```
 
-### Run Official Memora Evaluation
+This is not an official STALE benchmark result unless a later frozen evaluation
+task explicitly authorizes and validates it.
+
+### Run Memora Adapter Smoke/Dry-Run
 ```bash
-# Offline Mock Evaluation
 .venv/bin/python scripts/run_memora_official_eval.py --limit 1
-
-# Live Evaluation (requires OPENAI_API_KEY)
-.venv/bin/python scripts/run_memora_official_eval.py --live --limit 3
 ```
 
+This is not an official Memora benchmark result unless a later frozen evaluation
+task explicitly authorizes and validates it.

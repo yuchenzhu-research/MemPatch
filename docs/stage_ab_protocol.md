@@ -188,15 +188,18 @@ Forbidden before future evidence exists:
 - superiority over DirectJudge, CUPMem, STALE baselines, Memora systems, or any
   external method.
 
-## Future Boundaries
+## Current and Future Boundaries
 
-The following are future or deferred only. They do not start automatically:
+The immediate post-v3 boundary is an internal Ambiguity-and-Scope feasibility
+diagnostic on fixed `SharedCandidateView` inputs, after provider and smoke-run
+safety repairs. It may use tiny approved live development calls only if
+credentials and safety caps are valid.
 
-- AB-1C: one live provider adapter and tiny approved dev-only calls.
-- AB-2: secondary end-to-end internal pipeline.
-- AB-3: frozen official evaluation.
-- Stage C: learned local typed-edge verifier using the same DPA core.
+The following remain future or deferred only. They do not start automatically:
 
-No live API call, official STALE/Memora evaluation, provider integration,
-end-to-end experiment wiring, or Stage C work is part of AB-1B or this
-repair task.
+- secondary end-to-end internal pipeline as paper-facing evidence;
+- frozen official STALE/Memora evaluation;
+- Stage C learned local typed-edge verifier using the same DPA core.
+
+No official STALE/Memora evaluation, full benchmark run, provider-generalization
+project, or Stage C work is part of the immediate feasibility packet.
