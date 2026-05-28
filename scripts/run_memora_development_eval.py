@@ -1,4 +1,13 @@
 #!/usr/bin/env python3
+"""Memora Oracle-Conditioned Authorization Diagnostic runner.
+
+MEMORA ORACLE-CONDITIONED AUTHORIZATION DIAGNOSTIC ONLY —
+NOT OFFICIAL END-TO-END MEMORA RESULT.
+
+Candidate beliefs originate from Memora evaluation annotations
+(memory_evidence / forgetting_evidence), not from end-to-end memory
+extraction.  Do not interpret output as a paper result.
+"""
 from __future__ import annotations
 
 import argparse
@@ -23,6 +32,7 @@ from retracemem.cache.jsonl_cache import JSONLCache
 from retracemem.evaluation.cost_accounting import CostAccounting
 from retracemem.evaluation.manifest import RunConfiguration, RunManifest, compute_file_sha256
 from retracemem.generation.answer_generator import PromptAnswerGenerator
+from retracemem.methods.batched_controlled_retrace import BatchedControlledReTraceLLM
 from retracemem.methods.contracts import SharedCandidateView
 from retracemem.methods.controlled_retrace import ControlledReTraceLLM
 from retracemem.methods.directjudge import DirectJudgeLLM
@@ -30,9 +40,13 @@ from retracemem.providers.base import MockLLMProvider
 from retracemem.providers.cached_client import CachedLLMClient
 from retracemem.providers.http_provider import HTTPLLMProvider
 from retracemem.schemas import BeliefNode, EvidenceNode
+from retracemem.verifier.prompt_batched_evidence_edge_verifier import PromptBatchedEvidenceEdgeVerifier
 from retracemem.verifier.prompt_evidence_edge_verifier import PromptEvidenceEdgeVerifier
 
-DISCLAIMER = "MEMORA DEVELOPMENT EVALUATION ONLY — NOT FINAL PAPER RESULT."
+DISCLAIMER = (
+    "MEMORA ORACLE-CONDITIONED AUTHORIZATION DIAGNOSTIC ONLY — "
+    "NOT OFFICIAL END-TO-END MEMORA RESULT."
+)
 PERSONAS = [
     "academic_researcher",
     "business_executive",
@@ -47,24 +61,62 @@ PERSONAS = [
 ]
 
 
-class CountingProvider:
-    def __init__(self, inner: Any, max_calls: int, max_tokens: int) -> None:
-        self.inner = inner
+# ---------------------------------------------------------------------------
+# Global shared budget
+# ---------------------------------------------------------------------------
+
+class GlobalBudget:
+    """Single shared budget across all provider calls."""
+
+    def __init__(self, max_calls: int, max_tokens: int) -> None:
         self.max_calls = max_calls
         self.max_tokens = max_tokens
         self.calls = 0
         self.tokens = 0
+        self.calls_by_stage: dict[str, int] = {}
+        self.tokens_by_stage: dict[str, int] = {}
+
+    def check(self) -> None:
+        if self.calls >= self.max_calls:
+            raise RuntimeError(f"Global call cap reached: {self.calls}/{self.max_calls}")
+        if self.tokens >= self.max_tokens:
+            raise RuntimeError(f"Global token cap reached: {self.tokens}/{self.max_tokens}")
+
+    def record(self, total_tokens: int, stage: str) -> None:
+        self.calls += 1
+        self.tokens += total_tokens
+        self.calls_by_stage[stage] = self.calls_by_stage.get(stage, 0) + 1
+        self.tokens_by_stage[stage] = self.tokens_by_stage.get(stage, 0) + total_tokens
+
+    def summary(self) -> dict[str, Any]:
+        return {
+            "total_calls": self.calls,
+            "total_tokens": self.tokens,
+            "max_calls": self.max_calls,
+            "max_tokens": self.max_tokens,
+            "calls_by_stage": dict(self.calls_by_stage),
+            "tokens_by_stage": dict(self.tokens_by_stage),
+        }
+
+
+class BudgetWrappedProvider:
+    """Wraps an inner provider and tracks against global budget."""
+
+    def __init__(self, inner: Any, budget: GlobalBudget, stage: str) -> None:
+        self.inner = inner
+        self.budget = budget
+        self.stage = stage
 
     def generate(self, *args: Any, **kwargs: Any) -> Any:
-        if self.calls >= self.max_calls:
-            raise RuntimeError(f"Hard live call cap reached: {self.max_calls}")
-        if self.tokens >= self.max_tokens:
-            raise RuntimeError(f"Hard live token cap reached: {self.max_tokens}")
+        self.budget.check()
         trace = self.inner.generate(*args, **kwargs)
-        self.calls += 1
-        self.tokens += trace.total_tokens
+        self.budget.record(trace.total_tokens, self.stage)
         return trace
 
+
+# ---------------------------------------------------------------------------
+# Mock providers for replay mode
+# ---------------------------------------------------------------------------
 
 class StageBMockProvider(MockLLMProvider):
     def generate(self, prompt: str, **kwargs: Any) -> Any:
@@ -77,6 +129,10 @@ class StageBMockProvider(MockLLMProvider):
         self.default_response = json.dumps({"verdicts": verdicts})
         return super().generate(prompt, **kwargs)
 
+
+# ---------------------------------------------------------------------------
+# View construction
+# ---------------------------------------------------------------------------
 
 def flatten_values(value: Any) -> list[dict[str, Any]]:
     items: list[dict[str, Any]] = []
@@ -92,8 +148,11 @@ def flatten_values(value: Any) -> list[dict[str, Any]]:
     return items
 
 
-def evidence_text_for_sessions(sessions: list[dict[str, Any]], session_ids: set[int]) -> str:
-    parts = []
+def evidence_text_for_sessions(
+    sessions: list[dict[str, Any]], session_ids: set[int],
+) -> str:
+    seen_texts: set[str] = set()
+    parts: list[str] = []
     for session in sessions:
         sid = session.get("session_id")
         try:
@@ -102,7 +161,7 @@ def evidence_text_for_sessions(sessions: list[dict[str, Any]], session_ids: set[
             sid_int = -1
         if sid_int not in session_ids:
             continue
-        turns = []
+        turns: list[str] = []
         for turn in session.get("conversation", []):
             if isinstance(turn, dict):
                 speaker = turn.get("speaker") or turn.get("role") or "unknown"
@@ -110,18 +169,32 @@ def evidence_text_for_sessions(sessions: list[dict[str, Any]], session_ids: set[
                 if message:
                     turns.append(f"{speaker}: {message}")
         if turns:
-            parts.append(f"session {sid}: " + "\n".join(turns))
+            block = f"session {sid}: " + "\n".join(turns)
+            if block not in seen_texts:
+                seen_texts.add(block)
+                parts.append(block)
     return "\n\n".join(parts)
 
 
-def build_view(period: str, persona: str, question: dict[str, Any], sessions: list[dict[str, Any]]) -> SharedCandidateView:
+def build_view(
+    period: str, persona: str, question: dict[str, Any],
+    sessions: list[dict[str, Any]],
+) -> tuple[SharedCandidateView, dict[str, Any]]:
     qid = str(question.get("question_id"))
     memory_items = flatten_values(question.get("memory_evidence", {}))
     forgetting_items = flatten_values(question.get("forgetting_evidence", {}))
-    session_ids = {int(item.get("session_id")) for item in memory_items + forgetting_items if str(item.get("session_id", "")).isdigit()}
+    session_ids = {
+        int(item.get("session_id"))
+        for item in memory_items + forgetting_items
+        if str(item.get("session_id", "")).isdigit()
+    }
     context_text = evidence_text_for_sessions(sessions, session_ids)
     if not context_text:
-        context_text = json.dumps({"memory_evidence": question.get("memory_evidence"), "forgetting_evidence": question.get("forgetting_evidence")}, ensure_ascii=False)
+        context_text = json.dumps(
+            {"memory_evidence": question.get("memory_evidence"),
+             "forgetting_evidence": question.get("forgetting_evidence")},
+            ensure_ascii=False,
+        )
     evidence = EvidenceNode(
         evidence_id=f"memora:{period}:{persona}:{qid}:evidence",
         session_id=f"{period}:{persona}",
@@ -130,18 +203,41 @@ def build_view(period: str, persona: str, question: dict[str, Any], sessions: li
         source_dataset="memora",
         source_pointer=f"{period}/{persona}/{qid}",
     )
-    beliefs = []
+    beliefs: list[BeliefNode] = []
     for idx, item in enumerate(memory_items):
         val = str(item.get("value") or "").strip()
         if val:
-            beliefs.append(BeliefNode(belief_id=f"b:{period}:{persona}:{qid}:memory:{idx}", proposition=val, source_evidence_ids=(evidence.evidence_id,), confidence=1.0, metadata={"memora_role": "memory_presence", "session_id": item.get("session_id"), "question_date": question.get("question_date")}))
+            beliefs.append(BeliefNode(
+                belief_id=f"b:{period}:{persona}:{qid}:memory:{idx}",
+                proposition=val,
+                source_evidence_ids=(evidence.evidence_id,),
+                confidence=1.0,
+                metadata={"memora_role": "memory_presence",
+                          "session_id": item.get("session_id"),
+                          "question_date": question.get("question_date")},
+            ))
     for idx, item in enumerate(forgetting_items):
         val = str(item.get("value") or "").strip()
         if val:
-            beliefs.append(BeliefNode(belief_id=f"b:{period}:{persona}:{qid}:forget:{idx}", proposition=val, source_evidence_ids=(evidence.evidence_id,), confidence=1.0, metadata={"memora_role": "forgetting_absence", "session_id": item.get("session_id"), "question_date": question.get("question_date")}))
+            beliefs.append(BeliefNode(
+                belief_id=f"b:{period}:{persona}:{qid}:forget:{idx}",
+                proposition=val,
+                source_evidence_ids=(evidence.evidence_id,),
+                confidence=1.0,
+                metadata={"memora_role": "forgetting_absence",
+                          "session_id": item.get("session_id"),
+                          "question_date": question.get("question_date")},
+            ))
     if not beliefs:
-        beliefs.append(BeliefNode(belief_id=f"b:{period}:{persona}:{qid}:fallback", proposition=str(question.get("question") or ""), source_evidence_ids=(evidence.evidence_id,), confidence=0.5, metadata={"memora_role": "fallback", "question_date": question.get("question_date")}))
-    return SharedCandidateView(
+        beliefs.append(BeliefNode(
+            belief_id=f"b:{period}:{persona}:{qid}:fallback",
+            proposition=str(question.get("question") or ""),
+            source_evidence_ids=(evidence.evidence_id,),
+            confidence=0.5,
+            metadata={"memora_role": "fallback",
+                      "question_date": question.get("question_date")},
+        ))
+    view = SharedCandidateView(
         instance_id=f"memora:{period}:{persona}:{qid}",
         query_id=f"memora:{period}:{persona}:{qid}",
         query=str(question.get("question") or ""),
@@ -149,34 +245,154 @@ def build_view(period: str, persona: str, question: dict[str, Any], sessions: li
         new_evidence=evidence,
         candidate_beliefs=tuple(beliefs),
         candidate_replacement_beliefs=(),
-        candidate_conditions_by_belief=tuple((belief.belief_id, ()) for belief in beliefs),
-        dependency_edges_by_belief=tuple((belief.belief_id, ()) for belief in beliefs),
+        candidate_conditions_by_belief=tuple(
+            (b.belief_id, ()) for b in beliefs
+        ),
+        dependency_edges_by_belief=tuple(
+            (b.belief_id, ()) for b in beliefs
+        ),
+    )
+    view_meta = {
+        "candidate_belief_count": len(beliefs),
+        "evidence_chars": len(context_text),
+        "selected_sessions": len(session_ids),
+    }
+    return view, view_meta
+
+
+# ---------------------------------------------------------------------------
+# Progress helpers
+# ---------------------------------------------------------------------------
+
+def _progress(
+    tag: str, persona: str, qid: str, budget: GlobalBudget, started: float,
+) -> None:
+    elapsed = time.time() - started
+    print(
+        f"[{tag}] persona={persona} qid={qid} "
+        f"calls={budget.calls}/{budget.max_calls} "
+        f"tokens={budget.tokens}/{budget.max_tokens} "
+        f"elapsed={elapsed:.1f}s",
+        flush=True,
     )
 
 
-def make_client(mode: str, cache_path: str, max_calls: int, max_tokens: int, *, stage: str) -> tuple[CachedLLMClient, CountingProvider | None]:
+# ---------------------------------------------------------------------------
+# Client factories
+# ---------------------------------------------------------------------------
+
+def make_client(
+    mode: str, cache_path: str, budget: GlobalBudget, stage: str,
+    timeout: float,
+) -> CachedLLMClient:
     if mode == "live-dev":
-        counter = CountingProvider(HTTPLLMProvider(), max_calls=max_calls, max_tokens=max_tokens)
-        return CachedLLMClient(JSONLCache(cache_path), counter, CostAccounting()), counter
-    provider = StageBMockProvider(default_response='{"verdicts": []}') if stage == "B" else MockLLMProvider(default_response='{"edges": []}')
-    return CachedLLMClient(JSONLCache(cache_path), provider, CostAccounting()), None
+        inner = HTTPLLMProvider(timeout=timeout)
+        wrapped = BudgetWrappedProvider(inner, budget, stage)
+        return CachedLLMClient(JSONLCache(cache_path), wrapped, CostAccounting())
+    if stage == "stage_b":
+        provider = StageBMockProvider(default_response='{"verdicts": []}')
+    else:
+        provider = MockLLMProvider(default_response='{"edges": []}')
+    return CachedLLMClient(JSONLCache(cache_path), provider, CostAccounting())
 
 
-def make_answer_client(mode: str, cache_path: str, max_calls: int, max_tokens: int) -> tuple[CachedLLMClient, CountingProvider | None]:
+def make_answer_client(
+    mode: str, cache_path: str, budget: GlobalBudget, stage: str,
+    timeout: float,
+) -> CachedLLMClient:
     if mode == "live-dev":
-        counter = CountingProvider(HTTPLLMProvider(), max_calls=max_calls, max_tokens=max_tokens)
-        return CachedLLMClient(JSONLCache(cache_path), counter, CostAccounting()), counter
+        inner = HTTPLLMProvider(timeout=timeout)
+        wrapped = BudgetWrappedProvider(inner, budget, stage)
+        return CachedLLMClient(JSONLCache(cache_path), wrapped, CostAccounting())
     provider = MockLLMProvider(default_response="mock answer")
-    return CachedLLMClient(JSONLCache(cache_path), provider, CostAccounting()), None
+    return CachedLLMClient(JSONLCache(cache_path), provider, CostAccounting())
 
 
-def summarize_cost(client: CachedLLMClient, counter: CountingProvider | None) -> dict[str, Any]:
-    cost = client.cost_accountant.to_dict()
-    return {"cost": cost, "outbound_calls": counter.calls if counter else 0, "outbound_tokens": counter.tokens if counter else 0}
+# ---------------------------------------------------------------------------
+# Report helpers
+# ---------------------------------------------------------------------------
 
+def _write_report(
+    out: Path, rows: list[dict[str, Any]], errors: list[str],
+    args: Any, budget: GlobalBudget, verifier_hash: str, answer_hash: str,
+    personas: list[str],
+) -> tuple[Path, Path]:
+    report = {
+        "disclaimer": DISCLAIMER,
+        "oracle_conditioned_candidates": True,
+        "official_end_to_end_result": False,
+        "candidate_source": "memora_evaluation_annotations",
+        "scoring": "pending",
+        "mode": args.mode,
+        "stage_a_execution": args.stage_a_execution,
+        "provider": args.provider,
+        "model": args.model,
+        "stage_a_prompt_version": args.stage_a_prompt_version,
+        "http_timeout_seconds": args.http_timeout_seconds,
+        "period": args.period,
+        "personas": personas,
+        "questions_executed": len(rows),
+        "errors": errors,
+        "global_budget": budget.summary(),
+        "rows": rows,
+    }
+    report_path = out / "memora_development_report.json"
+    report_path.write_text(
+        json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8",
+    )
+    data_files = [
+        Path(args.reference_root) / "data" / args.period / p
+        / f"evaluation_questions_{p}.json"
+        for p in personas
+    ]
+    data_checksum = hashlib.sha256(
+        "".join(
+            compute_file_sha256(str(p)) for p in data_files if p.exists()
+        ).encode("utf-8")
+    ).hexdigest()
+    memora_sha = subprocess.run(
+        ["git", "-C", "reference/Memora", "rev-parse", "HEAD"],
+        text=True, capture_output=True, check=False,
+    ).stdout.strip()
+    manifest = RunManifest(
+        config=RunConfiguration(
+            run_id=f"memora-diag-{uuid.uuid4()}",
+            stage_and_method_name="Memora-oracle-conditioned-StageAB",
+            provider_name=args.provider,
+            model_id=args.model,
+            temperature=0.0,
+            prompt_hashes={"stage_a": verifier_hash, "answer": answer_hash},
+            cache_path=str(out / "caches"),
+            dataset_checksum=data_checksum,
+            metadata={
+                "memora_upstream_sha": memora_sha,
+                "period": args.period,
+                "personas": personas,
+                "questions_executed": len(rows),
+                "oracle_conditioned_candidates": True,
+                "official_end_to_end_result": False,
+                "stage_a_execution": args.stage_a_execution,
+            },
+        ),
+        aggregate_cost=budget.summary(),
+        instance_count=len(rows),
+        output_path=str(report_path),
+        errors_or_retries=[{"error": e} for e in errors],
+        metadata={"official_end_to_end_result": False},
+    )
+    manifest_path = out / "memora_development_manifest.json"
+    manifest.save(str(manifest_path))
+    return report_path, manifest_path
+
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Memora development Stage A/B runner.")
+    parser = argparse.ArgumentParser(
+        description="Memora Oracle-Conditioned Authorization Diagnostic.",
+    )
     parser.add_argument("--mode", choices=("replay", "live-dev"), default="replay")
     parser.add_argument("--live-approved", action="store_true")
     parser.add_argument("--reference-root", default="reference/Memora")
@@ -184,81 +400,197 @@ def main() -> None:
     parser.add_argument("--persona", default="academic_researcher")
     parser.add_argument("--all-personas", action="store_true")
     parser.add_argument("--limit-questions", type=int, default=5)
-    parser.add_argument("--provider", default="gemini")
-    parser.add_argument("--model", default="gemini-3.5-flash")
-    parser.add_argument("--stage-a-prompt-version", default="evidence_edge_prediction_v1")
-    parser.add_argument("--max-calls", type=int, default=2000)
-    parser.add_argument("--max-tokens", type=int, default=4000000)
-    parser.add_argument("--output-dir", default="outputs/memora_development_eval")
+    parser.add_argument("--provider", default="siliconflow")
+    parser.add_argument("--model", default="deepseek-ai/DeepSeek-V4-Pro")
+    parser.add_argument(
+        "--stage-a-execution", choices=("per-belief", "batched"),
+        default="batched",
+    )
+    parser.add_argument(
+        "--stage-a-prompt-version",
+        default="evidence_edge_prediction_batch_v1",
+    )
+    parser.add_argument("--max-calls", type=int, default=20)
+    parser.add_argument("--max-tokens", type=int, default=200000)
+    parser.add_argument("--http-timeout-seconds", type=float, default=120.0)
+    parser.add_argument(
+        "--output-dir", default="outputs/memora_oracle_diag",
+    )
     args = parser.parse_args()
+
     if args.mode == "live-dev" and not args.live_approved:
         raise SystemExit("Refusing live execution without --live-approved")
     out = Path(args.output_dir)
-    if args.mode == "live-dev" and ((out / "memora_development_report.json").exists() or (out / "memora_development_manifest.json").exists()):
+    if args.mode == "live-dev" and (
+        (out / "memora_development_report.json").exists()
+        or (out / "memora_development_manifest.json").exists()
+    ):
         raise SystemExit("Refusing to overwrite existing live output directory")
     out.mkdir(parents=True, exist_ok=True)
+
     adapter = MemoraAdapter(args.reference_root)
     personas = PERSONAS if args.all_personas else [args.persona]
+
     selected: list[tuple[str, list[dict[str, Any]], list[dict[str, Any]]]] = []
     for persona in personas:
         sessions = adapter.load_sessions(args.period, persona)
-        questions = adapter.load_evaluation_questions(args.period, persona)[: max(args.limit_questions, 0)]
+        questions = adapter.load_evaluation_questions(
+            args.period, persona,
+        )[: max(args.limit_questions, 0)]
         if questions:
             selected.append((persona, sessions, questions))
-    total_questions = sum(len(qs) for _persona, _sessions, qs in selected)
-    print(f"[PLAN] {DISCLAIMER} period={args.period} personas={len(selected)} questions={total_questions} provider={args.provider} model={args.model}", flush=True)
-    cache_prefix = out / f"cache_{uuid.uuid4()}"
-    client_a, counter_a = make_client(args.mode, str(cache_prefix) + "_stage_a.jsonl", args.max_calls, args.max_tokens, stage="A")
-    client_b, counter_b = make_client(args.mode, str(cache_prefix) + "_stage_b.jsonl", args.max_calls, args.max_tokens, stage="B")
-    answer_a, answer_counter_a = make_answer_client(args.mode, str(cache_prefix) + "_answer_a.jsonl", args.max_calls, args.max_tokens)
-    answer_b, answer_counter_b = make_answer_client(args.mode, str(cache_prefix) + "_answer_b.jsonl", args.max_calls, args.max_tokens)
-    verifier = PromptEvidenceEdgeVerifier(client=client_a, model_id=args.model, provider=args.provider, prompt_version=args.stage_a_prompt_version)
-    stage_a_runner = ControlledReTraceLLM(edge_verifier=verifier, client=client_a)
-    stage_b_runner = DirectJudgeLLM(client=client_b, model_id=args.model, provider=args.provider)
-    gen_a = PromptAnswerGenerator(answer_a)
-    gen_b = PromptAnswerGenerator(answer_b)
-    rows = []
-    errors = []
+
+    total_questions = sum(len(qs) for _, _, qs in selected)
+    print(
+        f"[PLAN] {DISCLAIMER}\n"
+        f"  period={args.period} personas={len(selected)} "
+        f"questions={total_questions}\n"
+        f"  provider={args.provider} model={args.model}\n"
+        f"  stage_a_execution={args.stage_a_execution} "
+        f"timeout={args.http_timeout_seconds}s\n"
+        f"  max_calls={args.max_calls} max_tokens={args.max_tokens}",
+        flush=True,
+    )
+
+    budget = GlobalBudget(max_calls=args.max_calls, max_tokens=args.max_tokens)
+    cache_dir = out / "caches"
+    cache_dir.mkdir(parents=True, exist_ok=True)
+    cache_prefix = str(cache_dir / f"c_{uuid.uuid4()}")
+
+    timeout = args.http_timeout_seconds
+    client_a = make_client(
+        args.mode, cache_prefix + "_stage_a.jsonl", budget, "stage_a", timeout,
+    )
+    client_b = make_client(
+        args.mode, cache_prefix + "_stage_b.jsonl", budget, "stage_b", timeout,
+    )
+    client_ans_a = make_answer_client(
+        args.mode, cache_prefix + "_answer_a.jsonl", budget, "answer_a", timeout,
+    )
+    client_ans_b = make_answer_client(
+        args.mode, cache_prefix + "_answer_b.jsonl", budget, "answer_b", timeout,
+    )
+
+    if args.stage_a_execution == "batched":
+        batched_verifier = PromptBatchedEvidenceEdgeVerifier(
+            client=client_a, model_id=args.model, provider=args.provider,
+            prompt_version=args.stage_a_prompt_version,
+        )
+        stage_a_runner = BatchedControlledReTraceLLM(
+            edge_verifier=batched_verifier, client=client_a,
+        )
+        verifier_hash = batched_verifier._template_hash
+    else:
+        per_belief_verifier = PromptEvidenceEdgeVerifier(
+            client=client_a, model_id=args.model, provider=args.provider,
+            prompt_version=args.stage_a_prompt_version,
+        )
+        stage_a_runner = ControlledReTraceLLM(
+            edge_verifier=per_belief_verifier, client=client_a,
+        )
+        verifier_hash = per_belief_verifier._template_hash
+
+    stage_b_runner = DirectJudgeLLM(
+        client=client_b, model_id=args.model, provider=args.provider,
+    )
+    gen_a = PromptAnswerGenerator(client_ans_a)
+    gen_b = PromptAnswerGenerator(client_ans_b)
+
+    rows: list[dict[str, Any]] = []
+    errors: list[str] = []
     done = 0
     started = time.time()
+
     for persona, sessions, questions in selected:
         for question in questions:
             qid = str(question.get("question_id"))
-            view = build_view(args.period, persona, question, sessions)
-            row: dict[str, Any] = {"period": args.period, "persona": persona, "question_id": qid, "question": view.query, "evaluation": question.get("evaluation", {}), "stage_a": {}, "stage_b": {}}
+            view, view_meta = build_view(
+                args.period, persona, question, sessions,
+            )
+            row: dict[str, Any] = {
+                "period": args.period,
+                "persona": persona,
+                "question_id": qid,
+                "question": view.query,
+                "evaluation": question.get("evaluation", {}),
+                "view_meta": view_meta,
+                "stage_a": {},
+                "stage_b": {},
+            }
+
+            _progress("STAGE_A_START", persona, qid, budget, started)
             try:
                 res_a = stage_a_runner.run(view)
-                basis_a = [belief for belief in view.candidate_beliefs if belief.belief_id in res_a.authorized_belief_ids]
-                ans_a = gen_a.generate_answer(view.query, list(basis_a), model_id=args.model, provider=args.provider)
-                row["stage_a"] = {"authorized_belief_ids": list(res_a.authorized_belief_ids), "excluded_belief_ids": list(res_a.excluded_belief_ids), "answer": ans_a, "provenance": res_a.provenance}
+                _progress("STAGE_A_DONE", persona, qid, budget, started)
+                basis_a = [
+                    b for b in view.candidate_beliefs
+                    if b.belief_id in res_a.authorized_belief_ids
+                ]
+                _progress("ANSWER_A_START", persona, qid, budget, started)
+                ans_a = gen_a.generate_answer(
+                    view.query, list(basis_a),
+                    model_id=args.model, provider=args.provider,
+                )
+                _progress("ANSWER_A_DONE", persona, qid, budget, started)
+                row["stage_a"] = {
+                    "authorized_belief_ids": list(res_a.authorized_belief_ids),
+                    "excluded_belief_ids": list(res_a.excluded_belief_ids),
+                    "answer": ans_a,
+                    "provenance": res_a.provenance,
+                }
             except Exception as exc:
                 msg = f"Stage A {persona}/{qid}: {type(exc).__name__}: {exc}"
                 row["stage_a"] = {"error": msg}
                 errors.append(msg)
+                _progress("STAGE_A_ERROR", persona, qid, budget, started)
+
+            _progress("STAGE_B_START", persona, qid, budget, started)
             try:
                 res_b = stage_b_runner.judge(view)
-                basis_b = [belief for belief in view.candidate_beliefs if belief.belief_id in res_b.authorized_belief_ids]
-                ans_b = gen_b.generate_answer(view.query, list(basis_b), model_id=args.model, provider=args.provider)
-                row["stage_b"] = {"authorized_belief_ids": list(res_b.authorized_belief_ids), "excluded_belief_ids": list(res_b.excluded_belief_ids), "answer": ans_b, "provenance": res_b.provenance}
+                _progress("STAGE_B_DONE", persona, qid, budget, started)
+                basis_b = [
+                    b for b in view.candidate_beliefs
+                    if b.belief_id in res_b.authorized_belief_ids
+                ]
+                _progress("ANSWER_B_START", persona, qid, budget, started)
+                ans_b = gen_b.generate_answer(
+                    view.query, list(basis_b),
+                    model_id=args.model, provider=args.provider,
+                )
+                _progress("ANSWER_B_DONE", persona, qid, budget, started)
+                row["stage_b"] = {
+                    "authorized_belief_ids": list(res_b.authorized_belief_ids),
+                    "excluded_belief_ids": list(res_b.excluded_belief_ids),
+                    "answer": ans_b,
+                    "provenance": res_b.provenance,
+                }
             except Exception as exc:
                 msg = f"Stage B {persona}/{qid}: {type(exc).__name__}: {exc}"
                 row["stage_b"] = {"error": msg}
                 errors.append(msg)
+                _progress("STAGE_B_ERROR", persona, qid, budget, started)
+
             rows.append(row)
             done += 1
-            outbound = sum(c.calls for c in (counter_a, counter_b, answer_counter_a, answer_counter_b) if c)
-            tokens = sum(c.tokens for c in (counter_a, counter_b, answer_counter_a, answer_counter_b) if c)
-            print(f"[PROGRESS] persona={persona} period={args.period} questions {done}/{total_questions} outbound {outbound}/{args.max_calls} tokens {tokens}/{args.max_tokens} elapsed {time.time() - started:.1f}s", flush=True)
-    report = {"disclaimer": DISCLAIMER, "official_final_result": False, "mode": args.mode, "provider": args.provider, "model": args.model, "stage_a_prompt_version": args.stage_a_prompt_version, "period": args.period, "personas": personas, "questions_executed": len(rows), "errors": errors, "cost": {"stage_a": summarize_cost(client_a, counter_a), "stage_b": summarize_cost(client_b, counter_b), "answer_a": summarize_cost(answer_a, answer_counter_a), "answer_b": summarize_cost(answer_b, answer_counter_b)}, "rows": rows}
-    report_path = out / "memora_development_report.json"
-    report_path.write_text(json.dumps(report, indent=2, ensure_ascii=False), encoding="utf-8")
-    data_files = [Path(args.reference_root) / "data" / args.period / persona / f"evaluation_questions_{persona}.json" for persona in personas]
-    data_checksum = hashlib.sha256("".join(compute_file_sha256(str(p)) for p in data_files if p.exists()).encode("utf-8")).hexdigest()
-    memora_sha = subprocess.run(["git", "-C", "reference/Memora", "rev-parse", "HEAD"], text=True, capture_output=True, check=False).stdout.strip()
-    manifest = RunManifest(config=RunConfiguration(run_id=f"memora-dev-{uuid.uuid4()}", stage_and_method_name="Memora-development-StageAB-controlled", provider_name=args.provider, model_id=args.model, temperature=0.0, prompt_hashes={"stage_a": verifier._template_hash, "answer": gen_a.template_hash}, cache_path=str(cache_prefix), dataset_checksum=data_checksum, metadata={"memora_upstream_sha": memora_sha, "period": args.period, "personas": personas, "questions_executed": len(rows), "development_only": True}), aggregate_cost=report["cost"], instance_count=len(rows), output_path=str(report_path), errors_or_retries=[{"error": e} for e in errors], metadata={"official_final_result": False})
-    manifest_path = out / "memora_development_manifest.json"
-    manifest.save(str(manifest_path))
-    print(f"[DONE] report={report_path} manifest={manifest_path} errors={len(errors)}", flush=True)
+            print(
+                f"[QUESTION_DONE] {done}/{total_questions} "
+                f"persona={persona} qid={qid} "
+                f"calls={budget.calls}/{budget.max_calls} "
+                f"tokens={budget.tokens}/{budget.max_tokens} "
+                f"elapsed={time.time() - started:.1f}s",
+                flush=True,
+            )
+
+    report_path, manifest_path = _write_report(
+        out, rows, errors, args, budget, verifier_hash, gen_a.template_hash,
+        personas,
+    )
+    print(
+        f"[DONE] report={report_path} manifest={manifest_path} "
+        f"errors={len(errors)} "
+        f"calls={budget.calls} tokens={budget.tokens}",
+        flush=True,
+    )
 
 
 if __name__ == "__main__":
