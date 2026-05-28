@@ -8,11 +8,11 @@ storytelling document.
 ## Repository State
 
 - Repository: `yuchenzhu-research/ReTrace`
-- Active branch: `experiment/retrace-ab-feasibility`
+- Active branch: `refactor/retrace-minimal-core`
 - Starting scaffold: `integration/retrace-v1-complete` @
   `5e8d6e2d1a494d572d6d0fa929595bb198154390`
-- Current packet: architecture convergence after the batched Memora
-  oracle-conditioned diagnostic smoke.
+- Current packet: repository minimalization after architecture convergence.
+- Current verified base: `6007e0c53a9d7b4e906849d11c9fdeb801dbb276`.
 
 ## Validated Offline
 
@@ -23,6 +23,7 @@ storytelling document.
 - AB-1A / AB-1A.5 controlled attribution and auditability protocol.
 - AB-1B internal development-case evaluator and replay-only runner.
 - Batched Stage A typed-edge proposal and deterministic DPA execution path.
+- Shared proposal strategy interface for backend ingestion.
 
 ## Implemented Scaffolding, Not Yet Scientific Results
 
@@ -63,11 +64,19 @@ The repository currently has no verified result showing:
 ## Current Next Boundary
 
 The current next boundary is code convergence and persistent write/read
-separation, not another large live run. In particular, ReTrace should separate
-write-time memory construction/update from query-time read/evaluation, share
-deterministic authorization execution across Stage A paths, and keep the Memora
-oracle-conditioned diagnostic separate from any future official agent
-evaluation.
+separation, not another live run. The repository should stay minimal: one
+obvious diagnostic replay path, stable method docs, and no official-result
+claims until a later authorized benchmark task.
+
+## Canonical Entrypoints
+
+- Offline validation:
+  `env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src tests scripts`
+  and `.venv/bin/python -m pytest`.
+- Current demo replay:
+  `.venv/bin/python scripts/run_memora_development_eval.py --mode replay --period weekly --persona academic_researcher --limit-questions 2 --stage-a-execution batched`.
+- Reference regression paths remain in tests and development scripts but are
+  not the default demo path.
 
 ## Verification at Starting Scaffold
 
