@@ -5,6 +5,7 @@ import json
 import os
 import time
 import urllib.request
+import urllib.error
 import uuid
 from typing import Any
 
@@ -182,6 +183,19 @@ class HTTPLLMProvider(BaseLLMProvider):
                     completion_tokens = len(response_text.split()) if response_text else 0
                     total_tokens = prompt_tokens + completion_tokens
 
+        except urllib.error.HTTPError as e:
+            status = "failure"
+            body = ""
+            try:
+                body = e.read().decode("utf-8")
+            except Exception:
+                body = ""
+            raw_error = f"{type(e).__name__}: {str(e)}"
+            if body:
+                raw_error = f"{raw_error}; body={body[:1000]}"
+            error_message = self._redact_secret_values(raw_error, provider)
+            prompt_tokens = len(prompt.split())
+            total_tokens = prompt_tokens
         except Exception as e:
             status = "failure"
             error_message = self._redact_secret_values(f"{type(e).__name__}: {str(e)}", provider)
