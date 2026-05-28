@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import json
 import os
+import subprocess
+import sys
 import tempfile
 
 import pytest
@@ -231,6 +233,8 @@ class TestRunnerScriptShape:
         assert "--case-ids" in text
         assert "--write-review-table" in text
         assert "possible_bias_or_ambiguity" in text
+        assert "--run-type" in text
+        assert "--stage-a-prompt-version" in text
 
     def test_pilot_case_ids_cover_categories(self, cases):
         import importlib.util
@@ -250,3 +254,37 @@ class TestRunnerScriptShape:
         pilot_cases = [case for case in cases if case.case.case_id in pilot_ids]
         assert len(pilot_cases) == 8
         assert {case.category for case in pilot_cases} == set(REQUIRED_CATEGORIES)
+
+    def test_runner_records_run_type_and_prompt_version(self, tmp_path):
+        script_path = os.path.join(
+            os.path.dirname(__file__),
+            os.pardir,
+            os.pardir,
+            "scripts",
+            "run_ambiguity_scope_ab_dev.py",
+        )
+        result = subprocess.run(
+            [
+                sys.executable,
+                script_path,
+                "--mode",
+                "replay",
+                "--pilot-only",
+                "--run-type",
+                "replay_correctness",
+                "--stage-a-prompt-version",
+                "evidence_edge_prediction_v1",
+                "--output-dir",
+                str(tmp_path),
+            ],
+            check=False,
+            text=True,
+            capture_output=True,
+        )
+        assert result.returncode == 0, result.stderr
+        report = json.loads((tmp_path / "ambiguity_scope_report.json").read_text(encoding="utf-8"))
+        manifest = json.loads((tmp_path / "ambiguity_scope_manifest.json").read_text(encoding="utf-8"))
+        assert report["run_type"] == "replay_correctness"
+        assert report["stage_a_prompt_version"] == "evidence_edge_prediction_v1"
+        assert manifest["config"]["metadata"]["run_type"] == "replay_correctness"
+        assert manifest["config"]["metadata"]["stage_a_prompt_version"] == "evidence_edge_prediction_v1"

@@ -48,11 +48,29 @@ def _make_verifier(
     response: str,
     tmp_path: str,
     status: str = "success",
+    prompt_version: str = "evidence_edge_prediction_v0",
 ) -> PromptEvidenceEdgeVerifier:
     mock = MockLLMProvider(default_response=response, status=status)
     cache = JSONLCache(os.path.join(tmp_path, "cache.jsonl"))
     client = CachedLLMClient(cache=cache, provider_client=mock)
-    return PromptEvidenceEdgeVerifier(client=client, model_id="mock", provider="mock")
+    return PromptEvidenceEdgeVerifier(
+        client=client,
+        model_id="mock",
+        provider="mock",
+        prompt_version=prompt_version,
+    )
+
+
+def test_v0_prompt_remains_present_and_v1_prompt_defines_no_effect() -> None:
+    prompt_dir = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, "prompts", "retrace_llm")
+    v0 = open(os.path.join(prompt_dir, "evidence_edge_prediction_v0.txt"), encoding="utf-8").read()
+    v1 = open(os.path.join(prompt_dir, "evidence_edge_prediction_v1.txt"), encoding="utf-8").read()
+
+    assert "predict zero or more typed local edges" in v0
+    assert "Empty-edge preservation rule" in v1
+    assert '{"edges": []}' in v1
+    assert "Do NOT emit UNCERTAIN merely because" in v1
+    assert "not to re-prove it from the new evidence" in v1
 
 
 def test_valid_blocks_parse(tmp_path: str) -> None:
@@ -316,3 +334,20 @@ def test_trace_metadata_present(tmp_path: str) -> None:
     )
     assert edges[0].model_call_trace_id is not None
     assert edges[0].verifier == "evidence_edge_prediction_v0"
+
+
+def test_v1_prompt_version_is_recorded_in_edges(tmp_path: str) -> None:
+    response = json.dumps({
+        "edges": [
+            {"edge_type": "UNCERTAIN", "target_id": "b_bike", "rationale": "Unclear.", "confidence": 0.3}
+        ]
+    })
+    verifier = _make_verifier(response, str(tmp_path), prompt_version="evidence_edge_prediction_v1")
+    edges = verifier.verify_edges(
+        new_evidence=_make_evidence(),
+        candidate_belief=_make_belief(),
+        candidate_replacement_beliefs=(),
+        candidate_conditions=(),
+        temporal_context=(),
+    )
+    assert edges[0].verifier == "evidence_edge_prediction_v1"
