@@ -30,6 +30,7 @@ class ReTraceMemorySystem(BaseMemorySystem):
         super().__init__(user_id)
         # Use development fixture components by default if not provided
         self.pipeline = kwargs.get("pipeline")
+        self.uses_development_fixture = self.pipeline is None
         if self.pipeline is None:
             self.pipeline = ReTracePipeline.for_development_fixture()
         self.pipeline.reset_user(user_id)
@@ -77,6 +78,7 @@ class ReTraceMemorySystem(BaseMemorySystem):
             "status": "success",
             "session_id": session_id,
             "admitted_edges_count": len(admitted_edges),
+            "pipeline_mode": "development_fixture" if self.uses_development_fixture else "injected_pipeline",
         }
 
     def search_memories(

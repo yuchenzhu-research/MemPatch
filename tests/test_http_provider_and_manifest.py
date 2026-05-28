@@ -19,9 +19,8 @@ def test_http_provider_resolves_endpoints_and_headers() -> None:
     # 1. No base_url specified, google provider
     p1 = HTTPLLMProvider(api_key="test-key")
     url, headers = p1._resolve_endpoint_and_headers("google")
-    assert url == "https://generativelanguage.googleapis.com/v1beta/chat/completions"
+    assert url == "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
     assert headers["Authorization"] == "Bearer test-key"
-    assert headers["x-goog-api-key"] == "test-key"
 
     # 2. No base_url specified, openai provider
     p2 = HTTPLLMProvider(api_key="test-key")
@@ -34,6 +33,41 @@ def test_http_provider_resolves_endpoints_and_headers() -> None:
     p3 = HTTPLLMProvider(api_key="test-key", base_url="https://custom.api.com/chat")
     url, headers = p3._resolve_endpoint_and_headers("openai")
     assert url == "https://custom.api.com/chat"
+
+
+def test_http_provider_selects_provider_specific_environment_keys(monkeypatch) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
+    monkeypatch.setenv("OPENAI_API_KEY", "openai-key")
+
+    provider = HTTPLLMProvider()
+    _, openai_headers = provider._resolve_endpoint_and_headers("openai")
+    _, gemini_headers = provider._resolve_endpoint_and_headers("gemini")
+
+    assert openai_headers["Authorization"] == "Bearer openai-key"
+    assert gemini_headers["Authorization"] == "Bearer gemini-key"
+
+
+def test_http_provider_missing_key_is_provider_specific(monkeypatch) -> None:
+    monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+
+    trace = HTTPLLMProvider().generate(
+        prompt="Hello",
+        model_id="gpt-4o",
+        provider="openai",
+    )
+
+    assert trace.status == "failure"
+    assert "OPENAI_API_KEY" in trace.error_message
+    assert "GEMINI_API_KEY" not in trace.error_message
+    assert "gemini-key" not in trace.error_message
+
+
+def test_http_provider_rejects_unsupported_provider() -> None:
+    provider = HTTPLLMProvider(api_key="test-key")
+
+    with pytest.raises(ValueError, match="Unsupported HTTP provider"):
+        provider._resolve_endpoint_and_headers("unknown")
 
 
 @patch("urllib.request.urlopen")
@@ -124,6 +158,21 @@ def test_http_provider_http_failure(mock_urlopen) -> None:
     assert trace.status == "failure"
     assert trace.response is None
     assert "Rate limit" in trace.error_message
+
+
+@patch("urllib.request.urlopen")
+def test_http_provider_redacts_secret_from_error_message(mock_urlopen) -> None:
+    mock_urlopen.side_effect = Exception("token secret-key appeared in provider error")
+
+    trace = HTTPLLMProvider(api_key="secret-key").generate(
+        prompt="Hello",
+        model_id="gpt-4o",
+        provider="openai",
+    )
+
+    assert trace.status == "failure"
+    assert "secret-key" not in trace.error_message
+    assert "[REDACTED]" in trace.error_message
 
 
 def test_manifest_and_git_sha_computations() -> None:

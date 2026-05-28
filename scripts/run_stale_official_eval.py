@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Official STALE evaluation runner using dynamic clean-room monkey-patching."""
+"""STALE adapter smoke/dry-run runner using dynamic clean-room monkey-patching."""
 from __future__ import annotations
 
 import argparse
@@ -54,11 +54,16 @@ def monkey_patch_stale(is_live: bool) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run official STALE evaluation.")
+    parser = argparse.ArgumentParser(description="Run STALE adapter smoke/dry-run.")
     parser.add_argument(
         "--live",
         action="store_true",
-        help="Enable live API calls to LLM Judge (requires JUDGE_PROVIDER/API keys).",
+        help="Enable live official-style judge calls only with --allow-official-live.",
+    )
+    parser.add_argument(
+        "--allow-official-live",
+        action="store_true",
+        help="Explicit opt-in for future official-style live execution; not used in this task.",
     )
     parser.add_argument(
         "--limit",
@@ -73,15 +78,21 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    if args.live and not args.allow_official_live:
+        print("Refusing live STALE execution without --allow-official-live.")
+        print("This task permits adapter smoke/dry-runs only, not official benchmark evaluation.")
+        sys.exit(2)
+
     if not STALE_DIR.exists():
         print(f"Error: STALE repository not found at {STALE_DIR}")
         sys.exit(1)
 
     print("=" * 70)
-    print("RUNNING OFFICIAL STALE EVALUATION")
+    print("RUNNING STALE ADAPTER SMOKE/DRY-RUN")
     print("=" * 70)
+    print("  Disclaimer: not an official STALE result and not Stage A/B evidence.")
     print(f"  Limit:  {args.limit}")
-    print(f"  Mode:   {'LIVE' if args.live else 'MOCK'}")
+    print(f"  Mode:   {'LIVE OFFICIAL-STYLE' if args.live else 'MOCK SMOKE'}")
     print()
 
     # Load dataset
@@ -89,8 +100,8 @@ def main() -> None:
     main_files = adapter.discover_main_files()
     if not main_files:
         print("  No STALE MAIN dataset files discovered under reference/STALE.")
-        print("  Generating outputs/demo_T1_MAIN.json mock file dynamically.")
-        mock_out_dir = Path(__file__).resolve().parents[1] / "reference" / "STALE" / "outputs"
+        print("  Generating repository-owned outputs/stale_smoke/demo_T1_MAIN.json mock file dynamically.")
+        mock_out_dir = Path(__file__).resolve().parents[1] / "outputs" / "stale_smoke"
         mock_out_dir.mkdir(parents=True, exist_ok=True)
         dataset_path = mock_out_dir / "demo_T1_MAIN.json"
         
@@ -181,8 +192,8 @@ def main() -> None:
     # Apply monkey patches
     monkey_patch_stale(args.live)
 
-    # Run official evaluator
-    print("\n--- Running Official STALE Evaluator ---")
+    # Run evaluator in smoke mode unless explicitly opted into future live official-style execution.
+    print("\n--- Running STALE Evaluator Adapter Path ---")
     output_eval_json = output_dir / "stale_eval_results.json"
     
     import full_eval_performance
@@ -205,8 +216,9 @@ def main() -> None:
 
     print()
     print("=" * 70)
-    print("STALE EVALUATION COMPLETE")
-    print(f"Official evaluation JSON saved to: {output_eval_json}")
+    print("STALE ADAPTER SMOKE/DRY-RUN COMPLETE")
+    print("This output is not an official STALE benchmark result.")
+    print(f"Evaluation adapter JSON saved to: {output_eval_json}")
     print("=" * 70)
 
 
