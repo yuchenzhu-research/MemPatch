@@ -164,11 +164,12 @@ session id, timestamp, source dataset, source pointer, and text. This prevents
 the direct baseline from receiving an ambiguous evidence list where it cannot
 tell which evidence is the active update.
 
-## Current Call Cardinality
+## Call Cardinality
 
 The current controlled interface is not strict call-budget matched:
 
-- Stage A makes N semantic edge-verifier calls, one per candidate belief.
+- Per-belief Stage A reference execution makes N semantic edge-verifier calls,
+  one per candidate belief.
 - Stage B makes one direct-adjudication call over the complete
   `SharedCandidateView`.
 
@@ -193,6 +194,8 @@ Prompts and method interfaces differ by design.
 - DPA runs separately for every candidate belief, identical semantics.
 - Does not change canonical edge semantics or final deterministic authorization.
 - Must report batch size, calls, tokens, latency, and provenance.
+- Call complexity: O(ceil(B/K)) calls for batch size K.
+- Token complexity: approximately O(ceil(B/K) × |E_local| + |B|).
 
 Stage B remains unchanged. Comparison must report observed compute rather than
 strict matched budget.

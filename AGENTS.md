@@ -3,24 +3,11 @@
 This is the first file every coding model must read before editing this
 repository.
 
-## Current Phase
+## Current State
 
-Repository branch for the current feasibility packet:
-`experiment/retrace-ab-feasibility`.
-
-Starting scaffold branch:
-`integration/retrace-v1-complete` @
-`5e8d6e2d1a494d572d6d0fa929595bb198154390`.
-
-The integration branch contains useful provider, manifest, end-to-end, STALE,
-Memora, and Stage C deferral scaffolding. It is not yet a scientifically
-validated v1 result:
-
-- no verified live Stage A/B performance result exists;
-- no official STALE result exists;
-- no official Memora result exists;
-- no evidence yet shows Stage A is better than Stage B;
-- STALE/Memora mock executions are adapter smoke/dry-run validation only.
+Dynamic branch, HEAD, smoke, and validation status live only in
+`docs/implementation_status.md`. This file contains stable agent instructions,
+not volatile run status.
 
 ## Canonical Reading Order
 
@@ -29,12 +16,12 @@ Read only these active authority documents before method work:
 1. `AGENTS.md`
 2. `docs/method_spec_dpa.md`
 3. `docs/stage_ab_protocol.md`
-4. `docs/paper1_blueprint_zh.md`
-5. `docs/repository_execution_contract.md`
+4. `docs/implementation_status.md`
+5. `docs/upstream_integration.md`
 6. `docs/coding_contract.md`
-7. `docs/implementation_status.md`
-8. `docs/upstream_integration.md`
-9. `docs/stage_c_report.md`
+7. `docs/repository_execution_contract.md`
+8. `docs/stage_c_report.md`
+9. `docs/paper1_blueprint_zh.md`
 
 Legacy planning documents and old raw source-material files are no longer
 active authority. Git history preserves them.
@@ -128,9 +115,9 @@ It is not a scalable benchmark-execution interface because it repeats the same
 evidence context once per candidate belief: O(B) semantic-model calls and
 approximately O(B × |E|) repeated prompt tokens.
 
-Benchmark-facing development now requires a batched local typed-edge proposal
+Benchmark-facing development uses a bounded batched local typed-edge proposal
 path that preserves the same typed-edge vocabulary, RevisionGate, and DPA
-semantics while issuing one semantic-model call per candidate neighborhood.
+semantics while reducing repeated semantic-model calls.
 
 Current Memora execution is a **Memora Oracle-Conditioned Authorization
 Diagnostic** because candidate beliefs originate from Memora evaluation
