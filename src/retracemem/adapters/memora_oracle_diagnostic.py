@@ -30,6 +30,13 @@ DISCLAIMER = (
     "MEMORA ORACLE-CONDITIONED AUTHORIZATION DIAGNOSTIC ONLY — "
     "NOT OFFICIAL END-TO-END MEMORA RESULT."
 )
+DIAGNOSTIC_SCORING_LABELS = {
+    "diagnostic_only": True,
+    "oracle_conditioned_candidates": True,
+    "official_end_to_end_result": False,
+    "official_fama_score": None,
+    "scoring_type": "oracle_conditioned_authorization_metrics",
+}
 PERSONAS = (
     "academic_researcher",
     "business_executive",
@@ -290,6 +297,7 @@ def run_memora_oracle_diagnostic(config: MemoraDiagnosticConfig) -> tuple[Path, 
                 "question": view.query,
                 "evaluation": question.get("evaluation", {}),
                 "view_meta": view_meta,
+                "candidate_roles": candidate_roles(view.candidate_beliefs),
                 "stage_a": {},
                 "stage_b": {},
             }
@@ -338,6 +346,10 @@ def run_memora_oracle_diagnostic(config: MemoraDiagnosticConfig) -> tuple[Path, 
                     "authorized_belief_ids": list(res_b.authorized_belief_ids),
                     "excluded_belief_ids": list(res_b.excluded_belief_ids),
                     "answer": ans_b,
+                    "verdict_statuses": {
+                        verdict.belief_id: verdict.status.value
+                        for verdict in res_b.verdicts
+                    },
                     "provenance": res_b.provenance,
                 }
             except Exception as exc:
@@ -359,7 +371,7 @@ def run_memora_oracle_diagnostic(config: MemoraDiagnosticConfig) -> tuple[Path, 
 
     report_path, manifest_path = write_report(
         out, rows, errors, config, budget, verifier_hash, gen_a.template_hash,
-        personas,
+        personas, elapsed_seconds=time.time() - started,
     )
     summary = {
         "errors": len(errors),
@@ -367,6 +379,124 @@ def run_memora_oracle_diagnostic(config: MemoraDiagnosticConfig) -> tuple[Path, 
         "tokens": budget.tokens,
     }
     return report_path, manifest_path, summary
+
+
+def candidate_roles(candidate_beliefs: tuple[BeliefNode, ...]) -> dict[str, str]:
+    return {
+        belief.belief_id: str(belief.metadata.get("memora_role") or "")
+        for belief in candidate_beliefs
+    }
+
+
+def compute_stage_authorization_metrics(rows: list[dict[str, Any]], stage_key: str) -> dict[str, Any]:
+    memory_total = 0
+    memory_authorized = 0
+    forgetting_total = 0
+    forgetting_excluded = 0
+    uncertain_count = 0
+    scored_rows = 0
+    execution_errors = 0
+
+    for row in rows:
+        stage = row.get(stage_key, {})
+        if not isinstance(stage, dict) or stage.get("error"):
+            execution_errors += 1
+            continue
+        roles = row.get("candidate_roles", {})
+        if not isinstance(roles, dict):
+            continue
+        authorized = set(stage.get("authorized_belief_ids", []))
+        excluded = set(stage.get("excluded_belief_ids", []))
+        if not authorized and not excluded:
+            continue
+        scored_rows += 1
+        uncertain_ids = uncertain_belief_ids(stage)
+        for belief_id, role in roles.items():
+            if role == "memory_presence":
+                memory_total += 1
+                if belief_id in authorized:
+                    memory_authorized += 1
+            elif role == "forgetting_absence":
+                forgetting_total += 1
+                if belief_id in excluded:
+                    forgetting_excluded += 1
+            else:
+                continue
+            if belief_id in uncertain_ids:
+                uncertain_count += 1
+
+    memory_accuracy = safe_ratio(memory_authorized, memory_total)
+    forgetting_accuracy = safe_ratio(forgetting_excluded, forgetting_total)
+    total_scored = memory_total + forgetting_total
+    total_correct = memory_authorized + forgetting_excluded
+    balanced_values = [
+        value for value in (memory_accuracy, forgetting_accuracy)
+        if value is not None
+    ]
+    return {
+        **DIAGNOSTIC_SCORING_LABELS,
+        "stage": stage_key,
+        "scored_rows": scored_rows,
+        "execution_errors": execution_errors,
+        "memory_presence_total": memory_total,
+        "memory_presence_authorized": memory_authorized,
+        "memory_preservation_accuracy": memory_accuracy,
+        "forgetting_absence_total": forgetting_total,
+        "forgetting_absence_excluded": forgetting_excluded,
+        "forgetting_suppression_accuracy": forgetting_accuracy,
+        "overall_item_accuracy": safe_ratio(total_correct, total_scored),
+        "balanced_authorization_accuracy": (
+            sum(balanced_values) / len(balanced_values)
+            if len(balanced_values) == 2 else None
+        ),
+        "uncertain_count": uncertain_count,
+        "uncertain_rate": safe_ratio(uncertain_count, total_scored),
+    }
+
+
+def uncertain_belief_ids(stage: dict[str, Any]) -> set[str]:
+    uncertain: set[str] = set()
+    provenance = stage.get("provenance", {})
+    if isinstance(provenance, dict):
+        statuses = provenance.get("fine_grained_statuses", {})
+        if isinstance(statuses, dict):
+            uncertain.update(
+                str(belief_id)
+                for belief_id, status in statuses.items()
+                if str(status).upper() in {"UNRESOLVED", "UNCERTAIN"}
+            )
+    verdict_statuses = stage.get("verdict_statuses", {})
+    if isinstance(verdict_statuses, dict):
+        uncertain.update(
+            str(belief_id)
+            for belief_id, status in verdict_statuses.items()
+            if str(status).upper() == "UNCERTAIN"
+        )
+    return uncertain
+
+
+def safe_ratio(numerator: int, denominator: int) -> float | None:
+    if denominator == 0:
+        return None
+    return numerator / denominator
+
+
+def compute_authorization_diagnostic_metrics(
+    rows: list[dict[str, Any]],
+    errors: list[str],
+    budget: GlobalBudget,
+    elapsed_seconds: float | None = None,
+) -> dict[str, Any]:
+    metrics = {
+        **DIAGNOSTIC_SCORING_LABELS,
+        "errors": len(errors),
+        "global_budget": budget.summary(),
+        "stage_a": compute_stage_authorization_metrics(rows, "stage_a"),
+        "stage_b": compute_stage_authorization_metrics(rows, "stage_b"),
+    }
+    if elapsed_seconds is not None:
+        metrics["elapsed_seconds"] = elapsed_seconds
+    return metrics
 
 
 def progress(
@@ -413,13 +543,20 @@ def write_report(
     out: Path, rows: list[dict[str, Any]], errors: list[str],
     config: MemoraDiagnosticConfig, budget: GlobalBudget, verifier_hash: str, answer_hash: str,
     personas: list[str],
+    elapsed_seconds: float | None = None,
 ) -> tuple[Path, Path]:
+    diagnostic_metrics = compute_authorization_diagnostic_metrics(
+        rows, errors, budget, elapsed_seconds=elapsed_seconds,
+    )
     report = {
         "disclaimer": DISCLAIMER,
+        "diagnostic_only": True,
         "oracle_conditioned_candidates": True,
         "official_end_to_end_result": False,
+        "official_fama_score": None,
         "candidate_source": "memora_evaluation_annotations",
-        "scoring": "pending",
+        "scoring": diagnostic_metrics,
+        "scoring_type": "oracle_conditioned_authorization_metrics",
         "mode": config.mode,
         "stage_a_execution": config.stage_a_execution,
         "provider": config.provider,
@@ -468,6 +605,8 @@ def write_report(
                 "questions_executed": len(rows),
                 "oracle_conditioned_candidates": True,
                 "official_end_to_end_result": False,
+                "official_fama_score": None,
+                "scoring_type": "oracle_conditioned_authorization_metrics",
                 "stage_a_execution": config.stage_a_execution,
             },
         ),
@@ -475,7 +614,13 @@ def write_report(
         instance_count=len(rows),
         output_path=str(report_path),
         errors_or_retries=[{"error": e} for e in errors],
-        metadata={"official_end_to_end_result": False},
+        metadata={
+            "diagnostic_only": True,
+            "oracle_conditioned_candidates": True,
+            "official_end_to_end_result": False,
+            "official_fama_score": None,
+            "scoring_type": "oracle_conditioned_authorization_metrics",
+        },
     )
     manifest_path = out / "memora_development_manifest.json"
     manifest.save(str(manifest_path))
