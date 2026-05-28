@@ -17,7 +17,11 @@ authorized task.
 """
 from __future__ import annotations
 
+import asyncio
+import importlib.util
 import json
+import os
+import sys
 import time
 from dataclasses import dataclass
 from pathlib import Path
@@ -29,10 +33,20 @@ from retracemem.adapters.stale_official_adapter import (
     StaleOfficialRecord,
 )
 from retracemem.methods.contracts import EdgePredictionBatch
+from retracemem.extraction.typed_extractor import PromptTypedBeliefExtractor
+from retracemem.evaluation.cost_accounting import CostAccounting
 from retracemem.pipeline import ReTracePipeline
+from retracemem.providers.budget import BudgetWrappedProvider, GlobalBudget
+from retracemem.providers.http_provider import HTTPLLMProvider
 from retracemem.providers.cached_client import CachedLLMClient
+from retracemem.cache.jsonl_cache import JSONLCache
+from retracemem.retrieval.typed_retrievers import (
+    OverlapImpactCandidateRetriever,
+    OverlapQueryBeliefRetriever,
+)
 from retracemem.schemas import EvidenceNode
 from retracemem.verifier.proposal_strategy import BatchedEvidenceEdgeProposalStrategy
+from retracemem.verifier.prompt_batched_evidence_edge_verifier import PromptBatchedEvidenceEdgeVerifier
 
 
 _DATASET_SOURCE = "STALEproj/STALE"
@@ -45,6 +59,22 @@ class StaleOfflineRunConfig:
     output_dir: str = "outputs/stale_official_frozen_wiring_demo"
     limit_t1: int = 0
     limit_t2: int = 0
+
+
+@dataclass(frozen=True)
+class StaleLiveRunConfig:
+    dataset_path: str = "data_external/stale_official_frozen/T1_T2_400_FULL.json"
+    output_dir: str = "outputs/stale_official_frozen_stageab_live_smoke_2"
+    limit_t1: int = 1
+    limit_t2: int = 1
+    provider: str = "siliconflow"
+    model: str = "deepseek-ai/DeepSeek-V4-Pro"
+    judge_provider: str = "siliconflow"
+    judge_model: str = "deepseek-ai/DeepSeek-V4-Pro"
+    http_timeout_seconds: float = 120.0
+    max_calls: int = 500
+    max_tokens: int = 2_000_000
+    evaluator_concurrency: int = 2
 
 
 class _NoEdgeBatchedVerifier:
@@ -88,6 +118,66 @@ def build_offline_pipeline(client: CachedLLMClient) -> ReTracePipeline:
     )
 
 
+def build_live_stage_a_pipeline(
+    client_extract: CachedLLMClient,
+    client_edges: CachedLLMClient,
+    client_answer: CachedLLMClient,
+    config: StaleLiveRunConfig,
+) -> ReTracePipeline:
+    batched_verifier = PromptBatchedEvidenceEdgeVerifier(
+        client=client_edges,
+        model_id=config.model,
+        provider=config.provider,
+    )
+    strategy = BatchedEvidenceEdgeProposalStrategy(batched_verifier)
+    extractor = PromptTypedBeliefExtractor(
+        client=client_extract,
+        model_id=config.model,
+        provider=config.provider,
+    )
+    return ReTracePipeline.for_development_fixture(
+        extractor=extractor,
+        edge_proposal_strategy=strategy,
+        impact_retriever=OverlapImpactCandidateRetriever(),
+        query_retriever=OverlapQueryBeliefRetriever(),
+        client=client_answer,
+        model_id=config.model,
+        provider=config.provider,
+    )
+
+
+def build_live_stage_b_pipeline(
+    client_extract: CachedLLMClient,
+    client_answer_and_judge: CachedLLMClient,
+    config: StaleLiveRunConfig,
+) -> ReTracePipeline:
+    extractor = PromptTypedBeliefExtractor(
+        client=client_extract,
+        model_id=config.model,
+        provider=config.provider,
+    )
+    return ReTracePipeline.for_development_fixture(
+        extractor=extractor,
+        edge_proposal_strategy=BatchedEvidenceEdgeProposalStrategy(_NoEdgeBatchedVerifier()),
+        impact_retriever=OverlapImpactCandidateRetriever(),
+        query_retriever=OverlapQueryBeliefRetriever(),
+        client=client_answer_and_judge,
+        model_id=config.model,
+        provider=config.provider,
+    )
+
+
+def make_live_client(
+    cache_path: Path,
+    budget: GlobalBudget,
+    stage: str,
+    timeout: float,
+) -> CachedLLMClient:
+    cache_path.parent.mkdir(parents=True, exist_ok=True)
+    provider = BudgetWrappedProvider(HTTPLLMProvider(timeout=timeout), budget, stage)
+    return CachedLLMClient(JSONLCache(str(cache_path)), provider, CostAccounting())
+
+
 def ingest_method_visible_sessions(
     pipeline: ReTracePipeline,
     user_id: str,
@@ -118,24 +208,43 @@ def answer_probing_queries(
     user_id: str,
     scenario: StaleMethodVisibleScenario,
     method: str,
-) -> dict[str, str]:
+) -> tuple[dict[str, str], dict[str, Any]]:
     """Reuse the persistent ingested state to answer all three probing queries."""
     responses: dict[str, str] = {}
+    meta: dict[str, Any] = {}
     for query_key, query_text in scenario.probing_queries:
+        before = pipeline.client.cost_accountant.to_dict() if pipeline.client else {}
+        started = time.time()
         record = pipeline.answer(user_id, query_text, method=method)
+        after = pipeline.client.cost_accountant.to_dict() if pipeline.client else {}
         response_key = query_key.replace("_query", "_response")
         responses[response_key] = record.answer
-    return responses
+        meta[response_key.replace("_response", "_meta")] = {
+            "elapsed_seconds": time.time() - started,
+            "usage": _usage_delta(before, after),
+        }
+    return responses, meta
 
 
 def run_scenario(
     pipeline: ReTracePipeline,
     record: StaleOfficialRecord,
     method: str,
-) -> dict[str, str]:
+) -> tuple[dict[str, str], dict[str, Any], list[str]]:
     user_id = f"stale:{method}:{record.method_visible.uid}"
-    ingest_method_visible_sessions(pipeline, user_id, record.method_visible)
-    return answer_probing_queries(pipeline, user_id, record.method_visible, method)
+    evidence_ids = ingest_method_visible_sessions(pipeline, user_id, record.method_visible)
+    responses, meta = answer_probing_queries(pipeline, user_id, record.method_visible, method)
+    return responses, meta, evidence_ids
+
+
+def _usage_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, int]:
+    b_tokens = before.get("tokens", {}) if isinstance(before, dict) else {}
+    a_tokens = after.get("tokens", {}) if isinstance(after, dict) else {}
+    return {
+        "prompt_tokens": int(a_tokens.get("prompt", 0) - b_tokens.get("prompt", 0)),
+        "completion_tokens": int(a_tokens.get("completion", 0) - b_tokens.get("completion", 0)),
+        "total_tokens": int(a_tokens.get("total", 0) - b_tokens.get("total", 0)),
+    }
 
 
 def export_official_target_responses(
@@ -186,7 +295,7 @@ def run_offline_wiring_demo(
     for record in selected:
         uid = record.method_visible.uid
         try:
-            stage_a_responses = run_scenario(pipeline_a, record, method="retrace")
+            stage_a_responses, stage_a_meta, _ = run_scenario(pipeline_a, record, method="retrace")
         except Exception as exc:  # pragma: no cover - logged in manifest
             errors.append(f"stage_a:{uid}: {type(exc).__name__}: {exc}")
             stage_a_responses = {
@@ -194,10 +303,12 @@ def run_offline_wiring_demo(
                 "dim2_response": "",
                 "dim3_response": "",
             }
+            stage_a_meta = {}
         rows_a.append({"uid": uid, "type": record.evaluator_only.type,
-                       "target_model_responses": stage_a_responses})
+                       "target_model_responses": stage_a_responses,
+                       "target_model_meta": stage_a_meta})
         try:
-            stage_b_responses = run_scenario(pipeline_b, record, method="directjudge")
+            stage_b_responses, stage_b_meta, _ = run_scenario(pipeline_b, record, method="directjudge")
         except Exception as exc:  # pragma: no cover - logged in manifest
             errors.append(f"stage_b:{uid}: {type(exc).__name__}: {exc}")
             stage_b_responses = {
@@ -205,8 +316,10 @@ def run_offline_wiring_demo(
                 "dim2_response": "",
                 "dim3_response": "",
             }
+            stage_b_meta = {}
         rows_b.append({"uid": uid, "type": record.evaluator_only.type,
-                       "target_model_responses": stage_b_responses})
+                       "target_model_responses": stage_b_responses,
+                       "target_model_meta": stage_b_meta})
 
     output_dir = Path(config.output_dir)
     stage_a_path = output_dir / "stage_a_target_responses.json"
@@ -235,3 +348,192 @@ def run_offline_wiring_demo(
     output_dir.mkdir(parents=True, exist_ok=True)
     manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
     return {"manifest": manifest, "manifest_path": str(manifest_path)}
+
+
+def write_selected_subset(records: tuple[StaleOfficialRecord, ...], dataset_path: str, output_path: Path) -> None:
+    source_rows = json.loads(Path(dataset_path).read_text(encoding="utf-8"))
+    wanted = {record.method_visible.uid for record in records}
+    subset = [row for row in source_rows if row.get("uid") in wanted]
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(subset, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def export_evaluator_answers(rows: list[dict[str, Any]], output_path: Path) -> None:
+    payload = [
+        {
+            "uid": row["uid"],
+            "target_model_responses": row["target_model_responses"],
+            "target_model_meta": row.get("target_model_meta", {}),
+        }
+        for row in rows
+    ]
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_text(json.dumps(payload, indent=2, ensure_ascii=False), encoding="utf-8")
+
+
+def run_live_stageab_generation(config: StaleLiveRunConfig) -> dict[str, Any]:
+    started = time.time()
+    output_dir = Path(config.output_dir)
+    if output_dir.exists():
+        raise SystemExit(f"Refusing to overwrite existing live output directory: {output_dir}")
+    output_dir.mkdir(parents=True, exist_ok=True)
+    cache_dir = output_dir / "caches"
+    budget = GlobalBudget(max_calls=config.max_calls, max_tokens=config.max_tokens)
+    adapter = StaleOfficialAdapter(config.dataset_path)
+    selected = select_subset(adapter.load(), config.limit_t1, config.limit_t2)
+    subset_path = output_dir / "selected_official_subset.json"
+    write_selected_subset(selected, config.dataset_path, subset_path)
+
+    client_a_extract = make_live_client(cache_dir / "stage_a_extract.jsonl", budget, "stage_a_extract", config.http_timeout_seconds)
+    client_a_edges = make_live_client(cache_dir / "stage_a_edges.jsonl", budget, "stage_a_edges", config.http_timeout_seconds)
+    client_a_answer = make_live_client(cache_dir / "stage_a_answer.jsonl", budget, "stage_a_answer", config.http_timeout_seconds)
+    client_b_extract = make_live_client(cache_dir / "stage_b_extract.jsonl", budget, "stage_b_extract", config.http_timeout_seconds)
+    client_b_answer_judge = make_live_client(cache_dir / "stage_b_directjudge_answer.jsonl", budget, "stage_b_directjudge_answer", config.http_timeout_seconds)
+
+    pipeline_a = build_live_stage_a_pipeline(client_a_extract, client_a_edges, client_a_answer, config)
+    pipeline_b = build_live_stage_b_pipeline(client_b_extract, client_b_answer_judge, config)
+    rows_a: list[dict[str, Any]] = []
+    rows_b: list[dict[str, Any]] = []
+    errors: list[str] = []
+
+    total = len(selected)
+    for idx, record in enumerate(selected, start=1):
+        uid = record.method_visible.uid
+        rtype = record.evaluator_only.type
+        print(f"[SCENARIO_START] {idx}/{total} uid={uid} type={rtype} calls={budget.calls}/{budget.max_calls} tokens={budget.tokens}/{budget.max_tokens}", flush=True)
+        try:
+            responses, meta, evidence_ids = run_scenario(pipeline_a, record, method="retrace")
+            rows_a.append({"uid": uid, "type": rtype, "target_model_responses": responses, "target_model_meta": meta, "ingested_evidence_ids": evidence_ids})
+            print(f"[STAGE_A_DONE] {idx}/{total} uid={uid} sessions={len(evidence_ids)} calls={budget.calls}/{budget.max_calls} tokens={budget.tokens}/{budget.max_tokens}", flush=True)
+        except Exception as exc:
+            msg = f"stage_a:{uid}: {type(exc).__name__}: {exc}"
+            errors.append(msg)
+            rows_a.append({"uid": uid, "type": rtype, "target_model_responses": _empty_responses(), "target_model_meta": {}, "error": msg})
+            print(f"[STAGE_A_ERROR] {idx}/{total} uid={uid} error={type(exc).__name__}", flush=True)
+        try:
+            responses, meta, evidence_ids = run_scenario(pipeline_b, record, method="directjudge")
+            rows_b.append({"uid": uid, "type": rtype, "target_model_responses": responses, "target_model_meta": meta, "ingested_evidence_ids": evidence_ids})
+            print(f"[STAGE_B_DONE] {idx}/{total} uid={uid} sessions={len(evidence_ids)} calls={budget.calls}/{budget.max_calls} tokens={budget.tokens}/{budget.max_tokens}", flush=True)
+        except Exception as exc:
+            msg = f"stage_b:{uid}: {type(exc).__name__}: {exc}"
+            errors.append(msg)
+            rows_b.append({"uid": uid, "type": rtype, "target_model_responses": _empty_responses(), "target_model_meta": {}, "error": msg})
+            print(f"[STAGE_B_ERROR] {idx}/{total} uid={uid} error={type(exc).__name__}", flush=True)
+
+    stage_a_path = output_dir / "stage_a_target_responses.json"
+    stage_b_path = output_dir / "stage_b_target_responses.json"
+    export_evaluator_answers(rows_a, stage_a_path)
+    export_evaluator_answers(rows_b, stage_b_path)
+    manifest = {
+        "dataset_source": _DATASET_SOURCE,
+        "dataset_artifact": _DATASET_ARTIFACT,
+        "official_frozen_dataset": True,
+        "schema_wiring_demo_only": False,
+        "official_model_result": False,
+        "official_judge_evaluation_executed": False,
+        "live_provider_calls": True,
+        "provider": config.provider,
+        "model": config.model,
+        "selected_records": [{"uid": r.method_visible.uid, "type": r.evaluator_only.type} for r in selected],
+        "selected_subset_path": str(subset_path),
+        "stage_a_export": str(stage_a_path),
+        "stage_b_export": str(stage_b_path),
+        "global_budget": budget.summary(),
+        "errors": errors,
+        "elapsed_seconds": time.time() - started,
+        "fairness": {
+            "isolated_state": True,
+            "sessions_ingested_once_per_method_per_scenario": True,
+            "three_queries_reuse_persistent_state": True,
+            "stage_a_authorization": "batched_typed_edges_revision_gate_dpa",
+            "stage_b_authorization": "directjudge_query_authorization",
+            "shared_answer_generator": True,
+        },
+    }
+    manifest_path = output_dir / "generation_manifest.json"
+    manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
+    return {"manifest": manifest, "manifest_path": str(manifest_path)}
+
+
+def run_official_evaluator(
+    *,
+    answers_path: str,
+    dataset_path: str,
+    output_path: str,
+    model_method: str,
+    conflict_type: str,
+    judge_provider: str,
+    judge_model: str,
+    concurrency: int,
+    timeout: float,
+) -> None:
+    eval_path = Path("reference/STALE/STALE/Evaluation/full_eval_performance.py")
+    spec = importlib.util.spec_from_file_location("stale_full_eval_performance", eval_path)
+    if spec is None or spec.loader is None:
+        raise RuntimeError(f"Unable to load evaluator at {eval_path}")
+    eval_dir = str(eval_path.parent)
+    stale_root = str(eval_path.parents[1])
+    for item in (eval_dir, stale_root):
+        if item not in sys.path:
+            sys.path.insert(0, item)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    module.EVAL_PROVIDER = judge_provider
+    module.EVAL_MODEL = judge_model
+    module.CONCURRENCY_LIMIT = concurrency
+    module.eval_client = _AsyncHTTPEvaluatorClient(judge_provider, timeout)
+    asyncio.run(module.run_evaluation(answers_path, dataset_path, output_path, model_method, conflict_type))
+
+
+class _AsyncHTTPEvaluatorClient:
+    def __init__(self, provider: str, timeout: float) -> None:
+        self.chat = _AsyncHTTPChat(provider, timeout)
+
+
+class _AsyncHTTPChat:
+    def __init__(self, provider: str, timeout: float) -> None:
+        self.completions = _AsyncHTTPCompletions(provider, timeout)
+
+
+class _AsyncHTTPCompletions:
+    def __init__(self, provider: str, timeout: float) -> None:
+        self.provider = provider
+        self.inner = HTTPLLMProvider(timeout=timeout)
+
+    async def create(self, **kwargs: Any) -> Any:
+        messages = kwargs.get("messages") or []
+        prompt = "\n\n".join(str(message.get("content", "")) for message in messages)
+        trace = await asyncio.to_thread(
+            self.inner.generate,
+            prompt=prompt,
+            model_id=kwargs.get("model", ""),
+            provider=self.provider,
+            temperature=kwargs.get("temperature"),
+        )
+        if trace.status != "success" or trace.response is None:
+            raise RuntimeError(trace.error_message or "Evaluator HTTP call failed")
+        return _EvalResponse(trace.response, trace.prompt_tokens, trace.completion_tokens, trace.total_tokens)
+
+
+class _EvalResponse:
+    def __init__(self, content: str, prompt_tokens: int, completion_tokens: int, total_tokens: int) -> None:
+        self.choices = [_EvalChoice(content)]
+        self.usage = {
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens,
+            "total_tokens": total_tokens,
+        }
+
+
+class _EvalChoice:
+    def __init__(self, content: str) -> None:
+        self.message = _EvalMessage(content)
+
+
+class _EvalMessage:
+    def __init__(self, content: str) -> None:
+        self.content = content
+
+
+def _empty_responses() -> dict[str, str]:
+    return {"dim1_response": "", "dim2_response": "", "dim3_response": ""}

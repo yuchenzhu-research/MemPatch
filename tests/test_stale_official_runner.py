@@ -77,10 +77,11 @@ def test_three_queries_reuse_persistent_state(tmp_path: Path) -> None:
     user_id = "stale:retrace:u1"
     ingest_method_visible_sessions(pipeline, user_id, record.method_visible)
     before = len(pipeline.backend.ledgers[user_id])
-    answers = answer_probing_queries(pipeline, user_id, record.method_visible, method="retrace")
+    answers, meta = answer_probing_queries(pipeline, user_id, record.method_visible, method="retrace")
     after = len(pipeline.backend.ledgers[user_id])
     assert after == before  # answering must not append new evidence
     assert set(answers) == {"dim1_response", "dim2_response", "dim3_response"}
+    assert set(meta) == {"dim1_meta", "dim2_meta", "dim3_meta"}
 
 
 def test_method_visible_state_does_not_contain_gold_fields(tmp_path: Path) -> None:
