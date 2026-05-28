@@ -160,8 +160,14 @@ env PYTHONPYCACHEPREFIX=.pycache_compile python3 -m compileall -q retracemem tes
 
 - Wave 2 is merged into `main` (commit `dcf121b`).
 - Stage A/B planning branch `method/retrace-llm-directjudge` has begun.
-- Runtime implementation has not yet started; the plan is pending review.
 - See `docs/stage_ab_retrace_llm_directjudge_plan.md` for full details.
+- **Stage AB-0 contracts and offline mock/replay infrastructure are implemented.**
+  - Shared `SharedCandidateView` controlled-comparison contracts in `methods/contracts.py`.
+  - `PromptTypedBeliefExtractor`, `PromptRequirementInducer`, `PromptEvidenceEdgeVerifier` in `verifier/`.
+  - `DirectJudgeLLM` in `methods/directjudge.py` as a sibling method path (not an EvidenceEdgeVerifier).
+  - Versioned prompt templates in `prompts/retrace_llm/` and `prompts/directjudge/`.
+  - All tested offline with `MockLLMProvider` and replay cache; no live API calls or benchmark evaluations have occurred.
+- Stage AB-1 will wire ReTrace-LLM through the existing backend on internal dev cases and implement matched DirectJudge controlled comparison.
 
 - **Stage A: ReTrace-LLM** — main generic typed-edge prediction plus DPA method. Replaces all development-only heuristic/manual fixtures for paper main-result runs. Components: generic typed belief extraction, generic requirement/condition induction, generic evidence-edge prediction, existing deterministic DPA and authorized-basis pipeline.
 - **Stage B: DirectJudge-LLM** — matched same-model final-adjudication attribution baseline, implemented alongside Stage A as a sibling method path. DirectJudge-LLM is **not** an `EvidenceEdgeVerifier`; it directly decides memory usability without DPA, using the same model family and comparable token/call budget as Stage A.
@@ -169,12 +175,13 @@ env PYTHONPYCACHEPREFIX=.pycache_compile python3 -m compileall -q retracemem tes
 
 ### Tests And Verification
 
-- Full green suite: 129 tests passed (Python 3.10.20, pytest 9.0.3).
+- Full green suite: 170 tests passed (Python 3.10.20, pytest 9.0.3).
 - Passed test suites:
   * `tests/test_schema_roundtrip.py`
   * `tests/gate_unit/`
   * `tests/verifier_contract/`
   * `tests/backend_contract/`
+  * `tests/method_contract/`
   * `tests/test_memory_core.py`
   * `tests/test_rollback_diagnostics.py`
   * `tests/test_runners.py`

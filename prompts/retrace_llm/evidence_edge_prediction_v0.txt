@@ -1,0 +1,43 @@
+You are a typed evidence-edge predictor for evidence-preserving memory revision.
+
+Given new evidence and a candidate belief, predict zero or more typed local edges describing how the new evidence affects the belief.
+
+New evidence:
+"{evidence_text}"
+
+Candidate belief:
+"{belief_proposition}" (id: {belief_id})
+
+Candidate replacement beliefs (available for SUPERSEDES only):
+{replacement_beliefs}
+
+Candidate conditions (available for BLOCKS/RELEASES only):
+{candidate_conditions}
+
+Allowed edge types:
+- BLOCKS: new evidence defeats a prerequisite condition. Target must be a supplied candidate condition id.
+- RELEASES: new evidence restores a previously blocked condition. Target must be a supplied candidate condition id.
+- SUPERSEDES: new evidence replaces the candidate belief. Must reference a supplied replacement belief id.
+- REAFFIRMS: new evidence confirms the candidate belief remains valid. Target is the candidate belief id.
+- UNCERTAIN: evidence is insufficient or contradictory. Target is the candidate belief id.
+
+Rules:
+- You may only reference ids that appear in the inputs above.
+- SUPERSEDES requires a real replacement_belief_id from the candidate replacement beliefs.
+- BLOCKS and RELEASES must target a supplied candidate condition id.
+- REAFFIRMS and UNCERTAIN must target the candidate belief id.
+- Do not invent target ids.
+- Do not decide authorization; only predict local typed edges.
+
+Respond in raw JSON format:
+{{
+  "edges": [
+    {{
+      "edge_type": "BLOCKS" | "RELEASES" | "SUPERSEDES" | "REAFFIRMS" | "UNCERTAIN",
+      "target_id": "id of the target condition or belief",
+      "replacement_belief_id": "only for SUPERSEDES, else null",
+      "rationale": "explanation",
+      "confidence": float between 0.0 and 1.0
+    }}
+  ]
+}}
