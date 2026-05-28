@@ -1,0 +1,1822 @@
+{
+  "_disclaimer": [
+    "Internal development diagnostic asset for the ReTrace Stage A/B Ambiguity-and-Scope feasibility gate.",
+    "NOT an official benchmark. NOT a final evaluation. NOT human-validated until review_status changes per case.",
+    "Replay/mock execution is for runner correctness; any live execution is exploratory development-only."
+  ],
+  "_schema_version": "ambiguity_scope_controlled_v0",
+  "_required_categories": [
+    "clear_supersession",
+    "clear_prerequisite_blocking",
+    "protected_unrelated_belief",
+    "temporary_constraint_vs_persistent_preference",
+    "current_state_vs_historical_fact",
+    "tentative_intention_or_future_possibility",
+    "insufficient_evidence_requires_abstention",
+    "multi_belief_scope_expansion_trap"
+  ],
+  "cases": [
+    {
+      "case_id": "as_supersession_01",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "clear_supersession",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Explicit confirmed employer change with a grounded replacement belief.",
+      "scope_trap": false,
+      "query": "Where does the user currently work?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_emp_old",
+          "session_id": "s1",
+          "timestamp": "2025-04-01T00:00:00Z",
+          "text": "I work as a backend engineer at Acme Corp.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_supersession_01/ev_emp_old"
+        },
+        {
+          "evidence_id": "ev_emp_new",
+          "session_id": "s2",
+          "timestamp": "2025-11-10T00:00:00Z",
+          "text": "I formally accepted a senior engineer offer at Nimbus Labs and my last day at Acme Corp was last Friday.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_supersession_01/ev_emp_new"
+        }
+      ],
+      "new_evidence_id": "ev_emp_new",
+      "candidate_beliefs": [
+        {"belief_id": "b_emp_acme", "proposition": "The user works at Acme Corp as a backend engineer.", "source_evidence_ids": ["ev_emp_old"]}
+      ],
+      "candidate_replacement_beliefs": [
+        {"belief_id": "b_emp_nimbus", "proposition": "The user works at Nimbus Labs as a senior engineer.", "source_evidence_ids": ["ev_emp_new"]}
+      ],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_emp_acme": "SUPERSEDED"},
+      "expected_comparable_status": {"b_emp_acme": "NOT_USABLE"},
+      "protected_belief_ids": [],
+      "stale_target_belief_ids": ["b_emp_acme"],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_emp_acme": [
+          {"edge_type": "SUPERSEDES", "target_id": "b_emp_acme", "replacement_belief_id": "b_emp_nimbus", "rationale": "Explicit employer change confirmed by accepted offer and last day.", "confidence": 0.94}
+        ]
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_emp_acme", "status": "NOT_USABLE", "rationale": "User has confirmed they no longer work at Acme Corp.", "confidence": 0.93}
+      ]
+    },
+    {
+      "case_id": "as_supersession_02",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "clear_supersession",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Explicit phone model replacement with a grounded replacement belief.",
+      "scope_trap": false,
+      "query": "Which phone model does the user use day to day?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_phone_old",
+          "session_id": "s1",
+          "timestamp": "2024-09-01T00:00:00Z",
+          "text": "My daily phone is a Pixel 6 and I have used it for two years.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_supersession_02/ev_phone_old"
+        },
+        {
+          "evidence_id": "ev_phone_new",
+          "session_id": "s2",
+          "timestamp": "2025-11-15T00:00:00Z",
+          "text": "I traded in the Pixel 6 today and switched to a Pixel 9 Pro as my only daily device.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_supersession_02/ev_phone_new"
+        }
+      ],
+      "new_evidence_id": "ev_phone_new",
+      "candidate_beliefs": [
+        {"belief_id": "b_phone_pixel6", "proposition": "The user's primary phone is a Pixel 6.", "source_evidence_ids": ["ev_phone_old"]}
+      ],
+      "candidate_replacement_beliefs": [
+        {"belief_id": "b_phone_pixel9", "proposition": "The user's primary phone is a Pixel 9 Pro.", "source_evidence_ids": ["ev_phone_new"]}
+      ],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_phone_pixel6": "SUPERSEDED"},
+      "expected_comparable_status": {"b_phone_pixel6": "NOT_USABLE"},
+      "protected_belief_ids": [],
+      "stale_target_belief_ids": ["b_phone_pixel6"],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_phone_pixel6": [
+          {"edge_type": "SUPERSEDES", "target_id": "b_phone_pixel6", "replacement_belief_id": "b_phone_pixel9", "rationale": "Explicit trade-in and switch to Pixel 9 Pro.", "confidence": 0.95}
+        ]
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_phone_pixel6", "status": "NOT_USABLE", "rationale": "Pixel 6 has been traded in.", "confidence": 0.93}
+      ]
+    },
+    {
+      "case_id": "as_supersession_03",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "clear_supersession",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Confirmed relocation supersedes the prior residence city belief.",
+      "scope_trap": false,
+      "query": "Which city does the user live in?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_city_old",
+          "session_id": "s1",
+          "timestamp": "2023-08-10T00:00:00Z",
+          "text": "I rent a flat in central Madrid and have lived here for four years.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_supersession_03/ev_city_old"
+        },
+        {
+          "evidence_id": "ev_city_new",
+          "session_id": "s2",
+          "timestamp": "2025-10-22T00:00:00Z",
+          "text": "I signed a lease in Berlin and moved last weekend; I am no longer in Madrid.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_supersession_03/ev_city_new"
+        }
+      ],
+      "new_evidence_id": "ev_city_new",
+      "candidate_beliefs": [
+        {"belief_id": "b_city_madrid", "proposition": "The user lives in Madrid.", "source_evidence_ids": ["ev_city_old"]}
+      ],
+      "candidate_replacement_beliefs": [
+        {"belief_id": "b_city_berlin", "proposition": "The user lives in Berlin.", "source_evidence_ids": ["ev_city_new"]}
+      ],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_city_madrid": "SUPERSEDED"},
+      "expected_comparable_status": {"b_city_madrid": "NOT_USABLE"},
+      "protected_belief_ids": [],
+      "stale_target_belief_ids": ["b_city_madrid"],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_city_madrid": [
+          {"edge_type": "SUPERSEDES", "target_id": "b_city_madrid", "replacement_belief_id": "b_city_berlin", "rationale": "Lease signed and move completed.", "confidence": 0.95}
+        ]
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_city_madrid", "status": "NOT_USABLE", "rationale": "User has moved out of Madrid to Berlin.", "confidence": 0.94}
+      ]
+    },
+    {
+      "case_id": "as_supersession_04",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "clear_supersession",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Confirmed vehicle replacement supersedes the prior daily-driver belief.",
+      "scope_trap": false,
+      "query": "Which car does the user drive daily?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_car_old",
+          "session_id": "s1",
+          "timestamp": "2022-04-12T00:00:00Z",
+          "text": "My daily driver is a 2014 Honda Civic.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_supersession_04/ev_car_old"
+        },
+        {
+          "evidence_id": "ev_car_new",
+          "session_id": "s2",
+          "timestamp": "2025-12-01T00:00:00Z",
+          "text": "I sold the Civic and just took delivery of a 2025 Hyundai Ioniq 6, which is now my only daily driver.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_supersession_04/ev_car_new"
+        }
+      ],
+      "new_evidence_id": "ev_car_new",
+      "candidate_beliefs": [
+        {"belief_id": "b_car_civic", "proposition": "The user's daily driver is a 2014 Honda Civic.", "source_evidence_ids": ["ev_car_old"]}
+      ],
+      "candidate_replacement_beliefs": [
+        {"belief_id": "b_car_ioniq", "proposition": "The user's daily driver is a 2025 Hyundai Ioniq 6.", "source_evidence_ids": ["ev_car_new"]}
+      ],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_car_civic": "SUPERSEDED"},
+      "expected_comparable_status": {"b_car_civic": "NOT_USABLE"},
+      "protected_belief_ids": [],
+      "stale_target_belief_ids": ["b_car_civic"],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_car_civic": [
+          {"edge_type": "SUPERSEDES", "target_id": "b_car_civic", "replacement_belief_id": "b_car_ioniq", "rationale": "Civic sold and replaced by Ioniq 6 as sole daily driver.", "confidence": 0.96}
+        ]
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_car_civic", "status": "NOT_USABLE", "rationale": "User has sold the Civic and replaced it.", "confidence": 0.94}
+      ]
+    },
+    {
+      "case_id": "as_prereq_block_01",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "clear_prerequisite_blocking",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Explicit mobility-blocking event invalidates the cycling-mobility condition.",
+      "scope_trap": false,
+      "query": "How does the user commute right now?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_commute_bike",
+          "session_id": "s1",
+          "timestamp": "2025-05-15T00:00:00Z",
+          "text": "I commute to work by bicycle every weekday.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_prereq_block_01/ev_commute_bike"
+        },
+        {
+          "evidence_id": "ev_leg_cast",
+          "session_id": "s2",
+          "timestamp": "2025-10-02T00:00:00Z",
+          "text": "I fractured my left tibia yesterday and the orthopedist put me in a hard cast for eight weeks; no cycling allowed.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_prereq_block_01/ev_leg_cast"
+        }
+      ],
+      "new_evidence_id": "ev_leg_cast",
+      "candidate_beliefs": [
+        {"belief_id": "b_bike_commute", "proposition": "The user commutes by bicycle.", "source_evidence_ids": ["ev_commute_bike"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        ["b_bike_commute", [
+          {"condition_id": "c_leg_mobility", "scope_id": "user1", "text": "The user has lower-limb mobility sufficient to ride a bicycle."}
+        ]]
+      ],
+      "dependency_edges_by_belief": [
+        ["b_bike_commute", [
+          {"edge_id": "dep-b_bike_commute-c_leg_mobility", "belief_id": "b_bike_commute", "condition_id": "c_leg_mobility", "inducer": "internal_dev_fixture", "edge_type": "REQUIRES"}
+        ]]
+      ],
+      "expected_stage_a_status": {"b_bike_commute": "BLOCKED"},
+      "expected_comparable_status": {"b_bike_commute": "NOT_USABLE"},
+      "protected_belief_ids": [],
+      "stale_target_belief_ids": ["b_bike_commute"],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_bike_commute": [
+          {"edge_type": "BLOCKS", "target_id": "c_leg_mobility", "rationale": "Hard cast for eight weeks explicitly precludes cycling.", "confidence": 0.95}
+        ]
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_bike_commute", "status": "NOT_USABLE", "rationale": "Cast prevents cycling for the next eight weeks.", "confidence": 0.93}
+      ]
+    },
+    {
+      "case_id": "as_prereq_block_02",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "clear_prerequisite_blocking",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "License suspension blocks the legal-driving condition required for the driving belief.",
+      "scope_trap": false,
+      "query": "Does the user drive to work right now?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_drive_habit",
+          "session_id": "s1",
+          "timestamp": "2025-02-10T00:00:00Z",
+          "text": "I drive my own car to work every weekday.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_prereq_block_02/ev_drive_habit"
+        },
+        {
+          "evidence_id": "ev_license_suspended",
+          "session_id": "s2",
+          "timestamp": "2025-11-12T00:00:00Z",
+          "text": "The DMV suspended my driver's license for six months starting today.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_prereq_block_02/ev_license_suspended"
+        }
+      ],
+      "new_evidence_id": "ev_license_suspended",
+      "candidate_beliefs": [
+        {"belief_id": "b_drives_to_work", "proposition": "The user drives their own car to work.", "source_evidence_ids": ["ev_drive_habit"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        ["b_drives_to_work", [
+          {"condition_id": "c_valid_license", "scope_id": "user1", "text": "The user holds a currently valid driver's license."}
+        ]]
+      ],
+      "dependency_edges_by_belief": [
+        ["b_drives_to_work", [
+          {"edge_id": "dep-b_drives_to_work-c_valid_license", "belief_id": "b_drives_to_work", "condition_id": "c_valid_license", "inducer": "internal_dev_fixture", "edge_type": "REQUIRES"}
+        ]]
+      ],
+      "expected_stage_a_status": {"b_drives_to_work": "BLOCKED"},
+      "expected_comparable_status": {"b_drives_to_work": "NOT_USABLE"},
+      "protected_belief_ids": [],
+      "stale_target_belief_ids": ["b_drives_to_work"],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_drives_to_work": [
+          {"edge_type": "BLOCKS", "target_id": "c_valid_license", "rationale": "DMV suspension removes the legal-driving prerequisite.", "confidence": 0.96}
+        ]
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_drives_to_work", "status": "NOT_USABLE", "rationale": "User cannot legally drive while license is suspended.", "confidence": 0.94}
+      ]
+    },
+    {
+      "case_id": "as_prereq_block_03",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "clear_prerequisite_blocking",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Expired gym membership blocks the membership-validity condition for ongoing gym attendance.",
+      "scope_trap": false,
+      "query": "Can the user enter their usual gym this week?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_gym_routine",
+          "session_id": "s1",
+          "timestamp": "2025-01-05T00:00:00Z",
+          "text": "I attend my CrossFit gym four times per week.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_prereq_block_03/ev_gym_routine"
+        },
+        {
+          "evidence_id": "ev_gym_expired",
+          "session_id": "s2",
+          "timestamp": "2025-12-02T00:00:00Z",
+          "text": "My CrossFit membership expired last Friday and I have not renewed it; the gym has blocked my access until I do.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_prereq_block_03/ev_gym_expired"
+        }
+      ],
+      "new_evidence_id": "ev_gym_expired",
+      "candidate_beliefs": [
+        {"belief_id": "b_attends_crossfit", "proposition": "The user attends their CrossFit gym multiple times per week.", "source_evidence_ids": ["ev_gym_routine"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        ["b_attends_crossfit", [
+          {"condition_id": "c_active_membership", "scope_id": "user1", "text": "The user holds an active CrossFit gym membership."}
+        ]]
+      ],
+      "dependency_edges_by_belief": [
+        ["b_attends_crossfit", [
+          {"edge_id": "dep-b_attends_crossfit-c_active_membership", "belief_id": "b_attends_crossfit", "condition_id": "c_active_membership", "inducer": "internal_dev_fixture", "edge_type": "REQUIRES"}
+        ]]
+      ],
+      "expected_stage_a_status": {"b_attends_crossfit": "BLOCKED"},
+      "expected_comparable_status": {"b_attends_crossfit": "NOT_USABLE"},
+      "protected_belief_ids": [],
+      "stale_target_belief_ids": ["b_attends_crossfit"],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_attends_crossfit": [
+          {"edge_type": "BLOCKS", "target_id": "c_active_membership", "rationale": "Expired and unrenewed membership prevents gym access.", "confidence": 0.94}
+        ]
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_attends_crossfit", "status": "NOT_USABLE", "rationale": "User cannot enter the gym while membership is expired.", "confidence": 0.92}
+      ]
+    },
+    {
+      "case_id": "as_prereq_block_04",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "clear_prerequisite_blocking",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Ear infection with explicit medical no-swim order blocks the medical-clearance condition.",
+      "scope_trap": false,
+      "query": "Can the user attend swim practice this week?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_swim_practice",
+          "session_id": "s1",
+          "timestamp": "2025-03-18T00:00:00Z",
+          "text": "I swim with my masters team three mornings a week.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_prereq_block_04/ev_swim_practice"
+        },
+        {
+          "evidence_id": "ev_ear_infection",
+          "session_id": "s2",
+          "timestamp": "2025-11-29T00:00:00Z",
+          "text": "My ENT diagnosed a severe inner-ear infection and explicitly told me no swimming for at least three weeks.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_prereq_block_04/ev_ear_infection"
+        }
+      ],
+      "new_evidence_id": "ev_ear_infection",
+      "candidate_beliefs": [
+        {"belief_id": "b_swims_masters", "proposition": "The user swims with a masters team multiple mornings each week.", "source_evidence_ids": ["ev_swim_practice"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        ["b_swims_masters", [
+          {"condition_id": "c_swim_medical_ok", "scope_id": "user1", "text": "The user has medical clearance to swim."}
+        ]]
+      ],
+      "dependency_edges_by_belief": [
+        ["b_swims_masters", [
+          {"edge_id": "dep-b_swims_masters-c_swim_medical_ok", "belief_id": "b_swims_masters", "condition_id": "c_swim_medical_ok", "inducer": "internal_dev_fixture", "edge_type": "REQUIRES"}
+        ]]
+      ],
+      "expected_stage_a_status": {"b_swims_masters": "BLOCKED"},
+      "expected_comparable_status": {"b_swims_masters": "NOT_USABLE"},
+      "protected_belief_ids": [],
+      "stale_target_belief_ids": ["b_swims_masters"],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_swims_masters": [
+          {"edge_type": "BLOCKS", "target_id": "c_swim_medical_ok", "rationale": "ENT's explicit no-swimming order removes the medical-clearance prerequisite.", "confidence": 0.95}
+        ]
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_swims_masters", "status": "NOT_USABLE", "rationale": "ENT has explicitly prohibited swimming for at least three weeks.", "confidence": 0.93}
+      ]
+    },
+    {
+      "case_id": "as_protected_01",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "protected_unrelated_belief",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Cycling blocker must not erase an unrelated long-standing dietary preference.",
+      "scope_trap": true,
+      "query": "Summarize the user's daily commute and dietary preferences.",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_veg_diet",
+          "session_id": "s1",
+          "timestamp": "2024-01-20T00:00:00Z",
+          "text": "I have been vegetarian for six years and have no plans to change.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_protected_01/ev_veg_diet"
+        },
+        {
+          "evidence_id": "ev_bike_habit",
+          "session_id": "s2",
+          "timestamp": "2025-03-01T00:00:00Z",
+          "text": "I cycle to work every day, even in winter.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_protected_01/ev_bike_habit"
+        },
+        {
+          "evidence_id": "ev_knee_surgery",
+          "session_id": "s3",
+          "timestamp": "2025-09-25T00:00:00Z",
+          "text": "I had knee surgery and I am on strict no-weight-bearing recovery for at least ten weeks; cycling is out of the question.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_protected_01/ev_knee_surgery"
+        }
+      ],
+      "new_evidence_id": "ev_knee_surgery",
+      "candidate_beliefs": [
+        {"belief_id": "b_cycle_commute", "proposition": "The user commutes by bicycle.", "source_evidence_ids": ["ev_bike_habit"]},
+        {"belief_id": "b_vegetarian", "proposition": "The user follows a vegetarian diet.", "source_evidence_ids": ["ev_veg_diet"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        ["b_cycle_commute", [
+          {"condition_id": "c_leg_ok", "scope_id": "user1", "text": "The user can place weight on their legs sufficiently to pedal a bicycle."}
+        ]]
+      ],
+      "dependency_edges_by_belief": [
+        ["b_cycle_commute", [
+          {"edge_id": "dep-b_cycle_commute-c_leg_ok", "belief_id": "b_cycle_commute", "condition_id": "c_leg_ok", "inducer": "internal_dev_fixture", "edge_type": "REQUIRES"}
+        ]]
+      ],
+      "expected_stage_a_status": {"b_cycle_commute": "BLOCKED", "b_vegetarian": "AUTHORIZED"},
+      "expected_comparable_status": {"b_cycle_commute": "NOT_USABLE", "b_vegetarian": "USABLE"},
+      "protected_belief_ids": ["b_vegetarian"],
+      "stale_target_belief_ids": ["b_cycle_commute"],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_cycle_commute": [
+          {"edge_type": "BLOCKS", "target_id": "c_leg_ok", "rationale": "Strict no-weight-bearing recovery for ten weeks prevents cycling.", "confidence": 0.94}
+        ],
+        "b_vegetarian": []
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_cycle_commute", "status": "NOT_USABLE", "rationale": "Knee surgery rules out cycling.", "confidence": 0.92},
+        {"belief_id": "b_vegetarian", "status": "USABLE", "rationale": "Dietary preference is unrelated to the injury.", "confidence": 0.94}
+      ]
+    },
+    {
+      "case_id": "as_protected_02",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "protected_unrelated_belief",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Job change must not erase an unrelated long-standing musical interest.",
+      "scope_trap": true,
+      "query": "Tell me about the user's job and music interests.",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_loves_jazz",
+          "session_id": "s1",
+          "timestamp": "2023-02-14T00:00:00Z",
+          "text": "I have played jazz piano for fifteen years and still practice almost every day.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_protected_02/ev_loves_jazz"
+        },
+        {
+          "evidence_id": "ev_job_at_acme",
+          "session_id": "s1",
+          "timestamp": "2023-02-14T00:00:00Z",
+          "text": "I currently work as a data analyst at Acme Corp.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_protected_02/ev_job_at_acme"
+        },
+        {
+          "evidence_id": "ev_job_change_p2",
+          "session_id": "s2",
+          "timestamp": "2025-11-30T00:00:00Z",
+          "text": "I resigned from Acme and am between roles while job searching.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_protected_02/ev_job_change_p2"
+        }
+      ],
+      "new_evidence_id": "ev_job_change_p2",
+      "candidate_beliefs": [
+        {"belief_id": "b_job_acme_analyst", "proposition": "The user works as a data analyst at Acme Corp.", "source_evidence_ids": ["ev_job_at_acme"]},
+        {"belief_id": "b_plays_jazz_piano", "proposition": "The user plays jazz piano regularly.", "source_evidence_ids": ["ev_loves_jazz"]}
+      ],
+      "candidate_replacement_beliefs": [
+        {"belief_id": "b_between_roles", "proposition": "The user is between roles and is currently job searching.", "source_evidence_ids": ["ev_job_change_p2"]}
+      ],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_job_acme_analyst": "SUPERSEDED", "b_plays_jazz_piano": "AUTHORIZED"},
+      "expected_comparable_status": {"b_job_acme_analyst": "NOT_USABLE", "b_plays_jazz_piano": "USABLE"},
+      "protected_belief_ids": ["b_plays_jazz_piano"],
+      "stale_target_belief_ids": ["b_job_acme_analyst"],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_job_acme_analyst": [
+          {"edge_type": "SUPERSEDES", "target_id": "b_job_acme_analyst", "replacement_belief_id": "b_between_roles", "rationale": "User has resigned and is now in a between-roles state.", "confidence": 0.9}
+        ],
+        "b_plays_jazz_piano": []
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_job_acme_analyst", "status": "NOT_USABLE", "rationale": "User no longer works at Acme.", "confidence": 0.92},
+        {"belief_id": "b_plays_jazz_piano", "status": "USABLE", "rationale": "Musical hobby is unrelated to the job change.", "confidence": 0.95}
+      ]
+    },
+    {
+      "case_id": "as_protected_03",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "protected_unrelated_belief",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Phone breakage blocks app-based contact but must not erase an unrelated language skill.",
+      "scope_trap": true,
+      "query": "What languages does the user speak and how can I reach them?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_speaks_japanese",
+          "session_id": "s1",
+          "timestamp": "2022-07-22T00:00:00Z",
+          "text": "I am conversationally fluent in Japanese after living in Tokyo for two years.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_protected_03/ev_speaks_japanese"
+        },
+        {
+          "evidence_id": "ev_uses_signal",
+          "session_id": "s1",
+          "timestamp": "2022-07-22T00:00:00Z",
+          "text": "Signal is my main messaging app for both work and friends.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_protected_03/ev_uses_signal"
+        },
+        {
+          "evidence_id": "ev_phone_broken_p",
+          "session_id": "s2",
+          "timestamp": "2025-12-05T00:00:00Z",
+          "text": "My phone is completely broken and the repair shop will take at least ten days; I cannot use any apps until then.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_protected_03/ev_phone_broken_p"
+        }
+      ],
+      "new_evidence_id": "ev_phone_broken_p",
+      "candidate_beliefs": [
+        {"belief_id": "b_uses_signal", "proposition": "The user uses Signal as their main messaging app.", "source_evidence_ids": ["ev_uses_signal"]},
+        {"belief_id": "b_speaks_japanese", "proposition": "The user is conversationally fluent in Japanese.", "source_evidence_ids": ["ev_speaks_japanese"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        ["b_uses_signal", [
+          {"condition_id": "c_working_phone", "scope_id": "user1", "text": "The user has a working phone that can run messaging apps."}
+        ]]
+      ],
+      "dependency_edges_by_belief": [
+        ["b_uses_signal", [
+          {"edge_id": "dep-b_uses_signal-c_working_phone", "belief_id": "b_uses_signal", "condition_id": "c_working_phone", "inducer": "internal_dev_fixture", "edge_type": "REQUIRES"}
+        ]]
+      ],
+      "expected_stage_a_status": {"b_uses_signal": "BLOCKED", "b_speaks_japanese": "AUTHORIZED"},
+      "expected_comparable_status": {"b_uses_signal": "NOT_USABLE", "b_speaks_japanese": "USABLE"},
+      "protected_belief_ids": ["b_speaks_japanese"],
+      "stale_target_belief_ids": ["b_uses_signal"],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_uses_signal": [
+          {"edge_type": "BLOCKS", "target_id": "c_working_phone", "rationale": "Phone is broken for at least ten days.", "confidence": 0.93}
+        ],
+        "b_speaks_japanese": []
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_uses_signal", "status": "NOT_USABLE", "rationale": "No working phone means Signal is currently unusable.", "confidence": 0.9},
+        {"belief_id": "b_speaks_japanese", "status": "USABLE", "rationale": "Language skill is unaffected by phone breakage.", "confidence": 0.96}
+      ]
+    },
+    {
+      "case_id": "as_protected_04",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "protected_unrelated_belief",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "City relocation supersedes the residence belief but must not erase the family-relationship belief.",
+      "scope_trap": true,
+      "query": "Where does the user live and what are their family ties?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_sister_close",
+          "session_id": "s1",
+          "timestamp": "2021-05-09T00:00:00Z",
+          "text": "I am very close with my sister Aiko and we talk every week.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_protected_04/ev_sister_close"
+        },
+        {
+          "evidence_id": "ev_lives_in_chicago",
+          "session_id": "s1",
+          "timestamp": "2023-01-17T00:00:00Z",
+          "text": "I live in Chicago, in the Logan Square neighborhood.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_protected_04/ev_lives_in_chicago"
+        },
+        {
+          "evidence_id": "ev_moved_to_seattle",
+          "session_id": "s2",
+          "timestamp": "2025-12-08T00:00:00Z",
+          "text": "I just finished moving from Chicago to Seattle for a new job and signed the lease for a place in Capitol Hill.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_protected_04/ev_moved_to_seattle"
+        }
+      ],
+      "new_evidence_id": "ev_moved_to_seattle",
+      "candidate_beliefs": [
+        {"belief_id": "b_lives_in_chicago", "proposition": "The user lives in Chicago.", "source_evidence_ids": ["ev_lives_in_chicago"]},
+        {"belief_id": "b_close_to_sister", "proposition": "The user is very close with their sister Aiko.", "source_evidence_ids": ["ev_sister_close"]}
+      ],
+      "candidate_replacement_beliefs": [
+        {"belief_id": "b_lives_in_seattle", "proposition": "The user lives in Seattle.", "source_evidence_ids": ["ev_moved_to_seattle"]}
+      ],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_lives_in_chicago": "SUPERSEDED", "b_close_to_sister": "AUTHORIZED"},
+      "expected_comparable_status": {"b_lives_in_chicago": "NOT_USABLE", "b_close_to_sister": "USABLE"},
+      "protected_belief_ids": ["b_close_to_sister"],
+      "stale_target_belief_ids": ["b_lives_in_chicago"],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_lives_in_chicago": [
+          {"edge_type": "SUPERSEDES", "target_id": "b_lives_in_chicago", "replacement_belief_id": "b_lives_in_seattle", "rationale": "Explicit move from Chicago to Seattle.", "confidence": 0.95}
+        ],
+        "b_close_to_sister": []
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_lives_in_chicago", "status": "NOT_USABLE", "rationale": "User has moved to Seattle.", "confidence": 0.94},
+        {"belief_id": "b_close_to_sister", "status": "USABLE", "rationale": "Family relationship is unrelated to relocation.", "confidence": 0.96}
+      ]
+    },
+    {
+      "case_id": "as_temp_vs_persistent_01",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "temporary_constraint_vs_persistent_preference",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "A short-term schedule conflict should not erase a long-standing cycling preference.",
+      "scope_trap": false,
+      "query": "Does the user usually cycle to the office?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_cycle_pref",
+          "session_id": "s1",
+          "timestamp": "2024-08-15T00:00:00Z",
+          "text": "Cycling is my preferred daily commute; I have done it for three years.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_temp_vs_persistent_01/ev_cycle_pref"
+        },
+        {
+          "evidence_id": "ev_business_trip",
+          "session_id": "s2",
+          "timestamp": "2025-10-20T00:00:00Z",
+          "text": "I am traveling for client meetings this week, so I will not be cycling until Monday.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_temp_vs_persistent_01/ev_business_trip"
+        }
+      ],
+      "new_evidence_id": "ev_business_trip",
+      "candidate_beliefs": [
+        {"belief_id": "b_cycle_pref", "proposition": "The user prefers cycling as their daily commute.", "source_evidence_ids": ["ev_cycle_pref"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_cycle_pref": "AUTHORIZED"},
+      "expected_comparable_status": {"b_cycle_pref": "USABLE"},
+      "protected_belief_ids": ["b_cycle_pref"],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_cycle_pref": []
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_cycle_pref", "status": "USABLE", "rationale": "A short trip does not change a long-standing commuting preference.", "confidence": 0.88}
+      ]
+    },
+    {
+      "case_id": "as_temp_vs_persistent_02",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "temporary_constraint_vs_persistent_preference",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "A single non-vegetarian meal does not erase a long-standing vegetarian preference.",
+      "scope_trap": false,
+      "query": "Is the user vegetarian?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_long_vegetarian",
+          "session_id": "s1",
+          "timestamp": "2020-04-04T00:00:00Z",
+          "text": "I have been vegetarian for eight years and intend to stay vegetarian.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_temp_vs_persistent_02/ev_long_vegetarian"
+        },
+        {
+          "evidence_id": "ev_pizza_tonight",
+          "session_id": "s2",
+          "timestamp": "2025-11-04T20:00:00Z",
+          "text": "Tonight I am at a friend's birthday and there is only meat pizza, so I will eat one slice with pepperoni this once.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_temp_vs_persistent_02/ev_pizza_tonight"
+        }
+      ],
+      "new_evidence_id": "ev_pizza_tonight",
+      "candidate_beliefs": [
+        {"belief_id": "b_vegetarian_pref", "proposition": "The user follows a vegetarian diet as a long-standing preference.", "source_evidence_ids": ["ev_long_vegetarian"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_vegetarian_pref": "AUTHORIZED"},
+      "expected_comparable_status": {"b_vegetarian_pref": "USABLE"},
+      "protected_belief_ids": ["b_vegetarian_pref"],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_vegetarian_pref": []
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_vegetarian_pref", "status": "USABLE", "rationale": "One-off exception at a party does not negate a long-standing preference.", "confidence": 0.86}
+      ]
+    },
+    {
+      "case_id": "as_temp_vs_persistent_03",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "temporary_constraint_vs_persistent_preference",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Working from a cafe for one day does not change a stated remote-work-from-home preference.",
+      "scope_trap": false,
+      "query": "Where does the user typically work from on weekdays?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_wfh_pref",
+          "session_id": "s1",
+          "timestamp": "2024-11-30T00:00:00Z",
+          "text": "I primarily work from my home office; I have done this for two years and it works well for me.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_temp_vs_persistent_03/ev_wfh_pref"
+        },
+        {
+          "evidence_id": "ev_cafe_today",
+          "session_id": "s2",
+          "timestamp": "2025-12-10T09:00:00Z",
+          "text": "Internet is out at my apartment this morning, so I am working from the cafe down the street just for today.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_temp_vs_persistent_03/ev_cafe_today"
+        }
+      ],
+      "new_evidence_id": "ev_cafe_today",
+      "candidate_beliefs": [
+        {"belief_id": "b_wfh_preference", "proposition": "The user primarily works from their home office.", "source_evidence_ids": ["ev_wfh_pref"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_wfh_preference": "AUTHORIZED"},
+      "expected_comparable_status": {"b_wfh_preference": "USABLE"},
+      "protected_belief_ids": ["b_wfh_preference"],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_wfh_preference": []
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_wfh_preference", "status": "USABLE", "rationale": "A one-day location change due to outage is not a preference change.", "confidence": 0.87}
+      ]
+    },
+    {
+      "case_id": "as_temp_vs_persistent_04",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "temporary_constraint_vs_persistent_preference",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Taking a taxi once because of a train delay does not change a stated train-commute preference.",
+      "scope_trap": false,
+      "query": "How does the user commute to work most days?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_train_pref",
+          "session_id": "s1",
+          "timestamp": "2024-06-12T00:00:00Z",
+          "text": "I take the commuter train into the city every weekday and I find it reliable.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_temp_vs_persistent_04/ev_train_pref"
+        },
+        {
+          "evidence_id": "ev_taxi_today",
+          "session_id": "s2",
+          "timestamp": "2025-12-15T07:30:00Z",
+          "text": "There is a signal failure and trains are suspended this morning; I took a taxi today as a one-off.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_temp_vs_persistent_04/ev_taxi_today"
+        }
+      ],
+      "new_evidence_id": "ev_taxi_today",
+      "candidate_beliefs": [
+        {"belief_id": "b_train_commute", "proposition": "The user commutes by train into the city on weekdays.", "source_evidence_ids": ["ev_train_pref"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_train_commute": "AUTHORIZED"},
+      "expected_comparable_status": {"b_train_commute": "USABLE"},
+      "protected_belief_ids": ["b_train_commute"],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_train_commute": []
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_train_commute", "status": "USABLE", "rationale": "A one-day taxi due to signal failure does not change the underlying commute habit.", "confidence": 0.85}
+      ]
+    },
+    {
+      "case_id": "as_current_vs_historical_01",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "current_state_vs_historical_fact",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "A current employment change must not erase a past academic accomplishment.",
+      "scope_trap": false,
+      "query": "What academic degree has the user earned?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_phd_award",
+          "session_id": "s1",
+          "timestamp": "2018-06-10T00:00:00Z",
+          "text": "I successfully defended my PhD in computational neuroscience in 2018.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_current_vs_historical_01/ev_phd_award"
+        },
+        {
+          "evidence_id": "ev_job_change",
+          "session_id": "s2",
+          "timestamp": "2025-09-01T00:00:00Z",
+          "text": "I left research and now work as a product manager at a fintech startup.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_current_vs_historical_01/ev_job_change"
+        }
+      ],
+      "new_evidence_id": "ev_job_change",
+      "candidate_beliefs": [
+        {"belief_id": "b_phd_degree", "proposition": "The user earned a PhD in computational neuroscience in 2018.", "source_evidence_ids": ["ev_phd_award"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_phd_degree": "AUTHORIZED"},
+      "expected_comparable_status": {"b_phd_degree": "USABLE"},
+      "protected_belief_ids": ["b_phd_degree"],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_phd_degree": []
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_phd_degree", "status": "USABLE", "rationale": "A past degree is not invalidated by a later career change.", "confidence": 0.94}
+      ]
+    },
+    {
+      "case_id": "as_current_vs_historical_02",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "current_state_vs_historical_fact",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "A current relocation must not erase the user's birthplace fact.",
+      "scope_trap": false,
+      "query": "Where was the user born?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_born_in_saopaulo",
+          "session_id": "s1",
+          "timestamp": "2020-09-09T00:00:00Z",
+          "text": "I was born in São Paulo, Brazil and spent my childhood there.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_current_vs_historical_02/ev_born_in_saopaulo"
+        },
+        {
+          "evidence_id": "ev_now_in_berlin",
+          "session_id": "s2",
+          "timestamp": "2025-11-25T00:00:00Z",
+          "text": "I recently relocated to Berlin for a new job and signed a long lease here.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_current_vs_historical_02/ev_now_in_berlin"
+        }
+      ],
+      "new_evidence_id": "ev_now_in_berlin",
+      "candidate_beliefs": [
+        {"belief_id": "b_birthplace_saopaulo", "proposition": "The user was born in São Paulo, Brazil.", "source_evidence_ids": ["ev_born_in_saopaulo"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_birthplace_saopaulo": "AUTHORIZED"},
+      "expected_comparable_status": {"b_birthplace_saopaulo": "USABLE"},
+      "protected_belief_ids": ["b_birthplace_saopaulo"],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_birthplace_saopaulo": []
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_birthplace_saopaulo", "status": "USABLE", "rationale": "Birthplace is a historical fact that relocation does not change.", "confidence": 0.97}
+      ]
+    },
+    {
+      "case_id": "as_current_vs_historical_03",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "current_state_vs_historical_fact",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "A coaching role this season must not erase a past championship win.",
+      "scope_trap": false,
+      "query": "What major sporting accomplishment has the user achieved?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_won_championship",
+          "session_id": "s1",
+          "timestamp": "2019-07-20T00:00:00Z",
+          "text": "I won the state amateur tennis championship in 2019.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_current_vs_historical_03/ev_won_championship"
+        },
+        {
+          "evidence_id": "ev_coaches_now",
+          "session_id": "s2",
+          "timestamp": "2025-10-12T00:00:00Z",
+          "text": "I currently coach my child's junior tennis team and no longer compete myself.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_current_vs_historical_03/ev_coaches_now"
+        }
+      ],
+      "new_evidence_id": "ev_coaches_now",
+      "candidate_beliefs": [
+        {"belief_id": "b_won_state_championship_2019", "proposition": "The user won the state amateur tennis championship in 2019.", "source_evidence_ids": ["ev_won_championship"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_won_state_championship_2019": "AUTHORIZED"},
+      "expected_comparable_status": {"b_won_state_championship_2019": "USABLE"},
+      "protected_belief_ids": ["b_won_state_championship_2019"],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_won_state_championship_2019": []
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_won_state_championship_2019", "status": "USABLE", "rationale": "A current coaching role does not erase a prior championship win.", "confidence": 0.95}
+      ]
+    },
+    {
+      "case_id": "as_current_vs_historical_04",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "current_state_vs_historical_fact",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Current surgical recovery must not erase the user's prior Boston Marathon completion.",
+      "scope_trap": false,
+      "query": "Has the user completed the Boston Marathon?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_boston_marathon",
+          "session_id": "s1",
+          "timestamp": "2021-04-19T00:00:00Z",
+          "text": "I completed the Boston Marathon in 2021 with a finish time of 3:14:08.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_current_vs_historical_04/ev_boston_marathon"
+        },
+        {
+          "evidence_id": "ev_rehab_now",
+          "session_id": "s2",
+          "timestamp": "2025-11-18T00:00:00Z",
+          "text": "I am currently rehabilitating from ACL surgery and cannot run at all this year.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_current_vs_historical_04/ev_rehab_now"
+        }
+      ],
+      "new_evidence_id": "ev_rehab_now",
+      "candidate_beliefs": [
+        {"belief_id": "b_completed_boston_2021", "proposition": "The user completed the Boston Marathon in 2021.", "source_evidence_ids": ["ev_boston_marathon"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_completed_boston_2021": "AUTHORIZED"},
+      "expected_comparable_status": {"b_completed_boston_2021": "USABLE"},
+      "protected_belief_ids": ["b_completed_boston_2021"],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_completed_boston_2021": []
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_completed_boston_2021", "status": "USABLE", "rationale": "Current injury does not change the historical fact of completing the marathon.", "confidence": 0.96}
+      ]
+    },
+    {
+      "case_id": "as_tentative_intention_01",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "tentative_intention_or_future_possibility",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "A tentative future-possibility hint should produce UNRESOLVED/UNCERTAIN, not confident supersession.",
+      "scope_trap": false,
+      "query": "Where does the user currently live?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_live_sf",
+          "session_id": "s1",
+          "timestamp": "2025-01-12T00:00:00Z",
+          "text": "I live in San Francisco near the Mission district.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_tentative_intention_01/ev_live_sf"
+        },
+        {
+          "evidence_id": "ev_maybe_move",
+          "session_id": "s2",
+          "timestamp": "2025-11-05T00:00:00Z",
+          "text": "My partner and I are seriously thinking about moving to Lisbon next spring, but nothing is decided yet.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_tentative_intention_01/ev_maybe_move"
+        }
+      ],
+      "new_evidence_id": "ev_maybe_move",
+      "candidate_beliefs": [
+        {"belief_id": "b_sf_resident", "proposition": "The user lives in San Francisco.", "source_evidence_ids": ["ev_live_sf"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_sf_resident": "UNRESOLVED"},
+      "expected_comparable_status": {"b_sf_resident": "UNCERTAIN"},
+      "protected_belief_ids": [],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": ["b_sf_resident"],
+      "stage_a_mock_edges": {
+        "b_sf_resident": [
+          {"edge_type": "UNCERTAIN", "target_id": "b_sf_resident", "rationale": "User is considering a move but has not committed.", "confidence": 0.78}
+        ]
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_sf_resident", "status": "UNCERTAIN", "rationale": "Move is being considered but is not confirmed.", "confidence": 0.74}
+      ]
+    },
+    {
+      "case_id": "as_tentative_intention_02",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "tentative_intention_or_future_possibility",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Considering a job switch is not a confirmed supersession of the current employer belief.",
+      "scope_trap": false,
+      "query": "Where does the user currently work?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_works_at_ti2",
+          "session_id": "s1",
+          "timestamp": "2024-12-02T00:00:00Z",
+          "text": "I work as a designer at Tinker Industries.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_tentative_intention_02/ev_works_at_ti2"
+        },
+        {
+          "evidence_id": "ev_considering_switch",
+          "session_id": "s2",
+          "timestamp": "2025-11-20T00:00:00Z",
+          "text": "I am considering switching jobs because of the long commute, but I have not interviewed anywhere yet.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_tentative_intention_02/ev_considering_switch"
+        }
+      ],
+      "new_evidence_id": "ev_considering_switch",
+      "candidate_beliefs": [
+        {"belief_id": "b_works_at_tinker", "proposition": "The user works as a designer at Tinker Industries.", "source_evidence_ids": ["ev_works_at_ti2"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_works_at_tinker": "UNRESOLVED"},
+      "expected_comparable_status": {"b_works_at_tinker": "UNCERTAIN"},
+      "protected_belief_ids": [],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": ["b_works_at_tinker"],
+      "stage_a_mock_edges": {
+        "b_works_at_tinker": [
+          {"edge_type": "UNCERTAIN", "target_id": "b_works_at_tinker", "rationale": "Considering a switch but no commitment.", "confidence": 0.7}
+        ]
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_works_at_tinker", "status": "UNCERTAIN", "rationale": "Considering a switch but no concrete move.", "confidence": 0.7}
+      ]
+    },
+    {
+      "case_id": "as_tentative_intention_03",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "tentative_intention_or_future_possibility",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "A possible future diet change is not confirmation that the user has already changed diets.",
+      "scope_trap": false,
+      "query": "What kind of diet does the user follow?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_eats_omnivore",
+          "session_id": "s1",
+          "timestamp": "2023-10-30T00:00:00Z",
+          "text": "I eat a typical mixed diet including meat, fish and vegetables.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_tentative_intention_03/ev_eats_omnivore"
+        },
+        {
+          "evidence_id": "ev_maybe_vegan",
+          "session_id": "s2",
+          "timestamp": "2025-11-18T00:00:00Z",
+          "text": "I have been reading about plant-based diets and I might try going fully vegan next month, but I have not started yet.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_tentative_intention_03/ev_maybe_vegan"
+        }
+      ],
+      "new_evidence_id": "ev_maybe_vegan",
+      "candidate_beliefs": [
+        {"belief_id": "b_diet_omnivore", "proposition": "The user follows a typical mixed diet including meat, fish, and vegetables.", "source_evidence_ids": ["ev_eats_omnivore"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_diet_omnivore": "UNRESOLVED"},
+      "expected_comparable_status": {"b_diet_omnivore": "UNCERTAIN"},
+      "protected_belief_ids": [],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": ["b_diet_omnivore"],
+      "stage_a_mock_edges": {
+        "b_diet_omnivore": [
+          {"edge_type": "UNCERTAIN", "target_id": "b_diet_omnivore", "rationale": "Vegan trial is being considered but has not started.", "confidence": 0.72}
+        ]
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_diet_omnivore", "status": "UNCERTAIN", "rationale": "Diet change is being considered for the future.", "confidence": 0.72}
+      ]
+    },
+    {
+      "case_id": "as_tentative_intention_04",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "tentative_intention_or_future_possibility",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Thinking about quitting hiking does not confirm that the hobby has been dropped.",
+      "scope_trap": false,
+      "query": "Does the user hike regularly?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_hikes_regularly",
+          "session_id": "s1",
+          "timestamp": "2024-05-09T00:00:00Z",
+          "text": "I hike every weekend on the trails near my house.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_tentative_intention_04/ev_hikes_regularly"
+        },
+        {
+          "evidence_id": "ev_thinking_quit",
+          "session_id": "s2",
+          "timestamp": "2025-12-01T00:00:00Z",
+          "text": "I am thinking about quitting hiking because my knees ache, but I have not made up my mind.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_tentative_intention_04/ev_thinking_quit"
+        }
+      ],
+      "new_evidence_id": "ev_thinking_quit",
+      "candidate_beliefs": [
+        {"belief_id": "b_hikes_regularly", "proposition": "The user hikes every weekend on local trails.", "source_evidence_ids": ["ev_hikes_regularly"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_hikes_regularly": "UNRESOLVED"},
+      "expected_comparable_status": {"b_hikes_regularly": "UNCERTAIN"},
+      "protected_belief_ids": [],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": ["b_hikes_regularly"],
+      "stage_a_mock_edges": {
+        "b_hikes_regularly": [
+          {"edge_type": "UNCERTAIN", "target_id": "b_hikes_regularly", "rationale": "Considering quitting but no decision made.", "confidence": 0.7}
+        ]
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_hikes_regularly", "status": "UNCERTAIN", "rationale": "Quitting is being considered but not committed to.", "confidence": 0.7}
+      ]
+    },
+    {
+      "case_id": "as_insufficient_evidence_01",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "insufficient_evidence_requires_abstention",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Vague mood-only signal does not justify confident supersession of a residence belief.",
+      "scope_trap": false,
+      "query": "Where does the user live?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_residence_pdx",
+          "session_id": "s1",
+          "timestamp": "2024-03-04T00:00:00Z",
+          "text": "I live in a rented apartment in Portland, Oregon.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_insufficient_evidence_01/ev_residence_pdx"
+        },
+        {
+          "evidence_id": "ev_vague_change",
+          "session_id": "s2",
+          "timestamp": "2025-11-22T00:00:00Z",
+          "text": "Lately things at home have just felt different and I am not sure how to describe it.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_insufficient_evidence_01/ev_vague_change"
+        }
+      ],
+      "new_evidence_id": "ev_vague_change",
+      "candidate_beliefs": [
+        {"belief_id": "b_pdx_resident", "proposition": "The user lives in a rented apartment in Portland, Oregon.", "source_evidence_ids": ["ev_residence_pdx"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_pdx_resident": "UNRESOLVED"},
+      "expected_comparable_status": {"b_pdx_resident": "UNCERTAIN"},
+      "protected_belief_ids": [],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": ["b_pdx_resident"],
+      "stage_a_mock_edges": {
+        "b_pdx_resident": [
+          {"edge_type": "UNCERTAIN", "target_id": "b_pdx_resident", "rationale": "Evidence is too vague to support any structural change.", "confidence": 0.62}
+        ]
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_pdx_resident", "status": "UNCERTAIN", "rationale": "Vague mood signal does not justify a confident change.", "confidence": 0.60}
+      ]
+    },
+    {
+      "case_id": "as_insufficient_evidence_02",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "insufficient_evidence_requires_abstention",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Trying 'something new' once does not justify confident change to the main hobby belief.",
+      "scope_trap": false,
+      "query": "What is the user's main hobby?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_main_hobby_chess",
+          "session_id": "s1",
+          "timestamp": "2023-09-09T00:00:00Z",
+          "text": "My main hobby is playing online chess; I play almost every evening.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_insufficient_evidence_02/ev_main_hobby_chess"
+        },
+        {
+          "evidence_id": "ev_tried_new_thing",
+          "session_id": "s2",
+          "timestamp": "2025-11-27T00:00:00Z",
+          "text": "I tried something new today and it was interesting; I am not sure what to make of it yet.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_insufficient_evidence_02/ev_tried_new_thing"
+        }
+      ],
+      "new_evidence_id": "ev_tried_new_thing",
+      "candidate_beliefs": [
+        {"belief_id": "b_main_hobby_chess", "proposition": "The user's main hobby is online chess.", "source_evidence_ids": ["ev_main_hobby_chess"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_main_hobby_chess": "UNRESOLVED"},
+      "expected_comparable_status": {"b_main_hobby_chess": "UNCERTAIN"},
+      "protected_belief_ids": [],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": ["b_main_hobby_chess"],
+      "stage_a_mock_edges": {
+        "b_main_hobby_chess": [
+          {"edge_type": "UNCERTAIN", "target_id": "b_main_hobby_chess", "rationale": "Vague 'tried something new' lacks specifics.", "confidence": 0.6}
+        ]
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_main_hobby_chess", "status": "UNCERTAIN", "rationale": "No identifiable change to the main hobby.", "confidence": 0.6}
+      ]
+    },
+    {
+      "case_id": "as_insufficient_evidence_03",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "insufficient_evidence_requires_abstention",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Generic 'health situation being assessed' should yield UNCERTAIN, not confident exercise block.",
+      "scope_trap": false,
+      "query": "Does the user still exercise regularly?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_runs_3_per_week",
+          "session_id": "s1",
+          "timestamp": "2024-08-22T00:00:00Z",
+          "text": "I run three times a week along the river.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_insufficient_evidence_03/ev_runs_3_per_week"
+        },
+        {
+          "evidence_id": "ev_health_unclear",
+          "session_id": "s2",
+          "timestamp": "2025-12-04T00:00:00Z",
+          "text": "I am undergoing some routine tests this week and waiting on results; we will see how things look.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_insufficient_evidence_03/ev_health_unclear"
+        }
+      ],
+      "new_evidence_id": "ev_health_unclear",
+      "candidate_beliefs": [
+        {"belief_id": "b_runs_3_per_week", "proposition": "The user runs three times a week along the river.", "source_evidence_ids": ["ev_runs_3_per_week"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_runs_3_per_week": "UNRESOLVED"},
+      "expected_comparable_status": {"b_runs_3_per_week": "UNCERTAIN"},
+      "protected_belief_ids": [],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": ["b_runs_3_per_week"],
+      "stage_a_mock_edges": {
+        "b_runs_3_per_week": [
+          {"edge_type": "UNCERTAIN", "target_id": "b_runs_3_per_week", "rationale": "Tests pending; no specific limitation reported.", "confidence": 0.65}
+        ]
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_runs_3_per_week", "status": "UNCERTAIN", "rationale": "Health status is undetermined.", "confidence": 0.65}
+      ]
+    },
+    {
+      "case_id": "as_insufficient_evidence_04",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "insufficient_evidence_requires_abstention",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Reviewing options is vague and does not justify confident change to the employer belief.",
+      "scope_trap": false,
+      "query": "Where does the user currently work?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_employer_kibo",
+          "session_id": "s1",
+          "timestamp": "2024-03-11T00:00:00Z",
+          "text": "I have been a project manager at Kibo Systems for almost three years.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_insufficient_evidence_04/ev_employer_kibo"
+        },
+        {
+          "evidence_id": "ev_reviewing_options",
+          "session_id": "s2",
+          "timestamp": "2025-12-09T00:00:00Z",
+          "text": "I am reviewing my options at the moment; nothing definite to share yet.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_insufficient_evidence_04/ev_reviewing_options"
+        }
+      ],
+      "new_evidence_id": "ev_reviewing_options",
+      "candidate_beliefs": [
+        {"belief_id": "b_employer_kibo", "proposition": "The user works as a project manager at Kibo Systems.", "source_evidence_ids": ["ev_employer_kibo"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {"b_employer_kibo": "UNRESOLVED"},
+      "expected_comparable_status": {"b_employer_kibo": "UNCERTAIN"},
+      "protected_belief_ids": [],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": ["b_employer_kibo"],
+      "stage_a_mock_edges": {
+        "b_employer_kibo": [
+          {"edge_type": "UNCERTAIN", "target_id": "b_employer_kibo", "rationale": "Generic 'reviewing options' lacks specifics.", "confidence": 0.65}
+        ]
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_employer_kibo", "status": "UNCERTAIN", "rationale": "Insufficient evidence to declare a change.", "confidence": 0.65}
+      ]
+    },
+    {
+      "case_id": "as_scope_trap_01",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "multi_belief_scope_expansion_trap",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Knee injury blocks cycling commute but must not block adjacent cycling-related identity beliefs.",
+      "scope_trap": true,
+      "query": "Tell me about the user's cycling life right now.",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_owns_bike",
+          "session_id": "s1",
+          "timestamp": "2023-05-08T00:00:00Z",
+          "text": "I bought my carbon road bike four years ago and it still rides like new.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_scope_trap_01/ev_owns_bike"
+        },
+        {
+          "evidence_id": "ev_lives_bikepath",
+          "session_id": "s1",
+          "timestamp": "2023-05-08T00:00:00Z",
+          "text": "I live two blocks from a major protected bike path.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_scope_trap_01/ev_lives_bikepath"
+        },
+        {
+          "evidence_id": "ev_cycle_youtube",
+          "session_id": "s1",
+          "timestamp": "2023-05-08T00:00:00Z",
+          "text": "I follow a few professional cycling channels on YouTube every week.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_scope_trap_01/ev_cycle_youtube"
+        },
+        {
+          "evidence_id": "ev_cycle_commute_scope",
+          "session_id": "s1",
+          "timestamp": "2024-06-01T00:00:00Z",
+          "text": "I cycle to the office every weekday.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_scope_trap_01/ev_cycle_commute_scope"
+        },
+        {
+          "evidence_id": "ev_knee_block",
+          "session_id": "s2",
+          "timestamp": "2025-10-30T00:00:00Z",
+          "text": "I tore my meniscus and my surgeon told me to stop cycling for the next four months.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_scope_trap_01/ev_knee_block"
+        }
+      ],
+      "new_evidence_id": "ev_knee_block",
+      "candidate_beliefs": [
+        {"belief_id": "b_cycle_commute_scope", "proposition": "The user cycles to the office every weekday.", "source_evidence_ids": ["ev_cycle_commute_scope"]},
+        {"belief_id": "b_owns_bike", "proposition": "The user owns a carbon road bike.", "source_evidence_ids": ["ev_owns_bike"]},
+        {"belief_id": "b_lives_bikepath", "proposition": "The user lives near a protected bike path.", "source_evidence_ids": ["ev_lives_bikepath"]},
+        {"belief_id": "b_cycle_youtube", "proposition": "The user follows professional cycling channels on YouTube.", "source_evidence_ids": ["ev_cycle_youtube"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        ["b_cycle_commute_scope", [
+          {"condition_id": "c_knee_ok_scope", "scope_id": "user1", "text": "The user has knee function sufficient for cycling."}
+        ]]
+      ],
+      "dependency_edges_by_belief": [
+        ["b_cycle_commute_scope", [
+          {"edge_id": "dep-b_cycle_commute_scope-c_knee_ok_scope", "belief_id": "b_cycle_commute_scope", "condition_id": "c_knee_ok_scope", "inducer": "internal_dev_fixture", "edge_type": "REQUIRES"}
+        ]]
+      ],
+      "expected_stage_a_status": {
+        "b_cycle_commute_scope": "BLOCKED",
+        "b_owns_bike": "AUTHORIZED",
+        "b_lives_bikepath": "AUTHORIZED",
+        "b_cycle_youtube": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_cycle_commute_scope": "NOT_USABLE",
+        "b_owns_bike": "USABLE",
+        "b_lives_bikepath": "USABLE",
+        "b_cycle_youtube": "USABLE"
+      },
+      "protected_belief_ids": ["b_owns_bike", "b_lives_bikepath", "b_cycle_youtube"],
+      "stale_target_belief_ids": ["b_cycle_commute_scope"],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_cycle_commute_scope": [
+          {"edge_type": "BLOCKS", "target_id": "c_knee_ok_scope", "rationale": "Meniscus tear precludes cycling for the next four months.", "confidence": 0.95}
+        ],
+        "b_owns_bike": [],
+        "b_lives_bikepath": [],
+        "b_cycle_youtube": []
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_cycle_commute_scope", "status": "NOT_USABLE", "rationale": "Cycling is blocked by knee surgery.", "confidence": 0.92},
+        {"belief_id": "b_owns_bike", "status": "USABLE", "rationale": "Owning a bike is unaffected by injury.", "confidence": 0.93},
+        {"belief_id": "b_lives_bikepath", "status": "USABLE", "rationale": "Location is unaffected by injury.", "confidence": 0.95},
+        {"belief_id": "b_cycle_youtube", "status": "USABLE", "rationale": "Media-consumption habit is unaffected by injury.", "confidence": 0.95}
+      ]
+    },
+    {
+      "case_id": "as_scope_trap_02",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "multi_belief_scope_expansion_trap",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Broken stove blocks home-cooking activity but must not erase unrelated food-identity beliefs.",
+      "scope_trap": true,
+      "query": "Describe the user's food and cooking life right now.",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_loves_italian",
+          "session_id": "s1",
+          "timestamp": "2023-03-04T00:00:00Z",
+          "text": "I love Italian food and have eaten my way through most of the trattorias in town.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_scope_trap_02/ev_loves_italian"
+        },
+        {
+          "evidence_id": "ev_owns_cookbooks",
+          "session_id": "s1",
+          "timestamp": "2023-03-04T00:00:00Z",
+          "text": "I collect chef cookbooks and have over forty on my shelves.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_scope_trap_02/ev_owns_cookbooks"
+        },
+        {
+          "evidence_id": "ev_follows_food_bloggers",
+          "session_id": "s1",
+          "timestamp": "2023-03-04T00:00:00Z",
+          "text": "I follow a number of food bloggers daily on social media.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_scope_trap_02/ev_follows_food_bloggers"
+        },
+        {
+          "evidence_id": "ev_cooks_dinner_home",
+          "session_id": "s1",
+          "timestamp": "2024-07-01T00:00:00Z",
+          "text": "I cook dinner at home almost every night using my gas stove.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_scope_trap_02/ev_cooks_dinner_home"
+        },
+        {
+          "evidence_id": "ev_stove_broken",
+          "session_id": "s2",
+          "timestamp": "2025-11-30T00:00:00Z",
+          "text": "My gas stove is broken and will not be repaired for at least three weeks; I cannot cook at home until then.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_scope_trap_02/ev_stove_broken"
+        }
+      ],
+      "new_evidence_id": "ev_stove_broken",
+      "candidate_beliefs": [
+        {"belief_id": "b_cooks_dinner_home", "proposition": "The user cooks dinner at home most nights.", "source_evidence_ids": ["ev_cooks_dinner_home"]},
+        {"belief_id": "b_loves_italian_food", "proposition": "The user loves Italian food.", "source_evidence_ids": ["ev_loves_italian"]},
+        {"belief_id": "b_collects_cookbooks", "proposition": "The user collects chef cookbooks.", "source_evidence_ids": ["ev_owns_cookbooks"]},
+        {"belief_id": "b_follows_food_bloggers", "proposition": "The user follows food bloggers on social media.", "source_evidence_ids": ["ev_follows_food_bloggers"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        ["b_cooks_dinner_home", [
+          {"condition_id": "c_working_stove", "scope_id": "user1", "text": "The user has a working stove for cooking at home."}
+        ]]
+      ],
+      "dependency_edges_by_belief": [
+        ["b_cooks_dinner_home", [
+          {"edge_id": "dep-b_cooks_dinner_home-c_working_stove", "belief_id": "b_cooks_dinner_home", "condition_id": "c_working_stove", "inducer": "internal_dev_fixture", "edge_type": "REQUIRES"}
+        ]]
+      ],
+      "expected_stage_a_status": {
+        "b_cooks_dinner_home": "BLOCKED",
+        "b_loves_italian_food": "AUTHORIZED",
+        "b_collects_cookbooks": "AUTHORIZED",
+        "b_follows_food_bloggers": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_cooks_dinner_home": "NOT_USABLE",
+        "b_loves_italian_food": "USABLE",
+        "b_collects_cookbooks": "USABLE",
+        "b_follows_food_bloggers": "USABLE"
+      },
+      "protected_belief_ids": ["b_loves_italian_food", "b_collects_cookbooks", "b_follows_food_bloggers"],
+      "stale_target_belief_ids": ["b_cooks_dinner_home"],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_cooks_dinner_home": [
+          {"edge_type": "BLOCKS", "target_id": "c_working_stove", "rationale": "Stove broken for at least three weeks blocks home cooking.", "confidence": 0.93}
+        ],
+        "b_loves_italian_food": [],
+        "b_collects_cookbooks": [],
+        "b_follows_food_bloggers": []
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_cooks_dinner_home", "status": "NOT_USABLE", "rationale": "Broken stove prevents home cooking.", "confidence": 0.92},
+        {"belief_id": "b_loves_italian_food", "status": "USABLE", "rationale": "Food preference is unaffected by appliance breakage.", "confidence": 0.95},
+        {"belief_id": "b_collects_cookbooks", "status": "USABLE", "rationale": "Owning cookbooks is unrelated to cooking right now.", "confidence": 0.95},
+        {"belief_id": "b_follows_food_bloggers", "status": "USABLE", "rationale": "Following food bloggers is unrelated to the stove.", "confidence": 0.95}
+      ]
+    },
+    {
+      "case_id": "as_scope_trap_03",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "multi_belief_scope_expansion_trap",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "Phone breakage blocks a single app-based habit but must not erase adjacent fitness-identity beliefs.",
+      "scope_trap": true,
+      "query": "Tell me about the user's running life right now.",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_trains_marathons",
+          "session_id": "s1",
+          "timestamp": "2023-04-30T00:00:00Z",
+          "text": "I train for marathons twice a year and have done four already.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_scope_trap_03/ev_trains_marathons"
+        },
+        {
+          "evidence_id": "ev_follows_coaches",
+          "session_id": "s1",
+          "timestamp": "2023-04-30T00:00:00Z",
+          "text": "I follow several elite running coaches on YouTube for training inspiration.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_scope_trap_03/ev_follows_coaches"
+        },
+        {
+          "evidence_id": "ev_uses_strava",
+          "session_id": "s1",
+          "timestamp": "2024-02-10T00:00:00Z",
+          "text": "I log every training run with the Strava app on my phone.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_scope_trap_03/ev_uses_strava"
+        },
+        {
+          "evidence_id": "ev_phone_broken_scope",
+          "session_id": "s2",
+          "timestamp": "2025-12-06T00:00:00Z",
+          "text": "My phone got water damage and is being repaired for two weeks; I cannot use the Strava app in the meantime.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_scope_trap_03/ev_phone_broken_scope"
+        }
+      ],
+      "new_evidence_id": "ev_phone_broken_scope",
+      "candidate_beliefs": [
+        {"belief_id": "b_uses_strava", "proposition": "The user logs runs with the Strava app on their phone.", "source_evidence_ids": ["ev_uses_strava"]},
+        {"belief_id": "b_trains_marathons", "proposition": "The user trains for marathons multiple times per year.", "source_evidence_ids": ["ev_trains_marathons"]},
+        {"belief_id": "b_follows_run_coaches", "proposition": "The user follows several running coaches on YouTube.", "source_evidence_ids": ["ev_follows_coaches"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        ["b_uses_strava", [
+          {"condition_id": "c_phone_works", "scope_id": "user1", "text": "The user has a working phone that can run Strava."}
+        ]]
+      ],
+      "dependency_edges_by_belief": [
+        ["b_uses_strava", [
+          {"edge_id": "dep-b_uses_strava-c_phone_works", "belief_id": "b_uses_strava", "condition_id": "c_phone_works", "inducer": "internal_dev_fixture", "edge_type": "REQUIRES"}
+        ]]
+      ],
+      "expected_stage_a_status": {
+        "b_uses_strava": "BLOCKED",
+        "b_trains_marathons": "AUTHORIZED",
+        "b_follows_run_coaches": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_uses_strava": "NOT_USABLE",
+        "b_trains_marathons": "USABLE",
+        "b_follows_run_coaches": "USABLE"
+      },
+      "protected_belief_ids": ["b_trains_marathons", "b_follows_run_coaches"],
+      "stale_target_belief_ids": ["b_uses_strava"],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_uses_strava": [
+          {"edge_type": "BLOCKS", "target_id": "c_phone_works", "rationale": "Phone repair will take two weeks.", "confidence": 0.93}
+        ],
+        "b_trains_marathons": [],
+        "b_follows_run_coaches": []
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_uses_strava", "status": "NOT_USABLE", "rationale": "Without a phone, Strava cannot be used right now.", "confidence": 0.92},
+        {"belief_id": "b_trains_marathons", "status": "USABLE", "rationale": "Marathon training is unrelated to the phone outage.", "confidence": 0.95},
+        {"belief_id": "b_follows_run_coaches", "status": "USABLE", "rationale": "Following coaches is unrelated to the phone outage.", "confidence": 0.95}
+      ]
+    },
+    {
+      "case_id": "as_scope_trap_04",
+      "schema_version": "ambiguity_scope_controlled_v0",
+      "category": "multi_belief_scope_expansion_trap",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_human_review",
+      "rationale": "A short travel ban blocks one travel-dependent activity but must not erase unrelated heritage and language beliefs.",
+      "scope_trap": true,
+      "query": "Tell me about the user's connection to Italy right now.",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_speaks_italian",
+          "session_id": "s1",
+          "timestamp": "2020-11-10T00:00:00Z",
+          "text": "I speak Italian fluently thanks to my Italian grandparents.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_scope_trap_04/ev_speaks_italian"
+        },
+        {
+          "evidence_id": "ev_italian_heritage",
+          "session_id": "s1",
+          "timestamp": "2020-11-10T00:00:00Z",
+          "text": "My family heritage is Italian and I keep in close touch with cousins in Bologna.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_scope_trap_04/ev_italian_heritage"
+        },
+        {
+          "evidence_id": "ev_annual_italy_trip",
+          "session_id": "s1",
+          "timestamp": "2024-04-21T00:00:00Z",
+          "text": "I fly to Italy for a long vacation every summer.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_scope_trap_04/ev_annual_italy_trip"
+        },
+        {
+          "evidence_id": "ev_travel_ban",
+          "session_id": "s2",
+          "timestamp": "2025-12-08T00:00:00Z",
+          "text": "Due to a passport renewal hold, I am explicitly unable to travel internationally for the next four months; the Italy trip is on hold.",
+          "source_dataset": "internal_dev",
+          "source_pointer": "as_scope_trap_04/ev_travel_ban"
+        }
+      ],
+      "new_evidence_id": "ev_travel_ban",
+      "candidate_beliefs": [
+        {"belief_id": "b_flies_to_italy", "proposition": "The user flies to Italy each summer for vacation.", "source_evidence_ids": ["ev_annual_italy_trip"]},
+        {"belief_id": "b_speaks_italian", "proposition": "The user speaks Italian fluently.", "source_evidence_ids": ["ev_speaks_italian"]},
+        {"belief_id": "b_italian_heritage", "proposition": "The user has Italian family heritage and ties to relatives in Bologna.", "source_evidence_ids": ["ev_italian_heritage"]}
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        ["b_flies_to_italy", [
+          {"condition_id": "c_intl_travel_ok", "scope_id": "user1", "text": "The user can travel internationally."}
+        ]]
+      ],
+      "dependency_edges_by_belief": [
+        ["b_flies_to_italy", [
+          {"edge_id": "dep-b_flies_to_italy-c_intl_travel_ok", "belief_id": "b_flies_to_italy", "condition_id": "c_intl_travel_ok", "inducer": "internal_dev_fixture", "edge_type": "REQUIRES"}
+        ]]
+      ],
+      "expected_stage_a_status": {
+        "b_flies_to_italy": "BLOCKED",
+        "b_speaks_italian": "AUTHORIZED",
+        "b_italian_heritage": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_flies_to_italy": "NOT_USABLE",
+        "b_speaks_italian": "USABLE",
+        "b_italian_heritage": "USABLE"
+      },
+      "protected_belief_ids": ["b_speaks_italian", "b_italian_heritage"],
+      "stale_target_belief_ids": ["b_flies_to_italy"],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_flies_to_italy": [
+          {"edge_type": "BLOCKS", "target_id": "c_intl_travel_ok", "rationale": "Passport hold removes international-travel ability for four months.", "confidence": 0.94}
+        ],
+        "b_speaks_italian": [],
+        "b_italian_heritage": []
+      },
+      "stage_b_mock_verdicts": [
+        {"belief_id": "b_flies_to_italy", "status": "NOT_USABLE", "rationale": "Passport hold prevents the Italy trip for now.", "confidence": 0.92},
+        {"belief_id": "b_speaks_italian", "status": "USABLE", "rationale": "Language skill is unrelated to passport hold.", "confidence": 0.96},
+        {"belief_id": "b_italian_heritage", "status": "USABLE", "rationale": "Family heritage is unrelated to travel ability.", "confidence": 0.96}
+      ]
+    }
+  ]
+}
