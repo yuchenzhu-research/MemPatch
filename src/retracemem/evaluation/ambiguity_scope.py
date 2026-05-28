@@ -580,11 +580,20 @@ def run_cases(
     cases: list[AmbiguityScopeCase],
     tmp_dir: str,
     *,
+    client_a: Any | None = None,
+    client_b: Any | None = None,
     model_id: str = "mock",
     provider: str = "mock",
 ) -> list[CaseResult]:
     """Execute all loaded cases via the shared controlled track runner."""
     return [
-        run_case(case.case, tmp_dir, model_id=model_id, provider=provider)
+        run_case(
+            case.case,
+            tmp_dir,
+            client_a=client_a,
+            client_b=client_b,
+            model_id=model_id,
+            provider=provider,
+        )
         for case in cases
     ]
