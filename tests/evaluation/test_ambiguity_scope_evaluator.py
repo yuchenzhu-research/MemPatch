@@ -10,6 +10,8 @@ import tempfile
 import pytest
 
 from retracemem.evaluation.ambiguity_scope import (
+    HARD_REQUIRED_CATEGORIES,
+    HARD_SCHEMA_VERSION,
     REQUIRED_CATEGORIES,
     SCHEMA_VERSION,
     compute_metrics,
@@ -26,6 +28,28 @@ _DATASET_PATH = os.path.join(
     "data",
     "internal_dev",
     "ambiguity_scope_controlled_v0.json",
+)
+_HARD_DATASET_PATH = os.path.join(
+    os.path.dirname(__file__),
+    os.pardir,
+    os.pardir,
+    "data",
+    "internal_dev",
+    "ambiguity_scope_hard_v1.json",
+)
+_HARD_PILOT_CONFIG_PATH = os.path.join(
+    os.path.dirname(__file__),
+    os.pardir,
+    os.pardir,
+    "configs",
+    "ambiguity_scope_hard_v1_pilot.json",
+)
+_REGRESSION_CONFIG_PATH = os.path.join(
+    os.path.dirname(__file__),
+    os.pardir,
+    os.pardir,
+    "configs",
+    "ambiguity_scope_regression_v1.json",
 )
 
 
@@ -204,6 +228,68 @@ class TestBalanceCheck:
             assert counts.get(category) == 4, (
                 f"Category {category} has {counts.get(category, 0)} cases; expected 4"
             )
+
+
+class TestHardV1Dataset:
+    @pytest.fixture(scope="class")
+    def hard_cases(self):
+        return load_dataset(_HARD_DATASET_PATH)
+
+    def test_hard_schema_and_size(self, hard_cases):
+        with open(_HARD_DATASET_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+        assert data["_schema_version"] == HARD_SCHEMA_VERSION
+        assert tuple(data["_required_categories"]) == HARD_REQUIRED_CATEGORIES
+        assert len(hard_cases) == 24
+
+    def test_hard_category_balance(self, hard_cases):
+        counts: dict[str, int] = {}
+        for case in hard_cases:
+            counts[case.category] = counts.get(case.category, 0) + 1
+        assert counts == {category: 4 for category in HARD_REQUIRED_CATEGORIES}
+
+    def test_hard_required_flags_and_annotations(self, hard_cases):
+        for case in hard_cases:
+            raw = case.raw_record
+            assert raw["challenge_version"] == "hard_v1"
+            assert raw["review_status"] == "model_drafted_pending_assistant_and_user_review"
+            assert "temporal_reasoning_required" in raw
+            assert "premise_resistance" in raw
+            belief_ids = {b["belief_id"] for b in raw["candidate_beliefs"]}
+            assert set(raw["expected_stage_a_status"]) == belief_ids
+            assert set(raw["expected_comparable_status"]) == belief_ids
+            assert len(raw["candidate_beliefs"]) >= 3
+            if raw["category"] == "dense_semantic_neighborhood_scope_control":
+                assert 5 <= len(raw["candidate_beliefs"]) <= 8
+            for belief_id in raw["protected_belief_ids"]:
+                assert raw["expected_stage_a_status"][belief_id] == "AUTHORIZED"
+                assert raw["stage_a_mock_edges"][belief_id] == []
+
+    def test_hard_pilot_one_per_category_and_no_regression_overlap(self, hard_cases):
+        with open(_HARD_PILOT_CONFIG_PATH, encoding="utf-8") as f:
+            pilot = json.load(f)
+        with open(_REGRESSION_CONFIG_PATH, encoding="utf-8") as f:
+            regression = json.load(f)
+        by_id = {case.case.case_id: case for case in hard_cases}
+        selected = pilot["selected_case_ids"]
+        assert len(selected) == 6
+        assert set(selected).isdisjoint(regression["case_ids"])
+        assert {by_id[case_id].category for case_id in selected} == set(HARD_REQUIRED_CATEGORIES)
+        assert pilot["prompt_version"] == "evidence_edge_prediction_v1"
+        assert pilot["run_type"] == "live_fresh_challenge"
+
+    def test_hard_replay_mock_runner_correctness(self, hard_cases):
+        with tempfile.TemporaryDirectory() as tmp:
+            results = run_cases(hard_cases, tmp, stage_a_prompt_version="evidence_edge_prediction_v1")
+        metrics = compute_metrics(hard_cases, results)
+        report = format_report(hard_cases, results, metrics)
+        assert report["aggregate"]["total_cases"] == 24
+        assert report["aggregate"]["execution_errors"] == 0
+        assert report["aggregate"]["parse_errors"] == 0
+        total_decisions = sum(len(case.case.view.candidate_beliefs) for case in hard_cases)
+        expected = f"{total_decisions}/{total_decisions}"
+        assert report["aggregate"]["overall_comparable_accuracy"]["stage_a"] == expected
+        assert report["aggregate"]["overall_comparable_accuracy"]["stage_b"] == expected
 
 
 class TestRunnerScriptShape:
