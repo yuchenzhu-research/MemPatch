@@ -1,0 +1,29 @@
+{
+  "split_id": "ambiguity_scope_hard_v1_pilot",
+  "source_dataset": "data/internal_dev/ambiguity_scope_hard_v1.json",
+  "selected_case_ids": [
+    "ash_dense_01",
+    "ash_temporal_01",
+    "ash_premise_01",
+    "ash_release_01",
+    "ash_uncertain_01",
+    "ash_cross_01"
+  ],
+  "prompt_version": "evidence_edge_prediction_v1",
+  "excluded_regression_case_ids": [
+    "as_supersession_03",
+    "as_prereq_block_02",
+    "as_protected_02",
+    "as_temp_vs_persistent_01",
+    "as_current_vs_historical_01",
+    "as_tentative_intention_01",
+    "as_insufficient_evidence_02",
+    "as_scope_trap_01"
+  ],
+  "planned_provider": "siliconflow",
+  "planned_model": "MiniMaxAI/MiniMax-M2.5",
+  "call_cap": 24,
+  "token_cap": 60000,
+  "run_type": "live_fresh_challenge",
+  "interpretation_boundary": "internal exploratory development only; not official benchmark; not final paper result"
+}
