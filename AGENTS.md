@@ -8,13 +8,14 @@ repository.
 Read these files before making code changes:
 
 1. `docs/refactor_plan_defeat_path.md` (Governs refactor implementation and DPA core specifications)
-2. `docs/model_context_index.md`
-3. `docs/project_logic.md`
-4. `docs/coding_contract.md`
-5. `docs/implementation_status.md`
-6. `docs/reference_integration_map.md`
-7. `docs/source_materials/iclr_2027_paper_1_final_blueprint_re_trace.md`
-8. `docs/source_materials/re_trace_companion_codebase_integration_and_model_handoff.md`
+2. `docs/stage_ab_retrace_llm_directjudge_plan.md` (Governs Stage A/B method development)
+3. `docs/model_context_index.md`
+4. `docs/project_logic.md`
+5. `docs/coding_contract.md`
+6. `docs/implementation_status.md`
+7. `docs/reference_integration_map.md`
+8. `docs/source_materials/iclr_2027_paper_1_final_blueprint_re_trace.md`
+9. `docs/source_materials/re_trace_companion_codebase_integration_and_model_handoff.md`
 
 Note: The two files under `docs/source_materials/` are raw historical planning documents copied from the design stage. They are preserved for original research scope and motivation, but their superseded implementation vocabulary (flat relation labels, legacy pipeline) is outranked by `docs/refactor_plan_defeat_path.md` and current verifier contract specifications.
 

@@ -158,6 +158,11 @@ env PYTHONPYCACHEPREFIX=.pycache_compile python3 -m compileall -q retracemem tes
 
 ### Next Stage
 
+- Wave 2 is merged into `main` (commit `dcf121b`).
+- Stage A/B planning branch `method/retrace-llm-directjudge` has begun.
+- Runtime implementation has not yet started; the plan is pending review.
+- See `docs/stage_ab_retrace_llm_directjudge_plan.md` for full details.
+
 - **Stage A: ReTrace-LLM** — main generic typed-edge prediction plus DPA method. Replaces all development-only heuristic/manual fixtures for paper main-result runs. Components: generic typed belief extraction, generic requirement/condition induction, generic evidence-edge prediction, existing deterministic DPA and authorized-basis pipeline.
 - **Stage B: DirectJudge-LLM** — matched same-model final-adjudication attribution baseline, implemented alongside Stage A as a sibling method path. DirectJudge-LLM is **not** an `EvidenceEdgeVerifier`; it directly decides memory usability without DPA, using the same model family and comparable token/call budget as Stage A.
 - **Stage C: ReTrace-Local** — later learned local typed-edge verifier variant (SFT / LoRA) using the same DPA core. Deferred until Stage A/B validation establishes that the structured DPA formulation has value.
