@@ -1,21 +1,34 @@
-# ICLR 2027 Paper 1 蓝图：ReTrace 的证据保留式可逆授权方法
+# ICLR 2027 Paper 1 蓝图 v3：ReTrace 的证据保留式可逆授权
 
 **目标会议：** ICLR 2027 Main Conference
 **方法名：** ReTrace
-**标题候选：** *ReTrace: Evidence-Preserving Reversible Authorization for Evolving Agent Memory*
-**当前工程状态：** `method/retrace-llm-directjudge` 已完成 AB-1B（含 AB-1B.1 语义修复）。AB-1C 尚未开始。
+**候选标题：** *ReTrace: Evidence-Preserving Reversible Authorization for Evolving Agent Memory*
+**本文档定位：** 当前科学主张、实验顺序与 go/no-go 边界的中文权威草案。
+**审计基线：** `integration/retrace-v1-complete` @ `5e8d6e2d1a494d572d6d0fa929595bb198154390`。
 
-本文档是当前仓库中的中文科学蓝图。旧 blueprint 和旧 source-material
-文件不再是活跃研究决策来源；Git history 已经保留其历史内容。
+---
 
-## 1. 论文身份
+## 0. 这次更新为什么必要
 
-Paper 1 不是 latent learning paper，也不是完整新 benchmark paper。它研究：
+论文想法本身没有被推翻。需要更新文档，是因为代码已从 AB-1B 的 offline controlled harness 推进到 v1 integration scaffold，但新代码尚未产生支持论文结论的真实比较结果，并且部分工程文案把“接口打通/模拟运行”写成了“正式阶段完成”。
 
-> 当新证据改变用户当前状态时，曾经由证据支持的旧 belief 是否还可以支配当前回答？
-> 系统能否在不删除历史证据的前提下，通过可审计、可撤销的理由路径完成这个授权决定？
+本版本锁定三条事实：
 
-一句话方法定义：
+1. **方法主线不变。** Paper 1 研究的是 evidence-preserving reversible authorization，不是 latent memory、RL memory policy 或 consolidation learning。
+2. **工程状态必须降到事实层。** 当前已有 provider、end-to-end runner、STALE/Memora adapter 的实现骨架和 mock validation；尚未证明真实 provider 正确运行、尚未完成可归因的 A/B 区分性实验、尚未产生 frozen official benchmark results。
+3. **实验顺序必须前置可证伪测试。** 在投入正式 STALE/Memora 成本前，必须先用真实模型在内部 ambiguity-and-scope diagnostic split 上判断 Stage A 是否比 Stage B 更少误伤、更能 abstain。
+
+---
+
+## 1. 论文的核心问题
+
+长期 agent memory 不仅要记住过去，还必须知道过去的信息何时不再适合支配当前回答。
+
+Paper 1 研究：
+
+> 当 later evidence 改变用户当前状态时，一个曾被证据支持的 earlier belief，凭什么仍然有资格进入当前回答依据，或者凭什么应被暂时禁止使用？这个资格变化能否在保留原始证据的前提下，具有明确、可审计、可撤销的理由路径？
+
+一句话方法：
 
 ```text
 ReTrace = immutable evidence ledger
@@ -23,342 +36,350 @@ ReTrace = immutable evidence ledger
         + deterministic Defeat-Path Authorization Algorithm (DPA)
 ```
 
-原始 evidence 永久保留；belief 是否进入当前回答依据，由 later evidence
-是否形成合法 typed defeat path 决定。
+核心观念：
 
-## 2. 不做什么
+```text
+memory revision 不等于删除或覆盖历史证据；
+memory revision = 在新证据下重新计算旧 belief 的当前使用资格。
+```
 
-Paper 1 不做：
+---
 
-- latent memory 或 memory-token learning；
-- RL / GRPO memory-action policy；
+## 2. Paper 1 明确不做什么
+
+本文不把下列方向作为第一篇的贡献：
+
+- latent memory / memory-token learning；
+- RL 或 GRPO memory-action policy；
 - learned episodic-to-semantic consolidation；
-- 完整新 benchmark contribution；
-- CUPMem 固定 slot ontology 的重命名版本；
-- 纯 LLM judge 直接重写 memory；
-- 手写 heuristic scaffold 作为可发表主方法；
-- Stage C 的本地 verifier 训练。
+- 完整新 benchmark 论文；
+- 把 external benchmark 的 official scored examples 用于调 prompt 或训练；
+- 把 heuristic/manual fixture 包装成主方法；
+- 在 A/B 结构价值未成立前训练 Stage C；
+- 将 Stage A live outputs 自行宣布为 Stage C 的 gold labels。
 
-Stage C 不是 latent learning。它只是 A/B 结构价值成立后，可能训练的本地
-typed-edge verifier，仍复用同一个 DPA core。
+Stage C 若未来启动，学习的只是 local typed-edge prediction，而非 latent memory representation；其训练数据必须来自 development-safe、经人工审核且与 official evaluation 隔离的数据。
 
-## 3. 准确主张
+---
 
-不能写：
+## 3. ReTrace 的四层框架
 
-> ReTrace eliminates LLM judgment from memory revision.
+### 第一层：Immutable Evidence Ledger
 
-准确写法是：
-
-> ReTrace restricts semantic-model judgment to local evidence-edge proposals
-> and delegates final belief authorization to an auditable deterministic
-> defeat-path procedure.
-
-中文含义：
-
-> ReTrace 仍依赖语义模型理解 later evidence 与 candidate belief/condition 的局部关系；
-> 但不允许模型一句话决定旧 belief 的最终命运。最终授权必须由 typed graph 和 DPA
-> 确定性计算。
-
-## 4. 三个阶段
-
-### Stage A：`ReTrace-LLM`
-
-主方法路径。在 primary controlled track 中：
+系统以 append-only 方式保存原始事件及其时间、来源和 provenance。例如：
 
 ```text
-SharedCandidateView
-→ isolated typed graph
-→ gate fixed REQUIRES anchors
-→ PromptEvidenceEdgeVerifier per candidate belief
-→ gate evidence proposals
-→ deterministic DPA
-→ authorization result
+e_old:     “我平时骑自行车去学校。”
+e_injury:  “我腿骨折了，六周内不能骑车。”
+e_recover: “医生允许我重新骑车。”
 ```
 
-Stage A 预测局部 typed evidence edges，不直接输出 final usability verdict。
+此层解决：历史证据不能因系统更新而被无声覆盖。
 
-### Stage B：`DirectJudge-LLM`
+### 第二层：Belief / Condition Construction
 
-shared-view-controlled direct-adjudication baseline。它消费同一份
-`SharedCandidateView`，直接输出每个 candidate belief 的：
-
-```text
-USABLE / NOT_USABLE / UNCERTAIN
-```
-
-它不是 `EvidenceEdgeVerifier`，不生成 edge，不经过 DPA。它也不能被描述为
-strict call-budget matched baseline。
-
-### Stage C：`ReTrace-Local`
-
-延期阶段。它是 learned local typed-edge verifier + 同一 DPA core，只有当 Stage
-A/B 结果说明结构化授权分解有价值后才有理由启动。它不是 latent-memory
-representation learning。
-
-## 5. Canonical typed vocabulary
-
-### 节点
-
-- `EvidenceNode`：append-only evidence，含 source 与 timestamp provenance。
-- `BeliefNode`：由 evidence 支持的 open-text proposition。
-- `ConditionNode`：带 `scope_id` 的 prerequisite condition。
-
-### 边
-
-Dependency edge 只有：
+从 evidence 提取可用于推理的 open-text beliefs，并诱导其当前可用所依赖的条件：
 
 ```text
-DependencyEdge(REQUIRES): belief -> condition
-```
-
-Evidence edges 只有：
-
-```text
-BLOCKS: evidence -> condition
-RELEASES: evidence -> condition
-SUPERSEDES: evidence -> prior belief, with grounded replacement_belief_id
-REAFFIRMS: evidence -> belief
-UNCERTAIN: evidence -> belief
-```
-
-旧的 flat relation vocabulary 已被替换：`SUPPORT`、`CONDITION`、`REQUIRED_BY`
-不是当前 Stage A runtime scheme。
-
-## 6. DPA 授权语义
-
-DPA 对每个 belief 输出：
-
-```text
-AUTHORIZED
-BLOCKED
-SUPERSEDED
-UNRESOLVED
-```
-
-优先级：
-
-```text
-SUPERSEDES > PREREQUISITE_BLOCK > UNRESOLVED_UNCERTAIN > AUTHORIZED
-```
-
-### Supersession
-
-`SUPERSEDES(e, b_old)` 必须有真实 replacement belief。DPA 返回
-`SUPERSEDED`，并保留 old belief、replacement id 与 evidence edge provenance。
-
-### Prerequisite block
-
-`BLOCKS(e, c)` 只有在 DPA 为某个 belief 找到 `REQUIRES(b, c)` 时，才影响该
-belief。仅仅存在 condition-level `BLOCKS` edge 不会任意屏蔽所有 belief。
-
-### Release
-
-`RELEASES(e, c)` 解除 active blocker，但不证明 belief 当前为真。若存在更高优先级
-`SUPERSEDES`，仍由 supersession 决定。
-
-### Uncertainty / Reaffirmation
-
-`UNCERTAIN(e, b)` 使 belief 当前使用资格变为 `UNRESOLVED`。更晚的
-`REAFFIRMS(e, b)` 可清除 uncertainty，但不能覆盖 active block 或 supersession。
-
-## 7. 最小例子
-
-历史 evidence：
-
-```text
-e_old: “我平时骑自行车去学校。”
-```
-
-提取：
-
-```text
-b_bike: “用户通常骑自行车通勤。”
-c_mobility: “用户当前具备骑车所需行动能力。”
+b_bike:     用户通常骑自行车通勤。
+c_mobility: 用户当前具备骑车通勤所需的行动能力。
 b_bike --REQUIRES--> c_mobility
 ```
 
-新 evidence：
+完整 end-to-end 系统中，这一步可以由 prompt-based semantic components 完成；但在 primary controlled attribution 中，这些输入被固定，以避免 extraction/retrieval 错误污染核心机制比较。
+
+### 第三层：Evidence-Preserving Authorization - 本文核心
+
+Later evidence 只提出局部 typed effects：
 
 ```text
-e_injury: “我昨天腿骨折了，六周内要打石膏。”
+e_injury  --BLOCKS-->  c_mobility
+e_recover --RELEASES--> c_mobility
+e_newjob  --SUPERSEDES--> b_old_job
 ```
 
-Stage A 可提出：
+经过 RevisionGate 的结构合法性检查后，由 DPA 对 belief 输出：
 
 ```text
-e_injury --BLOCKS--> c_mobility
+AUTHORIZED / BLOCKED / SUPERSEDED / UNRESOLVED
 ```
 
-DPA 得到：
+关键限制是：
+
+> 一个 belief 只有在存在显式 typed defeat path 时才能被限制。没有路径支持的相关联想或全局范围扩张不得直接改变其授权资格。
+
+这不是承诺 LLM 永不犯错；它是将错误影响限制在局部、可见、可审计的路径中，并让误伤能够被专门评测。
+
+### 第四层：Authorized Basis -> Answer -> Evaluation
+
+当前被授权的 beliefs 构成 answer generator 的依据：
 
 ```text
-b_bike = BLOCKED
+query + authorized basis -> same answer generator -> final answer
 ```
 
-历史事实未删除；只是当前回答中不能继续以骑车作为安全通勤建议依据。
+这一层本身不是核心算法创新；它是验证授权机制是否真正改善最终回答的必要出口。Stage A 与 Stage B 在 end-to-end 比较中必须共享 preprocessing、retrieval 和 answer generation，唯一被比较的差异应是 authorization mechanism。
 
-若后续 evidence 为：
+---
+
+## 4. Canonical typed graph 与 DPA
+
+### 4.1 节点
+
+- `EvidenceNode`: 不可变的原始或最小证据单元，保存 timestamp/source/provenance。
+- `BeliefNode`: 可进入回答依据的开放文本命题，保存 source evidence grounding。
+- `ConditionNode`: belief 当前可使用所依赖的 scope-specific 条件。
+
+### 4.2 边
 
 ```text
-e_recovery: “医生已经允许我重新骑自行车。”
+DependencyEdge(REQUIRES): belief -> condition
+EvidenceEdge(BLOCKS):     evidence -> condition
+EvidenceEdge(RELEASES):   evidence -> condition
+EvidenceEdge(SUPERSEDES): evidence -> prior belief + grounded replacement belief
+EvidenceEdge(REAFFIRMS):  evidence -> belief
+EvidenceEdge(UNCERTAIN):  evidence -> belief
 ```
 
-Stage A 可提出：
+### 4.3 DPA 的作用
+
+DPA 不调用语义模型；它只在已 admitted 的 typed graph 上执行确定性授权计算：
+
+- 若新证据 `SUPERSEDES` 一个旧 belief，且 replacement 被当前证据 grounded，则旧 belief 为 `SUPERSEDED`；
+- 若新证据 `BLOCKS` 某 condition，且 belief 明确 `REQUIRES` 该 condition，则 belief 为 `BLOCKED`；
+- 若有效 blocker 被 later `RELEASES` 解除，且没有 supersession，则 belief 可恢复 eligibility；
+- 若关系不足以确定修改，则输出 `UNRESOLVED`，而非武断 suppression。
+
+---
+
+## 5. 误伤、范围扩张与 UNCERTAIN：论文最重要的切入点
+
+### 5.1 最强的研究假设
+
+本文不以“模型能不能找到明显冲突”作为唯一卖点，而测试更困难的问题：
+
+> 与 direct adjudication 相比，局部 typed-edge proposal + deterministic DPA 能否在阻止 stale belief 的同时，更少误伤无关、历史型或仅暂时受限的 beliefs，并在证据不足时更愿意 abstain？
+
+### 5.2 为什么这比简单 stale blocking 更关键
+
+若新证据是“腿骨折六周不能骑车”，系统应当限制：
 
 ```text
-e_recovery --RELEASES--> c_mobility
+当前骑车通勤建议
 ```
 
-若没有有效 `SUPERSEDES`，`b_bike` 可重新获得授权资格。
-
-无关 belief：
+但不得自动限制：
 
 ```text
-b_food: “用户喜欢泰国菜。”
+喜欢骑自行车的长期偏好
+曾经完成骑行比赛的历史事实
+喜欢泰国菜的偏好
 ```
 
-腿骨折 evidence 不存在合法 defeat path，因此不得误屏蔽。
+因此本文需要同时测：
 
-## 8. Primary controlled attribution
+- **Obsolete-Memory Misuse**: 该挡的旧 belief 是否仍进入答案；
+- **Protected-Belief Preservation (PBP)**: 不该挡的 belief 是否被保留；
+- **Abstention Accuracy**: 模糊证据下是否输出 `UNCERTAIN/UNRESOLVED`；
+- **Unsupported Confident Revision**: 本应不确定时是否武断 `BLOCKED/SUPERSEDED/NOT_USABLE`。
 
-两种方法共享固定输入：
+### 5.3 DPA 能保证什么、不能保证什么
+
+DPA 能结构性禁止：
+
+- 没有 `REQUIRES` / `SUPERSEDES` 路径支持的任意 suppression；
+- 结构非法或未 grounded 的 replacement revision。
+
+DPA 不能单独保证：
+
+- LLM 提出的 condition 一定足够原子；
+- dependency edge 一定正确；
+- candidate retrieval 一定既不漏检也不过宽。
+
+因此，ReTrace 的贡献不是“消灭语义错误”，而是“把黑箱全局错误压缩为可审计的局部结构错误，并专门评测范围控制与弃权行为”。
+
+---
+
+## 6. Stage A / Stage B / Stage C
+
+### Stage A - `ReTrace-LLM`：主方法
+
+Primary controlled track：
 
 ```text
-SharedCandidateView
-- query
-- ordered evidence_context
-- current new_evidence
-- candidate_beliefs
-- candidate_replacement_beliefs
-- candidate_conditions
-- fixed DependencyEdge(REQUIRES) anchors
-- deterministic view_fingerprint
+fixed SharedCandidateView
+-> local typed-edge predictions
+-> RevisionGate
+-> deterministic DPA
+-> authorization result + provenance
 ```
 
-该轨道首先评价 authorization，而不是最终回答文案。
+Stage A 仍使用 LLM 做局部语义判断；其贡献来自限制模型的最终裁决权限与影响传播范围，而不是声称没有 LLM judge。
 
-Stage A 的 fine-grained status 映射为 Stage B 可比状态：
+### Stage B - `DirectJudge-LLM`：结构归因 baseline
 
-| Stage A DPA status | Comparable status |
+```text
+same fixed semantic SharedCandidateView
+-> direct USABLE / NOT_USABLE / UNCERTAIN verdicts
+```
+
+Stage B 不是普通小模块消融，而是 architectural/counterfactual baseline：如果同样输入直接让模型给最终判决已经足够好，则 Stage A 的额外结构没有证明价值。
+
+### Stage C - `ReTrace-Local`：后置训练版本
+
+Stage C 只在下列条件满足后才能讨论：
+
+- Stage A/B 的真实模型比较显示结构有价值；
+- training data 来自 development-safe、人工审核的 typed-edge annotations；
+- 与 official STALE/Memora scored examples 完全隔离；
+- 训练目标是 local edge classification/generation，而不是 latent memory。
+
+---
+
+## 7. 实验结构：先可证伪，再正式评测
+
+### 7.1 Primary Controlled Attribution
+
+输入固定为 `SharedCandidateView`，排除 extraction/retrieval/answer-generation confounds。比较：
+
+```text
+Stage A: typed edge + DPA
+Stage B: direct usability verdict
+```
+
+允许声称：same fixed semantic view、same model family/revision when configured、observed cost reported。
+禁止声称：strict matched call budget、identical prompts、已完成 budget-normalized analysis。
+
+### 7.2 P0：Ambiguity-and-Scope Feasibility Gate - 必须先做
+
+在任何正式 benchmark 花费前，新增并冻结一个内部诊断 split，初始建议 30-50 个高质量 cases，覆盖：
+
+- clear supersession；
+- clear prerequisite blocking；
+- protected unrelated belief；
+- temporary ability constraint vs persistent preference；
+- current change vs historical fact；
+- tentative intention / possible future change；
+- insufficient evidence requiring `UNCERTAIN/UNRESOLVED`；
+- multi-belief scope-expansion traps；
+- stateful release 仅在 prior blocker 真正进入执行图时纳入。
+
+每个 case 标注：evidence、candidate beliefs、conditions、REQUIRES anchors、expected status、protected belief ids、ambiguity flag、rationale、provenance source。
+
+P0 的 go/no-go：
+
+| 观察 | 解释与动作 |
 |---|---|
-| `AUTHORIZED` | `USABLE` |
-| `BLOCKED` | `NOT_USABLE` |
-| `SUPERSEDED` | `NOT_USABLE` |
-| `UNRESOLVED` | `UNCERTAIN` |
+| A 保持 stale blocking 且 PBP/abstention 优于 B | 结构方向 promising；继续外部评测 |
+| A/B 都近乎满分 | split 不具区分度；先增强 challenge，不作优越性结论 |
+| A/B 都差 | 诊断模型能力、prompt 或输入构造，不急于正式实验 |
+| B 明显优于 A | 科学阻断项；暂停 Stage C 与大规模正式主表，分析 decomposition 风险 |
 
-允许声称：
+### 7.3 STALE pilot 与正式使用
 
-- same fixed semantic candidate view；
-- 正式配置时可使用相同 model family/model id/provider/model revision；
-- per-instance calls/tokens/cache/latency 会被报告；
-- 比较的是 structured authorization 与 direct adjudication。
+STALE 是最接近本文问题的外部 benchmark：其评价维度包括 State Resolution、Premise Resistance 与 Implicit Policy Adaptation，且官方结果显示该任务尚不饱和。
 
-禁止声称：
+正确顺序：
 
-- strict matched call budget；
-- identical prompt exposure；
-- equal number of calls；
-- 已完成 budget-normalized analysis；
-- 已完成官方 benchmark evaluation；
-- 已经证明优于 DirectJudge、CUPMem、STALE baselines 或 Memora systems。
+1. 使用 development-safe/generated 或明确保留的探索实例做 pipeline pilot；
+2. 固定 prompts、models、retrieval、cost policy 与 manifests；
+3. 再在 frozen official setting 上运行 Stage A/B 最终回答比较。
 
-当前调用数必须写清：
+不得把 official scored inputs 或 evaluator judgments 变成 Stage C 训练标签。
 
-- Stage A：每个 candidate belief 一次 semantic edge-verifier call，共 N 次。
-- Stage B：对完整 `SharedCandidateView` 一次 direct-adjudication call。
+### 7.4 Memora 的角色
 
-## 9. Secondary end-to-end pipeline
+Memora 适合评估更长时间尺度下的最终回答表现：FAMA 同时考察 `memory_presence` 与 `forgetting_absence`。它应作为 end-to-end 外部验证，而不是 typed-edge training labels 的来源。
 
-Secondary track 仍是计划或未来工作，尚未作为官方结果实现。它将包含：
+---
 
-```text
-Incoming session
-→ immutable EvidenceNode ledger
-→ generic belief extraction
-→ generic requirement/condition induction
-→ impact candidate retrieval
-→ Stage A or Stage B authorization mechanism
-→ query-conditioned basis
-→ fixed answer model
-→ benchmark scoring
-```
+## 8. 截至 commit `5e8d6e2` 的工程事实审计
 
-该轨道必须单独报告，因为 extraction 和 retrieval 会引入 primary controlled
-track 中不存在的混杂因素。
+### 8.1 已真实建立的工程骨架
 
-## 10. 评价设计
+- validated controlled Stage A/B execution 与 AB-1B evaluator 基础；
+- `HTTPLLMProvider`、manifest 和 runner 入口代码；
+- end-to-end internal runner 的 mock/replay 骨架；
+- STALE / Memora adapter 与 runner 入口；
+- Stage C defer/no-go 文档入口。
 
-Primary controlled metrics 是建议/计划指标，当前尚未形成官方结果：
+### 8.2 尚不能作为论文结果或正式完成项的部分
 
-- Authorization Accuracy；
-- Obsolete-Memory Misuse Rate；
-- Unsupported Revision Rate；
-- Protected-Belief Preservation；
-- Rollback Recovery；
-- calls/tokens/latency/cache。
+1. **Provider 尚未被真实验证为可用路径。** 当前 Gemini OpenAI-compatible endpoint 代码缺少官方所要求的 `/openai/` 路径段；在修复并进行 dev-only capped live smoke 前，不能称 real provider operational。
+2. **End-to-end mock runner 不是方法验证结果。** Mock 模式使用 manual extraction/induction/edges/retrieval；live 模式使用 token-overlap retrieval。后者最多是 v1 engineering baseline，不应称作 paper-facing retrieval method，也没有验证 scope control。
+3. **STALE runner 当前是 adapter smoke。** 它使用 `ReTracePipeline.for_development_fixture()`、手工添加旧 belief，并在 mock 模式下拦截官方 judge；这证明 runner 接口可执行，不证明 ReTrace 在 STALE 上有效。
+4. **Memora runner 当前是 adapter smoke。** Wrapper 默认使用 development fixture pipeline，并会让 upstream 路径产生结果文件；需要改成 outputs-only clean-room 执行并接真实 Stage A/B pipeline 后，才适合 frozen evaluation。
+5. **Stage C report 的 training-data 说法必须纠正。** Stage A live output traces 不是 gold labels；official evaluation runs 更不得用于生成 Stage C 监督数据。
+6. **快照中的文档不一致已被列为修复对象。** 在审计快照中，`AGENTS.md` 与 implementation status 曾宣称 v1/AB-3 fully operational，而旧中文 blueprint / execution contract 仍停在 AB-1B/AB-1C 前状态；本 v3 边界要求主动文档同步到事实层。
 
-Secondary benchmark plans：
+---
 
-- STALE：implicit invalidation 与 stale premise；
-- Memora：repeated mutation 与 obsolete reuse；
-- BoundaryAudit：小型诊断集，不作为新 benchmark headline。
+## 9. 近期工程顺序：小心测试优先
 
-任何指标、表格、figure 或 benchmark 结果，除非由当前代码和冻结运行实际产生，
-都只能标注为 proposed evaluation design 或 future work。
+### P0 - 立即修复实验边界与明显代码问题
 
-## 11. 当前工程状态
+- 修复真实 provider endpoint / provider-specific key selection / live smoke tests；
+- 将 “official evaluation mock-run” 重命名为 adapter smoke/dry-run；
+- 禁止 adapter 在 `reference/` 内写入生成数据或 official result artifacts；
+- 修正 Stage C report 的 gold/leakage 表述；
+- 将 overlap retrieval 明确标注为 development baseline 或替换为经过设计的 shared retrieval layer；
+- 同步所有 canonical docs。
 
-已完成：
+### P1 - 运行 Ambiguity-and-Scope Feasibility Gate
 
-- `main` 上 typed DPA execution spine；
-- AB-0 offline method contracts、prompts、DirectJudge sibling path、mock/replay tests；
-- AB-0.5 fairness and deterministic-grounding hardening；
-- AB-1A offline controlled attribution harness；
-- AB-1A.5 auditability and comparison-protocol lock。
+- 创建 30-50 个 internal diagnostic cases；
+- 使用同一真实模型配置运行 Stage A/B；
+- 输出 PBP、abstention、unsupported commitment、stale blocking 与成本；
+- 根据结果决定是否继续正式 benchmark。
 
-AB-1B 已完成（含语义修复）。回滚恢复（rollback recovery）在 AB-1B 中尚未启用，
-因为 fixed-view controlled interface 不支持 preload prior accepted evidence-edge
-history。
+### P2 - 外部 benchmark pathway validation
 
-下一步只有在未来明确授权时才是 AB-1C：
+- STALE：先 dev-safe pilot，再 freeze 后 official run；
+- Memora：先 adapter clean-room/dry-run，再 freeze 后 official run；
+- 保留 upstream SHA、license、input checksum、prompt/model/config hashes 与官方 evaluator raw outputs。
 
-- live provider adapter；
-- tiny approved dev-only API calls。
+### P3 - Stage C 决策
 
-不在当前状态中：
+仅在 Stage A 相对 B 产生稳定、可解释的结构优势后，另立任务设计 human-audited training data；不得从 official test runs 自蒸馏为 gold。
 
-- real provider adapter；
-- live API call；
-- official STALE/Memora evaluation；
-- secondary end-to-end benchmark run；
-- Stage C training。
+---
 
-## 12. Related work 定位
+## 10. 本文最稳的 contribution 表述
 
-本文不能声称首次研究 stale memory 或 repeated memory mutation。STALE/CUPMem 和
-Memora 已经覆盖了重要外部问题设置。
+1. **Problem formulation:** 将 evolving agent memory revision 定义为 evidence-preserving reversible authorization，而非 destructive rewriting 或 latent consolidation。
+2. **Mechanism:** 以 typed local effects 与 deterministic DPA 要求 suppression 必须由显式 defeat path 支持，从而约束 unsupported scope expansion，并保留审计与恢复路径。
+3. **Attribution protocol:** 以 Stage A 对 Stage B 的同视图比较，专门检验 structured authorization 是否在 protected-belief preservation 与 ambiguity abstention 上优于 direct adjudication。
+4. **Evaluation pathway:** 在 STALE 与 Memora 上检验这种授权差异是否转化为最终回答中更少 obsolete-memory misuse；所有 official claims 必须等待 frozen runs。
 
-ReTrace 的定位是：
+---
 
-> unlike direct adjudication methods that let a model decide memory usability in
-> one step, ReTrace preserves episodic evidence and revises only the authorized
-> current-belief view through typed defeat paths resolved by deterministic DPA.
+## 11. 当前禁止写入论文的结论
 
-CUPMem、Memora、Nemori、Graphiti、TriMem、MemoryAgentBench、LongMemEval、Mem0、
-A-MEM、A-MAC、AgeMem、MEM1 等工作的具体代码/集成角色见
-`docs/upstream_integration.md`。
+在真实可证伪测试和 frozen official evaluation 完成前，不得声称：
 
-## 13. Go / No-Go 原则
+- ReTrace 优于 DirectJudge 或 CUPMem；
+- Stage A 已解决范围误伤；
+- official STALE / Memora 已跑出结果；
+- real-provider pipeline 已通过真实调用验证；
+- Stage C 已具备 gold training data；
+- v1 mock/dry-run 等价于论文实验完成。
 
-- AB-1C 前不接真实 provider。
-- AB-1C 前不做 live API dev calls。
-- config/prompt freeze 前不跑正式 STALE/Memora evaluation。
-- A/B 结构价值未建立前不训练 Stage C。
-- 没有结果前不宣称 ReTrace 优于 DirectJudge、CUPMem 或任何外部方法。
+---
 
-最终执行原则：
+## 12. Related-work 与外部评测使用原则
 
-> ReTrace 不试图学习“全部记忆”。它保留历史证据，并预测 later evidence 与
-> earlier belief/condition 之间的局部 typed relations；一个旧 belief 是否还能支配
-> 当前回答，最终只能由可审计、可撤销的 defeat-path authorization 决定。
+- **STALE/CUPMem**：最近邻问题与方法对照；STALE 用于 implicit invalidation 的最终评测，CUPMem 需基于官方代码后再作强比较。
+- **Memora**：长期 repeated mutation 与 forgetting-aware final-answer evaluation；不提供 ReTrace typed-edge gold。
+- **LongMemEval / MemoryAgentBench**：可作为 update/abstention/selective-forgetting 补充，不阻塞主实验。
+- **Nemori / Auto-Dreamer / A-MEM / consolidation 工作**：解释为何本文不做 memory construction/consolidation。
+- **AgeMem / Memory-R1 / MEM1**：解释为何本文不做 RL/latent memory control。
+
+---
+
+## 13. 结论
+
+ReTrace 的论文方向仍然成立，但当前最重要的不是继续把 mock infrastructure 包装成完成，而是尽快进行能失败的实验：
+
+> 在同一真实基础模型与固定 semantic view 下，Stage A 是否能在不牺牲 stale blocking 的情况下，比 Stage B 更少误伤 protected beliefs、更愿意在 ambiguous evidence 下输出不确定？
+
+如果答案是肯定的，后续 STALE/Memora 的 frozen evaluation 与 Stage C 讨论才有坚实理由；如果答案是否定的，及时停止扩张并分析失败同样比在错误叙事上继续堆工程更有价值。
