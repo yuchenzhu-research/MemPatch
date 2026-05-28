@@ -32,6 +32,39 @@ Offline controlled attribution harness was completed:
 - DirectJudge and ControlledReTrace share the same fingerprint in provenance;
 - per-instance cost is reported by delta accounting.
 
+### AB-1B
+
+Offline internal development-case evaluator and replay-only runner is complete:
+
+- internal development cases in `data/internal_dev/controlled_ab_cases.json`
+  cover six explicit case types: direct supersession, prerequisite blocking,
+  protected unrelated belief, uncertainty, release/rollback recovery, and
+  rejected proposal audit;
+- cases deserialize into valid `SharedCandidateView` objects with deterministic
+  `view_fingerprint` preserved through both methods;
+- `src/retracemem/evaluation/controlled_ab.py` implements `load_cases`,
+  `run_case`, `compute_metrics`, and `format_report`;
+- replay/mock execution only via `MockLLMProvider`; no live API calls;
+- metrics implemented: total cases and belief decisions, Stage A authorization
+  accuracy, Stage B authorization accuracy, Stage A fine-grained status
+  breakdown, Stage B verdict breakdown, obsolete-memory misuse count/rate,
+  protected-belief preservation count/rate, rollback recovery count/rate,
+  observed per-stage calls/tokens/cache/latency, execution and parse error
+  counts;
+- `Unsupported Revision Rate` is deliberately deferred and surfaced in the
+  report as `NOT YET OPERATIONALIZED` with a written explanation of the
+  missing annotation requirement;
+- runner `scripts/run_controlled_ab_dev.py` prints prominent disclaimers,
+  writes JSON-compatible per-instance results and aggregate summary to
+  `outputs/controlled_ab_dev/` (gitignored), and never commits run artifacts;
+- parser-level rejections (e.g. hallucinated condition target) and gate
+  rejections are surfaced as auditable errors rather than silently dropped;
+- 25 new offline tests in `tests/evaluation/test_controlled_ab_evaluator.py`.
+
+AB-1B results are internal development protocol diagnostics only. They are
+not official benchmark results, are not strict call-budget matched, and make
+no claim that ReTrace outperforms DirectJudge.
+
 ### AB-1A.5
 
 Offline auditability and comparison protocol lock is complete:
@@ -150,7 +183,6 @@ Forbidden before future evidence exists:
 
 The following are future or deferred only. They do not start automatically:
 
-- AB-1B: internal development-case evaluator and replay-only runner.
 - AB-1C: one live provider adapter and tiny approved dev-only calls.
 - AB-2: secondary end-to-end internal pipeline.
 - AB-3: frozen official evaluation.
