@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import pathlib
 from retracemem.cache.jsonl_cache import JSONLCache
 from retracemem.evaluation.cost_accounting import CostAccounting
 from retracemem.extraction.manual_fixture_extractor import ManualFixtureExtractor
@@ -13,22 +14,18 @@ from retracemem.verifier.prompt_verifier import PromptRelationVerifier
 
 
 def _mock_cached_client(
+    cache_dir: pathlib.Path,
     responses: dict[str, str] | None = None,
     default_response: str = "mocked response",
     status: str = "success",
 ) -> CachedLLMClient:
-    cache_path = "tests/temp_cache_test.jsonl"
-    if os.path.exists(cache_path):
-        try:
-            os.remove(cache_path)
-        except Exception:
-            pass
+    cache_path = str(cache_dir / "temp_cache_test.jsonl")
     cache = JSONLCache(cache_path=cache_path)
     mock_provider = MockLLMProvider(responses=responses, default_response=default_response, status=status)
     return CachedLLMClient(cache=cache, provider_client=mock_provider, cost_accountant=CostAccounting())
 
 
-def test_prompt_verifier_success() -> None:
+def test_prompt_verifier_success(tmp_path: pathlib.Path) -> None:
     ev = EpisodicEvidence(id="ev_1", timestamp="2026-05-27T00:00:00Z", text="I broke my leg.", source_id="s1")
     belief = Belief(id="b_1", proposition="I commute by bicycle.", supported_by=["ev_0"])
 
@@ -41,7 +38,7 @@ def test_prompt_verifier_success() -> None:
     }
     response_str = json.dumps(response_data)
 
-    client = _mock_cached_client(default_response=response_str)
+    client = _mock_cached_client(tmp_path, default_response=response_str)
     verifier = PromptRelationVerifier(client=client)
 
     prediction = verifier.verify(ev, belief)
@@ -54,11 +51,11 @@ def test_prompt_verifier_success() -> None:
     assert prediction.belief_id == belief.id
 
 
-def test_prompt_verifier_fail_closed_on_invalid_json() -> None:
+def test_prompt_verifier_fail_closed_on_invalid_json(tmp_path: pathlib.Path) -> None:
     ev = EpisodicEvidence(id="ev_1", timestamp="2026-05-27T00:00:00Z", text="I broke my leg.", source_id="s1")
     belief = Belief(id="b_1", proposition="I commute by bicycle.", supported_by=["ev_0"])
 
-    client = _mock_cached_client(default_response="Not a JSON string at all!")
+    client = _mock_cached_client(tmp_path, default_response="Not a JSON string at all!")
     verifier = PromptRelationVerifier(client=client)
 
     prediction = verifier.verify(ev, belief)
@@ -68,11 +65,11 @@ def test_prompt_verifier_fail_closed_on_invalid_json() -> None:
     assert prediction.confidence == 0.0
 
 
-def test_prompt_verifier_fail_closed_on_api_error() -> None:
+def test_prompt_verifier_fail_closed_on_api_error(tmp_path: pathlib.Path) -> None:
     ev = EpisodicEvidence(id="ev_1", timestamp="2026-05-27T00:00:00Z", text="I broke my leg.", source_id="s1")
     belief = Belief(id="b_1", proposition="I commute by bicycle.", supported_by=["ev_0"])
 
-    client = _mock_cached_client(status="failure")
+    client = _mock_cached_client(tmp_path, status="failure")
     verifier = PromptRelationVerifier(client=client)
 
     prediction = verifier.verify(ev, belief)
