@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Official Memora evaluation runner using dynamic clean-room monkey-patching."""
+"""Memora adapter smoke/dry-run runner using dynamic clean-room monkey-patching."""
 from __future__ import annotations
 
 import argparse
@@ -78,11 +78,16 @@ def monkey_patch_memora(is_live: bool) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Run official Memora evaluation.")
+    parser = argparse.ArgumentParser(description="Run Memora adapter smoke/dry-run.")
     parser.add_argument(
         "--live",
         action="store_true",
-        help="Enable live API calls to OpenAI (requires OPENAI_API_KEY).",
+        help="Enable live official-style calls only with --allow-official-live.",
+    )
+    parser.add_argument(
+        "--allow-official-live",
+        action="store_true",
+        help="Explicit opt-in for future official-style live execution; not used in this task.",
     )
     parser.add_argument(
         "--persona",
@@ -102,17 +107,23 @@ def main() -> None:
     )
     args = parser.parse_args()
 
+    if args.live and not args.allow_official_live:
+        print("Refusing live Memora execution without --allow-official-live.")
+        print("This task permits adapter smoke/dry-runs only, not official benchmark evaluation.")
+        sys.exit(2)
+
     if not MEMORA_DIR.exists():
         print(f"Error: Memora repository not found at {MEMORA_DIR}")
         sys.exit(1)
 
     print("=" * 70)
-    print("RUNNING OFFICIAL MEMORA EVALUATION")
+    print("RUNNING MEMORA ADAPTER SMOKE/DRY-RUN")
     print("=" * 70)
+    print("  Disclaimer: not an official Memora result and not Stage A/B evidence.")
     print(f"  Persona:  {args.persona}")
     print(f"  Timeline: {args.timeline}")
     print(f"  Limit:    {args.limit}")
-    print(f"  Mode:     {'LIVE' if args.live else 'MOCK'}")
+    print(f"  Mode:     {'LIVE OFFICIAL-STYLE' if args.live else 'MOCK SMOKE'}")
     print()
 
     # Apply patching
@@ -186,9 +197,10 @@ def main() -> None:
 
     print()
     print("=" * 70)
-    print("MEMORA EVALUATION COMPLETE")
+    print("MEMORA ADAPTER SMOKE/DRY-RUN COMPLETE")
+    print("This output is not an official Memora benchmark result.")
     if copied_files:
-        print("Official evaluation JSON files copied to:")
+        print("Adapter output JSON files copied to:")
         for f in copied_files:
             print(f"  - {f}")
     else:

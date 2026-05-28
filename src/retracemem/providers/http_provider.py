@@ -24,26 +24,46 @@ class HTTPLLMProvider(BaseLLMProvider):
         base_url: str | None = None,
         timeout: float = 30.0,
     ) -> None:
-        self.api_key = api_key or os.environ.get("GEMINI_API_KEY") or os.environ.get("OPENAI_API_KEY")
+        self.api_key = api_key
         self.base_url = base_url
         self.timeout = timeout
 
+    @staticmethod
+    def _provider_env_var(provider: str) -> str:
+        provider_normalized = provider.lower()
+        if provider_normalized in ("google", "gemini"):
+            return "GEMINI_API_KEY"
+        if provider_normalized == "openai":
+            return "OPENAI_API_KEY"
+        raise ValueError(f"Unsupported HTTP provider: {provider}")
+
+    def _resolve_api_key(self, provider: str) -> str | None:
+        env_var = self._provider_env_var(provider)
+        if self.api_key:
+            return self.api_key
+        return os.environ.get(env_var)
+
+    def _redact_secret_values(self, text: str, provider: str) -> str:
+        redacted = text
+        for value in (self.api_key, os.environ.get(self._provider_env_var(provider))):
+            if value:
+                redacted = redacted.replace(value, "[REDACTED]")
+        return redacted
+
     def _resolve_endpoint_and_headers(self, provider: str) -> tuple[str, dict[str, str]]:
         headers = {"Content-Type": "application/json"}
-        
+        api_key = self._resolve_api_key(provider)
+
         # If base_url is explicitly set, use it.
         if self.base_url:
             endpoint = self.base_url
         elif provider.lower() in ("google", "gemini"):
-            endpoint = "https://generativelanguage.googleapis.com/v1beta/chat/completions"
+            endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
         else:
             endpoint = "https://api.openai.com/v1/chat/completions"
 
-        if self.api_key:
-            headers["Authorization"] = f"Bearer {self.api_key}"
-            # For Gemini endpoints, also set x-goog-api-key just in case
-            if "generativelanguage.googleapis.com" in endpoint:
-                headers["x-goog-api-key"] = self.api_key
+        if api_key:
+            headers["Authorization"] = f"Bearer {api_key}"
 
         return endpoint, headers
 
@@ -68,7 +88,9 @@ class HTTPLLMProvider(BaseLLMProvider):
         call_id = f"http-call-{uuid.uuid4()}"
         input_hash = hashlib.sha256(prompt.encode("utf-8")).hexdigest()
         
-        if not self.api_key:
+        api_key = self._resolve_api_key(provider)
+        if not api_key:
+            env_var = self._provider_env_var(provider)
             return ModelCallTrace(
                 call_id=call_id,
                 provider=provider,
@@ -91,7 +113,7 @@ class HTTPLLMProvider(BaseLLMProvider):
                 completion_tokens=0,
                 total_tokens=0,
                 retries=0,
-                error_message="API Key missing: please set GEMINI_API_KEY or OPENAI_API_KEY env vars.",
+                error_message=f"API key missing for provider '{provider}': set {env_var} or pass api_key.",
                 eligible_for_replay=eligible_for_replay,
                 metadata=metadata or {},
             )
@@ -155,7 +177,7 @@ class HTTPLLMProvider(BaseLLMProvider):
 
         except Exception as e:
             status = "failure"
-            error_message = f"{type(e).__name__}: {str(e)}"
+            error_message = self._redact_secret_values(f"{type(e).__name__}: {str(e)}", provider)
             # Basic fallback counts on failure
             prompt_tokens = len(prompt.split())
 
