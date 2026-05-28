@@ -211,6 +211,39 @@ and does not introduce method-specific LLM or embedding retrieval.
 
 **No file ownership conflicts with existing code.**
 
+### Wave AB-0.5: Fairness and Replay Invariants (Hardening)
+
+Locked requirements before AB-1 may begin:
+
+1. **Full shared-view fairness.**
+   DirectJudge-LLM in the primary controlled track receives the same evidence
+   context, candidate beliefs, candidate replacement beliefs, and candidate
+   conditions available to ReTrace-LLM. Its prompt must render all of these.
+
+2. **Complete verdict coverage.**
+   DirectJudge must output exactly one verdict for every candidate belief.
+   Omissions, duplicates, and unknown belief ids are parser failures.
+
+3. **Explicit scope.**
+   `PromptRequirementInducer` must require explicit scope identity derived
+   from `belief.metadata["scope_id"]` and may not use `"default"` or
+   `"global"` fallback.
+
+4. **Current-evidence supersession grounding.**
+   A `SUPERSEDES` replacement must be both:
+   - present among supplied `candidate_replacement_beliefs`; and
+   - grounded in the current new evidence
+     (`new_evidence.evidence_id in replacement.source_evidence_ids`).
+
+5. **Deterministic ids.**
+   LLM outputs provide semantic text and labels, not authoritative graph
+   object identifiers. Graph ids used by Stage A prompt components must be
+   computed deterministically from grounded inputs (evidence_id, scope_id,
+   normalized semantic output, edge_type, target_id, prompt_version).
+
+6. **Gate condition.**
+   AB-1 remains blocked until AB-0.5 passes full tests offline.
+
 ### Wave AB-1: ReTrace-LLM Generic Semantic Components
 
 **Files to implement (from AB-0 stubs):**
