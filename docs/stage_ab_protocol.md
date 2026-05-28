@@ -34,32 +34,41 @@ Offline controlled attribution harness was completed:
 
 ### AB-1B
 
-Offline internal development-case evaluator and replay-only runner is complete:
+Offline internal development-case evaluator and replay-only runner is complete
+with repaired semantics:
 
 - internal development cases in `data/internal_dev/controlled_ab_cases.json`
   cover six explicit case types: direct supersession, prerequisite blocking,
-  protected unrelated belief, uncertainty, release/rollback recovery, and
+  protected unrelated belief, uncertainty, releases smoke, and
   rejected proposal audit;
 - cases deserialize into valid `SharedCandidateView` objects with deterministic
   `view_fingerprint` preserved through both methods;
 - `src/retracemem/evaluation/controlled_ab.py` implements `load_cases`,
   `run_case`, `compute_metrics`, and `format_report`;
 - replay/mock execution only via `MockLLMProvider`; no live API calls;
-- metrics implemented: total cases and belief decisions, Stage A authorization
-  accuracy, Stage B authorization accuracy, Stage A fine-grained status
-  breakdown, Stage B verdict breakdown, obsolete-memory misuse count/rate,
-  protected-belief preservation count/rate, rollback recovery count/rate,
-  observed per-stage calls/tokens/cache/latency, execution and parse error
-  counts;
+- observed cost accounting uses `calls.get("total", 0)` instead of
+  `sum(calls.values())` to avoid double-counting; cost is captured even on
+  method failure via `finally` blocks;
+- total annotated belief decisions are computed independently of Stage A
+  success; conservative accuracy policy counts failed executions against
+  method correctness;
+- rejected proposal audit case triggers `RevisionGate` rejection
+  (`replacement_belief_id_only_valid_for_supersedes`) rather than parser
+  failure; provenance records `admitted=false` and stable `gate_reason`;
+- obsolete-memory misuse and protected-belief preservation are computed
+  symmetrically for both Stage A and Stage B;
+- rollback recovery is `NOT YET OPERATIONALIZED` because the current
+  fixed-view controlled interface does not preload prior accepted
+  evidence-edge history; the prior `release_rollback` case type is relabelled
+  as `releases_smoke`;
+- `parse_errors` is incremented only on actual parse/value errors, not
+  merely declared;
 - `Unsupported Revision Rate` is deliberately deferred and surfaced in the
-  report as `NOT YET OPERATIONALIZED` with a written explanation of the
-  missing annotation requirement;
+  report as `NOT YET OPERATIONALIZED`;
 - runner `scripts/run_controlled_ab_dev.py` prints prominent disclaimers,
   writes JSON-compatible per-instance results and aggregate summary to
   `outputs/controlled_ab_dev/` (gitignored), and never commits run artifacts;
-- parser-level rejections (e.g. hallucinated condition target) and gate
-  rejections are surfaced as auditable errors rather than silently dropped;
-- 25 new offline tests in `tests/evaluation/test_controlled_ab_evaluator.py`.
+- 27 offline tests in `tests/evaluation/test_controlled_ab_evaluator.py`.
 
 AB-1B results are internal development protocol diagnostics only. They are
 not official benchmark results, are not strict call-budget matched, and make
@@ -189,5 +198,5 @@ The following are future or deferred only. They do not start automatically:
 - Stage C: learned local typed-edge verifier using the same DPA core.
 
 No live API call, official STALE/Memora evaluation, provider integration,
-end-to-end experiment wiring, or Stage C work is part of AB-1A.5 or this
-documentation reset.
+end-to-end experiment wiring, or Stage C work is part of AB-1B or this
+repair task.

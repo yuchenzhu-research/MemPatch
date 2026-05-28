@@ -21,7 +21,8 @@ authority. Do not restore them as required reading.
 
 ## Stage Interpretation
 
-Stage AB-1A.5 is complete. AB-1B is the next not-yet-started future boundary.
+Stages AB-1A.5 and AB-1B are complete. AB-1C is the next not-yet-started
+future boundary.
 
 Stage identities:
 
@@ -160,17 +161,12 @@ frozen.
 
 ## Safe Future Packets
 
-These are future task shapes, not active work in this documentation reset.
+These are future task shapes, not active work.
 
-### AB-1B
+### AB-1B (completed)
 
 Internal development-case evaluator and replay-only runner.
-
-Expected future outputs may include internal controlled authorization cases,
-controlled A/B metrics, replay-only runner, tests, and manifests.
-
-Forbidden in AB-1B unless separately approved: live providers, official
-benchmark execution, Stage C training.
+Completed with repaired semantics in AB-1B.1.
 
 ### AB-1C
 

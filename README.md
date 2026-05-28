@@ -23,14 +23,16 @@ immutable EvidenceNode ledger
 
 The active branch is `method/retrace-llm-directjudge`.
 
-Completed through Stage AB-1A.5:
+Completed through repaired Stage AB-1B:
 
 - typed DPA execution spine;
 - offline Stage A/B contracts, prompts, sibling DirectJudge path, and
   mock/replay tests;
 - fairness and deterministic-grounding hardening;
 - offline controlled attribution harness;
-- auditability and comparison-protocol lock.
+- auditability and comparison-protocol lock;
+- replay-only internal evaluation with repaired cost/metric/provenance
+  semantics.
 
 No live-provider result, official STALE result, official Memora result, or
 Stage C result is claimed yet.
