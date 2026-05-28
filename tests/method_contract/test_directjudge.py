@@ -44,7 +44,8 @@ def _make_view() -> SharedCandidateView:
         evidence_context=(ev,),
         candidate_beliefs=(b_bike, b_car),
         candidate_replacement_beliefs=(b_car,),
-        candidate_conditions_by_belief={"b_bike": (c_leg,)},
+        candidate_conditions_by_belief=(("b_bike", (c_leg,)),),
+        new_evidence=ev,
     )
 
 
@@ -201,3 +202,39 @@ def test_full_view_rendered_in_prompt(tmp_path: str) -> None:
     assert "commutes by car" in prompt
     assert "c_leg" in prompt
     assert "physically able" in prompt
+
+
+def test_view_fingerprint_in_provenance(tmp_path: str) -> None:
+    response = json.dumps({
+        "verdicts": [
+            {"belief_id": "b_bike", "status": "NOT_USABLE", "rationale": "r"},
+            {"belief_id": "b_car", "status": "USABLE", "rationale": "r"},
+        ]
+    })
+    judge = _make_judge(response, str(tmp_path))
+    view = _make_view()
+    result = judge.judge(view)
+    assert result.provenance["view_fingerprint"] == view.view_fingerprint
+
+
+def test_per_instance_cost_not_cumulative(tmp_path: str) -> None:
+    response = json.dumps({
+        "verdicts": [
+            {"belief_id": "b_bike", "status": "NOT_USABLE", "rationale": "r"},
+            {"belief_id": "b_car", "status": "USABLE", "rationale": "r"},
+        ]
+    })
+    mock = MockLLMProvider(default_response=response)
+    cache = JSONLCache(os.path.join(str(tmp_path), "cache.jsonl"))
+    client = CachedLLMClient(cache=cache, provider_client=mock)
+    judge = DirectJudgeLLM(client=client, model_id="mock", provider="mock")
+    view = _make_view()
+
+    result1 = judge.judge(view)
+    result2 = judge.judge(view)
+
+    # Each run should report the same per-instance cost
+    assert result1.cost["tokens"]["total"] == result2.cost["tokens"]["total"]
+    # Cumulative client total should be 2x
+    cumulative = client.cost_accountant.to_dict()
+    assert cumulative["tokens"]["total"] >= 2 * result1.cost["tokens"]["total"]
