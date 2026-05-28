@@ -64,6 +64,33 @@ def _cost_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]
     }
 
 
+def _canonicalize_belief_id(returned_id: Any, valid_belief_ids: set[str]) -> str:
+    if not isinstance(returned_id, str) or not returned_id:
+        raise ValueError(f"Verdict item missing belief_id: {returned_id!r}")
+    if returned_id in valid_belief_ids:
+        return returned_id
+    matches = [
+        valid_id for valid_id in valid_belief_ids
+        if returned_id.startswith(valid_id) and returned_id != valid_id
+    ]
+    if len(matches) == 1:
+        suffix = returned_id[len(matches[0]):]
+        if suffix and (
+            suffix[0].isspace()
+            or suffix.startswith((':', '-', '—', '–', '"', "'", '(', '[', '{'))
+        ):
+            return matches[0]
+    if len(matches) > 1:
+        raise ValueError(
+            f"DirectJudge returned ambiguous belief_id prefix '{returned_id}'. "
+            f"Matches: {sorted(matches)}"
+        )
+    raise ValueError(
+        f"DirectJudge returned verdict for unknown belief_id '{returned_id}'. "
+        f"Valid: {valid_belief_ids}"
+    )
+
+
 class DirectJudgeLLM:
     """Stage B: matched same-model direct usability adjudication.
 
@@ -198,11 +225,7 @@ class DirectJudgeLLM:
 
             if not bid:
                 raise ValueError(f"Verdict item missing belief_id: {item}")
-            if bid not in valid_belief_ids:
-                raise ValueError(
-                    f"DirectJudge returned verdict for unknown belief_id '{bid}'. "
-                    f"Valid: {valid_belief_ids}"
-                )
+            bid = _canonicalize_belief_id(bid, valid_belief_ids)
             if bid in seen_ids:
                 raise ValueError(
                     f"DirectJudge returned duplicate verdict for belief_id '{bid}'"
