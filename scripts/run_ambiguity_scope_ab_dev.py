@@ -63,9 +63,7 @@ PILOT_CASE_IDS = (
     "as_insufficient_evidence_02",
     "as_scope_trap_01",
 )
-_PROMPT_EDGE = os.path.join(
-    os.path.dirname(__file__), os.pardir, "prompts", "retrace_llm", "evidence_edge_prediction_v0.txt"
-)
+DEFAULT_STAGE_A_PROMPT_VERSION = "evidence_edge_prediction_v1"
 _PROMPT_JUDGE = os.path.join(
     os.path.dirname(__file__), os.pardir, "prompts", "directjudge", "direct_usability_v1.txt"
 )
@@ -97,6 +95,12 @@ def _file_hash(path: str) -> str:
         return ""
     with open(path, encoding="utf-8") as f:
         return hashlib.sha256(f.read().encode("utf-8")).hexdigest()
+
+
+def _stage_a_prompt_path(prompt_version: str) -> str:
+    return os.path.join(
+        os.path.dirname(__file__), os.pardir, "prompts", "retrace_llm", f"{prompt_version}.txt"
+    )
 
 
 def _select_cases(cases: list[Any], case_ids: tuple[str, ...]) -> list[Any]:
@@ -208,6 +212,9 @@ def main() -> None:
     parser.add_argument("--pilot-only", action="store_true", help="Run the fixed 8-case human-review pilot subset.")
     parser.add_argument("--max-calls", type=int, default=int(os.getenv("RETRACE_LIVE_MAX_CALLS", "24")), help="Hard live-dev total call cap across both stages.")
     parser.add_argument("--max-tokens", type=int, default=int(os.getenv("RETRACE_LIVE_MAX_TOKENS", "60000")), help="Hard live-dev total token cap across both stages.")
+    parser.add_argument("--stage-a-prompt-version", default=DEFAULT_STAGE_A_PROMPT_VERSION, help="Stage A evidence-edge prompt version.")
+    parser.add_argument("--run-type", choices=("replay_correctness", "live_regression", "live_fresh_challenge", "replay_verification"), default=None, help="Explicit run type recorded in report and manifest.")
+    parser.add_argument("--cache-path", default="", help="Optional cache path for live-dev or replay-verification runs.")
     parser.add_argument("--write-review-table", action="store_true", help="Write the compact human-review markdown artifact and exit.")
     parser.add_argument(
         "--review-output",
@@ -229,6 +236,7 @@ def main() -> None:
 
     dataset_path = os.path.normpath(args.dataset)
     output_dir = os.path.normpath(args.output_dir)
+    run_type = args.run_type or ("replay_correctness" if args.mode == "replay" else "live_regression")
     run_id = f"run-ambiguity-scope-{uuid.uuid4()}"
 
     print("=" * 70)
@@ -237,9 +245,20 @@ def main() -> None:
     print("  Disclaimer: internal development feasibility study only.")
     print(f"  Run ID: {run_id}")
     print(f"  Mode:   {args.mode.upper()}")
+    print(f"  Run type: {run_type}")
     print(f"  Cases:  {dataset_path}")
     print(f"  Output: {output_dir}")
     print()
+
+    if args.mode == "live-dev" and run_type == "replay_verification" and not args.cache_path:
+        print("Refusing replay_verification without --cache-path.")
+        sys.exit(2)
+    if args.mode == "live-dev" and run_type != "replay_verification":
+        existing_report = Path(output_dir) / "ambiguity_scope_report.json"
+        existing_manifest = Path(output_dir) / "ambiguity_scope_manifest.json"
+        if existing_report.exists() or existing_manifest.exists():
+            print("Refusing to overwrite existing live output directory; choose a fresh output-dir.")
+            sys.exit(2)
 
     cases = load_dataset(dataset_path)
     if not args.skip_balance_check:
@@ -270,7 +289,7 @@ def main() -> None:
         if not selected_ids:
             print("Refusing live execution without --pilot-only or --case-ids.")
             sys.exit(2)
-        cache_path = str(Path(output_dir) / "ambiguity_scope_live_cache.jsonl")
+        cache_path = args.cache_path or str(Path(output_dir) / f"{run_id}_live_cache.jsonl")
         cache = JSONLCache(cache_path)
         provider = CappedProviderWrapper(
             HTTPLLMProvider(api_key=args.api_key, base_url=args.base_url),
@@ -290,9 +309,19 @@ def main() -> None:
             client_b=client_b,
             model_id="mock" if args.mode == "replay" else args.model,
             provider="mock" if args.mode == "replay" else args.provider,
+            stage_a_prompt_version=args.stage_a_prompt_version,
         )
         metrics = compute_metrics(cases, results)
         report = format_report(cases, results, metrics)
+        report["run_type"] = run_type
+        report["stage_a_prompt_version"] = args.stage_a_prompt_version
+        report["cache_path"] = cache_path
+        report["cost_semantics"] = {
+            "calls": "semantic method invocations recorded by the cache/accounting layer",
+            "cache_hits": "semantic invocations served from cache",
+            "cache_misses": "semantic invocations delegated to provider; hard call cap applies before cache lookup in live-dev",
+            "tokens": "tokens reported on returned model traces; cache-hit replay repeats cached trace token counts for reporting",
+        }
 
     report_path = Path(output_dir) / "ambiguity_scope_report.json"
     with open(report_path, "w", encoding="utf-8") as f:
@@ -307,7 +336,7 @@ def main() -> None:
         temperature=0.0,
         max_tokens=args.max_tokens if args.mode == "live-dev" else None,
         prompt_hashes={
-            "evidence_edge_prediction": _file_hash(_PROMPT_EDGE),
+            "evidence_edge_prediction": _file_hash(_stage_a_prompt_path(args.stage_a_prompt_version)),
             "direct_usability": _file_hash(_PROMPT_JUDGE),
         },
         cache_path=cache_path,
@@ -315,8 +344,12 @@ def main() -> None:
         comparison_regime="ambiguity_scope_controlled",
         metadata={
             "max_calls": args.max_calls if args.mode == "live-dev" else None,
+            "max_tokens": args.max_tokens if args.mode == "live-dev" else None,
+            "run_type": run_type,
+            "stage_a_prompt_version": args.stage_a_prompt_version,
             "selected_case_ids": [case.case.case_id for case in cases],
             "live_requires_explicit_approval": True,
+            "cache_path": cache_path,
         },
     )
     manifest = RunManifest(

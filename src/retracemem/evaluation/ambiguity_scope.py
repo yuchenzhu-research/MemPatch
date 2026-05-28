@@ -585,6 +585,7 @@ def run_cases(
     client_b: Any | None = None,
     model_id: str = "mock",
     provider: str = "mock",
+    stage_a_prompt_version: str = "evidence_edge_prediction_v0",
 ) -> list[CaseResult]:
     """Execute all loaded cases via the shared controlled track runner."""
     return [
@@ -595,6 +596,7 @@ def run_cases(
             client_b=client_b,
             model_id=model_id,
             provider=provider,
+            stage_a_prompt_version=stage_a_prompt_version,
         )
         for case in cases
     ]
