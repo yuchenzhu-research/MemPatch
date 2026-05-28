@@ -39,6 +39,9 @@ Do not turn this codebase into:
 
 ## Current Method Status
 
+Typed graph schemas and DPA logic exist.
+Canonical EvidenceNode ledger migration and typed end-to-end integration are not yet complete.
+
 Canonical typed DPA core exists:
 - EvidenceNode / BeliefNode / ConditionNode
 - DependencyEdge(REQUIRES)
@@ -66,7 +69,7 @@ Development-only:
 - Do not commit `reference/`, `outputs/`, caches, local environments, or API
   keys.
 - Preserve the dataclass contracts in `retracemem/schemas.py`.
-- All methods should emit `EvaluationRecord` or JSON-compatible records.
+- All new method paths should emit JSON-compatible typed traces or score records with provenance. Legacy EvaluationRecord is transitional only and must not govern new runtime design.
 - Add or update tests for every new behavior.
 
 ## Verification

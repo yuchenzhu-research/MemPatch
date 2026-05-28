@@ -1,6 +1,6 @@
 > [!IMPORTANT]
 > This document is retained solely as the initial planning reference for the flat relation prototype.
-> The implementation has transitioned to a typed graph + Defeat-Path Authorization (DPA) core. All runtime specifications are governed by [docs/refactor_plan_defeat_path.md](file:///Users/yuchenzhu/Desktop/ReTrace/docs/refactor_plan_defeat_path.md).
+> The implementation has transitioned to a typed graph + Defeat-Path Authorization (DPA) core. All runtime specifications are governed by [docs/refactor_plan_defeat_path.md](docs/refactor_plan_defeat_path.md).
 
 # ReTrace Implementation Plan
 

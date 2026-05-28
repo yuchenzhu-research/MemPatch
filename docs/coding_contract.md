@@ -23,6 +23,7 @@ Allowed now:
 
 - Python standard library.
 - Existing local package modules.
+- pytest as a development/test-only dependency declared in [project.optional-dependencies].dev
 
 Not allowed in first-version core:
 
@@ -69,7 +70,7 @@ Owns relation prediction contracts:
 
 - `RequirementInducer` and `EvidenceEdgeVerifier` protocols.
 - `HeuristicRequirementInducer` and `HeuristicEvidenceEdgeVerifier` (development-only deterministic fixtures).
-- `PromptEvidenceEdgeVerifier` (LLM-based verifier).
+- `PromptEvidenceEdgeVerifier` (planned, not yet implemented).
 
 No verifier should directly mutate memory. Deep learning or heavy machine learning packages (e.g., PyTorch, Transformers) must not be added as core dependencies; they are deferred and may only be introduced as optional extensions for a future `ReTrace-Local` edge verifier.
 
