@@ -217,35 +217,44 @@ def _build_stage_b_mock_response(verdicts: list[dict[str, Any]]) -> str:
     return json.dumps({"verdicts": verdicts})
 
 
-def run_case(case: InternalDevCase, tmp_dir: str) -> CaseResult:
+def run_case(
+    case: InternalDevCase,
+    tmp_dir: str,
+    client_a: CachedLLMClient | None = None,
+    client_b: CachedLLMClient | None = None,
+    model_id: str = "mock",
+    provider: str = "mock",
+) -> CaseResult:
     """Execute one internal case through both Stage A and Stage B."""
     result = CaseResult(case_id=case.case_id, case_type=case.case_type)
 
     # --- Stage A ---
-    client_a = None
+    active_client_a = client_a
     try:
-        # Stage A calls the verifier once per candidate belief.
-        # We need to provide ordered mock responses for each belief.
-        stage_a_responses: list[str] = []
-        for belief in case.view.candidate_beliefs:
-            edges = case.stage_a_mock_edges.get(belief.belief_id, [])
-            stage_a_responses.append(_build_stage_a_mock_response(edges))
+        if active_client_a is None:
+            # Stage A calls the verifier once per candidate belief.
+            # We need to provide ordered mock responses for each belief.
+            stage_a_responses: list[str] = []
+            for belief in case.view.candidate_beliefs:
+                edges = case.stage_a_mock_edges.get(belief.belief_id, [])
+                stage_a_responses.append(_build_stage_a_mock_response(edges))
 
-        call_idx = [0]
-        original_responses = stage_a_responses
+            call_idx = [0]
+            original_responses = stage_a_responses
 
-        class _OrderedMockA(MockLLMProvider):
-            def generate(self, prompt: str, **kwargs: Any):  # type: ignore[override]
-                idx = min(call_idx[0], len(original_responses) - 1)
-                self.default_response = original_responses[idx]
-                call_idx[0] += 1
-                return super().generate(prompt, **kwargs)
+            class _OrderedMockA(MockLLMProvider):
+                def generate(self, prompt: str, **kwargs: Any):  # type: ignore[override]
+                    idx = min(call_idx[0], len(original_responses) - 1)
+                    self.default_response = original_responses[idx]
+                    call_idx[0] += 1
+                    return super().generate(prompt, **kwargs)
 
-        mock_a = _OrderedMockA(default_response=original_responses[0] if original_responses else '{"edges": []}')
-        cache_a = JSONLCache(os.path.join(tmp_dir, f"{case.case_id}_a.jsonl"))
-        client_a = CachedLLMClient(cache=cache_a, provider_client=mock_a)
-        verifier = PromptEvidenceEdgeVerifier(client=client_a, model_id="mock", provider="mock")
-        runner_a = ControlledReTraceLLM(edge_verifier=verifier, client=client_a)
+            mock_a = _OrderedMockA(default_response=original_responses[0] if original_responses else '{"edges": []}')
+            cache_a = JSONLCache(os.path.join(tmp_dir, f"{case.case_id}_a.jsonl"))
+            active_client_a = CachedLLMClient(cache=cache_a, provider_client=mock_a)
+
+        verifier = PromptEvidenceEdgeVerifier(client=active_client_a, model_id=model_id, provider=provider)
+        runner_a = ControlledReTraceLLM(edge_verifier=verifier, client=active_client_a)
         result.stage_a_result = runner_a.run(case.view)
     except Exception as exc:
         result.stage_a_error = f"{type(exc).__name__}: {exc}"
@@ -259,17 +268,19 @@ def run_case(case: InternalDevCase, tmp_dir: str) -> CaseResult:
         if is_parse:
             result.is_stage_a_parse_error = True
     finally:
-        if client_a is not None:
-            result.stage_a_cost = client_a.cost_accountant.to_dict()
+        if active_client_a is not None:
+            result.stage_a_cost = active_client_a.cost_accountant.to_dict()
 
     # --- Stage B ---
-    client_b = None
+    active_client_b = client_b
     try:
-        stage_b_response = _build_stage_b_mock_response(case.stage_b_mock_verdicts)
-        mock_b = MockLLMProvider(default_response=stage_b_response)
-        cache_b = JSONLCache(os.path.join(tmp_dir, f"{case.case_id}_b.jsonl"))
-        client_b = CachedLLMClient(cache=cache_b, provider_client=mock_b)
-        judge = DirectJudgeLLM(client=client_b, model_id="mock", provider="mock")
+        if active_client_b is None:
+            stage_b_response = _build_stage_b_mock_response(case.stage_b_mock_verdicts)
+            mock_b = MockLLMProvider(default_response=stage_b_response)
+            cache_b = JSONLCache(os.path.join(tmp_dir, f"{case.case_id}_b.jsonl"))
+            active_client_b = CachedLLMClient(cache=cache_b, provider_client=mock_b)
+
+        judge = DirectJudgeLLM(client=active_client_b, model_id=model_id, provider=provider)
         result.stage_b_result = judge.judge(case.view)
     except Exception as exc:
         result.stage_b_error = f"{type(exc).__name__}: {exc}"
@@ -283,8 +294,8 @@ def run_case(case: InternalDevCase, tmp_dir: str) -> CaseResult:
         if is_parse:
             result.is_stage_b_parse_error = True
     finally:
-        if client_b is not None:
-            result.stage_b_cost = client_b.cost_accountant.to_dict()
+        if active_client_b is not None:
+            result.stage_b_cost = active_client_b.cost_accountant.to_dict()
 
     return result
 
