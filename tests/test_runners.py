@@ -202,6 +202,7 @@ def _run_script(script: str, *args: str) -> subprocess.CompletedProcess[str]:
 
 def test_run_retrace_internal_dev_script() -> None:
     result = _run_script("scripts/run_retrace_internal_dev.py")
-    assert result.returncode == 0, result.stderr
+    assert result.returncode == 0, f"stderr: {result.stderr}\nstdout: {result.stdout}"
     assert "All Dev Cases Passed Cleanly!" in result.stdout
+    assert "Typed Fixtures" in result.stdout
 

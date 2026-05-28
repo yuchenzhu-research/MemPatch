@@ -19,6 +19,7 @@ from retracemem.retrieval.typed_retrievers import (
     ManualImpactCandidateRetriever,
     ManualQueryBeliefRetriever,
 )
+from retracemem.evaluation.jsonl import write_jsonl, read_jsonl
 
 
 class _FailingClient:
@@ -99,7 +100,7 @@ def test_pipeline_blocker_and_release_flow():
     })
 
     # Instantiate Pipeline
-    pipeline = ReTracePipeline(
+    pipeline = ReTracePipeline.for_development_fixture(
         extractor=extractor,
         inducer=inducer,
         edge_verifier=edge_verifier,
@@ -223,7 +224,7 @@ def test_pipeline_supersedes_flow():
     })
 
     # Instantiate Pipeline
-    pipeline = ReTracePipeline(
+    pipeline = ReTracePipeline.for_development_fixture(
         extractor=extractor,
         inducer=inducer,
         edge_verifier=edge_verifier,
@@ -294,7 +295,7 @@ def test_backend_search_retains_unresolved_excluded_trace():
     )
     edge_verifier = ManualEvidenceEdgeVerifier()
     edge_verifier.register(edge_uncertain, belief_id="belief_schedule")
-    pipeline = ReTracePipeline(
+    pipeline = ReTracePipeline.for_development_fixture(
         extractor=extractor,
         inducer=ManualRequirementInducer([]),
         edge_verifier=edge_verifier,
@@ -361,3 +362,105 @@ def test_unsupported_backend_ablation_flags_fail_loudly():
         ReTraceBackend.for_development_fixture(disable_gate=True)
     with pytest.raises(ValueError, match="does not support disable_ledger"):
         ReTraceBackend.for_development_fixture(disable_temporal=True)
+
+
+def test_pipeline_requires_explicit_backend_or_all_components():
+    with pytest.raises(ValueError, match="requires either an explicit backend or all five typed components"):
+        ReTracePipeline()
+    with pytest.raises(ValueError, match="Missing: inducer, edge_verifier, impact_retriever, query_retriever"):
+        ReTracePipeline(extractor=ManualTypedBeliefExtractor({}))
+
+
+def test_pipeline_answer_blocked_beliefs_are_query_conditioned():
+    user_id = "user_qcond"
+    b_bike = BeliefNode(
+        belief_id="belief_bike",
+        proposition="Alice commutes by bicycle.",
+        source_evidence_ids=("s1",),
+    )
+    b_food = BeliefNode(
+        belief_id="belief_food",
+        proposition="Alice likes sushi.",
+        source_evidence_ids=("s1",),
+    )
+    extractor = ManualTypedBeliefExtractor({"s1": [b_bike, b_food], "s2": []})
+    c_mobility = ConditionNode(condition_id="cond_mob", scope_id=user_id, text="mobility")
+    dep = DependencyEdge(edge_id="dep_mob", belief_id="belief_bike", condition_id="cond_mob", inducer="manual")
+    inducer = ManualRequirementInducer([RequirementProposal(condition=c_mobility, dependency_edge=dep)])
+    edge_block = EvidenceEdge(
+        edge_id="edge_block_mob",
+        edge_type=EvidenceEdgeType.BLOCKS,
+        evidence_id="s2",
+        target_kind="condition",
+        target_id="cond_mob",
+        verifier="manual",
+    )
+    edge_verifier = ManualEvidenceEdgeVerifier()
+    edge_verifier.register(edge_block, belief_id="belief_bike")
+    impact_retriever = ManualImpactCandidateRetriever({"s2": ["belief_bike"]})
+    query_retriever = ManualQueryBeliefRetriever({
+        "how does Alice commute?": ["belief_bike"],
+        "what food does Alice like?": ["belief_food"],
+    })
+    pipeline = ReTracePipeline.for_development_fixture(
+        extractor=extractor,
+        inducer=inducer,
+        edge_verifier=edge_verifier,
+        impact_retriever=impact_retriever,
+        query_retriever=query_retriever,
+    )
+    pipeline.reset_user(user_id)
+    pipeline.ingest_evidence(
+        user_id,
+        EvidenceNode(evidence_id="s1", session_id="s1", timestamp="2026-01-01T00:00:00Z",
+                     text="Alice commutes by bicycle and likes sushi.",
+                     source_dataset="manual", source_pointer="test"),
+    )
+    pipeline.ingest_evidence(
+        user_id,
+        EvidenceNode(evidence_id="s2", session_id="s2", timestamp="2026-01-02T00:00:00Z",
+                     text="Alice broke her leg.",
+                     source_dataset="manual", source_pointer="test"),
+    )
+
+    commute_record = pipeline.answer(user_id, "how does Alice commute?")
+    assert commute_record.authorized_basis == []
+    assert len(commute_record.blocked_beliefs) == 1
+    assert commute_record.blocked_beliefs[0]["belief_id"] == "belief_bike"
+
+    food_record = pipeline.answer(user_id, "what food does Alice like?")
+    assert len(food_record.authorized_basis) == 1
+    assert food_record.authorized_basis[0]["belief_id"] == "belief_food"
+    assert food_record.blocked_beliefs == []
+
+
+def test_pipeline_answer_record_is_jsonl_compatible(tmp_path):
+    user_id = "user_jsonl"
+    b = BeliefNode(
+        belief_id="belief_food",
+        proposition="Alice likes Thai food.",
+        source_evidence_ids=("s1",),
+    )
+    extractor = ManualTypedBeliefExtractor({"s1": [b]})
+    pipeline = ReTracePipeline.for_development_fixture(
+        extractor=extractor,
+        inducer=ManualRequirementInducer([]),
+        edge_verifier=ManualEvidenceEdgeVerifier(),
+        impact_retriever=ManualImpactCandidateRetriever({}),
+        query_retriever=ManualQueryBeliefRetriever({"What food does Alice like?": ["belief_food"]}),
+    )
+    pipeline.reset_user(user_id)
+    pipeline.ingest_evidence(
+        user_id,
+        EvidenceNode(evidence_id="s1", session_id="s1", timestamp="2026-01-01T00:00:00Z",
+                     text="Alice likes Thai food.",
+                     source_dataset="manual", source_pointer="test"),
+    )
+    record = pipeline.answer(user_id, "What food does Alice like?")
+    output_path = tmp_path / "answers.jsonl"
+    write_jsonl([record], output_path)
+    loaded = read_jsonl(output_path)
+    assert loaded[0]["query_id"] == f"{user_id}:What food does Alice like?"
+    assert loaded[0]["method"] == "retrace_pipeline"
+    assert loaded[0]["authorized_basis"][0]["belief_id"] == "belief_food"
+    assert loaded[0]["blocked_beliefs"] == []

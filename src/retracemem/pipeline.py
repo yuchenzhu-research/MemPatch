@@ -8,15 +8,11 @@ from retracemem.backends.retrace_backend import ReTraceBackend
 from retracemem.schemas import (
     EvidenceNode,
     BeliefNode,
-    ConditionNode,
-    DependencyEdge,
     EvidenceEdge,
-    AuthorizationStatus,
     EvaluationRecord,
 )
 from retracemem.memory.belief_store import BeliefStore
 from retracemem.memory.episode_ledger import EpisodeLedger
-from retracemem.tms.authorization import DefeatPathAuthorizationAlgorithm
 from retracemem.extraction.typed_extractor import TypedBeliefExtractor
 from retracemem.verifier.contracts import RequirementInducer, EvidenceEdgeVerifier
 from retracemem.retrieval.typed_retrievers import ImpactCandidateRetriever, QueryBeliefRetriever
@@ -27,19 +23,58 @@ class ReTracePipeline:
 
     def __init__(
         self,
+        backend: ReTraceBackend | None = None,
+        *,
         extractor: TypedBeliefExtractor | None = None,
         inducer: RequirementInducer | None = None,
         edge_verifier: EvidenceEdgeVerifier | None = None,
         impact_retriever: ImpactCandidateRetriever | None = None,
         query_retriever: QueryBeliefRetriever | None = None,
     ) -> None:
-        self.backend = ReTraceBackend.for_development_fixture(
+        if backend is not None:
+            self.backend = backend
+        else:
+            components = {
+                "extractor": extractor,
+                "inducer": inducer,
+                "edge_verifier": edge_verifier,
+                "impact_retriever": impact_retriever,
+                "query_retriever": query_retriever,
+            }
+            missing = [k for k, v in components.items() if v is None]
+            if missing:
+                raise ValueError(
+                    "ReTracePipeline requires either an explicit backend or all five typed components; "
+                    "use ReTracePipeline.for_development_fixture() only for deterministic development tests. "
+                    f"Missing: {', '.join(missing)}"
+                )
+            self.backend = ReTraceBackend(
+                extractor=extractor,
+                inducer=inducer,
+                edge_verifier=edge_verifier,
+                impact_retriever=impact_retriever,
+                query_retriever=query_retriever,
+            )
+
+    @classmethod
+    def for_development_fixture(
+        cls,
+        *,
+        extractor: TypedBeliefExtractor | None = None,
+        inducer: RequirementInducer | None = None,
+        edge_verifier: EvidenceEdgeVerifier | None = None,
+        impact_retriever: ImpactCandidateRetriever | None = None,
+        query_retriever: QueryBeliefRetriever | None = None,
+    ) -> ReTracePipeline:
+        """Development-only deterministic fixture pipeline; forbidden for paper main-result runners."""
+        backend = ReTraceBackend.for_development_fixture(
             extractor=extractor,
             inducer=inducer,
             edge_verifier=edge_verifier,
             impact_retriever=impact_retriever,
             query_retriever=query_retriever,
         )
+        return cls(backend=backend)
 
     @property
     def stores(self) -> dict[str, BeliefStore]:
@@ -54,7 +89,6 @@ class ReTracePipeline:
 
     def add_belief(self, user_id: str, belief: BeliefNode) -> None:
         self.backend._ensure_user(user_id)
-        # Ensure scope_id is in belief.metadata
         meta = dict(belief.metadata) if belief.metadata else {}
         meta["scope_id"] = user_id
         updated_belief = replace(belief, metadata=meta)
@@ -70,8 +104,11 @@ class ReTracePipeline:
         self.backend._ensure_user(user_id)
         store = self.backend.stores[user_id]
         ledger = self.backend.ledgers[user_id]
-        basis = self.authorized_basis(user_id, query, limit=limit)
-        blocked = self._blocked_beliefs(store, ledger)
+
+        search_result = self.backend.search(user_id, query, limit=limit)
+        basis = search_result["authorized_basis"]
+        blocked = self._excluded_to_blocked(search_result.get("excluded", []), store)
+
         context = "\n".join(item.get("proposition") or item.get("text", "") for item in basis)
         answer_text = f"Query: {query}\nAuthorized basis:\n{context}"
 
@@ -87,21 +124,18 @@ class ReTracePipeline:
         return replace(record, authorized_basis=basis)
 
     @staticmethod
-    def _blocked_beliefs(store: BeliefStore, ledger: EpisodeLedger) -> list[dict[str, Any]]:
-        engine = DefeatPathAuthorizationAlgorithm(store, ledger)
+    def _excluded_to_blocked(excluded: list[dict[str, Any]], store: BeliefStore) -> list[dict[str, Any]]:
         blocked: list[dict[str, Any]] = []
-        for belief in store.all_beliefs():
-            trace = engine.authorize(belief.belief_id)
-            if trace.status == AuthorizationStatus.AUTHORIZED:
-                continue
-            blocked.append(
-                {
-                    "belief_id": belief.belief_id,
-                    "text": belief.proposition,
-                    "reason": trace.status.value if hasattr(trace.status, "value") else str(trace.status),
-                    "justification_path": [trace.accepted_defeat_path.path_id] if trace.accepted_defeat_path else [],
-                }
-            )
+        for item in excluded:
+            belief_id = item["belief_id"]
+            text = store.get_belief(belief_id).proposition if store.has_belief(belief_id) else ""
+            defeat_path = item.get("accepted_defeat_path")
+            blocked.append({
+                "belief_id": belief_id,
+                "text": text,
+                "reason": item["status"],
+                "justification_path": [defeat_path["path_id"]] if defeat_path else [],
+            })
         return blocked
 
     @staticmethod

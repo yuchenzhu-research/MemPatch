@@ -34,8 +34,6 @@ class ReTraceBackend:
         impact_retriever: ImpactCandidateRetriever | None = None,
         query_retriever: QueryBeliefRetriever | None = None,
         client: Any | None = None,
-        model_id: str = "gemini-pro",
-        provider: str = "google",
         disable_ledger: bool = False,
         disable_gate: bool = False,
         disable_temporal: bool = False,
@@ -67,8 +65,6 @@ class ReTraceBackend:
         self.impact_retriever = impact_retriever
         self.query_retriever = query_retriever
         self.gate = RevisionGate()
-        self.model_id = model_id
-        self.provider = provider
 
     @classmethod
     def for_development_fixture(
