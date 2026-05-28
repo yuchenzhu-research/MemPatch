@@ -12,6 +12,8 @@ from retracemem.methods.contracts import SharedCandidateView
 from retracemem.providers.base import MockLLMProvider
 from retracemem.providers.cached_client import CachedLLMClient
 from retracemem.schemas import BeliefNode, ConditionNode, DependencyEdge, EvidenceNode
+from retracemem.methods.controlled_retrace import ControlledReTraceLLM
+from retracemem.verifier.prompt_evidence_edge_verifier import PromptEvidenceEdgeVerifier
 from retracemem.verifier.prompt_batched_evidence_edge_verifier import PromptBatchedEvidenceEdgeVerifier
 
 
@@ -246,3 +248,42 @@ def test_single_model_call_for_batch(tmp_path):
     result = runner.run(view)
     assert mock.calls_count == 1
     assert len(result.model_call_trace_ids) == 1
+
+
+def test_rejected_fixed_anchor_fails_loudly_in_both_wrappers(tmp_path):
+    b1 = _belief("b_bike")
+    c1 = _cond("c_leg")
+    bad_dep = DependencyEdge(
+        edge_id="dep_bad", belief_id="b_bike", condition_id="c_leg",
+        inducer="", edge_type="REQUIRES",
+    )
+    ev_old = _old_ev()
+    ev_new = _ev()
+    view = SharedCandidateView(
+        instance_id="bad_anchor", query_id="q_bad", query="How?",
+        evidence_context=(ev_old, ev_new), new_evidence=ev_new,
+        candidate_beliefs=(b1,),
+        candidate_replacement_beliefs=(),
+        candidate_conditions_by_belief=(("b_bike", (c1,)),),
+        dependency_edges_by_belief=(("b_bike", (bad_dep,)),),
+    )
+    response = json.dumps({"edges": []})
+
+    per_mock = MockLLMProvider(default_response=response)
+    per_client = CachedLLMClient(JSONLCache(os.path.join(str(tmp_path), "p.jsonl")), per_mock)
+    per_runner = ControlledReTraceLLM(
+        edge_verifier=PromptEvidenceEdgeVerifier(per_client, model_id="mock", provider="mock"),
+        client=per_client,
+    )
+
+    batched_mock = MockLLMProvider(default_response=response)
+    batched_client = CachedLLMClient(JSONLCache(os.path.join(str(tmp_path), "b.jsonl")), batched_mock)
+    batched_runner = BatchedControlledReTraceLLM(
+        edge_verifier=PromptBatchedEvidenceEdgeVerifier(batched_client, model_id="mock", provider="mock"),
+        client=batched_client,
+    )
+
+    with pytest.raises(ValueError, match="rejected by RevisionGate"):
+        per_runner.run(view)
+    with pytest.raises(ValueError, match="rejected by RevisionGate"):
+        batched_runner.run(view)
