@@ -289,55 +289,55 @@
       "case_id": "dev_rejected_edge_01",
       "case_type": "rejected_proposal_audit",
       "description": "A structurally rejected predicted edge remains auditable in Stage A provenance without entering DPA authorization.",
-      "query": "What is the user's hobby?",
+      "query": "Can the user drive to work?",
       "evidence_context": [
         {
-          "evidence_id": "ev_hobby",
+          "evidence_id": "ev_drive_commute",
           "session_id": "s1",
           "timestamp": "2025-04-01T00:00:00Z",
-          "text": "I spend most weekends painting landscapes.",
+          "text": "I drive my car to work every day.",
           "source_dataset": "internal_dev",
-          "source_pointer": "dev_rejected_edge_01/ev_hobby"
+          "source_pointer": "dev_rejected_edge_01/ev_drive_commute"
         },
         {
-          "evidence_id": "ev_supplies",
+          "evidence_id": "ev_car_purchase",
           "session_id": "s2",
           "timestamp": "2025-10-01T00:00:00Z",
-          "text": "I just bought new oil paints and canvases for my art.",
+          "text": "I just bought a new hybrid car.",
           "source_dataset": "internal_dev",
-          "source_pointer": "dev_rejected_edge_01/ev_supplies"
+          "source_pointer": "dev_rejected_edge_01/ev_car_purchase"
         }
       ],
-      "new_evidence_id": "ev_supplies",
+      "new_evidence_id": "ev_car_purchase",
       "candidate_beliefs": [
         {
-          "belief_id": "b_painter",
-          "proposition": "The user paints landscapes as a hobby.",
-          "source_evidence_ids": ["ev_hobby"]
+          "belief_id": "b_drive_to_work",
+          "proposition": "The user commutes by driving a car.",
+          "source_evidence_ids": ["ev_drive_commute"]
         }
       ],
       "candidate_replacement_beliefs": [],
       "candidate_conditions_by_belief": [
-        ["b_painter", [
-          {"condition_id": "c_art_supplies", "scope_id": "user1", "text": "The user has access to art supplies."}
+        ["b_drive_to_work", [
+          {"condition_id": "c_valid_license", "scope_id": "user1", "text": "The user possesses a valid driver's license."}
         ]]
       ],
       "dependency_edges_by_belief": [
-        ["b_painter", [
-          {"edge_id": "dep-b_painter-c_art_supplies", "belief_id": "b_painter", "condition_id": "c_art_supplies", "inducer": "internal_dev_fixture", "edge_type": "REQUIRES"}
+        ["b_drive_to_work", [
+          {"edge_id": "dep-b_drive_to_work-c_valid_license", "belief_id": "b_drive_to_work", "condition_id": "c_valid_license", "inducer": "internal_dev_fixture", "edge_type": "REQUIRES"}
         ]]
       ],
-      "expected_stage_a_status": {"b_painter": "AUTHORIZED"},
-      "expected_comparable_status": {"b_painter": "USABLE"},
+      "expected_stage_a_status": {"b_drive_to_work": "AUTHORIZED"},
+      "expected_comparable_status": {"b_drive_to_work": "USABLE"},
       "stage_a_mock_edges": {
-        "b_painter": [
-          {"edge_type": "BLOCKS", "target_id": "c_art_supplies", "replacement_belief_id": "b_some_replacement", "rationale": "Hallucinated replacement belief on non-supersedes edge.", "confidence": 0.40}
+        "b_drive_to_work": [
+          {"edge_type": "BLOCKS", "target_id": "c_valid_license", "replacement_belief_id": "b_some_replacement", "rationale": "Hallucinated replacement belief on non-supersedes edge.", "confidence": 0.40}
         ]
       },
       "stage_b_mock_verdicts": [
-        {"belief_id": "b_painter", "status": "USABLE", "rationale": "Hobby is reaffirmed by new supplies purchase.", "confidence": 0.93}
+        {"belief_id": "b_drive_to_work", "status": "USABLE", "rationale": "Driving commute is reaffirmed by a new car purchase.", "confidence": 0.93}
       ],
-      "annotations": {"protected_beliefs": ["b_painter"], "rollback_case": false, "rejected_edge_audit": true}
+      "annotations": {"protected_beliefs": ["b_drive_to_work"], "rollback_case": false, "rejected_edge_audit": true}
     }
   ]
 }

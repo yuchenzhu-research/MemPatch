@@ -93,7 +93,7 @@ Owns controlled Stage A/B method paths:
 Own the only allowed provider/cache/accounting boundary for future live model
 calls. Random modules must not import SDK clients or call live models directly.
 
-The current documentation reset must not connect a provider or call a live API.
+No live provider integration or live API calls unless an explicitly authorized AB-1C task begins.
 
 ### `src/retracemem/retrieval`, `src/retracemem/backends`, `src/retracemem/pipeline`
 
