@@ -26,17 +26,30 @@ storytelling document.
 ## Implemented Scaffolding, Not Yet Scientific Results
 
 - `HTTPLLMProvider`, cache/accounting, capped-provider wrapper, and run manifest
-  infrastructure exist, but real provider behavior must be repaired and
-  validated before live feasibility claims.
+  infrastructure exist.
 - End-to-end development runner exists. Replay mode uses manual fixtures; live
   mode uses prompt components plus overlap retrieval. This is development
   scaffolding, not validated paper-facing retrieval or primary attribution
   evidence.
 - STALE adapter/runner entrypoints exist. Current offline/mock execution is
   adapter smoke/dry-run only and is not an official STALE result.
-- Memora wrapper/runner entrypoints exist. Current offline/mock execution is
-  adapter smoke/dry-run only and is not an official Memora result.
 - Stage C remains deferred.
+
+## Memora Oracle-Conditioned Authorization Diagnostic
+
+- Memora released data is present (600 questions, 10 personas, 3 periods).
+- `scripts/run_memora_development_eval.py` is a development diagnostic runner.
+- Current runner is oracle-conditioned diagnostic only: candidate beliefs
+  originate from Memora evaluation annotations (`memory_evidence` /
+  `forgetting_evidence`), not from end-to-end memory extraction.
+- One live SiliconFlow DeepSeek-V4-Pro connectivity attempt reached successful
+  model calls but timed out before any final answer or interpretable score.
+- Blocking issue was repeated-context per-belief Stage A complexity (O(B) calls,
+  O(B × |E|) prompt tokens) plus oversized diagnostic input (13 beliefs for one
+  weekly question).
+- Immediate implementation goal is batched Stage A authorization (one model call
+  per candidate neighborhood) and configurable timeout.
+- No official Memora result exists.
 
 ## Explicit Non-Claims
 
@@ -51,9 +64,8 @@ The repository currently has no verified result showing:
 
 ## Current Next Boundary
 
-Before any official benchmark evaluation or Stage C work, run an internal Stage
-A/B Ambiguity-and-Scope feasibility diagnostic on fixed `SharedCandidateView`
-inputs after provider and smoke-run safety fixes.
+Complete batched Stage A authorization path, validate offline, then run a small
+Memora oracle-conditioned diagnostic live smoke with SiliconFlow DeepSeek-V4-Pro.
 
 ## Verification at Starting Scaffold
 

@@ -120,25 +120,31 @@ work:
 
 ## Safe Next Boundary
 
-The next boundary is not official benchmark evaluation. The immediate authorized
-boundary is:
+The next boundary is not official benchmark evaluation.
 
-- adopt the corrected v3 authority documents;
-- repair provider and adapter-smoke safety issues;
-- run an internal Stage A/B Ambiguity-and-Scope feasibility diagnostic on fixed
-  `SharedCandidateView` inputs;
-- stop after reporting whether Stage A shows any promising signal over Stage B.
+Stage A v1 controlled semantics are retained. The per-belief verifier path
+(`ControlledReTraceLLM`) is the auditable controlled reference implementation.
+It is not a scalable benchmark-execution interface because it repeats the same
+evidence context once per candidate belief: O(B) semantic-model calls and
+approximately O(B × |E|) repeated prompt tokens.
 
-The previously exposed simple 8-case pilot is now a regression-only check for
-effect-triggered semantics. Fresh exploratory work uses the separate hard_v1
-internal challenge split and remains non-official.
+Benchmark-facing development now requires a batched local typed-edge proposal
+path that preserves the same typed-edge vocabulary, RevisionGate, and DPA
+semantics while issuing one semantic-model call per candidate neighborhood.
+
+Current Memora execution is a **Memora Oracle-Conditioned Authorization
+Diagnostic** because candidate beliefs originate from Memora evaluation
+annotations (`memory_evidence` / `forgetting_evidence`). No official end-to-end
+Memora result exists. No failed or timed-out live diagnostic is a scientific
+result.
 
 Completed and retained:
 
 - validated AB-1B controlled offline protocol;
 - provider/cache/manifest scaffolding;
 - secondary end-to-end development runner scaffolding;
-- STALE and Memora adapter smoke/dry-run scaffolding.
+- STALE and Memora adapter smoke/dry-run scaffolding;
+- Ambiguity-and-Scope internal feasibility diagnostic.
 
 Deferred or prohibited for the current task:
 

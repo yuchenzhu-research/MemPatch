@@ -174,6 +174,29 @@ The current controlled interface is not strict call-budget matched:
 
 Prompts and method interfaces differ by design.
 
+## Stage A Execution Paths
+
+### Controlled attribution reference path (`ControlledReTraceLLM`)
+
+- One candidate belief per verifier call.
+- Intended for attribution auditing and small regression cases.
+- Call complexity: O(B) calls.
+- Token complexity: approximately O(B × |E|) repeated prompt cost.
+- Each call repeats the full `new_evidence.text`.
+
+### Scalable batched authorization path (`BatchedControlledReTraceLLM`)
+
+- One local candidate neighborhood per verifier call.
+- Returns typed-edge proposals indexed by candidate belief id and/or supplied
+  condition id.
+- All proposed edges still pass through the same `RevisionGate`.
+- DPA runs separately for every candidate belief, identical semantics.
+- Does not change canonical edge semantics or final deterministic authorization.
+- Must report batch size, calls, tokens, latency, and provenance.
+
+Stage B remains unchanged. Comparison must report observed compute rather than
+strict matched budget.
+
 ## Allowed Comparison Claims
 
 Allowed:
@@ -198,21 +221,19 @@ Forbidden before future evidence exists:
 
 ## Current and Future Boundaries
 
-The immediate post-v3 boundary is an internal Ambiguity-and-Scope feasibility
-diagnostic on fixed `SharedCandidateView` inputs, after provider and smoke-run
-safety repairs. It may use tiny approved live development calls only if
-credentials and safety caps are valid.
+The Ambiguity-and-Scope internal feasibility diagnostic is complete.
 
-The previously used simple pilot cases are regression-only checks for Stage A
-v1 no-effect preservation. Fresh exploratory testing uses
-`data/internal_dev/ambiguity_scope_hard_v1.json` and the frozen pilot config in
-`configs/ambiguity_scope_hard_v1_pilot.json`; this split is internal
-development material, not an official benchmark or final paper result.
+The current development boundary is a Memora Oracle-Conditioned Authorization
+Diagnostic using the batched Stage A path and DirectJudge Stage B, with
+SiliconFlow DeepSeek-V4-Pro as the development provider. Candidate beliefs
+originate from Memora evaluation annotations (`memory_evidence` /
+`forgetting_evidence`), so this is not official end-to-end Memora evaluation.
+No failed or timed-out live diagnostic is a scientific result.
 
 The following remain future or deferred only. They do not start automatically:
 
-- secondary end-to-end internal pipeline as paper-facing evidence;
-- frozen official STALE/Memora evaluation;
+- official end-to-end Memora evaluation with FAMA scoring;
+- frozen official STALE evaluation;
 - Stage C learned local typed-edge verifier using the same DPA core.
 
 No official STALE/Memora evaluation, full benchmark run, provider-generalization
