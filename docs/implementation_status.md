@@ -8,12 +8,12 @@ storytelling document.
 ## Repository State
 
 - Repository: `yuchenzhu-research/ReTrace`
-- Active branch: `refactor/retrace-minimal-core`
+- Active branch: `experiment/stale-official-frozen-eval`
 - Starting scaffold: `integration/retrace-v1-complete` @
   `5e8d6e2d1a494d572d6d0fa929595bb198154390`
-- Current packet: Memora oracle-conditioned Stage A/B diagnostic failure
-  attribution after first 30-question quantitative run.
-- Current verified base: `76905510362df74841c18ae99ddcabdcc16fafcd`.
+- Current packet: official frozen STALE dataset registration and non-leaking
+  offline Stage A/B wiring demo.
+- Current verified base: pending final validation for this branch.
 
 ## Validated Offline
 
@@ -27,6 +27,8 @@ storytelling document.
 - Shared proposal strategy interface for backend ingestion.
 - Memora oracle-conditioned authorization metrics, DirectJudge belief-id parser
   hardening, and offline Stage A provenance failure analyzer.
+- Official frozen STALE strict adapter and offline non-leaking Stage A/B wiring
+  demo.
 
 ## Implemented Scaffolding, Not Yet Scientific Results
 
@@ -36,9 +38,37 @@ storytelling document.
   mode uses prompt components plus overlap retrieval. This is development
   scaffolding, not validated paper-facing retrieval or primary attribution
   evidence.
-- STALE adapter/runner entrypoints exist. Current offline/mock execution is
-  adapter smoke/dry-run only and is not an official STALE result.
+- Official frozen STALE adapter/runner entrypoints exist. Current offline/mock
+  execution is schema/wiring validation only and is not an official STALE
+  result.
 - Stage C remains deferred.
+
+## Official Frozen STALE Benchmark
+
+- Primary external benchmark: official frozen STALE 400-case dataset.
+- Source: `https://huggingface.co/datasets/STALEproj/STALE`
+- Artifact: `T1_T2_400_FULL.json`
+- License: CC BY 4.0.
+- Local gitignored path:
+  `data_external/stale_official_frozen/T1_T2_400_FULL.json`.
+- Size: 305908212 bytes.
+- SHA256:
+  `5f3ec375179e20e2e94469e018189188f34e2e7e5f21cbecbd99fcfa648c1876`.
+- Rows: 400 total, 200 `T1`, 200 `T2`.
+- Method-visible fields: `uid`, ordered `haystack_session`, aligned
+  `timestamps`, and one probing query at a time from `probing_queries`.
+- Evaluator/provenance-only fields: `M_old`, `M_new`, `explanation`,
+  `relevant_session_index`, and `type`; `type` may be used only for post-run
+  stratification.
+- If `M_old` or `M_new` text independently appears in genuine haystack
+  sessions, that session text remains method-visible. The prohibition is
+  against directly injecting the separate gold fields or relevant-session
+  indices.
+- Current offline demo output:
+  `outputs/stale_official_frozen_wiring_demo/`.
+- Demo labels: `schema_wiring_demo_only=true`, `official_model_result=false`,
+  `official_judge_evaluation_executed=false`, `live_provider_calls=false`.
+- No official STALE SR / PR / IPA / Overall result exists yet.
 
 ## Memora Oracle-Conditioned Authorization Diagnostic
 
@@ -103,12 +133,12 @@ The repository currently has no verified result showing:
 
 ## Current Next Boundary
 
-The current next boundary is not another live run. The next work should define
-and audit a filtered conflict-grounded authorization subset for Memora-style
-forgetting targets. Do not tune Stage A on the current overall
-`forgetting_absence` metric, do not run a 150-question expansion, and do not
-change DPA or RevisionGate unless a deterministic offline repro shows a
-Gate/DPA failure.
+The current next boundary is not another Memora run and not a live STALE result.
+The next work should harden the official frozen STALE runner until Stage A and
+Stage B are scientifically fair persistent-state executions, then separately
+authorize live provider and official judge evaluation. Do not tune Stage A on
+the failed Memora pilot, do not run Memora expansion, and do not change DPA or
+RevisionGate unless a deterministic offline repro shows a Gate/DPA failure.
 
 ## Canonical Entrypoints
 
@@ -116,7 +146,7 @@ Gate/DPA failure.
   `env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src tests scripts`
   and `.venv/bin/python -m pytest`.
 - Current demo replay:
-  `.venv/bin/python scripts/run_memora_development_eval.py --mode replay --period weekly --persona academic_researcher --limit-questions 2 --stage-a-execution batched`.
+  `.venv/bin/python scripts/run_stale_official_frozen_eval.py --limit-t1 2 --limit-t2 2`.
 - Offline Stage A failure analysis for an existing diagnostic report:
   `.venv/bin/python scripts/analyze_memora_oracle_failure_modes.py --report outputs/memora_oracle_diag_batched_metrics_weekly_30/memora_development_report.json --output-dir outputs/analysis`.
 - Reference regression paths remain in tests and development scripts but are

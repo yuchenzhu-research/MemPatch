@@ -119,18 +119,36 @@ Benchmark-facing development uses a bounded batched local typed-edge proposal
 path that preserves the same typed-edge vocabulary, RevisionGate, and DPA
 semantics while reducing repeated semantic-model calls.
 
-Current Memora execution is a **Memora Oracle-Conditioned Authorization
-Diagnostic** because candidate beliefs originate from Memora evaluation
-annotations (`memory_evidence` / `forgetting_evidence`). No official end-to-end
-Memora result exists. No failed or timed-out live diagnostic is a scientific
-result.
+The primary external benchmark is the official frozen STALE 400-case dataset
+(`STALEproj/STALE`, file `T1_T2_400_FULL.json`, license CC BY 4.0). It is
+publicly released and is downloaded into the gitignored
+`data_external/stale_official_frozen/` directory. The previously claimed
+unavailability of the frozen STALE data is no longer accurate and must not be
+repeated.
+
+The Memora oracle-conditioned 30-question execution is retained only as an
+internal rejected-pilot/adapter-misalignment artifact. It must not be rerun and
+must not be cited as a positive method result. No official Memora or FAMA
+result exists.
+
+Method-visible STALE fields are `uid`, the ordered `haystack_session`, the
+aligned `timestamps`, and the three `probing_queries`. Evaluator-only fields
+are `M_old`, `M_new`, `explanation`, `relevant_session_index`, and `type`
+(`type` may be used only for post-run stratification, never as method input).
+If `M_old` or `M_new` text appears independently inside the genuine haystack
+sessions, that haystack text remains legitimately method-visible; the
+prohibition is against directly injecting the separate gold fields or
+`relevant_session_index` into the method.
 
 Completed and retained:
 
 - validated AB-1B controlled offline protocol;
 - provider/cache/manifest scaffolding;
 - secondary end-to-end development runner scaffolding;
-- STALE and Memora adapter smoke/dry-run scaffolding;
+- official frozen STALE adapter and offline non-leaking Stage A/B wiring
+  scaffolding;
+- legacy STALE smoke/dry-run scaffolding (kept for history, not the canonical
+  STALE entrypoint);
 - Ambiguity-and-Scope internal feasibility diagnostic.
 
 Deferred or prohibited for the current task:

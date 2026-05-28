@@ -1,0 +1,30 @@
+# Official frozen STALE benchmark dataset provenance.
+# Tracked configuration only; the dataset itself is gitignored under data_external/.
+
+dataset_source: "STALEproj/STALE"
+dataset_artifact: "T1_T2_400_FULL.json"
+official_frozen_dataset: true
+official_source_url: "https://huggingface.co/datasets/STALEproj/STALE"
+license: "CC BY 4.0"
+
+local_path: "data_external/stale_official_frozen/T1_T2_400_FULL.json"
+file_size_bytes: 305908212
+sha256: "5f3ec375179e20e2e94469e018189188f34e2e7e5f21cbecbd99fcfa648c1876"
+
+row_count: 400
+type_counts:
+  T1: 200
+  T2: 200
+
+method_visible_fields:
+  - "uid"
+  - "haystack_session"
+  - "timestamps"
+  - "probing_queries"
+
+evaluator_only_fields:
+  - "M_old"
+  - "M_new"
+  - "explanation"
+  - "relevant_session_index"
+  - "type"

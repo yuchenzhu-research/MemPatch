@@ -23,7 +23,9 @@ ReTrace is not generic RAG, a Mem0/Graphiti clone, RL memory-action learning, la
 - Per-belief Stage A controlled reference path.
 - Batched Stage A scalable development path.
 - Bounded batched backend ingestion.
-- Memora oracle-conditioned authorization diagnostic.
+- Official frozen STALE adapter and offline non-leaking Stage A/B wiring demo.
+- Memora oracle-conditioned authorization diagnostic, retained as a rejected
+  internal pilot artifact.
 
 ## Current Status
 
@@ -46,17 +48,23 @@ env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src t
 ```
 
 
-## Current Diagnostic Replay
+## Current Offline STALE Wiring Demo
 
 ```bash
-.venv/bin/python scripts/run_memora_development_eval.py --mode replay --period weekly --persona academic_researcher --limit-questions 2 --stage-a-execution batched
+.venv/bin/python scripts/run_stale_official_frozen_eval.py --limit-t1 2 --limit-t2 2
 ```
 
+This consumes the public official frozen STALE dataset
+`STALEproj/STALE::T1_T2_400_FULL.json` from the gitignored local path
+`data_external/stale_official_frozen/`. It validates non-leaking method wiring
+and official answer export schema only. It is not an official STALE model
+result and does not run the official judge.
 
-This is a Memora Oracle-Conditioned Authorization Diagnostic. Candidate beliefs
-originate from Memora evaluation annotations (`memory_evidence` /
-`forgetting_evidence`). It is not official end-to-end Memora evaluation and is
-not a paper result.
+## Memora Negative Pilot
+
+The Memora oracle-conditioned diagnostic is retained only as an internal
+rejected-pilot artifact demonstrating adapter/objective mismatch. It is not
+official end-to-end Memora evaluation, not FAMA, and not a paper result.
 
 ## Non-Claims
 
