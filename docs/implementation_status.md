@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-05-29
+Last updated: 2026-05-28
 
 This document tracks the first research-code version. It intentionally has only
 two sections:
@@ -155,7 +155,12 @@ env PYTHONPYCACHEPREFIX=.pycache_compile python3 -m compileall -q retracemem tes
 ### Legacy Modules (Remaining Migration Tasks)
 - Typed belief/condition/evidence-edge graph structures, DPA logic, typed pipeline, and dev runner are implemented.
 - Obsolete HeuristicRelationVerifier pipeline results are archived as prototype-only milestones.
-- Wave 3+ remaining: typed backend ingestion for benchmark adapters, generic ReTrace-LLM semantic edge predictor, DirectJudge-LLM attribution baseline, official frozen benchmark evaluation.
+
+### Next Stage
+
+- **Stage A: ReTrace-LLM** — main generic typed-edge prediction plus DPA method. Replaces all development-only heuristic/manual fixtures for paper main-result runs. Components: generic typed belief extraction, generic requirement/condition induction, generic evidence-edge prediction, existing deterministic DPA and authorized-basis pipeline.
+- **Stage B: DirectJudge-LLM** — matched same-model final-adjudication attribution baseline, implemented alongside Stage A as a sibling method path. DirectJudge-LLM is **not** an `EvidenceEdgeVerifier`; it directly decides memory usability without DPA, using the same model family and comparable token/call budget as Stage A.
+- **Stage C: ReTrace-Local** — later learned local typed-edge verifier variant (SFT / LoRA) using the same DPA core. Deferred until Stage A/B validation establishes that the structured DPA formulation has value.
 
 ### Tests And Verification
 
