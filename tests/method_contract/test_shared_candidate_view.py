@@ -178,6 +178,7 @@ def test_duplicate_candidate_belief_ids_rejected() -> None:
         SharedCandidateView(
             instance_id="x", query_id="q", query="q",
             evidence_context=(ev,),
+            new_evidence=ev,
             candidate_beliefs=(b1, b2),
             candidate_replacement_beliefs=(),
         )
@@ -192,6 +193,7 @@ def test_duplicate_replacement_belief_ids_rejected() -> None:
         SharedCandidateView(
             instance_id="x", query_id="q", query="q",
             evidence_context=(ev,),
+            new_evidence=ev,
             candidate_beliefs=(b1,),
             candidate_replacement_beliefs=(r1, r2),
         )
@@ -205,6 +207,7 @@ def test_invalid_conditions_key_rejected() -> None:
         SharedCandidateView(
             instance_id="x", query_id="q", query="q",
             evidence_context=(ev,),
+            new_evidence=ev,
             candidate_beliefs=(b1,),
             candidate_replacement_beliefs=(),
             candidate_conditions_by_belief=(("nonexistent", (c1,)),),
@@ -220,6 +223,7 @@ def test_duplicate_condition_ids_in_belief_rejected() -> None:
         SharedCandidateView(
             instance_id="x", query_id="q", query="q",
             evidence_context=(ev,),
+            new_evidence=ev,
             candidate_beliefs=(b1,),
             candidate_replacement_beliefs=(),
             candidate_conditions_by_belief=(("b1", (c1, c2)),),
@@ -238,6 +242,7 @@ def test_dependency_edge_wrong_type_rejected() -> None:
         SharedCandidateView(
             instance_id="x", query_id="q", query="q",
             evidence_context=(ev,),
+            new_evidence=ev,
             candidate_beliefs=(b1,),
             candidate_replacement_beliefs=(),
             candidate_conditions_by_belief=(("b1", (c1,)),),
@@ -257,6 +262,7 @@ def test_dependency_edge_dangling_condition_rejected() -> None:
         SharedCandidateView(
             instance_id="x", query_id="q", query="q",
             evidence_context=(ev,),
+            new_evidence=ev,
             candidate_beliefs=(b1,),
             candidate_replacement_beliefs=(),
             candidate_conditions_by_belief=(("b1", (c1,)),),
@@ -276,6 +282,7 @@ def test_dependency_edge_wrong_belief_rejected() -> None:
         SharedCandidateView(
             instance_id="x", query_id="q", query="q",
             evidence_context=(ev,),
+            new_evidence=ev,
             candidate_beliefs=(b1,),
             candidate_replacement_beliefs=(),
             candidate_conditions_by_belief=(("b1", (c1,)),),
@@ -300,10 +307,149 @@ def test_duplicate_dependency_edge_ids_rejected() -> None:
         SharedCandidateView(
             instance_id="x", query_id="q", query="q",
             evidence_context=(ev,),
+            new_evidence=ev,
             candidate_beliefs=(b1,),
             candidate_replacement_beliefs=(),
             candidate_conditions_by_belief=(("b1", (c1, c2)),),
             dependency_edges_by_belief=(("b1", (dep1, dep2)),),
+        )
+
+
+def test_overlap_candidate_and_replacement_rejected() -> None:
+    ev = _make_evidence()
+    b1 = _make_belief("b_same", "ev1")
+    r1 = _make_belief("b_same", "ev1")
+    with pytest.raises(ValueError, match="overlap"):
+        SharedCandidateView(
+            instance_id="x", query_id="q", query="q",
+            evidence_context=(ev,),
+            new_evidence=ev,
+            candidate_beliefs=(b1,),
+            candidate_replacement_beliefs=(r1,),
+        )
+
+
+def test_duplicate_evidence_ids_in_context_rejected() -> None:
+    ev = _make_evidence("ev_dup")
+    ev2 = _make_evidence("ev_dup")
+    b1 = _make_belief("b1", "ev_dup")
+    with pytest.raises(ValueError, match="duplicate evidence_ids"):
+        SharedCandidateView(
+            instance_id="x", query_id="q", query="q",
+            evidence_context=(ev, ev2),
+            new_evidence=ev,
+            candidate_beliefs=(b1,),
+            candidate_replacement_beliefs=(),
+        )
+
+
+def test_new_evidence_payload_mismatch_rejected() -> None:
+    ev1 = EvidenceNode(
+        evidence_id="ev1", session_id="s1", timestamp="2026-01-01T00:00:00Z",
+        text="Text A", source_dataset="test", source_pointer="ptr",
+    )
+    ev1_diff = EvidenceNode(
+        evidence_id="ev1", session_id="s1", timestamp="2026-01-01T00:00:00Z",
+        text="Text B", source_dataset="test", source_pointer="ptr",
+    )
+    b1 = _make_belief("b1", "ev1")
+    with pytest.raises(ValueError, match="different payload"):
+        SharedCandidateView(
+            instance_id="x", query_id="q", query="q",
+            evidence_context=(ev1,),
+            new_evidence=ev1_diff,
+            candidate_beliefs=(b1,),
+            candidate_replacement_beliefs=(),
+        )
+
+
+def test_repeated_condition_key_rejected() -> None:
+    ev = _make_evidence()
+    b1 = _make_belief("b1", "ev1")
+    c1 = _make_condition("c1")
+    with pytest.raises(ValueError, match="repeated key"):
+        SharedCandidateView(
+            instance_id="x", query_id="q", query="q",
+            evidence_context=(ev,),
+            new_evidence=ev,
+            candidate_beliefs=(b1,),
+            candidate_replacement_beliefs=(),
+            candidate_conditions_by_belief=(("b1", (c1,)), ("b1", (c1,))),
+        )
+
+
+def test_repeated_dependency_key_rejected() -> None:
+    ev = _make_evidence()
+    b1 = _make_belief("b1", "ev1")
+    c1 = _make_condition("c1")
+    dep = DependencyEdge(
+        edge_id="dep1", belief_id="b1", condition_id="c1",
+        inducer="test", edge_type="REQUIRES",
+    )
+    with pytest.raises(ValueError, match="repeated key"):
+        SharedCandidateView(
+            instance_id="x", query_id="q", query="q",
+            evidence_context=(ev,),
+            new_evidence=ev,
+            candidate_beliefs=(b1,),
+            candidate_replacement_beliefs=(),
+            candidate_conditions_by_belief=(("b1", (c1,)),),
+            dependency_edges_by_belief=(("b1", (dep,)), ("b1", (dep,))),
+        )
+
+
+def test_conflicting_condition_payloads_rejected() -> None:
+    ev = _make_evidence()
+    b1 = _make_belief("b1", "ev1")
+    b2 = _make_belief("b2", "ev1")
+    c1a = ConditionNode(condition_id="c_shared", scope_id="u1", text="Text A")
+    c1b = ConditionNode(condition_id="c_shared", scope_id="u1", text="Text B")
+    with pytest.raises(ValueError, match="conflicting payloads"):
+        SharedCandidateView(
+            instance_id="x", query_id="q", query="q",
+            evidence_context=(ev,),
+            new_evidence=ev,
+            candidate_beliefs=(b1, b2),
+            candidate_replacement_beliefs=(),
+            candidate_conditions_by_belief=(("b1", (c1a,)), ("b2", (c1b,))),
+        )
+
+
+def test_metadata_does_not_affect_fingerprint() -> None:
+    """Metadata is non-semantic: changing it must not change the fingerprint.
+    Controlled execution MUST NOT read metadata.
+    """
+    ev = _make_evidence()
+    b1 = _make_belief("b_bike", "ev1")
+    b_car = _make_belief("b_car", "ev1")
+    v1 = SharedCandidateView(
+        instance_id="case_1", query_id="q_1", query="q",
+        evidence_context=(ev,), new_evidence=ev,
+        candidate_beliefs=(b1,),
+        candidate_replacement_beliefs=(b_car,),
+        metadata={"debug": "value_1"},
+    )
+    v2 = SharedCandidateView(
+        instance_id="case_1", query_id="q_1", query="q",
+        evidence_context=(ev,), new_evidence=ev,
+        candidate_beliefs=(b1,),
+        candidate_replacement_beliefs=(b_car,),
+        metadata={"debug": "value_2"},
+    )
+    assert v1.view_fingerprint == v2.view_fingerprint
+
+
+def test_view_fingerprint_is_not_caller_settable() -> None:
+    """view_fingerprint is init=False; callers cannot supply it."""
+    ev = _make_evidence()
+    b1 = _make_belief("b1", "ev1")
+    with pytest.raises(TypeError):
+        SharedCandidateView(
+            instance_id="x", query_id="q", query="q",
+            evidence_context=(ev,), new_evidence=ev,
+            candidate_beliefs=(b1,),
+            candidate_replacement_beliefs=(),
+            view_fingerprint="fake",
         )
 
 

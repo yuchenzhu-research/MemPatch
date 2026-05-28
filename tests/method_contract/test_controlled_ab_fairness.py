@@ -229,3 +229,88 @@ def test_both_fully_offline(tmp_path: str) -> None:
 
     assert mock_a.calls_count >= 1
     assert mock_b.calls_count >= 1
+
+
+def test_stage_a_records_full_provenance(tmp_path: str) -> None:
+    """Stage A provenance contains admitted_fixed_anchors and edge_proposals."""
+    view = _shared_view()
+    edge_resp = json.dumps({
+        "edges": [
+            {"edge_type": "BLOCKS", "target_id": "c_leg", "rationale": "r", "confidence": 0.9}
+        ]
+    })
+    client_a, _ = _make_client(edge_resp, str(tmp_path))
+    verifier = PromptEvidenceEdgeVerifier(client=client_a, model_id="mock", provider="mock")
+    runner_a = ControlledReTraceLLM(edge_verifier=verifier, client=client_a)
+    result = runner_a.run(view)
+
+    assert "admitted_fixed_anchors" in result.provenance
+    assert "edge_proposals" in result.provenance
+    assert len(result.provenance["admitted_fixed_anchors"]) == 1
+    assert len(result.provenance["edge_proposals"]) == 1
+    assert result.provenance["edge_proposals"][0]["admitted"] is True
+
+
+def test_stage_a_trace_id_on_zero_edges(tmp_path: str) -> None:
+    """Stage A records trace id even with zero edge predictions."""
+    view = _shared_view()
+    edge_resp = json.dumps({"edges": []})
+    client_a, _ = _make_client(edge_resp, str(tmp_path))
+    verifier = PromptEvidenceEdgeVerifier(client=client_a, model_id="mock", provider="mock")
+    runner_a = ControlledReTraceLLM(edge_verifier=verifier, client=client_a)
+    result = runner_a.run(view)
+
+    assert len(result.model_call_trace_ids) == 1
+    assert result.model_call_trace_ids[0] != ""
+
+
+def test_both_record_model_revision(tmp_path: str) -> None:
+    """Both methods record model_revision_or_api_version in provenance."""
+    view = _shared_view()
+    edge_resp = json.dumps({"edges": []})
+    dj_resp = json.dumps({
+        "verdicts": [{"belief_id": "b_bike", "status": "USABLE", "rationale": "ok"}]
+    })
+
+    client_a, _ = _make_client(edge_resp, str(tmp_path / "a"))
+    client_b, _ = _make_client(dj_resp, str(tmp_path / "b"))
+
+    verifier = PromptEvidenceEdgeVerifier(
+        client=client_a, model_id="mock", provider="mock",
+        model_revision_or_api_version="rev-A",
+    )
+    runner_a = ControlledReTraceLLM(edge_verifier=verifier, client=client_a)
+    judge = DirectJudgeLLM(
+        client=client_b, model_id="mock", provider="mock",
+        model_revision_or_api_version="rev-B",
+    )
+
+    result_a = runner_a.run(view)
+    result_b = judge.judge(view)
+
+    assert result_a.provenance["model_revision_or_api_version"] == "rev-A"
+    assert result_b.provenance["model_revision_or_api_version"] == "rev-B"
+
+
+def test_honest_call_cardinality_difference(tmp_path: str) -> None:
+    """Stage A calls N times (N=len(candidate_beliefs)); Stage B calls once."""
+    view = _shared_view()
+    edge_resp = json.dumps({"edges": []})
+    dj_resp = json.dumps({
+        "verdicts": [{"belief_id": "b_bike", "status": "USABLE", "rationale": "ok"}]
+    })
+
+    client_a, mock_a = _make_client(edge_resp, str(tmp_path / "a"))
+    client_b, mock_b = _make_client(dj_resp, str(tmp_path / "b"))
+
+    verifier = PromptEvidenceEdgeVerifier(client=client_a, model_id="mock", provider="mock")
+    runner_a = ControlledReTraceLLM(edge_verifier=verifier, client=client_a)
+    judge = DirectJudgeLLM(client=client_b, model_id="mock", provider="mock")
+
+    runner_a.run(view)
+    judge.judge(view)
+
+    # Stage A: N calls (1 per candidate belief)
+    assert mock_a.calls_count == len(view.candidate_beliefs)
+    # Stage B: always 1 call
+    assert mock_b.calls_count == 1

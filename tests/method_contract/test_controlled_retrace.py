@@ -250,20 +250,17 @@ def test_per_instance_cost_not_cumulative(tmp_path: str) -> None:
     assert cumulative["tokens"]["total"] >= 2 * result1.cost["tokens"]["total"]
 
 
-def test_requires_new_evidence(tmp_path: str) -> None:
-    """Runner must raise if new_evidence is not set."""
-    response = json.dumps({"edges": []})
-    runner, _ = _make_runner(response, str(tmp_path))
+def test_new_evidence_mandatory_in_view() -> None:
+    """new_evidence is mandatory in SharedCandidateView (TypeError if missing)."""
     ev = _make_old_evidence()
     b1 = _make_belief("b_bike")
-    view_no_new = SharedCandidateView(
-        instance_id="x", query_id="q", query="q",
-        evidence_context=(ev,),
-        candidate_beliefs=(b1,),
-        candidate_replacement_beliefs=(),
-    )
-    with pytest.raises(ValueError, match="requires SharedCandidateView.new_evidence"):
-        runner.run(view_no_new)
+    with pytest.raises(TypeError):
+        SharedCandidateView(
+            instance_id="x", query_id="q", query="q",
+            evidence_context=(ev,),
+            candidate_beliefs=(b1,),
+            candidate_replacement_beliefs=(),
+        )
 
 
 def test_does_not_run_extraction_or_retrieval(tmp_path: str) -> None:
@@ -281,3 +278,63 @@ def test_does_not_run_extraction_or_retrieval(tmp_path: str) -> None:
     # Only 1 call per candidate belief (edge verification only)
     assert mock.calls_count == len(view.candidate_beliefs)
     assert result.instance_id == view.instance_id
+
+
+def test_zero_edge_trace_id_preserved(tmp_path: str) -> None:
+    """Even with zero predicted edges, model_call_trace_id is recorded."""
+    response = json.dumps({"edges": []})
+    runner, _ = _make_runner(response, str(tmp_path))
+    view = _make_view()
+    result = runner.run(view)
+
+    assert len(result.model_call_trace_ids) == 1
+    assert result.model_call_trace_ids[0] != ""
+
+
+def test_admitted_anchors_in_provenance(tmp_path: str) -> None:
+    """Admitted fixed dep anchors recorded in provenance."""
+    response = json.dumps({"edges": []})
+    runner, _ = _make_runner(response, str(tmp_path))
+    view = _make_view()
+    result = runner.run(view)
+
+    anchors = result.provenance["admitted_fixed_anchors"]
+    assert len(anchors) == 1
+    assert anchors[0]["edge_id"] == "dep-b_bike-c_leg"
+    assert anchors[0]["belief_id"] == "b_bike"
+    assert anchors[0]["condition_id"] == "c_leg"
+
+
+def test_edge_proposals_in_provenance(tmp_path: str) -> None:
+    """Predicted edge proposals (admitted/rejected) recorded in provenance."""
+    response = json.dumps({
+        "edges": [
+            {"edge_type": "BLOCKS", "target_id": "c_leg", "rationale": "r", "confidence": 0.9}
+        ]
+    })
+    runner, _ = _make_runner(response, str(tmp_path))
+    view = _make_view()
+    result = runner.run(view)
+
+    proposals = result.provenance["edge_proposals"]
+    assert len(proposals) == 1
+    assert proposals[0]["admitted"] is True
+    assert proposals[0]["edge_type"] == "BLOCKS"
+    assert proposals[0]["model_call_trace_id"] != ""
+
+
+def test_model_revision_in_provenance(tmp_path: str) -> None:
+    """model_revision_or_api_version recorded in provenance."""
+    response = json.dumps({"edges": []})
+    mock = MockLLMProvider(default_response=response)
+    cache = JSONLCache(os.path.join(str(tmp_path), "cache.jsonl"))
+    client = CachedLLMClient(cache=cache, provider_client=mock)
+    verifier = PromptEvidenceEdgeVerifier(
+        client=client, model_id="mock", provider="mock",
+        model_revision_or_api_version="v2024-01-01",
+    )
+    runner = ControlledReTraceLLM(edge_verifier=verifier, client=client)
+    view = _make_view()
+    result = runner.run(view)
+
+    assert result.provenance["model_revision_or_api_version"] == "v2024-01-01"
