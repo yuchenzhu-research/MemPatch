@@ -67,6 +67,13 @@ It does not eliminate model judgment. It restricts semantic-model judgment to
 local typed proposals and delegates final belief authorization to deterministic
 DPA.
 
+Stage A v1 uses effect-triggered authorization revision: the candidate belief is
+already evidence-supported, and later evidence changes current authorization
+only through an admitted direct local typed effect on the belief, a supplied
+required condition, or a supplied grounded replacement. Irrelevant or silent
+new evidence must produce an empty edge set and preserve existing authorization;
+`UNCERTAIN` is reserved for directly relevant but unresolved evidence.
+
 ## Do Not Drift
 
 Do not turn this codebase into:
@@ -121,6 +128,10 @@ boundary is:
 - run an internal Stage A/B Ambiguity-and-Scope feasibility diagnostic on fixed
   `SharedCandidateView` inputs;
 - stop after reporting whether Stage A shows any promising signal over Stage B.
+
+The previously exposed simple 8-case pilot is now a regression-only check for
+effect-triggered semantics. Fresh exploratory work uses the separate hard_v1
+internal challenge split and remains non-official.
 
 Completed and retained:
 

@@ -33,7 +33,9 @@ Validated so far:
 - fairness and deterministic-grounding hardening;
 - offline controlled attribution harness;
 - auditability and comparison-protocol lock;
-- AB-1B replay-only internal development evaluation.
+- AB-1B replay-only internal development evaluation;
+- Stage A v1 effect-triggered prompt semantics and the hard_v1 internal
+  Ambiguity-and-Scope challenge split for exploratory feasibility.
 
 Implemented scaffolding that must not be overclaimed:
 
@@ -49,6 +51,11 @@ No current repository result establishes:
 - official STALE or Memora scores;
 - paper-facing retrieval validity;
 - Stage C training labels.
+
+Stage A v1 treats existing beliefs as already evidence-supported. New evidence
+changes authorization only by producing a direct local typed effect; irrelevant
+or silent evidence should produce `{"edges": []}` and preserve authorization.
+`UNCERTAIN` is reserved for directly relevant but unresolved updates.
 
 ## Canonical Docs
 
@@ -74,6 +81,22 @@ env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src t
 ```bash
 .venv/bin/python scripts/run_end_to_end_dev.py
 ```
+
+### Run Ambiguity-and-Scope Replay Diagnostics
+```bash
+.venv/bin/python scripts/run_ambiguity_scope_ab_dev.py --mode replay
+.venv/bin/python scripts/run_ambiguity_scope_ab_dev.py --mode replay --pilot-only
+.venv/bin/python scripts/run_ambiguity_scope_ab_dev.py \
+  --mode replay \
+  --dataset data/internal_dev/ambiguity_scope_hard_v1.json \
+  --case-ids ash_dense_01,ash_temporal_01,ash_premise_01,ash_release_01,ash_uncertain_01,ash_cross_01 \
+  --skip-balance-check \
+  --run-type replay_correctness \
+  --stage-a-prompt-version evidence_edge_prediction_v1
+```
+
+The original simple pilot is regression-only. The hard_v1 split is internal
+exploratory development material, not an official benchmark or paper result.
 
 ### Run STALE Adapter Smoke/Dry-Run
 ```bash

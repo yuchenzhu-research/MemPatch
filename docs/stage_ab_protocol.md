@@ -112,6 +112,14 @@ SharedCandidateView
 Stage A predicts local typed evidence edges. It does not directly emit final
 usability verdicts. DPA computes final authorization.
 
+Stage A v1 uses effect-triggered authorization revision. The candidate belief
+is treated as previously evidence-supported; new evidence changes current
+authorization only by producing an admitted direct local typed effect on the
+belief, a supplied required condition, or a supplied grounded replacement.
+Irrelevant or silent evidence must produce an empty edge set and preserve
+authorization. `UNCERTAIN` is reserved for directly relevant but unresolved
+evidence.
+
 The primary controlled track does not run extraction, requirement induction,
 retrieval, or answer generation.
 
@@ -194,6 +202,12 @@ The immediate post-v3 boundary is an internal Ambiguity-and-Scope feasibility
 diagnostic on fixed `SharedCandidateView` inputs, after provider and smoke-run
 safety repairs. It may use tiny approved live development calls only if
 credentials and safety caps are valid.
+
+The previously used simple pilot cases are regression-only checks for Stage A
+v1 no-effect preservation. Fresh exploratory testing uses
+`data/internal_dev/ambiguity_scope_hard_v1.json` and the frozen pilot config in
+`configs/ambiguity_scope_hard_v1_pilot.json`; this split is internal
+development material, not an official benchmark or final paper result.
 
 The following remain future or deferred only. They do not start automatically:
 
