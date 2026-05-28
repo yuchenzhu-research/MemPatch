@@ -21,6 +21,11 @@ from retracemem.cache.jsonl_cache import JSONLCache
 from retracemem.providers.base import MockLLMProvider
 from retracemem.providers.cached_client import CachedLLMClient
 
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover
+    load_dotenv = None
+
 
 _DEFAULT_RESPONSE = json.dumps({
     "verdicts": [],
@@ -62,6 +67,8 @@ def main() -> None:
     args = parser.parse_args()
 
     if args.mode == "live-dev":
+        if load_dotenv is not None:
+            load_dotenv(Path(__file__).resolve().parents[1] / ".env")
         config = StaleLiveRunConfig(
             dataset_path=args.dataset_path,
             output_dir=args.output_dir,
