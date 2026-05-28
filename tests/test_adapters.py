@@ -266,3 +266,63 @@ def test_cupmem_adapter_subclass(tmp_path) -> None:
     adapter = CUPMemAdapter(tmp_path / "STALE")
     assert not adapter.exists()
 
+
+def test_stale_v1_adapter_export(tmp_path) -> None:
+    from retracemem.adapters.stale_v1_adapter import StaleV1Adapter
+    records = [
+        {"query_id": "sample-1_dim1_query", "answer": "Commute is blocked."},
+        {"query_id": "sample-1_dim2_query", "answer": "I drive now."},
+        {"query_id": "sample-2_dim1_query", "answer": "Yes."},
+    ]
+    output_file = tmp_path / "stale_responses.json"
+    StaleV1Adapter.export_to_official_json(records, output_file)
+
+    assert output_file.exists()
+    with open(output_file, "r", encoding="utf-8") as f:
+        data = json.load(f)
+
+    assert len(data) == 2
+    assert data[0]["uid"] == "sample-1"
+    assert data[0]["target_model_responses"]["dim1_response"] == "Commute is blocked."
+    assert data[0]["target_model_responses"]["dim2_response"] == "I drive now."
+    assert data[0]["target_model_responses"]["dim3_response"] == ""
+    assert data[1]["uid"] == "sample-2"
+    assert data[1]["target_model_responses"]["dim1_response"] == "Yes."
+
+
+def test_memora_wrapper_integration() -> None:
+    from retracemem.adapters.memora_wrapper import ReTraceMemorySystem
+    from retracemem.pipeline import ReTracePipeline
+    from retracemem.extraction.typed_extractor import ManualTypedBeliefExtractor
+    from retracemem.schemas import BeliefNode
+
+    b = BeliefNode(belief_id="b1", proposition="User resides in SF.", source_evidence_ids=("u1_session_1",))
+    extractor = ManualTypedBeliefExtractor({"u1_session_1": [b]})
+    from retracemem.retrieval.typed_retrievers import ManualQueryBeliefRetriever
+    query_retriever = ManualQueryBeliefRetriever({"Where do I reside?": ["b1"]})
+    pipeline = ReTracePipeline.for_development_fixture(
+        extractor=extractor,
+        query_retriever=query_retriever,
+    )
+    sys = ReTraceMemorySystem("u1", pipeline=pipeline)
+    assert sys.get_system_name() == "retrace"
+    assert sys.get_required_env_vars() == []
+    assert sys.initialize_client() is True
+
+    # Ingest conversation
+    conv = {
+        "session_id": 1,
+        "date": "2025-06-01",
+        "conversation": [{"speaker": "user", "message": "I reside in SF."}]
+    }
+    res = sys.add_conversation_to_memory(conv)
+    assert res["status"] == "success"
+    assert res["session_id"] == 1
+
+    # Query memory
+    search_res = sys.search_memories("Where do I reside?", limit=5)
+    assert len(search_res) == 1
+    assert search_res[0]["memory"] == "User resides in SF."
+    assert search_res[0]["score"] == 1.0
+    assert search_res[0]["source"] == "retrace"
+

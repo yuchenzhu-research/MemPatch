@@ -1,84 +1,199 @@
+#!/usr/bin/env python3
+"""Official Memora evaluation runner using dynamic clean-room monkey-patching."""
 from __future__ import annotations
 
+import argparse
+import json
+import os
 import sys
 from pathlib import Path
+from typing import Any
 
-# Add project root and Memora agent eval to path
-project_root = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(project_root))
+# Ensure src is importable when running from repo root
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), os.pardir, "src")))
 
-memora_agent_eval_dir = project_root / "reference" / "Memora" / "evals" / "agent_eval"
-sys.path.insert(0, str(memora_agent_eval_dir))
+# Resolve Memora evals path
+MEMORA_DIR = Path(__file__).resolve().parents[1] / "reference" / "Memora"
+MEMORA_EVALS_DIR = MEMORA_DIR / "evals" / "agent_eval"
 
-try:
-    from base_evaluator import BaseMemorySystem, BaseEvaluator
-    from memory_to_answer import fama_score
-    MEMORA_IMPORT_OK = True
-except Exception as e:
-    print(f"Error importing Memora official evaluator components: {e}")
-    MEMORA_IMPORT_OK = False
+if str(MEMORA_EVALS_DIR) not in sys.path:
+    sys.path.insert(0, str(MEMORA_EVALS_DIR))
+
+
+def monkey_patch_memora(is_live: bool) -> None:
+    # 1. Patch argparse to allow 'retrace' as a system choice
+    import argparse
+    original_add_argument = argparse.ArgumentParser.add_argument
+
+    def patched_add_argument(self: argparse.ArgumentParser, *args: Any, **kwargs: Any) -> Any:
+        if len(args) > 0 and args[0] == "--system" and "choices" in kwargs:
+            kwargs["choices"] = list(kwargs["choices"]) + ["retrace"]
+        return original_add_argument(self, *args, **kwargs)
+
+    argparse.ArgumentParser.add_argument = patched_add_argument
+
+    # 2. Patch get_memory_system to dynamically register retrace
+    import base_evaluator
+    from retracemem.adapters.memora_wrapper import ReTraceMemorySystem
+
+    original_get_memory_system = base_evaluator.get_memory_system
+
+    def patched_get_memory_system(system_name: str, user_id: str, **kwargs: Any) -> Any:
+        if system_name.lower() == "retrace":
+            return ReTraceMemorySystem(user_id, **kwargs)
+        return original_get_memory_system(system_name, user_id, **kwargs)
+
+    base_evaluator.get_memory_system = patched_get_memory_system
+
+    # 2. Patch OpenAI client if not running live
+    if not is_live:
+        print("  [MOCK] Mocking OpenAI chat completion calls for offline execution.")
+        try:
+            import openai
+        except ImportError:
+            import types
+            mock_openai = types.ModuleType("openai")
+            sys.modules["openai"] = mock_openai
+            import openai
+
+        class MockChatCompletions:
+            def create(self, *args: Any, **kwargs: Any) -> Any:
+                class MockMessage:
+                    content = "yes\nMocked Memora OpenAI Response."
+                class MockChoice:
+                    message = MockMessage()
+                class MockResponse:
+                    choices = [MockChoice()]
+                return MockResponse()
+
+        class MockChat:
+            completions = MockChatCompletions()
+
+        class MockOpenAI:
+            def __init__(self, *args: Any, **kwargs: Any) -> None:
+                pass
+            chat = MockChat()
+
+        openai.OpenAI = MockOpenAI  # type: ignore[misc,assignment]
 
 
 def main() -> None:
-    if not MEMORA_IMPORT_OK:
-        print("Could not import official Memora evaluation modules. Skipping verification.")
+    parser = argparse.ArgumentParser(description="Run official Memora evaluation.")
+    parser.add_argument(
+        "--live",
+        action="store_true",
+        help="Enable live API calls to OpenAI (requires OPENAI_API_KEY).",
+    )
+    parser.add_argument(
+        "--persona",
+        default="software_engineer",
+        help="Memora persona to evaluate (e.g. software_engineer, academic_researcher).",
+    )
+    parser.add_argument(
+        "--timeline",
+        default="weekly",
+        help="Memora timeline (weekly, monthly, quarterly).",
+    )
+    parser.add_argument(
+        "--limit",
+        type=int,
+        default=3,
+        help="Limit number of evaluation questions to run.",
+    )
+    args = parser.parse_args()
+
+    if not MEMORA_DIR.exists():
+        print(f"Error: Memora repository not found at {MEMORA_DIR}")
         sys.exit(1)
 
-    print("Successfully imported Memora BaseMemorySystem, BaseEvaluator, and fama_score.")
+    print("=" * 70)
+    print("RUNNING OFFICIAL MEMORA EVALUATION")
+    print("=" * 70)
+    print(f"  Persona:  {args.persona}")
+    print(f"  Timeline: {args.timeline}")
+    print(f"  Limit:    {args.limit}")
+    print(f"  Mode:     {'LIVE' if args.live else 'MOCK'}")
+    print()
 
-    # 1. Verify fama_score correctness
-    print("\n--- Verifying FAMA Score Logic ---")
-    test_cases = [
-        # (presence_correct, presence_total, absence_correct, absence_total, expected_score)
-        (1, 1, 1, 1, 1.0),   # 100% presence, 100% absence
-        (1, 1, 0, 1, 0.5),   # 100% presence, 0% absence. lambda = 0.5. FAMA = 1.0 - 0.5*(1-0) = 0.5
-        (0, 1, 1, 1, 0.0),   # 0% presence, 100% absence. lambda = 0.5. FAMA = 0 - 0.5*(0) = 0.0
-        (2, 2, 1, 2, 0.75),  # 100% presence, 50% absence. lambda = 2/4 = 0.5. FAMA = 1.0 - 0.5*(0.5) = 0.75
+    # Apply patching
+    monkey_patch_memora(args.live)
+
+    # Set up arguments for conversation_to_memory.py
+    user_id = f"{args.persona}_{args.timeline}"
+    conv_dir = MEMORA_DIR / "data" / args.timeline / args.persona / "conversations"
+
+    # Step 1: Bulk process conversations to memory
+    print("--- STEP 1: conversation_to_memory ---")
+    sys.argv = [
+        "conversation_to_memory.py",
+        "--system", "retrace",
+        "--user-id", user_id,
+        "--conversation-directory", str(conv_dir),
+        "--num-sessions", str(args.limit),
     ]
 
-    all_passed = True
-    for idx, (pc, pt, ac, at, expected) in enumerate(test_cases):
-        score = fama_score(pc, pt, ac, at)
-        passed = abs(score - expected) < 1e-6
-        print(f"Case {idx}: presence={pc}/{pt}, absence={ac}/{at} => FAMA={score:.4f} (Expected={expected:.4f}) -> {'PASS' if passed else 'FAIL'}")
-        if not passed:
-            all_passed = False
-
-    # 2. Instantiate MockMemorySystem to verify BaseMemorySystem interface
-    print("\n--- Verifying BaseMemorySystem Subclass Interface ---")
-    
-    class ReTraceMemorySystem(BaseMemorySystem):
-        def get_system_name(self) -> str:
-            return "retrace_mock"
-        
-        def initialize_client(self) -> bool:
-            return True
-            
-        def add_conversation_to_memory(self, conversation_data: dict) -> dict:
-            return {"status": "success"}
-            
-        def search_memories(self, query: str, limit: int = 50, session_date = None, date_range = None) -> list:
-            return [{"memory": "Mocked memory support", "score": 1.0}]
-            
-        def get_required_env_vars(self) -> list:
-            return []
-
+    import conversation_to_memory
     try:
-        sys_instance = ReTraceMemorySystem(user_id="test_user_id")
-        evaluator = BaseEvaluator(sys_instance)
-        print("Successfully instantiated ReTraceMemorySystem and BaseEvaluator.")
-        print(f"System name: {sys_instance.get_system_name()}")
-        print(f"Config info: {sys_instance.get_config_info()}")
-    except Exception as e:
-        print(f"Failed to instantiate or verify evaluator interface: {e}")
-        all_passed = False
+        conversation_to_memory.main()
+    except SystemExit as exc:
+        if exc.code != 0:
+            print(f"conversation_to_memory exited with code {exc.code}")
+            sys.exit(exc.code)
 
-    if all_passed:
-        print("\nAll minimal scoring fixture verifications PASSED.")
-        sys.exit(0)
+    # Step 2: Answer questions using memories
+    print("\n--- STEP 2: memory_to_answer ---")
+    questions_file = MEMORA_DIR / "data" / args.timeline / args.persona / f"evaluation_questions_{args.persona}.json"
+    dest_dir = Path("outputs/memora")
+    dest_dir.mkdir(parents=True, exist_ok=True)
+
+    sys.argv = [
+        "memory_to_answer.py",
+        str(questions_file),
+        "--system", "retrace",
+        "--user-id", user_id,
+        "--limit", str(args.limit),
+    ]
+
+    # Ensure OPENAI_API_KEY env variable is mock-set if not live to avoid validation crash
+    if not args.live and not os.getenv("OPENAI_API_KEY"):
+        os.environ["OPENAI_API_KEY"] = "mock-openai-key"
+
+    import shutil
+    import glob
+    
+    # Store initial files in output directory to find new ones
+    memora_eval_results_dir = questions_file.parent / "eval_results" / "retrace"
+    initial_files = set(glob.glob(str(memora_eval_results_dir / "*.json"))) if memora_eval_results_dir.exists() else set()
+
+    import memory_to_answer
+    try:
+        memory_to_answer.main()
+    except SystemExit as exc:
+        if exc.code != 0:
+            print(f"memory_to_answer exited with code {exc.code}")
+            sys.exit(exc.code)
+
+    # Copy newly created JSON files to outputs/memora
+    copied_files = []
+    if memora_eval_results_dir.exists():
+        post_files = set(glob.glob(str(memora_eval_results_dir / "*.json")))
+        new_files = post_files - initial_files
+        for f in new_files:
+            file_path = Path(f)
+            dest_file = dest_dir / file_path.name
+            shutil.copy2(file_path, dest_file)
+            copied_files.append(dest_file)
+
+    print()
+    print("=" * 70)
+    print("MEMORA EVALUATION COMPLETE")
+    if copied_files:
+        print("Official evaluation JSON files copied to:")
+        for f in copied_files:
+            print(f"  - {f}")
     else:
-        print("\nSome verifications FAILED.")
-        sys.exit(1)
+        print(f"Check output under: {memora_eval_results_dir}")
+    print("=" * 70)
 
 
 if __name__ == "__main__":
