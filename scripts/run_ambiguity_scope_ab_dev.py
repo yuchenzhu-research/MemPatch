@@ -126,13 +126,17 @@ def _possible_bias_or_ambiguity(case: Any) -> str:
 
 def write_review_table(cases: list[Any], output_path: str) -> None:
     pilot = set(PILOT_CASE_IDS)
+    corrected_abstention_categories = {
+        "tentative_intention_or_future_possibility",
+        "insufficient_evidence_requires_abstention",
+    }
     lines = [
         "# Ambiguity-and-Scope Dataset Human Review Table",
         "",
         "Generated artifact only; not a tracked canonical document.",
         "",
-        "| case id | category | pilot_review_required | old evidence | new evidence | candidate belief(s) | expected Stage A fine-grained status | expected comparable Stage B verdict | annotations | annotation rationale | possible_bias_or_ambiguity |",
-        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
+        "| case id | category | pilot_review_required | corrected_abstention_case | old evidence | new evidence | candidate belief(s) | expected Stage A fine-grained status | expected comparable Stage B verdict | annotations | annotation rationale | possible_bias_or_ambiguity |",
+        "| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |",
     ]
     for case in cases:
         raw = case.raw_record
@@ -146,6 +150,7 @@ def write_review_table(cases: list[Any], output_path: str) -> None:
             case.case.case_id,
             case.category,
             "yes" if case.case.case_id in pilot else "no",
+            "yes" if case.category in corrected_abstention_categories else "no",
             "<br>".join(_old_evidence_texts(case)).replace("|", "\\|"),
             _new_evidence_text(case).replace("|", "\\|"),
             beliefs.replace("|", "\\|"),

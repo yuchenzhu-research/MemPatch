@@ -53,7 +53,10 @@ class TestDatasetSchema:
         assert len(cases) > 0
         for case in cases:
             assert case.case.view.view_fingerprint
-            assert case.review_status == "model_drafted_pending_human_review"
+            assert case.review_status in {
+                "model_drafted_pending_human_review",
+                "assistant_screened_pending_user_final_review",
+            }
             assert case.source_type == "newly_authored_internal"
             assert case.category in REQUIRED_CATEGORIES
 
@@ -174,7 +177,10 @@ class TestMetricsAndReport:
         metrics = compute_metrics(cases, replay_results)
         report = format_report(cases, replay_results, metrics)
         for entry in report["per_instance"]:
-            assert entry["review_status"] == "model_drafted_pending_human_review"
+            assert entry["review_status"] in {
+                "model_drafted_pending_human_review",
+                "assistant_screened_pending_user_final_review",
+            }
 
 
 class TestBalanceCheck:
