@@ -44,14 +44,16 @@ and keep the no-dependency tests runnable.
 
 Owns stable data contracts:
 
-- `EpisodicEvidence`
-- `Belief`
-- `RelationPrediction`
-- `AuthorizationDecision`
-- `EvaluationRecord`
+- `EvidenceNode`
+- `BeliefNode`
+- `ConditionNode`
+- `DependencyEdge`
+- `EvidenceEdge`
+- `DefeatPath`
+- `AuthorizationTrace`
+- `RequirementProposal` (in verifier/contracts.py)
 
-Do not add benchmark-specific fields directly to these dataclasses. Put
-benchmark-specific data in `metadata`.
+Legacy types (`EpisodicEvidence`, `Belief`, `RelationPrediction`, `AuthorizationDecision`, `EvaluationRecord`) are kept only for transitional compatibility; new runtime code must not import or return them. Do not add benchmark-specific fields directly to these dataclasses. Put benchmark-specific data in `metadata`.
 
 ### `retracemem.memory`
 
@@ -63,31 +65,29 @@ Owns local memory storage:
 
 ### `retracemem.verifier`
 
-Owns relation prediction:
+Owns relation prediction contracts:
 
-- heuristic verifier for first local runs;
-- prompt verifier later;
-- trained verifier later.
+- `RequirementInducer` and `EvidenceEdgeVerifier` protocols.
+- `HeuristicRequirementInducer` and `HeuristicEvidenceEdgeVerifier` (development-only deterministic fixtures).
+- `PromptEvidenceEdgeVerifier` (LLM-based verifier).
 
-No verifier should directly mutate memory.
+No verifier should directly mutate memory. Deep learning or heavy machine learning packages (e.g., PyTorch, Transformers) must not be added as core dependencies; they are deferred and may only be introduced as optional extensions for a future `ReTrace-Local` edge verifier.
 
 ### `retracemem.tms`
 
 Owns revision authorization:
 
-- gate relation predictions;
-- decide current authorization;
-- keep blocked beliefs auditable.
+- deterministic revision gate (`RevisionGate`);
+- decide current authorization via Defeat-Path Authorization (`DPA`);
+- keep blocked beliefs auditable via `DefeatPath` and `AuthorizationTrace`.
 
-The TMS layer decides whether a belief may govern current answers. It does not
-generate prose answers.
+The TMS layer decides whether a belief may govern current answers. It does not generate prose answers.
 
 ### `retracemem.generation`
 
 Owns query-time basis construction and answer wrappers.
 
-The first version may return deterministic answer shells. Real LLM answerers
-must be wrapper-only and optional.
+The first version may return deterministic answer shells. Real LLM answerers must be wrapper-only and optional.
 
 ### `retracemem.adapters`
 
@@ -126,24 +126,23 @@ Runner scripts under `scripts/` should:
 - print a compact summary;
 - never mutate files under `reference/`.
 
-## Test Rules
+## Test and Environment Rules
 
-Tests should run without API keys and without external services.
-
-Preferred command:
-
-```bash
-python3 -m pytest -q
-```
-
-No-dependency fallback:
-
-```bash
-env PYTHONPYCACHEPREFIX=.pycache_compile python3 -m compileall -q retracemem tests scripts
-```
-
-If a test needs temporary files, use `tempfile` or pytest `tmp_path`. Do not use
-real benchmark data as the only test fixture.
+- Python Version: Standard package requires Python >= 3.10. Current development environment uses a project-local virtual environment based on Python 3.10.20.
+- Setup: Create virtual environment and install in editable mode:
+  ```bash
+  ~/miniconda3/envs/paper/bin/python -m venv .venv
+  .venv/bin/python -m pip install -e ".[dev]"
+  ```
+- Preferred command to run tests:
+  ```bash
+  .venv/bin/python -m pytest
+  ```
+- Compilation check:
+  ```bash
+  env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src tests scripts
+  ```
+- If a test needs temporary files, use `tempfile` or pytest `tmp_path`. Do not write temporary cache artifacts directly to `tests/` or track them in Git.
 
 ## Style Rules
 

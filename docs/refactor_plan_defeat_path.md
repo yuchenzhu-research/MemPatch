@@ -89,12 +89,9 @@ edge classes, then derive everything else from that split.
    `evidence_edges_for_condition(condition_id)`, and
    `evidence_edges_for_belief(belief_id)`.
 3. Two verifier interfaces.
-   - `RequirementInducer.induce_requirements(belief, evidence_context)
-     -> list[DependencyEdge]`.
-   - `EvidenceEdgeVerifier.verify_edge(evidence, belief, condition,
-     temporal_context) -> EvidenceEdgeProposal`.
-   `PromptRelationVerifier` is rewritten as `PromptEvidenceEdgeVerifier`;
-   the heuristic verifier becomes `HeuristicEvidenceEdgeVerifier`.
+   - `RequirementInducer.induce_requirements(belief, evidence_context) -> list[RequirementProposal]`.
+   - `EvidenceEdgeVerifier.verify_edges(new_evidence, candidate_belief, candidate_replacement_beliefs, candidate_conditions, temporal_context) -> list[EvidenceEdge]`.
+   Note: During edge verification, `SUPERSEDES` edges must reference a real candidate replacement belief that is grounded in the new evidence (i.e. extraction of candidate new beliefs from new evidence must precede supersession verification). Heuristic implementations of these interfaces serve only as offline contract validation fixtures and must not be used in paper main-result runners.
 4. Path-admitting gate. Rewrite `retracemem/tms/gate.py` so an
    `EvidenceEdge` is admitted only when:
    - `BLOCKS(e, c)` requires that some accepted
