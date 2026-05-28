@@ -33,7 +33,7 @@ class ReTracePipeline:
         impact_retriever: ImpactCandidateRetriever | None = None,
         query_retriever: QueryBeliefRetriever | None = None,
     ) -> None:
-        self.backend = ReTraceBackend(
+        self.backend = ReTraceBackend.for_development_fixture(
             extractor=extractor,
             inducer=inducer,
             edge_verifier=edge_verifier,
@@ -64,7 +64,7 @@ class ReTracePipeline:
         return self.backend.ingest_evidence(user_id, evidence)
 
     def authorized_basis(self, user_id: str, query: str, limit: int = 10) -> list[dict[str, Any]]:
-        return self.backend.search(user_id, query, limit=limit)
+        return self.backend.search(user_id, query, limit=limit)["authorized_basis"]
 
     def answer(self, user_id: str, query: str, limit: int = 10) -> EvaluationRecord:
         self.backend._ensure_user(user_id)

@@ -42,6 +42,7 @@ class ManualImpactCandidateRetriever:
 
     Allows manually configuring which prior belief ids are impacted by which evidence.
     It resolves their associated conditions from the BeliefStore dynamically.
+    Forbidden for paper main-method retrieval implementations.
     """
 
     def __init__(self, impact_map: dict[str, list[str]] | None = None) -> None:
@@ -68,13 +69,8 @@ class ManualImpactCandidateRetriever:
                 dep_edges = store.dependencies_of(bid)
                 conditions: list[ConditionNode] = []
                 for edge in dep_edges:
-                    try:
-                        cond = store.get_condition(edge.condition_id)
-                        conditions.append(cond)
-                    except KeyError:
-                        # If condition is not yet stored, ignore or fail.
-                        # Per DPA design, dependency edges require condition nodes to exist.
-                        pass
+                    cond = store.get_condition(edge.condition_id)
+                    conditions.append(cond)
                 candidates.append(ImpactCandidate(belief=belief, conditions=tuple(conditions)))
                 
         return candidates
@@ -84,6 +80,7 @@ class ManualQueryBeliefRetriever:
     """Development-only deterministic fixture for query belief retrieval.
 
     Allows manually mapping query text to specific belief ids.
+    Forbidden for paper main-method retrieval implementations.
     """
 
     def __init__(self, query_map: dict[str, list[str]] | None = None) -> None:

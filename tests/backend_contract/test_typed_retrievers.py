@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import pytest
+
 from retracemem.retrieval.typed_retrievers import (
     ManualImpactCandidateRetriever,
     ManualQueryBeliefRetriever,
@@ -70,6 +72,39 @@ def test_query_time_retriever_consumes_query():
     )
     
     assert results == [belief_1]
+
+
+def test_write_time_retriever_fails_on_missing_dependency_condition():
+    store = BeliefStore()
+    belief = BeliefNode(belief_id="belief_1", proposition="Alice in SF", source_evidence_ids=("ev_0",))
+    condition = ConditionNode(condition_id="cond_1", scope_id="user_alice", text="Alice must have keys")
+    dependency = DependencyEdge(
+        edge_id="dep_1",
+        belief_id="belief_1",
+        condition_id="cond_1",
+        inducer="manual",
+    )
+    store.add_belief(belief)
+    store.add_condition(condition)
+    store.add_dependency_edge(dependency)
+    store._conditions.pop("cond_1")
+
+    retriever = ManualImpactCandidateRetriever(impact_map={"ev_1": ["belief_1"]})
+    new_evidence = EvidenceNode(
+        evidence_id="ev_1",
+        session_id="session_1",
+        timestamp="2026-05-28T00:00:00Z",
+        text="Alice lost her keys.",
+        source_dataset="manual_audit",
+        source_pointer="test",
+    )
+
+    with pytest.raises(KeyError, match="unknown condition"):
+        retriever.retrieve_impacts(
+            new_evidence=new_evidence,
+            prior_beliefs=(belief,),
+            store=store,
+        )
 
 
 def test_irrelevant_beliefs_not_returned():
