@@ -12,3 +12,8 @@ __pycache__/
 venv/
 .env
 .DS_Store
+
+# Packaging and test metadata.
+*.egg-info/
+.pytest_cache/
+

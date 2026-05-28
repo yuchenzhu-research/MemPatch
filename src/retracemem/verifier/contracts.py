@@ -44,6 +44,7 @@ class EvidenceEdgeVerifier(Protocol):
         self,
         new_evidence: EvidenceNode,
         candidate_belief: BeliefNode,
+        candidate_replacement_beliefs: tuple[BeliefNode, ...],
         candidate_conditions: tuple[ConditionNode, ...],
         temporal_context: tuple[EvidenceNode, ...],
     ) -> list[EvidenceEdge]:
