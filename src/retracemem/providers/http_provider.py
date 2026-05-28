@@ -33,6 +33,8 @@ class HTTPLLMProvider(BaseLLMProvider):
         provider_normalized = provider.lower()
         if provider_normalized in ("google", "gemini"):
             return "GEMINI_API_KEY"
+        if provider_normalized == "siliconflow":
+            return "SILICONFLOW_API_KEY"
         if provider_normalized == "openai":
             return "OPENAI_API_KEY"
         raise ValueError(f"Unsupported HTTP provider: {provider}")
@@ -59,6 +61,8 @@ class HTTPLLMProvider(BaseLLMProvider):
             endpoint = self.base_url
         elif provider.lower() in ("google", "gemini"):
             endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
+        elif provider.lower() == "siliconflow":
+            endpoint = "https://api.siliconflow.cn/v1/chat/completions"
         else:
             endpoint = "https://api.openai.com/v1/chat/completions"
 
@@ -140,6 +144,7 @@ class HTTPLLMProvider(BaseLLMProvider):
         error_message = None
         prompt_tokens = 0
         completion_tokens = 0
+        total_tokens = 0
 
         try:
             req = urllib.request.Request(
@@ -170,16 +175,19 @@ class HTTPLLMProvider(BaseLLMProvider):
                 if isinstance(usage, dict):
                     prompt_tokens = int(usage.get("prompt_tokens") or 0)
                     completion_tokens = int(usage.get("completion_tokens") or 0)
+                    total_tokens = int(usage.get("total_tokens") or prompt_tokens + completion_tokens)
                 else:
                     # Fallback token estimate
                     prompt_tokens = len(prompt.split())
                     completion_tokens = len(response_text.split()) if response_text else 0
+                    total_tokens = prompt_tokens + completion_tokens
 
         except Exception as e:
             status = "failure"
             error_message = self._redact_secret_values(f"{type(e).__name__}: {str(e)}", provider)
             # Basic fallback counts on failure
             prompt_tokens = len(prompt.split())
+            total_tokens = prompt_tokens
 
         latency_ms = (time.perf_counter() - start_time) * 1000.0
 
@@ -203,7 +211,7 @@ class HTTPLLMProvider(BaseLLMProvider):
             latency_ms=latency_ms,
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
-            total_tokens=prompt_tokens + completion_tokens,
+            total_tokens=total_tokens,
             retries=0,
             error_message=error_message,
             eligible_for_replay=eligible_for_replay,
