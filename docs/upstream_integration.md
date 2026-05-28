@@ -66,12 +66,16 @@ Use:
 
 - read-only adapter;
 - official evaluator invocation where possible;
-- separate preservation of raw evaluator output and local summaries.
+- separate preservation of raw evaluator output and local summaries;
+- evaluation annotations may be consumed only in explicitly labelled
+  oracle-conditioned authorization diagnostics.
 
 Do not:
 
 - turn Memora into a method template;
-- expose official evaluation evidence or labels to training/prompt tuning.
+- expose official evaluation evidence or labels to training/prompt tuning;
+- call oracle-conditioned annotation-driven diagnostics official end-to-end
+  Memora evaluation.
 
 ## Secondary or Optional Upstreams
 
@@ -147,6 +151,13 @@ Do not:
 
 - make ReTrace a Mem0 clone with different prompts.
 
+Actionable architecture lesson:
+
+- reduce expensive model loops by narrowing candidate neighborhoods before
+  authorization and retrieval, while preserving ReTrace's evidence-edge and DPA
+  method identity rather than adopting Mem0-style overwrite/add-only memory
+  semantics.
+
 ### A-MEM
 
 Role:
@@ -157,6 +168,12 @@ Role:
 Do not:
 
 - make linked-note evolution the core authorization method.
+
+Actionable architecture lesson:
+
+- keep reusable memory-state construction separate from paper reproduction and
+  evaluation sweeps so authorization state can be cached or persisted once per
+  persona-period and reused across many questions.
 
 ### A-MAC
 
@@ -219,3 +236,23 @@ Official evaluation assets must not be used for:
 If Stage C is later approved, generated or human-labelled training data must be
 kept separate from official test material, and contamination checks must be run
 against official evaluation assets before paper-facing results are reported.
+
+## Architecture Lessons Adopted
+
+The convergence path adopts only architectural separation lessons from
+executable upstreams:
+
+- write/read separation: write-time evidence ingestion and authorization update
+  must be separate from query-time answer evaluation;
+- candidate-neighborhood narrowing before expensive authorization: retrieved
+  affected beliefs define bounded local update neighborhoods;
+- cached or persistent memory state should be reused across multiple queries
+  instead of rebuilding authorization state per evaluation question;
+- provenance-bearing evidence must remain separate from benchmark adapters and
+  runners;
+- CUP-Mem's staged write pipeline motivates modular ReTrace update
+  orchestration, but ReTrace keeps typed evidence edges, RevisionGate, and DPA
+  as the method core;
+- Graphiti/Zep-style provenance separation motivates keeping ledger/store/Gate
+  and DPA independent from adapters and runners, without adding graph-database
+  infrastructure in this task.
