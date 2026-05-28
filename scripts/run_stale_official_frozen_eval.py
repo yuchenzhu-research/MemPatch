@@ -13,6 +13,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "src"))
 from retracemem.adapters.stale_official_runner import (
     StaleLiveRunConfig,
     StaleOfflineRunConfig,
+    estimate_live_calls,
     run_live_stageab_generation,
     run_offline_wiring_demo,
     run_official_evaluator,
@@ -45,7 +46,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Official frozen STALE Stage A/B runner.",
     )
-    parser.add_argument("--mode", choices=("replay", "live-dev", "evaluate"), default="replay")
+    parser.add_argument("--mode", choices=("replay", "estimate", "live-dev", "evaluate"), default="replay")
     parser.add_argument(
         "--dataset-path",
         default="data_external/stale_official_frozen/T1_T2_400_FULL.json",
@@ -64,9 +65,10 @@ def main() -> None:
     parser.add_argument("--max-calls", type=int, default=500)
     parser.add_argument("--max-tokens", type=int, default=2_000_000)
     parser.add_argument("--evaluator-concurrency", type=int, default=2)
+    parser.add_argument("--ingest-chunk-size", type=int, default=10)
     args = parser.parse_args()
 
-    if args.mode == "live-dev":
+    if args.mode in ("estimate", "live-dev"):
         if load_dotenv is not None:
             load_dotenv(Path(__file__).resolve().parents[1] / ".env")
         config = StaleLiveRunConfig(
@@ -82,7 +84,11 @@ def main() -> None:
             max_calls=args.max_calls,
             max_tokens=args.max_tokens,
             evaluator_concurrency=args.evaluator_concurrency,
+            ingest_chunk_size=args.ingest_chunk_size,
         )
+        if args.mode == "estimate":
+            print(json.dumps(estimate_live_calls(config), indent=2, ensure_ascii=False))
+            return
         result = run_live_stageab_generation(config)
         manifest = result["manifest"]
         if manifest["errors"]:

@@ -4,10 +4,15 @@ from pathlib import Path
 import pytest
 
 from retracemem.adapters.stale_official_runner import (
+    StaleLiveRunConfig,
     StaleOfflineRunConfig,
     _NoEdgeBatchedVerifier,
     answer_probing_queries,
+    build_chronological_evidence_chunks,
+    build_live_stage_a_pipeline,
+    build_live_stage_b_pipeline,
     build_offline_pipeline,
+    estimate_live_calls,
     export_official_target_responses,
     ingest_method_visible_sessions,
     run_offline_wiring_demo,
@@ -38,6 +43,13 @@ def _record(uid: str, rtype: str = "T1") -> dict:
     }
 
 
+def _record_with_sessions(uid: str, count: int, rtype: str = "T1") -> dict:
+    record = _record(uid, rtype)
+    record["timestamps"] = [f"2025-01-{index + 1:02d} 09:00" for index in range(count)]
+    record["haystack_session"] = [[f"session {index} turn"] for index in range(count)]
+    return record
+
+
 def _write_dataset(tmp_path: Path, payload: list[dict]) -> Path:
     path = tmp_path / "T1_T2_400_FULL.json"
     path.write_text(json.dumps(payload), encoding="utf-8")
@@ -65,8 +77,22 @@ def test_session_ingestion_runs_once_per_scenario(tmp_path: Path) -> None:
     user_id = "stale:retrace:u1"
     ids = ingest_method_visible_sessions(pipeline, user_id, record.method_visible)
     ledger = pipeline.backend.ledgers[user_id]
-    assert ids == ["u1:session:0", "u1:session:1"]
+    assert ids == ["u1:chunk:0", "u1:chunk:1"]
     assert len(ledger) == 2
+
+
+def test_chunked_ingestion_groups_fifty_sessions_in_order(tmp_path: Path) -> None:
+    path = _write_dataset(tmp_path, [_record_with_sessions("u1", 50)])
+    record = StaleOfficialAdapter(path).load()[0]
+    chunks = build_chronological_evidence_chunks(record.method_visible, chunk_size=10)
+    assert len(chunks) == 5
+    assert chunks[0].metadata["raw_session_indices"] == tuple(range(10))
+    assert chunks[-1].metadata["raw_session_indices"] == tuple(range(40, 50))
+    assert chunks[0].metadata["timestamps"][0] == "2025-01-01 09:00"
+    assert chunks[0].metadata["raw_session_count"] == 10
+    assert chunks[0].metadata["chunk_index"] == 0
+    assert "session 0 turn" in chunks[0].text
+    assert "session 10 turn" not in chunks[0].text
 
 
 def test_three_queries_reuse_persistent_state(tmp_path: Path) -> None:
@@ -95,6 +121,16 @@ def test_method_visible_state_does_not_contain_gold_fields(tmp_path: Path) -> No
     assert "evaluator-only old fact" not in ledger_text
     assert "evaluator-only new fact" not in ledger_text
     assert "evaluator-only why" not in ledger_text
+
+
+def test_chunk_text_does_not_inject_gold_fields(tmp_path: Path) -> None:
+    path = _write_dataset(tmp_path, [_record_with_sessions("u1", 50)])
+    record = StaleOfficialAdapter(path).load()[0]
+    chunks = build_chronological_evidence_chunks(record.method_visible, chunk_size=10)
+    all_text = "\n".join(chunk.text for chunk in chunks)
+    assert "evaluator-only old fact" not in all_text
+    assert "evaluator-only new fact" not in all_text
+    assert "evaluator-only why" not in all_text
 
 
 def test_stage_b_is_not_raw_haystack_direct_answer_baseline(tmp_path: Path) -> None:
@@ -146,6 +182,38 @@ def test_no_network_calls_in_replay(tmp_path: Path) -> None:
     assert manifest["official_judge_evaluation_executed"] is False
     assert manifest["dataset_source"] == "STALEproj/STALE"
     assert manifest["dataset_artifact"] == "T1_T2_400_FULL.json"
+
+
+def test_live_builders_can_share_extraction_client_and_keep_state_isolated(tmp_path: Path) -> None:
+    shared_extract = _make_client(tmp_path, "shared_extract")
+    stage_a_edges = _make_client(tmp_path, "stage_a_edges")
+    stage_a_answer = _make_client(tmp_path, "stage_a_answer")
+    stage_b_answer_judge = _make_client(tmp_path, "stage_b_answer_judge")
+    config = StaleLiveRunConfig(dataset_path=str(tmp_path / "unused.json"), ingest_chunk_size=10)
+    pipeline_a = build_live_stage_a_pipeline(shared_extract, stage_a_edges, stage_a_answer, config)
+    pipeline_b = build_live_stage_b_pipeline(shared_extract, stage_b_answer_judge, config)
+    assert pipeline_a.backend is not pipeline_b.backend
+    assert pipeline_a.backend.extractor.client is shared_extract
+    assert pipeline_b.backend.extractor.client is shared_extract
+    assert pipeline_a.backend.stores is not pipeline_b.backend.stores
+
+
+def test_estimate_mode_counts_chunked_shared_extraction_without_network(tmp_path: Path) -> None:
+    path = _write_dataset(tmp_path, [_record_with_sessions("u1", 50)])
+    config = StaleLiveRunConfig(
+        dataset_path=str(path),
+        limit_t1=1,
+        limit_t2=0,
+        ingest_chunk_size=10,
+    )
+    estimate = estimate_live_calls(config)
+    assert estimate["zero_api_calls"] is True
+    assert estimate["expected_shared_extraction_network_calls"] == 5
+    assert estimate["stage_a_edge_call_upper_bound"] == 5
+    assert estimate["stage_a_answer_calls"] == 3
+    assert estimate["stage_b_directjudge_calls"] == 3
+    assert estimate["stage_b_answer_calls"] == 3
+    assert estimate["approx_target_method_total_call_upper_bound_excluding_evaluator"] == 19
 
 
 def test_outputs_under_outputs_directory(tmp_path: Path) -> None:
