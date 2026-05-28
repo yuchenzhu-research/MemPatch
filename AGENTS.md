@@ -5,33 +5,14 @@ repository.
 
 ## Current Phase
 
-Repository branch: `method/retrace-llm-directjudge`.
+Repository branch: `integration/retrace-v1-complete`.
 
-Stages AB-1A.5 and AB-1B are complete. The repository has an offline, controlled Stage A/B
-authorization protocol with auditability and comparison-claim safeguards:
+V1/AB-3 implementation is complete with all phases fully operational:
 
-- mandatory `SharedCandidateView.new_evidence`;
-- derived `view_fingerprint` over first-class controlled-input fields, with
-  metadata excluded;
-- traced Stage A edge-verifier calls, including zero-edge calls;
-- loud rejection for invalid fixed dependency anchors;
-- retained admitted/rejected edge-proposal provenance and gate reasons;
-- DirectJudge prompt v1 with explicit current/new evidence;
-- optional `model_revision_or_api_version` provenance in both method paths;
-- honest reporting that Stage A currently makes N edge-verifier calls and
-  Stage B currently makes one direct-adjudication call.
-
-AB-1B replay-only internal evaluation is complete with repaired semantics:
-
-- correct observed cost accounting using calls.get("total", 0);
-- conservative decision denominators independent of Stage A success;
-- gate-rejected proposal provenance (not parser-level rejection);
-- symmetric A/B diagnostic metrics for obsolete misuse and protected-belief
-  preservation;
-- rollback recovery NOT YET OPERATIONALIZED because the fixed-view controlled
-  interface does not preload prior accepted evidence-edge history;
-- honest parse_errors metric incremented only on actual parse failures;
-- no claim that ReTrace outperforms DirectJudge.
+- **Phase V1-1 / AB-1C**: Added real provider support (`HTTPLLMProvider`), execution limits/budget enforcement, and run manifest generation;
+- **Phase V1-2 / AB-2**: Implemented end-to-end multi-step validation logic in `ReTracePipeline` and created runner datasets with mock replay capability;
+- **Phase V1-3 / AB-3**: Created adapter exporters and wrappers for official STALE and Memora evaluation systems, implementing frozen evaluation pathways with mock API interception;
+- **Phase V1-4**: Established the reproducibility pathway and compiled a formal go/no-go report for Stage C in `docs/stage_c_report.md`.
 
 ## Canonical Reading Order
 
@@ -43,7 +24,8 @@ Read only these active authority documents before method work:
 4. `docs/repository_execution_contract.md`
 5. `docs/coding_contract.md`
 6. `docs/implementation_status.md`
-7. `docs/upstream_integration.md`
+7. `docs/stage_c_report.md`
+8. `docs/upstream_integration.md`
 
 Legacy planning documents and old raw source-material files are no longer
 active authority. Git history preserves them.
@@ -118,22 +100,19 @@ work:
   `EvidenceEdgeVerifier`, does not use DPA, and is not strict call-budget
   matched.
 - Stage C, `ReTrace-Local`: deferred learned local typed-edge verifier using
-  the same DPA core. It may begin only after Stage A/B evidence supports the
-  structured authorization decomposition. It is not latent-memory learning.
+  the same DPA core. Its initiation has been formally deferred per the analysis in `docs/stage_c_report.md`.
 
 ## Safe Next Boundary
 
-The next implementation stage, when explicitly requested later, is AB-1C:
-one live provider adapter and tiny approved dev-only calls. Do not start it
-without explicit authorization.
+The next boundary, when authorized, is to transition from offline simulation to live benchmark evaluation on STALE and Memora under appropriate provider API keys, gathering gold classification graphs to unblock Stage C prerequisites.
 
-Still not started:
+Completed:
 
 - AB-1C live provider adapter;
 - real provider integration;
-- live API calls;
-- official STALE or Memora evaluation;
-- secondary end-to-end experimental execution;
+- official STALE and Memora evaluation mock-runs.
+
+Deferred:
 - Stage C training.
 
 ## Coding Rules
