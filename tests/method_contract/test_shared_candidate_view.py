@@ -110,6 +110,66 @@ def test_controlled_method_result_fields() -> None:
     assert len(result.model_call_trace_ids) == 2
 
 
+def test_duplicate_candidate_belief_ids_rejected() -> None:
+    import pytest
+    ev = _make_evidence()
+    b1 = _make_belief("b_dup", "ev1")
+    b2 = _make_belief("b_dup", "ev1")
+    with pytest.raises(ValueError, match="duplicate belief_ids"):
+        SharedCandidateView(
+            instance_id="x", query_id="q", query="q",
+            evidence_context=(ev,),
+            candidate_beliefs=(b1, b2),
+            candidate_replacement_beliefs=(),
+        )
+
+
+def test_duplicate_replacement_belief_ids_rejected() -> None:
+    import pytest
+    ev = _make_evidence()
+    b1 = _make_belief("b1", "ev1")
+    r1 = _make_belief("r_dup", "ev1")
+    r2 = _make_belief("r_dup", "ev1")
+    with pytest.raises(ValueError, match="duplicate belief_ids"):
+        SharedCandidateView(
+            instance_id="x", query_id="q", query="q",
+            evidence_context=(ev,),
+            candidate_beliefs=(b1,),
+            candidate_replacement_beliefs=(r1, r2),
+        )
+
+
+def test_invalid_conditions_key_rejected() -> None:
+    import pytest
+    ev = _make_evidence()
+    b1 = _make_belief("b1", "ev1")
+    c1 = _make_condition("c1")
+    with pytest.raises(ValueError, match="not a candidate belief id"):
+        SharedCandidateView(
+            instance_id="x", query_id="q", query="q",
+            evidence_context=(ev,),
+            candidate_beliefs=(b1,),
+            candidate_replacement_beliefs=(),
+            candidate_conditions_by_belief={"nonexistent": (c1,)},
+        )
+
+
+def test_duplicate_condition_ids_in_belief_rejected() -> None:
+    import pytest
+    ev = _make_evidence()
+    b1 = _make_belief("b1", "ev1")
+    c1 = _make_condition("c_dup")
+    c2 = _make_condition("c_dup")
+    with pytest.raises(ValueError, match="Duplicate condition_ids"):
+        SharedCandidateView(
+            instance_id="x", query_id="q", query="q",
+            evidence_context=(ev,),
+            candidate_beliefs=(b1,),
+            candidate_replacement_beliefs=(),
+            candidate_conditions_by_belief={"b1": (c1, c2)},
+        )
+
+
 def test_contracts_do_not_import_legacy_types() -> None:
     import retracemem.methods.contracts as mod
 

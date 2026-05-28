@@ -8,7 +8,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import uuid
 from typing import Any
 
 from retracemem.providers.cached_client import CachedLLMClient
@@ -34,6 +33,17 @@ def _load_prompt_template() -> str:
     path = os.path.normpath(_PROMPT_FILE)
     with open(path, encoding="utf-8") as f:
         return f.read()
+
+
+def _stable_edge_id(
+    evidence_id: str,
+    edge_type: str,
+    target_id: str,
+    replacement_belief_id: str | None,
+) -> str:
+    """Compute deterministic evidence edge_id from grounded inputs."""
+    payload = f"{evidence_id}|{edge_type}|{target_id}|{replacement_belief_id or ''}|{_PROMPT_VERSION}"
+    return f"ee-{hashlib.sha256(payload.encode('utf-8')).hexdigest()[:16]}"
 
 
 class PromptEvidenceEdgeVerifier:
@@ -102,14 +112,14 @@ class PromptEvidenceEdgeVerifier:
                 f"error={trace.error_message}"
             )
 
-        valid_replacement_ids = {b.belief_id for b in candidate_replacement_beliefs}
+        replacement_map = {b.belief_id: b for b in candidate_replacement_beliefs}
         valid_condition_ids = {c.condition_id for c in candidate_conditions}
 
         return self._parse(
             trace.response,
             new_evidence,
             candidate_belief,
-            valid_replacement_ids,
+            replacement_map,
             valid_condition_ids,
             trace.call_id,
         )
@@ -119,7 +129,7 @@ class PromptEvidenceEdgeVerifier:
         response: str,
         new_evidence: EvidenceNode,
         candidate_belief: BeliefNode,
-        valid_replacement_ids: set[str],
+        replacement_map: dict[str, BeliefNode],
         valid_condition_ids: set[str],
         call_id: str,
     ) -> list[EvidenceEdge]:
@@ -134,6 +144,7 @@ class PromptEvidenceEdgeVerifier:
         if not isinstance(data, dict) or "edges" not in data:
             raise ValueError(f"Invalid evidence-edge response: missing 'edges' key")
 
+        seen_edge_ids: set[str] = set()
         edges: list[EvidenceEdge] = []
         for item in data["edges"]:
             edge_type_str = item.get("edge_type", "").upper()
@@ -168,13 +179,35 @@ class PromptEvidenceEdgeVerifier:
             if edge_type == EvidenceEdgeType.SUPERSEDES:
                 if not replacement_id:
                     raise ValueError(f"SUPERSEDES edge missing replacement_belief_id: {item}")
-                if replacement_id not in valid_replacement_ids:
+                if replacement_id not in replacement_map:
                     raise ValueError(
                         f"SUPERSEDES edge references unknown replacement belief "
-                        f"'{replacement_id}'. Valid: {valid_replacement_ids}"
+                        f"'{replacement_id}'. Valid: {set(replacement_map.keys())}"
+                    )
+                replacement_belief = replacement_map[replacement_id]
+                if new_evidence.evidence_id not in replacement_belief.source_evidence_ids:
+                    raise ValueError(
+                        f"SUPERSEDES replacement '{replacement_id}' is not grounded in "
+                        f"current evidence '{new_evidence.evidence_id}'. "
+                        f"Replacement source_evidence_ids: {replacement_belief.source_evidence_ids}"
                     )
 
-            edge_id = f"ee-{new_evidence.evidence_id}-{target_id}-{uuid.uuid4().hex[:8]}"
+            confidence = item.get("confidence")
+            if confidence is not None:
+                if not isinstance(confidence, (int, float)) or confidence < 0.0 or confidence > 1.0:
+                    raise ValueError(
+                        f"Confidence must be a number in [0.0, 1.0], got {confidence!r}: {item}"
+                    )
+
+            edge_id = _stable_edge_id(
+                new_evidence.evidence_id, edge_type_str, target_id, replacement_id,
+            )
+            if edge_id in seen_edge_ids:
+                raise ValueError(
+                    f"Duplicate edge in response: {edge_type_str} -> {target_id}"
+                )
+            seen_edge_ids.add(edge_id)
+
             edge = EvidenceEdge(
                 edge_id=edge_id,
                 edge_type=edge_type,
@@ -183,7 +216,7 @@ class PromptEvidenceEdgeVerifier:
                 target_id=target_id,
                 verifier=_PROMPT_VERSION,
                 replacement_belief_id=replacement_id,
-                confidence=item.get("confidence"),
+                confidence=confidence,
                 rationale=item.get("rationale"),
                 model_call_trace_id=call_id,
             )

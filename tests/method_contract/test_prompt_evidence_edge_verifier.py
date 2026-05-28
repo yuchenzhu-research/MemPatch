@@ -32,11 +32,11 @@ def _make_belief(bid: str = "b_bike") -> BeliefNode:
     )
 
 
-def _make_replacement(bid: str = "b_car") -> BeliefNode:
+def _make_replacement(bid: str = "b_car", grounded_evidence: str = "ev_leg") -> BeliefNode:
     return BeliefNode(
         belief_id=bid,
         proposition="The user commutes by car.",
-        source_evidence_ids=("ev_leg",),
+        source_evidence_ids=(grounded_evidence,),
     )
 
 
@@ -81,6 +81,7 @@ def test_valid_blocks_parse(tmp_path: str) -> None:
     assert edges[0].target_kind == "condition"
     assert edges[0].target_id == "c_leg"
     assert edges[0].model_call_trace_id is not None
+    assert edges[0].edge_id.startswith("ee-")
 
 
 def test_valid_supersedes_parse(tmp_path: str) -> None:
@@ -107,6 +108,58 @@ def test_valid_supersedes_parse(tmp_path: str) -> None:
     assert len(edges) == 1
     assert edges[0].edge_type.value == "SUPERSEDES"
     assert edges[0].replacement_belief_id == "b_car"
+
+
+def test_deterministic_edge_id_under_replay(tmp_path: str) -> None:
+    response = json.dumps({
+        "edges": [
+            {"edge_type": "BLOCKS", "target_id": "c_leg", "rationale": "r", "confidence": 0.8}
+        ]
+    })
+    v1 = _make_verifier(response, str(tmp_path / "a"))
+    v2 = _make_verifier(response, str(tmp_path / "b"))
+    e1 = v1.verify_edges(
+        new_evidence=_make_evidence(),
+        candidate_belief=_make_belief(),
+        candidate_replacement_beliefs=(_make_replacement(),),
+        candidate_conditions=(_make_condition(),),
+        temporal_context=(),
+    )
+    e2 = v2.verify_edges(
+        new_evidence=_make_evidence(),
+        candidate_belief=_make_belief(),
+        candidate_replacement_beliefs=(_make_replacement(),),
+        candidate_conditions=(_make_condition(),),
+        temporal_context=(),
+    )
+    assert e1[0].edge_id == e2[0].edge_id
+
+
+def test_supersedes_ungrounded_replacement_rejected(tmp_path: str) -> None:
+    response = json.dumps({
+        "edges": [
+            {
+                "edge_type": "SUPERSEDES",
+                "target_id": "b_bike",
+                "replacement_belief_id": "b_car",
+                "rationale": "Switch.",
+            }
+        ]
+    })
+    ungrounded_replacement = BeliefNode(
+        belief_id="b_car",
+        proposition="The user commutes by car.",
+        source_evidence_ids=("ev_old",),
+    )
+    verifier = _make_verifier(response, str(tmp_path))
+    with pytest.raises(ValueError, match="not grounded in current evidence"):
+        verifier.verify_edges(
+            new_evidence=_make_evidence(),
+            candidate_belief=_make_belief(),
+            candidate_replacement_beliefs=(ungrounded_replacement,),
+            candidate_conditions=(_make_condition(),),
+            temporal_context=(),
+        )
 
 
 def test_fabricated_replacement_rejected(tmp_path: str) -> None:
@@ -179,6 +232,41 @@ def test_reaffirms_wrong_target_rejected(tmp_path: str) -> None:
     })
     verifier = _make_verifier(response, str(tmp_path))
     with pytest.raises(ValueError, match="must target candidate belief"):
+        verifier.verify_edges(
+            new_evidence=_make_evidence(),
+            candidate_belief=_make_belief(),
+            candidate_replacement_beliefs=(),
+            candidate_conditions=(),
+            temporal_context=(),
+        )
+
+
+def test_duplicate_edge_rejected(tmp_path: str) -> None:
+    response = json.dumps({
+        "edges": [
+            {"edge_type": "BLOCKS", "target_id": "c_leg", "rationale": "r1"},
+            {"edge_type": "BLOCKS", "target_id": "c_leg", "rationale": "r2"},
+        ]
+    })
+    verifier = _make_verifier(response, str(tmp_path))
+    with pytest.raises(ValueError, match="Duplicate edge"):
+        verifier.verify_edges(
+            new_evidence=_make_evidence(),
+            candidate_belief=_make_belief(),
+            candidate_replacement_beliefs=(),
+            candidate_conditions=(_make_condition(),),
+            temporal_context=(),
+        )
+
+
+def test_invalid_confidence_rejected(tmp_path: str) -> None:
+    response = json.dumps({
+        "edges": [
+            {"edge_type": "UNCERTAIN", "target_id": "b_bike", "rationale": "r", "confidence": 2.0}
+        ]
+    })
+    verifier = _make_verifier(response, str(tmp_path))
+    with pytest.raises(ValueError, match="Confidence must be"):
         verifier.verify_edges(
             new_evidence=_make_evidence(),
             candidate_belief=_make_belief(),

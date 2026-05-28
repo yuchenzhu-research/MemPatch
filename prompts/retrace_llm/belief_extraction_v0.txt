@@ -15,8 +15,8 @@ Respond in raw JSON format:
 {{
   "beliefs": [
     {{
-      "belief_id": "unique string identifier",
       "proposition": "atomic belief proposition",
+      "source_span": "optional verbatim text span from evidence supporting this belief",
       "confidence": float between 0.0 and 1.0
     }}
   ]

@@ -32,6 +32,25 @@ class SharedCandidateView:
     )
     metadata: dict[str, Any] = field(default_factory=dict)
 
+    def __post_init__(self) -> None:
+        belief_ids = [b.belief_id for b in self.candidate_beliefs]
+        if len(belief_ids) != len(set(belief_ids)):
+            raise ValueError("candidate_beliefs contains duplicate belief_ids")
+        replacement_ids = [b.belief_id for b in self.candidate_replacement_beliefs]
+        if len(replacement_ids) != len(set(replacement_ids)):
+            raise ValueError("candidate_replacement_beliefs contains duplicate belief_ids")
+        valid_belief_ids = set(belief_ids)
+        for key, conds in self.candidate_conditions_by_belief.items():
+            if key not in valid_belief_ids:
+                raise ValueError(
+                    f"candidate_conditions_by_belief key '{key}' is not a candidate belief id"
+                )
+            cond_ids = [c.condition_id for c in conds]
+            if len(cond_ids) != len(set(cond_ids)):
+                raise ValueError(
+                    f"Duplicate condition_ids for belief '{key}'"
+                )
+
 
 class DirectUsabilityStatus(str, Enum):
     """Verdict categories for DirectJudge-LLM.

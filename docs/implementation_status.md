@@ -167,6 +167,14 @@ env PYTHONPYCACHEPREFIX=.pycache_compile python3 -m compileall -q retracemem tes
   - `DirectJudgeLLM` in `methods/directjudge.py` as a sibling method path (not an EvidenceEdgeVerifier).
   - Versioned prompt templates in `prompts/retrace_llm/` and `prompts/directjudge/`.
   - All tested offline with `MockLLMProvider` and replay cache; no live API calls or benchmark evaluations have occurred.
+- **Stage AB-0.5 fairness and replay-determinism hardening is complete.**
+  - DirectJudge consumes the full `SharedCandidateView` (evidence, beliefs, replacements, conditions).
+  - DirectJudge enforces exactly one verdict per candidate belief; omissions and duplicates are parser failures.
+  - `PromptRequirementInducer` derives scope from `belief.metadata["scope_id"]` with no fallback.
+  - `SUPERSEDES` replacements must be grounded in the current `EvidenceNode`.
+  - All graph ids (belief_id, condition_id, edge_id) are computed deterministically from grounded inputs.
+  - `SharedCandidateView.__post_init__` validates uniqueness and key consistency.
+  - No live API call, provider dependency, official evaluation, or DPA/backend change occurred.
 - Stage AB-1 will wire ReTrace-LLM through the existing backend on internal dev cases and implement matched DirectJudge controlled comparison.
 
 - **Stage A: ReTrace-LLM** — main generic typed-edge prediction plus DPA method. Replaces all development-only heuristic/manual fixtures for paper main-result runs. Components: generic typed belief extraction, generic requirement/condition induction, generic evidence-edge prediction, existing deterministic DPA and authorized-basis pipeline.
@@ -175,7 +183,7 @@ env PYTHONPYCACHEPREFIX=.pycache_compile python3 -m compileall -q retracemem tes
 
 ### Tests And Verification
 
-- Full green suite: 170 tests passed (Python 3.10.20, pytest 9.0.3).
+- Full green suite: 191 tests passed (Python 3.10.20, pytest 9.0.3).
 - Passed test suites:
   * `tests/test_schema_roundtrip.py`
   * `tests/gate_unit/`

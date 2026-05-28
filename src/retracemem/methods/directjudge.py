@@ -65,10 +65,21 @@ class DirectJudgeLLM:
             f"  - {b.belief_id}: \"{b.proposition}\""
             for b in view.candidate_beliefs
         ) or "  (none)"
+        replacements_str = "\n".join(
+            f"  - {b.belief_id}: \"{b.proposition}\""
+            for b in view.candidate_replacement_beliefs
+        ) or "  (none)"
+        conditions_str_parts: list[str] = []
+        for bid, conds in view.candidate_conditions_by_belief.items():
+            for c in conds:
+                conditions_str_parts.append(f"  - [{bid}] {c.condition_id}: \"{c.text}\"")
+        conditions_str = "\n".join(conditions_str_parts) or "  (none)"
 
         prompt = self._template.replace("{query}", view.query)
         prompt = prompt.replace("{evidence_context}", evidence_str)
         prompt = prompt.replace("{candidate_beliefs}", beliefs_str)
+        prompt = prompt.replace("{candidate_replacement_beliefs}", replacements_str)
+        prompt = prompt.replace("{candidate_conditions}", conditions_str)
 
         trace = self.client.generate(
             prompt=prompt,
@@ -131,6 +142,7 @@ class DirectJudgeLLM:
         if not isinstance(data, dict) or "verdicts" not in data:
             raise ValueError(f"Invalid DirectJudge response: missing 'verdicts' key")
 
+        seen_ids: set[str] = set()
         verdicts: list[DirectUsabilityVerdict] = []
         for item in data["verdicts"]:
             bid = item.get("belief_id")
@@ -144,19 +156,37 @@ class DirectJudgeLLM:
                     f"DirectJudge returned verdict for unknown belief_id '{bid}'. "
                     f"Valid: {valid_belief_ids}"
                 )
+            if bid in seen_ids:
+                raise ValueError(
+                    f"DirectJudge returned duplicate verdict for belief_id '{bid}'"
+                )
+            seen_ids.add(bid)
 
             try:
                 status = DirectUsabilityStatus(status_str)
             except ValueError:
                 raise ValueError(f"Unknown DirectUsabilityStatus '{status_str}': {item}")
 
+            confidence = item.get("confidence")
+            if confidence is not None:
+                if not isinstance(confidence, (int, float)) or confidence < 0.0 or confidence > 1.0:
+                    raise ValueError(
+                        f"Confidence must be a number in [0.0, 1.0], got {confidence!r}: {item}"
+                    )
+
             verdict = DirectUsabilityVerdict(
                 belief_id=bid,
                 status=status,
                 rationale=rationale,
                 model_call_trace_id=call_id,
-                confidence=item.get("confidence"),
+                confidence=confidence,
             )
             verdicts.append(verdict)
+
+        missing = valid_belief_ids - seen_ids
+        if missing:
+            raise ValueError(
+                f"DirectJudge omitted verdicts for candidate belief(s): {sorted(missing)}"
+            )
 
         return verdicts
