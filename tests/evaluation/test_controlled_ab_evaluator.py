@@ -63,7 +63,7 @@ class TestCaseLoading:
         assert "prerequisite_blocking" in types
         assert "protected_unrelated_belief" in types
         assert "uncertainty" in types
-        assert "release_rollback" in types
+        assert "releases_smoke" in types
         assert "rejected_proposal_audit" in types
 
     def test_new_evidence_is_in_context(self) -> None:
@@ -100,19 +100,13 @@ class TestExecution:
                 assert result.stage_b_result is not None, f"Stage B failed for {case.case_id}: {result.stage_b_error}"
 
     def test_stage_a_succeeds_on_valid_cases(self) -> None:
-        """Stage A should succeed on all cases except the rejected_proposal_audit
-        case, which exercises a parse-level rejection for a hallucinated target."""
+        """Stage A should succeed on all cases since the rejected proposal is now
+        designed to be rejected by the gate instead of causing a parse error."""
         cases = load_cases(_CASES_PATH)
         with tempfile.TemporaryDirectory() as tmp:
             for case in cases:
                 result = run_case(case, tmp)
-                if case.case_type == "rejected_proposal_audit":
-                    # Parser rejects the hallucinated condition target;
-                    # this IS the auditable behavior being tested.
-                    assert result.stage_a_error is not None
-                    assert "c_nonexistent" in result.stage_a_error
-                else:
-                    assert result.stage_a_result is not None, f"Stage A failed for {case.case_id}: {result.stage_a_error}"
+                assert result.stage_a_result is not None, f"Stage A failed for {case.case_id}: {result.stage_a_error}"
 
     def test_view_fingerprint_preserved_in_stage_a(self) -> None:
         cases = load_cases(_CASES_PATH)
@@ -176,13 +170,14 @@ class TestMetrics:
         # Cases 3 and 6 have protected beliefs
         assert metrics.protected_belief_total >= 2
 
-    def test_rollback_recovery_metric(self) -> None:
+    def test_rollback_recovery_metric_deferred(self) -> None:
         cases = load_cases(_CASES_PATH)
         with tempfile.TemporaryDirectory() as tmp:
             results = [run_case(c, tmp) for c in cases]
         metrics = compute_metrics(cases, results)
-        # Case 5 is rollback
-        assert metrics.rollback_recovery_total >= 1
+        assert metrics.rollback_recovery_total == 0
+        report = format_report(metrics, results)
+        assert "NOT YET OPERATIONALIZED" in report["aggregate"]["rollback_recovery"]
 
     def test_observed_cost_reported_separately(self) -> None:
         cases = load_cases(_CASES_PATH)
@@ -197,15 +192,13 @@ class TestMetrics:
         assert "stage_a" in report["aggregate"]["observed_cost"]
         assert "stage_b" in report["aggregate"]["observed_cost"]
 
-    def test_execution_errors_surfaced(self) -> None:
-        """Errors should be counted, not silently dropped."""
+    def test_execution_errors_surfaced_zero_on_clean_run(self) -> None:
+        """On a clean run of the 6 internal cases, there should be zero execution errors."""
         cases = load_cases(_CASES_PATH)
         with tempfile.TemporaryDirectory() as tmp:
             results = [run_case(c, tmp) for c in cases]
         metrics = compute_metrics(cases, results)
-        # The rejected_proposal_audit case has a parser error in Stage A;
-        # this should be surfaced in execution_errors, not silently dropped.
-        assert metrics.execution_errors == 1
+        assert metrics.execution_errors == 0
 
 
 class TestReporting:
@@ -261,22 +254,31 @@ class TestReporting:
 class TestEdgeCases:
     """Test edge proposal provenance and rejected edges."""
 
-    def test_rejected_edge_case_surfaces_error(self) -> None:
-        """The rejected_proposal_audit case surfaces a parser-level rejection as an error.
-
-        The verifier parser performs strict validation: a BLOCKS edge targeting a
-        condition not in the supplied candidate_conditions is rejected before it
-        reaches the gate. This is correct AB-1A.5 behavior — the error is surfaced
-        in the result rather than silently dropped."""
+    def test_rejected_edge_case_provenance(self) -> None:
+        """Verify that the rejected_proposal_audit case succeeds, returns admitted=False and stable gate reason."""
         cases = load_cases(_CASES_PATH)
         rejected_case = next(c for c in cases if c.case_type == "rejected_proposal_audit")
         with tempfile.TemporaryDirectory() as tmp:
             result = run_case(rejected_case, tmp)
-        # Stage A error is surfaced, not silently dropped
-        assert result.stage_a_error is not None
-        assert "c_nonexistent" in result.stage_a_error
-        assert "BLOCKS" in result.stage_a_error
-        # Stage B still succeeds (it does not parse edges)
+        
+        # Stage A succeeds
+        assert result.stage_a_error is None
+        assert result.stage_a_result is not None
+        
+        # Prove provenance records the rejected proposal
+        prov = result.stage_a_result.provenance
+        proposals = prov.get("edge_proposals", [])
+        assert len(proposals) == 1
+        prop = proposals[0]
+        assert prop["edge_type"] == "BLOCKS"
+        assert prop["target_id"] == "c_art_supplies"
+        assert prop["admitted"] is False
+        assert prop["gate_reason"] == "replacement_belief_id_only_valid_for_supersedes"
+        
+        # Stage A status remains AUTHORIZED
+        assert result.stage_a_result.provenance["fine_grained_statuses"]["b_painter"] == "AUTHORIZED"
+        
+        # Stage B still succeeds
         assert result.stage_b_result is not None
         assert "b_painter" in result.stage_b_result.authorized_belief_ids
 
@@ -290,8 +292,75 @@ class TestEdgeCases:
 
     def test_release_case_produces_authorized(self) -> None:
         cases = load_cases(_CASES_PATH)
-        rel_case = next(c for c in cases if c.case_type == "release_rollback")
+        rel_case = next(c for c in cases if c.case_id == "dev_release_01")
         with tempfile.TemporaryDirectory() as tmp:
             result = run_case(rel_case, tmp)
         assert result.stage_a_result is not None
         assert "b_cycles_to_work" in result.stage_a_result.authorized_belief_ids
+
+
+class TestAuditHardening:
+    """Test cost accounting correctness, call counts and error capturing."""
+
+    def test_cost_accounting_call_counts_correct(self) -> None:
+        """Verify:
+        - successful Stage B contributing exactly 1 call.
+        - Stage A contributing exactly 1 call per candidate belief on success.
+        - aggregate totals match actual semantic invocation counts without double counting.
+        """
+        cases = load_cases(_CASES_PATH)
+        # Choose case 3 (dev_protected_01), which has 2 candidate beliefs
+        case = next(c for c in cases if c.case_id == "dev_protected_01")
+        assert len(case.view.candidate_beliefs) == 2
+
+        with tempfile.TemporaryDirectory() as tmp:
+            res = run_case(case, tmp)
+
+        # Stage B has 1 call
+        assert res.stage_b_cost.get("calls", {}).get("total", 0) == 1
+        # Stage A has 2 candidate beliefs, so 2 calls
+        assert res.stage_a_cost.get("calls", {}).get("total", 0) == 2
+
+        # Check total calls across all cases
+        with tempfile.TemporaryDirectory() as tmp:
+            results = [run_case(c, tmp) for c in cases]
+        metrics = compute_metrics(cases, results)
+
+        # Confirm aggregate call count matches sum of individual case belief counts / judge calls
+        expected_a_calls = sum(len(c.view.candidate_beliefs) for c in cases)
+        expected_b_calls = len(cases)
+        assert metrics.stage_a_calls == expected_a_calls
+        assert metrics.stage_b_calls == expected_b_calls
+        
+        # Verify that calls is not double-counted (since CostAccounting records both success and total)
+        assert metrics.stage_a_calls == expected_a_calls
+
+    def test_failed_execution_captures_cost_and_parse_error(self) -> None:
+        """Verify that offline parser-error paths contribute observed cost and increment parse_errors."""
+        cases = load_cases(_CASES_PATH)
+        # Create a deep copy of case 1
+        import copy
+        case = copy.deepcopy(cases[0])
+        # Insert a malformed edge that will fail edge parsing (missing target_id)
+        case.stage_a_mock_edges = {
+            "b_google_swe": [{"edge_type": "BLOCKS"}]  # missing target_id -> ValueError
+        }
+
+        with tempfile.TemporaryDirectory() as tmp:
+            res = run_case(case, tmp)
+
+        # Stage A should have failed
+        assert res.stage_a_result is None
+        assert res.stage_a_error is not None
+        assert "ValueError" in res.stage_a_error or "missing target_id" in res.stage_a_error
+        assert res.is_stage_a_parse_error is True
+
+        # Cost should still be captured
+        assert res.stage_a_cost.get("calls", {}).get("total", 0) == 1
+
+        # Check metrics computation
+        metrics = compute_metrics([case], [res])
+        assert metrics.execution_errors == 1
+        assert metrics.parse_errors == 1
+        # Cost is aggregated
+        assert metrics.stage_a_calls == 1
