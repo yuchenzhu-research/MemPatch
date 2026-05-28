@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Protocol
 
 from retracemem.schemas import (
@@ -9,6 +10,12 @@ from retracemem.schemas import (
     EvidenceEdge,
     EvidenceNode,
 )
+
+
+@dataclass(frozen=True)
+class RequirementProposal:
+    condition: ConditionNode
+    dependency_edge: DependencyEdge
 
 
 class RequirementInducer(Protocol):
@@ -22,7 +29,7 @@ class RequirementInducer(Protocol):
         self,
         belief: BeliefNode,
         evidence_context: tuple[EvidenceNode, ...],
-    ) -> list[DependencyEdge]:
+    ) -> list[RequirementProposal]:
         ...
 
 

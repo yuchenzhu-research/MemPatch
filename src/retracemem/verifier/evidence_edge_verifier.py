@@ -49,16 +49,29 @@ class ManualEvidenceEdgeVerifier:
         self,
         new_evidence: EvidenceNode,
         candidate_belief: BeliefNode,
+        candidate_replacement_beliefs: tuple[BeliefNode, ...],
         candidate_conditions: tuple[ConditionNode, ...],
         temporal_context: tuple[EvidenceNode, ...],
     ) -> list[EvidenceEdge]:
         direct_key = (new_evidence.evidence_id, candidate_belief.belief_id)
         condition_ids = tuple(condition.condition_id for condition in candidate_conditions)
         temporal_ids = tuple(evidence.evidence_id for evidence in temporal_context)
-        return [
-            self._with_context_metadata(edge, condition_ids, temporal_ids)
-            for edge in self._edges_by_evidence_and_belief.get(direct_key, ())
-        ]
+        edges = []
+        for edge in self._edges_by_evidence_and_belief.get(direct_key, ()):
+            if edge.edge_type == EvidenceEdgeType.SUPERSEDES:
+                replacement_found = False
+                for rep in candidate_replacement_beliefs:
+                    if rep.belief_id == edge.replacement_belief_id:
+                        if new_evidence.evidence_id in rep.source_evidence_ids:
+                            replacement_found = True
+                            break
+                if not replacement_found:
+                    raise ValueError(
+                        f"Proposed SUPERSEDES edge {edge.edge_id} has replacement_belief_id {edge.replacement_belief_id} "
+                        f"which is either not in candidate_replacement_beliefs or not grounded in {new_evidence.evidence_id}."
+                    )
+            edges.append(self._with_context_metadata(edge, condition_ids, temporal_ids))
+        return edges
 
     @staticmethod
     def _with_context_metadata(
@@ -79,7 +92,10 @@ class ManualEvidenceEdgeVerifier:
 
 
 class HeuristicEvidenceEdgeVerifier:
-    """Deterministic offline typed edge verifier for Wave 1B development."""
+    """Deterministic offline typed edge verifier for Wave 1B development.
+
+    development-only deterministic fixture; not a publishable semantic verifier and not permitted in paper main-result runners.
+    """
 
     name = "heuristic_evidence_edge_verifier"
 
@@ -130,6 +146,7 @@ class HeuristicEvidenceEdgeVerifier:
         self,
         new_evidence: EvidenceNode,
         candidate_belief: BeliefNode,
+        candidate_replacement_beliefs: tuple[BeliefNode, ...],
         candidate_conditions: tuple[ConditionNode, ...],
         temporal_context: tuple[EvidenceNode, ...],
     ) -> list[EvidenceEdge]:
@@ -173,6 +190,15 @@ class HeuristicEvidenceEdgeVerifier:
             return edges
 
         if self._looks_like_supersession(evidence_text, belief_text):
+            matching_replacements = []
+            for replacement in candidate_replacement_beliefs:
+                if replacement.belief_id != candidate_belief.belief_id:
+                    if new_evidence.evidence_id in replacement.source_evidence_ids:
+                        if _topic_overlap(_normalize(replacement.proposition), belief_text):
+                            matching_replacements.append(replacement)
+            if not matching_replacements:
+                return []
+            rep = matching_replacements[0]
             return [
                 EvidenceEdge(
                     edge_id=f"ev:{new_evidence.evidence_id}:SUPERSEDES:{candidate_belief.belief_id}",
@@ -181,7 +207,7 @@ class HeuristicEvidenceEdgeVerifier:
                     target_kind="belief",
                     target_id=candidate_belief.belief_id,
                     verifier=self.name,
-                    replacement_belief_id=f"replacement:{candidate_belief.belief_id}:{new_evidence.evidence_id}",
+                    replacement_belief_id=rep.belief_id,
                     confidence=0.75,
                     rationale="Evidence appears to replace the prior belief.",
                     span=_short_span(new_evidence.text),

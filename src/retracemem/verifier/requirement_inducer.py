@@ -4,7 +4,8 @@ import re
 from dataclasses import replace
 from typing import Iterable
 
-from retracemem.schemas import BeliefNode, DependencyEdge, EvidenceNode
+from retracemem.schemas import BeliefNode, ConditionNode, DependencyEdge, EvidenceNode
+from retracemem.verifier.contracts import RequirementProposal
 
 
 class ManualRequirementInducer:
@@ -14,40 +15,56 @@ class ManualRequirementInducer:
 
     def __init__(
         self,
-        edges: tuple[DependencyEdge, ...]
-        | dict[str, Iterable[DependencyEdge]]
+        proposals: tuple[RequirementProposal, ...]
+        | dict[str, Iterable[RequirementProposal]]
         | None = None,
     ) -> None:
-        self._edges_by_belief: dict[str, list[DependencyEdge]] = {}
-        if isinstance(edges, dict):
-            for belief_id, belief_edges in edges.items():
-                for edge in belief_edges:
-                    if edge.belief_id != belief_id:
+        self._proposals_by_belief: dict[str, list[RequirementProposal]] = {}
+        if isinstance(proposals, dict):
+            for belief_id, belief_proposals in proposals.items():
+                for proposal in belief_proposals:
+                    if proposal.dependency_edge.belief_id != belief_id:
                         raise ValueError(
-                            f"manual edge {edge.edge_id} belongs to {edge.belief_id}, "
+                            f"manual proposal {proposal.dependency_edge.edge_id} belongs to {proposal.dependency_edge.belief_id}, "
                             f"not fixture key {belief_id}"
                         )
-                    self.register(edge)
+                    self.register(proposal)
         else:
-            for edge in edges or ():
-                self.register(edge)
+            for proposal in proposals or ():
+                self.register(proposal)
 
-    def register(self, edge: DependencyEdge) -> None:
-        if edge.edge_type != "REQUIRES":
+    def register(self, proposal: RequirementProposal) -> None:
+        if proposal.dependency_edge.edge_type != "REQUIRES":
             raise ValueError("ManualRequirementInducer accepts only REQUIRES dependency edges")
-        self._edges_by_belief.setdefault(edge.belief_id, []).append(edge)
+        self._proposals_by_belief.setdefault(proposal.dependency_edge.belief_id, []).append(proposal)
 
     def induce_requirements(
         self,
         belief: BeliefNode,
         evidence_context: tuple[EvidenceNode, ...],
-    ) -> list[DependencyEdge]:
+    ) -> list[RequirementProposal]:
         del evidence_context
-        return list(self._edges_by_belief.get(belief.belief_id, ()))
+        proposals = self._proposals_by_belief.get(belief.belief_id, [])
+        for proposal in proposals:
+            if proposal.dependency_edge.condition_id != proposal.condition.condition_id:
+                raise ValueError(
+                    f"Mismatched condition_id: dependency_edge has '{proposal.dependency_edge.condition_id}', "
+                    f"but condition has '{proposal.condition.condition_id}'"
+                )
+            if proposal.dependency_edge.belief_id != belief.belief_id:
+                raise ValueError(
+                    f"Mismatched belief_id: dependency_edge has '{proposal.dependency_edge.belief_id}', "
+                    f"but requested belief has '{belief.belief_id}'"
+                )
+        return list(proposals)
 
 
 class HeuristicRequirementInducer:
-    """Deterministic offline requirement inducer for typed DPA smoke tests."""
+    """Development-only deterministic fixture for requirement induction.
+
+    This class serves as a development-only deterministic fixture for offline
+    validation and smoke testing, not for production use.
+    """
 
     name = "heuristic_requirement_inducer"
 
@@ -70,56 +87,55 @@ class HeuristicRequirementInducer:
         self,
         belief: BeliefNode,
         evidence_context: tuple[EvidenceNode, ...],
-    ) -> list[DependencyEdge]:
+    ) -> list[RequirementProposal]:
         proposition = _normalize(belief.proposition)
         supporting_ids = tuple(e.evidence_id for e in evidence_context)
-        edges: list[DependencyEdge] = []
+        proposals: list[RequirementProposal] = []
+
+        scope_id = belief.metadata.get("scope_id")
+        if scope_id is None:
+            raise ValueError("scope_id is missing in belief.metadata")
+        scope_id = str(scope_id)
 
         if _contains_any(proposition, self._MOBILITY_TERMS):
-            edges.append(
-                self._edge(
-                    belief=belief,
-                    condition_id=self._condition_id(belief, "mobility"),
-                    supporting_ids=supporting_ids,
-                    rationale="Mobility-related beliefs require current mobility ability.",
-                )
+            cond_id = f"condition:{scope_id}:mobility"
+            condition = ConditionNode(
+                condition_id=cond_id,
+                scope_id=scope_id,
+                text="Mobility-related beliefs require current mobility ability.",
             )
+            edge = DependencyEdge(
+                edge_id=f"dep:{belief.belief_id}:{cond_id}",
+                belief_id=belief.belief_id,
+                condition_id=cond_id,
+                inducer=self.name,
+                edge_type="REQUIRES",
+                supporting_evidence_ids=supporting_ids or belief.source_evidence_ids,
+                confidence=0.55,
+                rationale="Mobility-related beliefs require current mobility ability.",
+            )
+            proposals.append(RequirementProposal(condition=condition, dependency_edge=edge))
 
         if _contains_any(proposition, self._SCHEDULE_TERMS):
-            edges.append(
-                self._edge(
-                    belief=belief,
-                    condition_id=self._condition_id(belief, "availability"),
-                    supporting_ids=supporting_ids,
-                    rationale="Scheduling beliefs require current availability.",
-                )
+            cond_id = f"condition:{scope_id}:availability"
+            condition = ConditionNode(
+                condition_id=cond_id,
+                scope_id=scope_id,
+                text="Scheduling beliefs require current availability.",
             )
+            edge = DependencyEdge(
+                edge_id=f"dep:{belief.belief_id}:{cond_id}",
+                belief_id=belief.belief_id,
+                condition_id=cond_id,
+                inducer=self.name,
+                edge_type="REQUIRES",
+                supporting_evidence_ids=supporting_ids or belief.source_evidence_ids,
+                confidence=0.55,
+                rationale="Scheduling beliefs require current availability.",
+            )
+            proposals.append(RequirementProposal(condition=condition, dependency_edge=edge))
 
-        return edges
-
-    def _edge(
-        self,
-        *,
-        belief: BeliefNode,
-        condition_id: str,
-        supporting_ids: tuple[str, ...],
-        rationale: str,
-    ) -> DependencyEdge:
-        return DependencyEdge(
-            edge_id=f"dep:{belief.belief_id}:{condition_id}",
-            belief_id=belief.belief_id,
-            condition_id=condition_id,
-            inducer=self.name,
-            edge_type="REQUIRES",
-            supporting_evidence_ids=supporting_ids or belief.source_evidence_ids,
-            confidence=0.55,
-            rationale=rationale,
-        )
-
-    @staticmethod
-    def _condition_id(belief: BeliefNode, suffix: str) -> str:
-        scope_id = str(belief.metadata.get("scope_id") or "global")
-        return f"condition:{scope_id}:{suffix}"
+        return proposals
 
 
 def clone_dependency_edge(edge: DependencyEdge, **updates: object) -> DependencyEdge:
