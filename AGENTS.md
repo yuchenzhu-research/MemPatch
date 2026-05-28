@@ -1,27 +1,70 @@
 # ReTrace Agent Instructions
 
-This file is the first file every coding model should read before editing this
+This is the first file every coding model must read before editing this
 repository.
 
-## Mandatory Context Stack
+## Current Phase
 
-Read these files before making code changes:
+Repository branch: `method/retrace-llm-directjudge`.
 
-1. `docs/refactor_plan_defeat_path.md` (Governs refactor implementation and DPA core specifications)
-2. `docs/stage_ab_retrace_llm_directjudge_plan.md` (Governs Stage A/B method development)
-3. `docs/model_context_index.md`
-4. `docs/project_logic.md`
+Stage AB-1A.5 is complete. The repository has an offline, controlled Stage A/B
+authorization protocol with auditability and comparison-claim safeguards:
+
+- mandatory `SharedCandidateView.new_evidence`;
+- derived `view_fingerprint` over first-class controlled-input fields, with
+  metadata excluded;
+- traced Stage A edge-verifier calls, including zero-edge calls;
+- loud rejection for invalid fixed dependency anchors;
+- retained admitted/rejected edge-proposal provenance and gate reasons;
+- DirectJudge prompt v1 with explicit current/new evidence;
+- optional `model_revision_or_api_version` provenance in both method paths;
+- honest reporting that Stage A currently makes N edge-verifier calls and
+  Stage B currently makes one direct-adjudication call.
+
+This documentation reset does not begin AB-1B.
+
+## Canonical Reading Order
+
+Read only these active authority documents before method work:
+
+1. `docs/method_spec_dpa.md`
+2. `docs/stage_ab_protocol.md`
+3. `docs/paper1_blueprint_zh.md`
+4. `docs/repository_execution_contract.md`
 5. `docs/coding_contract.md`
 6. `docs/implementation_status.md`
-7. `docs/reference_integration_map.md`
-8. `docs/source_materials/iclr_2027_paper_1_final_blueprint_re_trace.md`
-9. `docs/source_materials/re_trace_companion_codebase_integration_and_model_handoff.md`
+7. `docs/upstream_integration.md`
 
-Note: The two files under `docs/source_materials/` are raw historical planning documents copied from the design stage. They are preserved for original research scope and motivation, but their superseded implementation vocabulary (flat relation labels, legacy pipeline) is outranked by `docs/refactor_plan_defeat_path.md` and current verifier contract specifications.
+Legacy planning documents and old raw source-material files are no longer
+active authority. Git history preserves them.
 
 ## One-Sentence Alignment
 
-ReTrace preserves immutable evidence and changes a belief's eligibility for current answers only through verified, temporally valid typed defeat paths computed by deterministic DPA.
+ReTrace preserves immutable evidence and changes a belief's eligibility for
+current answers only through verified, temporally valid typed defeat paths
+computed by deterministic DPA.
+
+## Method Boundary
+
+Paper 1 studies evidence-preserving reversible authorization for evolving agent
+memory:
+
+```text
+immutable evidence ledger
++ typed belief/condition/evidence-edge graph
++ deterministic Defeat-Path Authorization Algorithm
+```
+
+The central research question is:
+
+> Can local typed-edge prediction plus deterministic, auditable DPA authorize
+> current belief use more reliably than direct LLM adjudication, while
+> preserving original evidence and allowing later reversal?
+
+ReTrace still uses a semantic model in Stage A to propose local evidence edges.
+It does not eliminate model judgment. It restricts semantic-model judgment to
+local typed proposals and delegates final belief authorization to deterministic
+DPA.
 
 ## Do Not Drift
 
@@ -32,71 +75,82 @@ Do not turn this codebase into:
 - a Graphiti clone;
 - CUPMem fixed-slot state tracking;
 - RL memory action learning;
-- latent memory consolidation;
+- latent memory, memory-token, or learned consolidation work;
 - a new benchmark generator;
-- Do not present heuristic keyword fixtures as the publishable ReTrace method.
-- Do not let legacy RelationPrediction / CONDITION / REQUIRED_BY semantics govern new runtime code.
-- Do not claim that DPA eliminates semantic model judgment; it constrains local edge prediction and makes final authorization deterministic.
+- a publishable hand-written heuristic scaffold;
+- an unconstrained LLM judge that directly rewrites memory.
 
-## Current Method Status
+Do not let legacy flat `RelationPrediction`, `CONDITION`, `SUPPORT`, or
+`REQUIRED_BY` semantics govern new runtime method work.
 
-Wave 2 typed execution spine is complete and full-test closed (129 passed).
+## Canonical Runtime Vocabulary
 
-Implemented canonical runtime:
-- EvidenceNode ledger (append-only, typed);
-- BeliefNode / ConditionNode typed graph;
-- DependencyEdge(REQUIRES);
-- EvidenceEdge(BLOCKS / RELEASES / SUPERSEDES / REAFFIRMS / UNCERTAIN);
-- DefeatPathAuthorizationAlgorithm;
-- typed extraction and impact/query retrieval contracts;
-- query-conditioned authorized basis;
-- offline audit-preserving backend and pipeline;
-- explicit canonical constructors with development-only fixture factories.
+Only this typed scheme is canonical for new method documentation and runtime
+work:
 
-Development fixtures (heuristic/manual extractors, inducers, verifiers, retrievers) are test/smoke only and forbidden for paper main-result runners.
+- `DependencyEdge(REQUIRES)`: belief -> condition.
+- `EvidenceEdge(BLOCKS)`: evidence -> condition.
+- `EvidenceEdge(RELEASES)`: evidence -> condition.
+- `EvidenceEdge(SUPERSEDES)`: evidence -> prior belief, with grounded
+  `replacement_belief_id`.
+- `EvidenceEdge(REAFFIRMS)`: evidence -> belief.
+- `EvidenceEdge(UNCERTAIN)`: evidence -> belief.
 
-Next implementation stage must build Stage A and Stage B together:
-- Stage A ReTrace-LLM: main typed-edge prediction plus DPA method (generic semantic extraction, requirement induction, evidence-edge prediction, deterministic DPA).
-- Stage B DirectJudge-LLM: matched same-model direct-adjudication attribution baseline, implemented as a sibling method path (not an EvidenceEdgeVerifier).
-- Stage C ReTrace-Local: later learned local typed-edge verifier using the same DPA; begins only after Stage A/B establish that the structured DPA formulation has value.
+## Stage Identities
+
+- Stage A, `ReTrace-LLM`: main method path. In the primary controlled track it
+  consumes a fixed `SharedCandidateView`, predicts local typed evidence edges,
+  admits them through `RevisionGate`, and computes authorization with DPA. It
+  does not directly emit final usability verdicts.
+- Stage B, `DirectJudge-LLM`: shared-view-controlled direct-adjudication
+  baseline. It consumes the same fixed semantic view and directly emits
+  `USABLE`, `NOT_USABLE`, or `UNCERTAIN`. It is not an
+  `EvidenceEdgeVerifier`, does not use DPA, and is not strict call-budget
+  matched.
+- Stage C, `ReTrace-Local`: deferred learned local typed-edge verifier using
+  the same DPA core. It may begin only after Stage A/B evidence supports the
+  structured authorization decomposition. It is not latent-memory learning.
+
+## Safe Next Boundary
+
+The next implementation stage, when explicitly requested later, is AB-1B:
+internal development-case evaluator and replay-only runner. Do not start it
+during documentation cleanup.
+
+Still not started:
+
+- AB-1B internal development-case evaluator;
+- real provider integration;
+- live API calls;
+- official STALE or Memora evaluation;
+- secondary end-to-end experimental execution;
+- Stage C training.
 
 ## Coding Rules
 
 - Standard library first.
-- Keep core logic API-free and deterministic.
+- Keep core DPA logic API-free and deterministic.
 - Keep benchmark-specific logic in adapters or runners.
 - Do not edit `reference/`.
-- Do not commit `reference/`, `outputs/`, caches, local environments, or API
-  keys.
-- Preserve the dataclass contracts in `retracemem/schemas.py`.
-- All new method paths should emit JSON-compatible typed traces or score records with provenance. Legacy EvaluationRecord is transitional only and must not govern new runtime design.
+- Do not commit `reference/`, `outputs/`, caches, local environments, generated
+  artifacts, benchmark downloads, or API keys.
+- Preserve the canonical dataclass contracts in `src/retracemem/schemas.py`.
+- Keep all paper-relevant method paths JSON-compatible and provenance-rich.
 - Add or update tests for every new behavior.
 
 ## Verification
 
-To run compilation check:
+Compile:
 
 ```bash
 env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src tests scripts
 ```
 
-To run test suites:
+Full offline tests:
 
 ```bash
 .venv/bin/python -m pytest
 ```
 
-## Commit Style
-
-Use short English commits with production-level scope:
-
-- `Add ...`
-- `Implement ...`
-- `Document ...`
-- `Wire ...`
-- `Fix ...`
-
-Do not bundle unrelated method, runner, and documentation changes into one
-commit unless the change is purely mechanical.
-
-
+Do not run live providers or official benchmark evaluation unless a later task
+explicitly authorizes that stage.

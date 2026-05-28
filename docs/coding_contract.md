@@ -1,156 +1,163 @@
 # Coding Contract
 
-This document defines how code should be written in this repository. Follow it
-even when using a different model or coding assistant.
+This document defines package boundaries, editing rules, testing rules, and
+provenance rules for ReTrace.
 
 ## General Rules
 
 - Use Python 3.10+.
 - Prefer the standard library.
-- Do not add heavy dependencies unless a plan explicitly names them.
+- Do not add heavy dependencies unless an approved stage explicitly requires
+  them.
 - Do not introduce API calls in core logic.
 - Do not modify code under `reference/`.
-- Do not commit `reference/`, outputs, caches, virtual environments, API keys,
-  or benchmark downloads.
+- Do not commit `reference/`, `outputs/`, caches, virtual environments, API
+  keys, benchmark downloads, or generated run artifacts.
 - Keep functions small and deterministic.
-- Use dataclasses for shared records.
-- Preserve existing schema field names unless a migration note is added.
+- Preserve existing schema field names unless an approved migration updates all
+  users and tests.
 - Do not add notebook-style exploratory code to package modules.
 
-## Dependency Rules
+## Canonical Runtime Boundary
 
-Allowed now:
-
-- Python standard library.
-- Existing local package modules.
-- pytest as a development/test-only dependency declared in [project.optional-dependencies].dev
-
-Not allowed in first-version core:
-
-- `torch`
-- `transformers`
-- `langchain`
-- `llama-index`
-- `networkx`
-- `pandas`
-- `numpy`
-- benchmark-specific packages outside wrappers
-
-If a later baseline wrapper needs a dependency, isolate it in a wrapper module
-and keep the no-dependency tests runnable.
-
-## Package Boundaries
-
-### `retracemem.schemas`
-
-Owns stable data contracts:
+New runtime method work must use the typed graph and DPA contracts:
 
 - `EvidenceNode`
 - `BeliefNode`
 - `ConditionNode`
-- `DependencyEdge`
-- `EvidenceEdge`
+- `DependencyEdge(REQUIRES)`
+- `EvidenceEdge(BLOCKS / RELEASES / SUPERSEDES / REAFFIRMS / UNCERTAIN)`
 - `DefeatPath`
 - `AuthorizationTrace`
-- `RequirementProposal` (in verifier/contracts.py)
 
-Legacy types (`EpisodicEvidence`, `Belief`, `RelationPrediction`, `AuthorizationDecision`, `EvaluationRecord`) are kept only for transitional compatibility; new runtime code must not import or return them. Do not add benchmark-specific fields directly to these dataclasses. Put benchmark-specific data in `metadata`.
+Legacy flat `RelationPrediction` semantics, including `SUPPORT`, `CONDITION`,
+and `REQUIRED_BY`, may remain only as transitional compatibility or retired
+historical references. They must not govern new method code, prompts, runners,
+or paper-facing documentation.
 
-### `retracemem.memory`
+Development-only heuristic/manual fixtures may be used for tests and smoke
+runs. They are forbidden as paper main-result methods.
+
+## Package Boundaries
+
+### `src/retracemem/schemas.py`
+
+Owns stable dataclass contracts. Do not add benchmark-specific fields directly
+to canonical dataclasses; put benchmark-specific data in `metadata`.
+
+### `src/retracemem/memory`
 
 Owns local memory storage:
 
 - append-only evidence ledger;
-- open-text belief store;
-- no fixed domain slots.
+- open-text belief and condition store;
+- typed dependency and evidence edge collections.
 
-### `retracemem.verifier`
+### `src/retracemem/tms`
 
-Owns relation prediction contracts:
+Owns deterministic authorization:
 
-- `RequirementInducer` and `EvidenceEdgeVerifier` protocols.
-- `HeuristicRequirementInducer` and `HeuristicEvidenceEdgeVerifier` (development-only deterministic fixtures).
-- `PromptEvidenceEdgeVerifier` (planned, not yet implemented).
+- `RevisionGate` structurally admits typed edges;
+- `DefeatPathAuthorizationAlgorithm` computes final belief authorization;
+- no semantic-model calls;
+- no answer generation.
 
-No verifier should directly mutate memory. Deep learning or heavy machine learning packages (e.g., PyTorch, Transformers) must not be added as core dependencies; they are deferred and may only be introduced as optional extensions for a future `ReTrace-Local` edge verifier.
+### `src/retracemem/verifier`
 
-### `retracemem.tms`
+Owns local typed proposal interfaces:
 
-Owns revision authorization:
+- `RequirementInducer`;
+- `EvidenceEdgeVerifier`;
+- `PromptTypedBeliefExtractor`;
+- `PromptRequirementInducer`;
+- `PromptEvidenceEdgeVerifier`;
+- development-only manual/heuristic fixtures.
 
-- deterministic revision gate (`RevisionGate`);
-- decide current authorization via Defeat-Path Authorization (`DPA`);
-- keep blocked beliefs auditable via `DefeatPath` and `AuthorizationTrace`.
+Verifiers propose local objects. They do not mutate memory and do not decide
+final authorization.
 
-The TMS layer decides whether a belief may govern current answers. It does not generate prose answers.
+### `src/retracemem/methods`
 
-### `retracemem.generation`
+Owns controlled Stage A/B method paths:
 
-Owns query-time basis construction and answer wrappers.
+- `SharedCandidateView`;
+- `ControlledReTraceLLM`;
+- `DirectJudgeLLM`;
+- controlled method result records.
 
-The first version may return deterministic answer shells. Real LLM answerers must be wrapper-only and optional.
+`DirectJudgeLLM` is a sibling direct-adjudication baseline, not an
+`EvidenceEdgeVerifier` and not a DPA path.
 
-### `retracemem.adapters`
+### `src/retracemem/providers`, `src/retracemem/cache`, accounting modules
 
-Owns benchmark loading and normalization.
+Own the only allowed provider/cache/accounting boundary for future live model
+calls. Random modules must not import SDK clients or call live models directly.
 
-Adapters must degrade cleanly:
+The current documentation reset must not connect a provider or call a live API.
 
-- missing reference roots return empty discovery results;
-- invalid JSON returns empty records;
-- missing optional fields become empty strings/lists/metadata.
+### `src/retracemem/retrieval`, `src/retracemem/backends`, `src/retracemem/pipeline`
 
-### `retracemem.backends`
+Own retrieval, backend, and pipeline integration. Keep benchmark-specific logic
+out of core DPA and verifier contracts.
 
-Owns method wrappers behind one interface:
+### `src/retracemem/adapters`
 
-```python
-reset_user(user_id)
-ingest_session(user_id, session, metadata=None)
-search(user_id, query, limit=10, metadata=None)
-answer(user_id, query, retrieved, metadata=None)
-```
+Own benchmark loading and normalization. Adapters must degrade cleanly on
+missing local reference data and must not mutate `reference/`.
 
-### `retracemem.evaluation`
+### `scripts`
 
-Owns unified JSONL records, cost tracking, and metric helpers.
-
-All methods should emit `EvaluationRecord` or a JSON-compatible equivalent.
-
-## Runner Rules
-
-Runner scripts under `scripts/` should:
+Runner scripts should:
 
 - parse CLI args with `argparse`;
-- not require API keys for smoke mode;
-- write JSONL under `outputs/`;
-- print a compact summary;
+- avoid API keys for offline smoke or replay mode;
+- write outputs under ignored output/artifact locations;
+- print compact summaries;
 - never mutate files under `reference/`.
+
+## External Repositories
+
+`reference/` is the canonical ignored local-upstream clone location. Preserve
+this convention unless a future task explicitly authorizes a migration.
+
+Do not copy upstream implementation code into ReTrace. Prefer wrappers,
+adapters, provenance records, and patch files when unavoidable.
+
+## Prompt and Provenance Rules
+
+- Version prompt templates; never silently overwrite a prompt used for a run.
+- Record prompt hash, parser/schema version, model id, provider, model
+  revision/API version when available, cache behavior, calls, tokens, latency,
+  and errors.
+- Preserve `model_call_trace_id` for paper-relevant semantic calls.
+- Record gate rejections and parser failures instead of hiding them.
 
 ## Test and Environment Rules
 
-- Python Version: Standard package requires Python >= 3.10. Current development environment uses a project-local virtual environment based on Python 3.10.20.
-- Setup: Create virtual environment and install in editable mode:
-  ```bash
-  ~/miniconda3/envs/paper/bin/python -m venv .venv
-  .venv/bin/python -m pip install -e ".[dev]"
-  ```
-- Preferred command to run tests:
-  ```bash
-  .venv/bin/python -m pytest
-  ```
-- Compilation check:
-  ```bash
-  env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src tests scripts
-  ```
-- If a test needs temporary files, use `tempfile` or pytest `tmp_path`. Do not write temporary cache artifacts directly to `tests/` or track them in Git.
+Compile:
 
-## Style Rules
+```bash
+env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src tests scripts
+```
 
-- Use clear engineering names over paper-jargon names.
-- Keep comments sparse and useful.
-- Use explicit error messages for rejected invalid states.
-- Fail closed for unclear verifier output.
-- Prefer returning empty lists over raising for missing benchmark data.
-- Keep all timestamps as strings until a specific temporal parser is needed.
+Full offline tests:
 
+```bash
+.venv/bin/python -m pytest
+```
+
+If a test needs temporary files, use `tempfile` or pytest `tmp_path`. Do not
+write temporary cache artifacts directly to tracked directories.
+
+## Commit Rules
+
+Use short English commit messages with production-level scope:
+
+- `Add ...`
+- `Implement ...`
+- `Document ...`
+- `Wire ...`
+- `Fix ...`
+
+Do not bundle unrelated method, runner, and documentation changes into one
+commit unless the change is purely mechanical.
