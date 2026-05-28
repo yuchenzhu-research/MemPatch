@@ -13,7 +13,7 @@ storytelling document.
   `5e8d6e2d1a494d572d6d0fa929595bb198154390`
 - Current packet: official frozen STALE dataset registration and non-leaking
   offline Stage A/B wiring demo.
-- Current verified base: pending final validation for this branch.
+- Current verified base: `837d5d349d20a3954ad6fcf84eba65a73141cce6`.
 
 ## Validated Offline
 
@@ -157,3 +157,15 @@ RevisionGate unless a deterministic offline repro shows a Gate/DPA failure.
 The integration scaffold reported offline compile/test and mock runner success,
 but those runs were mock/replay/smoke validation only. Fresh validation for this
 branch must be recorded after the current changes.
+
+## Latest Branch Verification
+
+- Compile:
+  `env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src tests scripts`
+- Full tests: `.venv/bin/python -m pytest -q`
+- Result: 365 passed.
+- Offline STALE wiring demo:
+  `.venv/bin/python scripts/run_stale_official_frozen_eval.py --limit-t1 2 --limit-t2 2`
+- Demo result: 2 `T1` rows and 2 `T2` rows processed, all three probing
+  queries exported for each row, zero errors, no live provider calls, no
+  official judge execution.
