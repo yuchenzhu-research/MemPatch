@@ -5,6 +5,14 @@ Branch: `refactor/defeat-path-core` off `main` HEAD `67cc630`.
 Authority: governs all code changes during the refactor; ranks above
 `docs/implementation_status.md` for any conflict until merged back.
 
+Execution status: Waves 0–2 are implemented and test-closed on
+`refactor/defeat-path-core` (129 passed), pending fast-forward merge to
+`main`. The Wave 2 typed execution spine—EvidenceNode ledger, typed
+pipeline, query-conditioned authorized basis, explicit constructors—is
+complete. Next method-development phase is Stage A (ReTrace-LLM) plus
+Stage B (DirectJudge-LLM), built together. Stage C (ReTrace-Local)
+remains deferred until Stage A/B validation.
+
 ## 0. Non-goals and invariants
 
 - Do not drift toward RAG, Mem0 clones, fixed-slot tracking, or RL memory.
@@ -404,7 +412,7 @@ Tasks:
 - do not use STALE or Memora official evaluation examples in test
   fixtures.
 
-### Wave 2 - Subagent C
+### Wave 2 - Subagent C (completed)
 
 Subagent C: query-conditioned integration and smoke-run cleanup.
 
@@ -449,17 +457,27 @@ Tasks:
 - explicitly state that exact-hash comparison catches exact copies only and
   is not proof against paraphrase contamination.
 
-### Deferred
+### Stage A/B — Next method-development phase
 
-- `DirectJudgeBackend` (LLM-direct-judge attribution baseline).
-- Phase 6 local-classifier / SFT / LoRA edge verifier.
+- Stage A: ReTrace-LLM — generic semantic typed-edge prediction plus
+  deterministic DPA. Replaces all development-only heuristic/manual
+  fixtures for paper main-result runs.
+- Stage B: DirectJudge-LLM — matched same-model direct-adjudication
+  attribution baseline. Implemented as a sibling method path, not as an
+  `EvidenceEdgeVerifier`.
+
+### Deferred (Stage C)
+
+- Stage C: ReTrace-Local — learned local typed-edge verifier / SFT / LoRA
+  variant using the same DPA core. Begins only after Stage A/B establish
+  that the structured DPA formulation has value.
 - Any official STALE or Memora performance evaluation.
 
 ## 6. File inventory
 
 ### Preserve unchanged
 
-- `retracemem/memory/episode_ledger.py`.
+- `retracemem/memory/episode_ledger.py` (migrated to `EvidenceNode` in Wave 2).
 - `retracemem/cache/`, `retracemem/providers/`,
   `retracemem/evaluation/jsonl.py`, `cost_tracker.py`,
   `cost_accounting.py`, `records.py`.

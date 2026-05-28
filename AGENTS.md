@@ -39,26 +39,25 @@ Do not turn this codebase into:
 
 ## Current Method Status
 
-Typed graph schemas and DPA logic exist.
-Canonical EvidenceNode ledger migration and typed end-to-end integration are not yet complete.
+Wave 2 typed execution spine is complete and full-test closed (129 passed).
 
-Canonical typed DPA core exists:
-- EvidenceNode / BeliefNode / ConditionNode
-- DependencyEdge(REQUIRES)
-- EvidenceEdge(BLOCKS / RELEASES / SUPERSEDES / REAFFIRMS / UNCERTAIN)
-- DefeatPathAuthorizationAlgorithm
-- typed verifier contracts (`RequirementProposal`)
+Implemented canonical runtime:
+- EvidenceNode ledger (append-only, typed);
+- BeliefNode / ConditionNode typed graph;
+- DependencyEdge(REQUIRES);
+- EvidenceEdge(BLOCKS / RELEASES / SUPERSEDES / REAFFIRMS / UNCERTAIN);
+- DefeatPathAuthorizationAlgorithm;
+- typed extraction and impact/query retrieval contracts;
+- query-conditioned authorized basis;
+- offline audit-preserving backend and pipeline;
+- explicit canonical constructors with development-only fixture factories.
 
-Not yet integrated (Wave 2+):
-- typed backend ingestion
-- query-conditioned authorized basis
-- generic ReTrace-LLM semantic edge predictor
-- DirectJudge-LLM attribution baseline
-- official frozen benchmark evaluation
+Development fixtures (heuristic/manual extractors, inducers, verifiers, retrievers) are test/smoke only and forbidden for paper main-result runners.
 
-Development-only:
-- heuristic requirement inducer and evidence-edge verifier
-- hand-written gate and contract unit tests
+Next implementation stage must build Stage A and Stage B together:
+- Stage A ReTrace-LLM: main typed-edge prediction plus DPA method (generic semantic extraction, requirement induction, evidence-edge prediction, deterministic DPA).
+- Stage B DirectJudge-LLM: matched same-model direct-adjudication attribution baseline, implemented as a sibling method path (not an EvidenceEdgeVerifier).
+- Stage C ReTrace-Local: later learned local typed-edge verifier using the same DPA; begins only after Stage A/B establish that the structured DPA formulation has value.
 
 ## Coding Rules
 
