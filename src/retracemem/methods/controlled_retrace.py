@@ -6,11 +6,20 @@ induction, or retrieval.
 
 Execution pipeline:
     SharedCandidateView
-    → PromptEvidenceEdgeVerifier (evidence-edge prediction only)
+    → PromptEvidenceEdgeVerifier.verify_edges_with_trace (edge prediction)
     → isolated typed graph (fresh EpisodeLedger + BeliefStore)
     → RevisionGate (structural admission)
     → DefeatPathAuthorizationAlgorithm
-    → ControlledMethodResult
+    → ControlledMethodResult (full provenance)
+
+AB-1A.5 auditability guarantees:
+    - Every verifier invocation preserves its model_call_trace_id, including
+      zero-edge invocations.
+    - Rejected fixed DependencyEdge anchors fail immediately and loudly.
+    - Rejected EvidenceEdge proposals are recorded in provenance with their
+      gate rejection reason; they do not enter the store.
+    - Admitted fixed anchors are recorded in provenance.
+    - metadata fields are non-semantic and MUST NOT be consumed.
 """
 from __future__ import annotations
 
@@ -73,11 +82,6 @@ class ControlledReTraceLLM:
 
     def run(self, view: SharedCandidateView) -> ControlledMethodResult:
         """Execute controlled Stage A on the fixed view."""
-        if view.new_evidence is None:
-            raise ValueError(
-                "ControlledReTraceLLM requires SharedCandidateView.new_evidence"
-            )
-
         cost_before = self.client.cost_accountant.to_dict()
 
         # Build isolated typed graph
@@ -103,14 +107,28 @@ class ControlledReTraceLLM:
                     store.add_condition(c)
 
         # 4. Admit supplied dependency edges through the gate
+        # Fixed anchors MUST NOT be silently dropped — fail loudly on rejection.
+        admitted_anchors: list[dict[str, Any]] = []
         for _bid, deps in view.dependency_edges_by_belief:
             for dep in deps:
                 decision = gate.admit_dependency_edge(dep, store)
-                if decision.admitted:
-                    store.add_dependency_edge(dep)
+                if not decision.admitted:
+                    raise ValueError(
+                        f"Fixed supplied DependencyEdge '{dep.edge_id}' "
+                        f"rejected by RevisionGate: {decision.reason}"
+                    )
+                store.add_dependency_edge(dep)
+                admitted_anchors.append({
+                    "edge_id": dep.edge_id,
+                    "belief_id": dep.belief_id,
+                    "condition_id": dep.condition_id,
+                })
 
-        # 5. For each candidate belief, invoke edge verifier and admit results
+        # 5. For each candidate belief, invoke traced edge verifier and
+        #    admit results through the gate with full provenance.
         all_trace_ids: list[str] = []
+        edge_proposals: list[dict[str, Any]] = []
+
         for belief in view.candidate_beliefs:
             belief_conditions = tuple(
                 c
@@ -118,19 +136,31 @@ class ControlledReTraceLLM:
                 if bid == belief.belief_id
                 for c in conds
             )
-            proposed_edges = self.edge_verifier.verify_edges(
+            batch = self.edge_verifier.verify_edges_with_trace(
                 new_evidence=view.new_evidence,
                 candidate_belief=belief,
                 candidate_replacement_beliefs=view.candidate_replacement_beliefs,
                 candidate_conditions=belief_conditions,
                 temporal_context=view.evidence_context,
             )
-            for edge in proposed_edges:
+
+            # Always record the trace id, even for zero edges
+            if batch.model_call_trace_id not in all_trace_ids:
+                all_trace_ids.append(batch.model_call_trace_id)
+
+            for edge in batch.proposed_edges:
                 decision = gate.admit_evidence_edge(edge, store)
+                edge_proposals.append({
+                    "edge_id": edge.edge_id,
+                    "edge_type": edge.edge_type.value,
+                    "target_id": edge.target_id,
+                    "admitted": decision.admitted,
+                    "gate_reason": decision.reason,
+                    "belief_id": belief.belief_id,
+                    "model_call_trace_id": batch.model_call_trace_id,
+                })
                 if decision.admitted:
                     store.add_evidence_edge(edge)
-                if edge.model_call_trace_id and edge.model_call_trace_id not in all_trace_ids:
-                    all_trace_ids.append(edge.model_call_trace_id)
 
         # 6. Run DPA for each candidate belief
         dpa = DefeatPathAuthorizationAlgorithm(store, ledger)
@@ -178,5 +208,11 @@ class ControlledReTraceLLM:
                 "view_fingerprint": view.view_fingerprint,
                 "fine_grained_statuses": fine_grained,
                 "defeat_paths": defeat_paths,
+                "admitted_fixed_anchors": admitted_anchors,
+                "edge_proposals": edge_proposals,
+                "prompt_version": self.edge_verifier._template_hash[:8],
+                "model_id": self.edge_verifier.model_id,
+                "provider": self.edge_verifier.provider,
+                "model_revision_or_api_version": self.edge_verifier.model_revision_or_api_version,
             },
         )

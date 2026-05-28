@@ -183,15 +183,25 @@ env PYTHONPYCACHEPREFIX=.pycache_compile python3 -m compileall -q retracemem tes
   - Both methods report per-instance cost (delta accounting), not cumulative totals.
   - Primary status mapping: AUTHORIZED→USABLE, BLOCKED/SUPERSEDED→NOT_USABLE, UNRESOLVED→UNCERTAIN.
   - No live API call, provider SDK, official evaluation, or Stage C work occurred.
+- **Stage AB-1A.5 auditability and comparison protocol lock is complete.**
+  - `SharedCandidateView` now has mandatory `new_evidence` (no longer optional); `view_fingerprint` is `init=False` (derived, not caller-settable).
+  - Canonical versioned JSON + SHA-256 fingerprint covering all first-class fields of EvidenceNode, BeliefNode, ConditionNode, DependencyEdge. Metadata excluded (non-semantic policy documented).
+  - New invariants: duplicate evidence_ids rejected, new_evidence payload identity check, candidate/replacement overlap rejected, repeated condition/dep keys rejected, conflicting condition payloads rejected.
+  - `EdgePredictionBatch` contract: preserves `model_call_trace_id` even for zero-edge verifier invocations.
+  - `PromptEvidenceEdgeVerifier.verify_edges_with_trace()` returns traced batch; backward-compatible `verify_edges()` delegates.
+  - `ControlledReTraceLLM`: uses traced verifier, fails loudly on rejected fixed DependencyEdge anchors, records admitted anchors and edge proposal provenance (admitted/rejected + gate reason). Records model_revision_or_api_version.
+  - `DirectJudgeLLM`: upgraded to prompt v1 with explicit new_evidence identity/timestamps/source. Records model_revision_or_api_version in provenance.
+  - Honest protocol claims: Stage A calls N times (one per candidate belief for edge prediction); Stage B calls once (direct adjudication). Prompts differ by design.
+  - No live API calls, no real provider adapters, no Stage C, no backend/pipeline/DPA core changes.
 - Stage AB-1B will construct internal development cases and add one real provider adapter after approval.
 
 - **Stage A: ReTrace-LLM** — main generic typed-edge prediction plus DPA method. Replaces all development-only heuristic/manual fixtures for paper main-result runs. Components: generic typed belief extraction, generic requirement/condition induction, generic evidence-edge prediction, existing deterministic DPA and authorized-basis pipeline.
-- **Stage B: DirectJudge-LLM** — matched same-model final-adjudication attribution baseline, implemented alongside Stage A as a sibling method path. DirectJudge-LLM is **not** an `EvidenceEdgeVerifier`; it directly decides memory usability without DPA, using the same model family and comparable token/call budget as Stage A.
+- **Stage B: DirectJudge-LLM** — matched same-model final-adjudication attribution baseline, implemented alongside Stage A as a sibling method path. DirectJudge-LLM is **not** an `EvidenceEdgeVerifier`; it directly decides memory usability without DPA, using the same model family as Stage A. Call cardinalities differ by design: Stage A makes N calls (one per candidate belief for edge prediction); Stage B makes one call (direct adjudication over all candidates).
 - **Stage C: ReTrace-Local** — later learned local typed-edge verifier variant (SFT / LoRA) using the same DPA core. Deferred until Stage A/B validation establishes that the structured DPA formulation has value.
 
 ### Tests And Verification
 
-- Full green suite: 211 tests passed (Python 3.10.20, pytest 9.0.3).
+- Full green suite: 224 tests passed (Python 3.10.20, pytest 9.0.3).
 - Passed test suites:
   * `tests/test_schema_roundtrip.py`
   * `tests/gate_unit/`

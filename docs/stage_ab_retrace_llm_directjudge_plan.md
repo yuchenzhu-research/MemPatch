@@ -314,6 +314,65 @@ AB-1A is offline-only and precedes any live provider adapter.
 - `src/retracemem/evaluation/**`
 - `prompts/**`, `scripts/**`, `configs/**`, `pyproject.toml`, `reference/**`
 
+### Wave AB-1A.5: Offline Auditability and Comparison Protocol Lock
+
+AB-1A.5 hardens AB-1A for offline auditability and locks the honest
+comparison protocol before any live evaluation.
+
+**Design decisions locked for AB-1A.5:**
+
+1. `SharedCandidateView.new_evidence` is mandatory (not optional). Construction
+   without it is a `TypeError`.
+
+2. `view_fingerprint` is `init=False` — derived only, never caller-settable.
+   Uses versioned canonical JSON (`_FINGERPRINT_SCHEMA_VERSION = "v1"`) +
+   SHA-256 over all first-class semantic fields. `metadata` is explicitly
+   excluded (non-semantic diagnostic attachment, documented policy).
+
+3. New constructor invariants:
+   - No duplicate evidence_ids in `evidence_context`.
+   - `new_evidence` must appear in `evidence_context` with identical payload.
+   - No overlap between candidate belief ids and replacement belief ids.
+   - No repeated mapping keys in `candidate_conditions_by_belief` or
+     `dependency_edges_by_belief`.
+   - Cross-group condition_id consistency (same id → same payload).
+
+4. `EdgePredictionBatch` contract preserves `model_call_trace_id` even for
+   zero predicted edges, enabling full offline auditability.
+
+5. `PromptEvidenceEdgeVerifier.verify_edges_with_trace()` → `EdgePredictionBatch`.
+   Existing `verify_edges()` delegates for backward compatibility.
+
+6. `ControlledReTraceLLM` uses traced verifier; rejected fixed
+   `DependencyEdge` anchors raise `ValueError` immediately. Edge proposals are
+   recorded in provenance with admitted/rejected status and gate rejection
+   reason. `model_revision_or_api_version` recorded.
+
+7. `DirectJudgeLLM` upgraded to prompt v1 with explicit new-evidence
+   identity, timestamp, source dataset/pointer. Records
+   `model_revision_or_api_version` in provenance.
+
+8. Honest protocol claims: Stage A makes N LLM calls (one per candidate
+   belief); Stage B makes 1 LLM call (direct adjudication over all
+   candidates). Prompts differ by design — this is inherent to the A/B
+   comparison of decomposed-verification vs. direct-adjudication.
+
+**Files modified:**
+- `src/retracemem/methods/contracts.py`
+- `src/retracemem/methods/controlled_retrace.py`
+- `src/retracemem/methods/directjudge.py`
+- `src/retracemem/verifier/prompt_evidence_edge_verifier.py`
+- `prompts/directjudge/direct_usability_v1.txt` (new)
+- `tests/method_contract/test_shared_candidate_view.py`
+- `tests/method_contract/test_controlled_retrace.py`
+- `tests/method_contract/test_directjudge.py`
+- `tests/method_contract/test_controlled_ab_fairness.py`
+- `docs/implementation_status.md`
+
+**Forbidden modifications in AB-1A.5:**
+- Same as AB-1A: no backend, pipeline, DPA core, schemas, retrieval, cache,
+  providers core, official evaluation, Stage C.
+
 ### Wave AB-1: ReTrace-LLM Generic Semantic Components
 
 **Files to implement (from AB-0 stubs):**
