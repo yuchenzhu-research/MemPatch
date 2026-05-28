@@ -68,7 +68,7 @@ with repaired semantics:
 - runner `scripts/run_controlled_ab_dev.py` prints prominent disclaimers,
   writes JSON-compatible per-instance results and aggregate summary to
   `outputs/controlled_ab_dev/` (gitignored), and never commits run artifacts;
-- 27 offline tests in `tests/evaluation/test_controlled_ab_evaluator.py`.
+- 29 offline tests in `tests/evaluation/test_controlled_ab_evaluator.py`.
 
 AB-1B results are internal development protocol diagnostics only. They are
 not official benchmark results, are not strict call-budget matched, and make
