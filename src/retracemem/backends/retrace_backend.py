@@ -4,10 +4,7 @@ from typing import Any
 from retracemem.schemas import (
     EvidenceNode,
     BeliefNode,
-    ConditionNode,
-    DependencyEdge,
     EvidenceEdge,
-    EvidenceEdgeType,
 )
 from retracemem.memory.belief_store import BeliefStore
 from retracemem.memory.episode_ledger import EpisodeLedger
@@ -23,7 +20,6 @@ from retracemem.retrieval.typed_retrievers import (
     ManualQueryBeliefRetriever,
 )
 from retracemem.tms.gate import RevisionGate
-from retracemem.providers.cached_client import CachedLLMClient
 from retracemem.generation.basis_builder import BasisBuilder
 
 
@@ -37,27 +33,62 @@ class ReTraceBackend:
         edge_verifier: EvidenceEdgeVerifier | None = None,
         impact_retriever: ImpactCandidateRetriever | None = None,
         query_retriever: QueryBeliefRetriever | None = None,
-        client: CachedLLMClient | None = None,
+        client: Any | None = None,
         model_id: str = "gemini-pro",
         provider: str = "google",
         disable_ledger: bool = False,
         disable_gate: bool = False,
         disable_temporal: bool = False,
     ) -> None:
+        if client is not None:
+            raise ValueError(
+                "API-backed answer generation belongs to a later Stage A wrapper, not the Wave 2 typed backend"
+            )
+        if disable_ledger or disable_gate or disable_temporal:
+            raise ValueError("Wave 2 typed backend does not support disable_ledger/disable_gate/disable_temporal ablations")
+        required_components = {
+            "extractor": extractor,
+            "inducer": inducer,
+            "edge_verifier": edge_verifier,
+            "impact_retriever": impact_retriever,
+            "query_retriever": query_retriever,
+        }
+        missing = [name for name, value in required_components.items() if value is None]
+        if missing:
+            raise ValueError(
+                "ReTraceBackend requires explicit typed components; use ReTraceBackend.for_development_fixture() "
+                f"only for deterministic development tests. Missing: {', '.join(missing)}"
+            )
         self.ledgers: dict[str, EpisodeLedger] = {}
         self.stores: dict[str, BeliefStore] = {}
-        self.extractor = extractor or ManualTypedBeliefExtractor()
-        self.inducer = inducer or HeuristicRequirementInducer()
-        self.edge_verifier = edge_verifier or HeuristicEvidenceEdgeVerifier()
-        self.impact_retriever = impact_retriever or ManualImpactCandidateRetriever()
-        self.query_retriever = query_retriever or ManualQueryBeliefRetriever()
+        self.extractor = extractor
+        self.inducer = inducer
+        self.edge_verifier = edge_verifier
+        self.impact_retriever = impact_retriever
+        self.query_retriever = query_retriever
         self.gate = RevisionGate()
-        self.client = client
         self.model_id = model_id
         self.provider = provider
-        self.disable_ledger = disable_ledger
-        self.disable_gate = disable_gate
-        self.disable_temporal = disable_temporal
+
+    @classmethod
+    def for_development_fixture(
+        cls,
+        extractor: TypedBeliefExtractor | None = None,
+        inducer: RequirementInducer | None = None,
+        edge_verifier: EvidenceEdgeVerifier | None = None,
+        impact_retriever: ImpactCandidateRetriever | None = None,
+        query_retriever: QueryBeliefRetriever | None = None,
+        **kwargs: Any,
+    ) -> ReTraceBackend:
+        """Development-only fixture backend; forbidden for paper main-result runners."""
+        return cls(
+            extractor=extractor or ManualTypedBeliefExtractor(),
+            inducer=inducer or HeuristicRequirementInducer(),
+            edge_verifier=edge_verifier or HeuristicEvidenceEdgeVerifier(),
+            impact_retriever=impact_retriever or ManualImpactCandidateRetriever(),
+            query_retriever=query_retriever or ManualQueryBeliefRetriever(),
+            **kwargs,
+        )
 
     def reset_user(self, user_id: str) -> None:
         self.ledgers[user_id] = EpisodeLedger()
@@ -173,7 +204,7 @@ class ReTraceBackend:
         query: str,
         limit: int = 10,
         metadata: dict[str, Any] | None = None,
-    ) -> list[dict[str, Any]]:
+    ) -> dict[str, Any]:
         del metadata
         self._ensure_user(user_id)
 
@@ -187,33 +218,20 @@ class ReTraceBackend:
             beliefs=tuple(store.all_beliefs()),
             limit=limit,
         )
-        return result["authorized_basis"]
+        return result
 
     def answer(
         self,
         user_id: str,
         query: str,
-        retrieved: list[dict[str, Any]],
+        retrieved: list[dict[str, Any]] | dict[str, Any],
         metadata: dict[str, Any] | None = None,
     ) -> str:
         del user_id, metadata
 
-        if self.client is not None:
-            context = "\n".join(f"- {item.get('proposition') or item.get('text', '')}" for item in retrieved)
-            prompt = f"Answer the user's query using the authorized beliefs provided below.\n\nAuthorized Beliefs:\n{context}\n\nQuery: {query}\n\nAnswer:"
-            try:
-                trace = self.client.generate(
-                    prompt=prompt,
-                    model_id=self.model_id,
-                    provider=self.provider,
-                    temperature=0.0,
-                )
-                if trace.status == "success" and trace.response:
-                    return trace.response
-            except Exception:
-                pass
+        retrieved_items = retrieved.get("authorized_basis", []) if isinstance(retrieved, dict) else retrieved
 
-        context = "\n".join(item.get("proposition") or item.get("text", "") for item in retrieved)
+        context = "\n".join(item.get("proposition") or item.get("text", "") for item in retrieved_items)
         return f"Query: {query}\nAuthorized basis:\n{context}"
 
     def _ensure_user(self, user_id: str) -> None:

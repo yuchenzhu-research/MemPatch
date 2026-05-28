@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import pytest
+from retracemem.backends.retrace_backend import ReTraceBackend
 from retracemem.pipeline import ReTracePipeline
 from retracemem.schemas import (
     BeliefNode,
@@ -18,6 +19,16 @@ from retracemem.retrieval.typed_retrievers import (
     ManualImpactCandidateRetriever,
     ManualQueryBeliefRetriever,
 )
+
+
+class _FailingClient:
+    def __init__(self) -> None:
+        self.called = False
+
+    def generate(self, **kwargs):
+        del kwargs
+        self.called = True
+        raise AssertionError("Wave 2 backend must not call external clients")
 
 
 def test_pipeline_blocker_and_release_flow():
@@ -130,6 +141,12 @@ def test_pipeline_blocker_and_release_flow():
     # Verify belief is now blocked / excluded
     basis = pipeline.authorized_basis(user_id, "how does Alice commute?")
     assert len(basis) == 0
+    blocked_result = pipeline.backend.search(user_id, "how does Alice commute?")
+    assert blocked_result["authorized_basis"] == []
+    assert len(blocked_result["excluded"]) == 1
+    assert blocked_result["excluded"][0]["belief_id"] == "belief_commute"
+    assert blocked_result["excluded"][0]["status"] == "BLOCKED"
+    assert blocked_result["excluded"][0]["accepted_defeat_path"]["path_type"] == "PREREQUISITE_BLOCK"
 
     # Verify EvaluationRecord blocked/excluded structures
     record = pipeline.answer(user_id, "how does Alice commute?")
@@ -250,3 +267,97 @@ def test_pipeline_supersedes_flow():
     assert len(basis) == 1
     assert basis[0]["belief_id"] == "belief_chicago"
     assert basis[0]["proposition"] == "Alice lives in Chicago."
+
+    search_result = pipeline.backend.search(user_id, "where does Alice live?")
+    assert search_result["authorized_basis"] == basis
+    assert len(search_result["excluded"]) == 1
+    assert search_result["excluded"][0]["belief_id"] == "belief_nyc"
+    assert search_result["excluded"][0]["status"] == "SUPERSEDED"
+    assert search_result["excluded"][0]["accepted_defeat_path"]["replacement_belief_id"] == "belief_chicago"
+
+
+def test_backend_search_retains_unresolved_excluded_trace():
+    user_id = "user_test_3"
+    belief = BeliefNode(
+        belief_id="belief_schedule",
+        proposition="Alice attends morning standup.",
+        source_evidence_ids=("session_6",),
+    )
+    extractor = ManualTypedBeliefExtractor({"session_6": [belief], "session_7": []})
+    edge_uncertain = EvidenceEdge(
+        edge_id="edge_uncertain_schedule",
+        edge_type=EvidenceEdgeType.UNCERTAIN,
+        evidence_id="session_7",
+        target_kind="belief",
+        target_id="belief_schedule",
+        verifier="manual",
+    )
+    edge_verifier = ManualEvidenceEdgeVerifier()
+    edge_verifier.register(edge_uncertain, belief_id="belief_schedule")
+    pipeline = ReTracePipeline(
+        extractor=extractor,
+        inducer=ManualRequirementInducer([]),
+        edge_verifier=edge_verifier,
+        impact_retriever=ManualImpactCandidateRetriever({"session_7": ["belief_schedule"]}),
+        query_retriever=ManualQueryBeliefRetriever({"what is Alice schedule?": ["belief_schedule"]}),
+    )
+    pipeline.reset_user(user_id)
+    pipeline.ingest_evidence(
+        user_id,
+        EvidenceNode(
+            evidence_id="session_6",
+            session_id="session_6",
+            timestamp="2026-05-28T00:00:00Z",
+            text="Alice attends morning standup.",
+            source_dataset="manual",
+            source_pointer="test",
+        ),
+    )
+    pipeline.ingest_evidence(
+        user_id,
+        EvidenceNode(
+            evidence_id="session_7",
+            session_id="session_7",
+            timestamp="2026-05-28T01:00:00Z",
+            text="Alice may have changed standup plans.",
+            source_dataset="manual",
+            source_pointer="test",
+        ),
+    )
+
+    assert pipeline.authorized_basis(user_id, "what is Alice schedule?") == []
+    result = pipeline.backend.search(user_id, "what is Alice schedule?")
+    assert result["retrieved_belief_ids"] == ["belief_schedule"]
+    assert result["authorized_basis"] == []
+    assert len(result["excluded"]) == 1
+    assert result["excluded"][0]["status"] == "UNRESOLVED"
+    assert result["excluded"][0]["accepted_defeat_path"]["path_type"] == "UNRESOLVED_UNCERTAIN"
+
+
+def test_backend_answer_is_offline_only_and_rejects_client():
+    client = _FailingClient()
+    with pytest.raises(ValueError, match="API-backed answer generation belongs to a later Stage A wrapper"):
+        ReTraceBackend.for_development_fixture(client=client)
+    assert client.called is False
+
+    backend = ReTraceBackend.for_development_fixture()
+    answer = backend.answer(
+        "user",
+        "query",
+        {"authorized_basis": [{"proposition": "offline fact"}], "excluded": []},
+    )
+    assert answer == "Query: query\nAuthorized basis:\noffline fact"
+
+
+def test_canonical_backend_requires_explicit_components():
+    with pytest.raises(ValueError, match="requires explicit typed components"):
+        ReTraceBackend()
+
+
+def test_unsupported_backend_ablation_flags_fail_loudly():
+    with pytest.raises(ValueError, match="does not support disable_ledger"):
+        ReTraceBackend.for_development_fixture(disable_ledger=True)
+    with pytest.raises(ValueError, match="does not support disable_ledger"):
+        ReTraceBackend.for_development_fixture(disable_gate=True)
+    with pytest.raises(ValueError, match="does not support disable_ledger"):
+        ReTraceBackend.for_development_fixture(disable_temporal=True)
