@@ -102,7 +102,7 @@ class HeuristicRequirementInducer:
             condition = ConditionNode(
                 condition_id=cond_id,
                 scope_id=scope_id,
-                text="Mobility-related beliefs require current mobility ability.",
+                text="The user currently has sufficient mobility for this activity.",
             )
             edge = DependencyEdge(
                 edge_id=f"dep:{belief.belief_id}:{cond_id}",
@@ -121,7 +121,7 @@ class HeuristicRequirementInducer:
             condition = ConditionNode(
                 condition_id=cond_id,
                 scope_id=scope_id,
-                text="Scheduling beliefs require current availability.",
+                text="The user is currently available for the scheduled activity.",
             )
             edge = DependencyEdge(
                 edge_id=f"dep:{belief.belief_id}:{cond_id}",

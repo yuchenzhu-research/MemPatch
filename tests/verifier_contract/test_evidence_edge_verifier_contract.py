@@ -246,3 +246,20 @@ def test_heuristic_uncertain_targets_belief() -> None:
     assert [edge.edge_type for edge in result] == [EvidenceEdgeType.UNCERTAIN]
     assert result[0].target_kind == "belief"
     assert result[0].target_id == "belief_bike"
+
+
+def test_evidence_edge_verifier_protocol_signature() -> None:
+    import inspect
+    from retracemem.verifier.contracts import EvidenceEdgeVerifier
+    sig = inspect.signature(EvidenceEdgeVerifier.verify_edges)
+    params = list(sig.parameters.keys())
+    assert "candidate_replacement_beliefs" in params
+    assert params == [
+        "self",
+        "new_evidence",
+        "candidate_belief",
+        "candidate_replacement_beliefs",
+        "candidate_conditions",
+        "temporal_context",
+    ]
+

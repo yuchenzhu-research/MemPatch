@@ -75,6 +75,8 @@ def test_heuristic_requirement_inducer_emits_proposals() -> None:
     assert all(proposal.dependency_edge.supporting_evidence_ids == ("support_1",) for proposal in result)
     assert all(proposal.condition.scope_id == "user_1" for proposal in result)
     assert all(proposal.dependency_edge.condition_id == proposal.condition.condition_id for proposal in result)
+    assert result[0].condition.text == "The user currently has sufficient mobility for this activity."
+    assert result[0].dependency_edge.rationale == "Mobility-related beliefs require current mobility ability."
 
 
 def test_heuristic_requirement_inducer_missing_scope_id_raises_value_error() -> None:
