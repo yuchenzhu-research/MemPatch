@@ -45,11 +45,33 @@ AB-1A.5 completed behavior includes:
 - the protocol truthfully reports Stage A N calls versus Stage B one call in
   the current controlled interface.
 
+AB-1B completed behavior includes:
+
+- 6 internal development controlled authorization cases covering
+  direct supersession, prerequisite blocking, protected unrelated belief,
+  uncertainty, release/rollback recovery, and rejected proposal audit;
+- case deserialization into valid `SharedCandidateView` objects with
+  deterministic `view_fingerprint`;
+- replay/mock execution of both Stage A (`ControlledReTraceLLM`) and
+  Stage B (`DirectJudgeLLM`) using `MockLLMProvider` — no live API calls;
+- controlled A/B metric computation: authorization accuracy, obsolete-misuse
+  count/rate, protected-belief preservation, rollback recovery, fine-grained
+  status breakdown, verdict breakdown, observed cost (calls/tokens/cache/latency
+  reported separately for each stage);
+- `Unsupported Revision Rate` deliberately deferred — requires explicit
+  annotation of valid defeat-path structure and unambiguous denominator;
+- parser-level and execution errors surfaced in results, not silently dropped;
+- replay-only runner (`scripts/run_controlled_ab_dev.py`) with prominent
+  disclaimers: internal protocol check only, not an official benchmark,
+  not strict call-budget matched, no claim that ReTrace outperforms DirectJudge;
+- JSON-compatible per-instance results and aggregate summary;
+- output written to `outputs/controlled_ab_dev/` (gitignored);
+- 25 new tests in `tests/evaluation/test_controlled_ab_evaluator.py`.
+
 ## Not Started
 
 Do not treat any of these as implemented:
 
-- AB-1B internal development-case evaluator or replay-only runner;
 - real provider integration;
 - live API calls;
 - official STALE or Memora evaluation;
@@ -57,18 +79,14 @@ Do not treat any of these as implemented:
 - Stage C training;
 - learned local typed-edge verifier results.
 
-## Documentation Reset Scope
-
-This task changes documentation only. It does not modify runtime source code,
-tests, prompts, scripts, configs, datasets, registry files, provider/cache code,
-retrieval, backend, pipeline, `RevisionGate`, or DPA.
-
-## Verification From This Task
-
-Recorded from this documentation-reset task:
+## Verification From AB-1B
 
 - Compileall: passed with
   `env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src tests scripts`.
-- Pytest: `228 passed in 0.67s` with `.venv/bin/python -m pytest`.
+- Pytest: `253 passed` with `.venv/bin/python -m pytest`.
+- Replay-only runner: passed with
+  `.venv/bin/python scripts/run_controlled_ab_dev.py`.
 - Live API calls: none.
 - Official STALE/Memora evaluation: none.
+- DPA, RevisionGate, schemas, providers, cache, retrieval, backend, pipeline:
+  not modified.
