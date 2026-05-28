@@ -49,3 +49,15 @@ class EvidenceEdgeVerifier(Protocol):
         temporal_context: tuple[EvidenceNode, ...],
     ) -> list[EvidenceEdge]:
         ...
+
+
+class BatchedEvidenceEdgeVerifier(Protocol):
+    def verify_edges_batch(
+        self,
+        new_evidence: EvidenceNode,
+        candidate_beliefs: tuple[BeliefNode, ...],
+        candidate_replacement_beliefs: tuple[BeliefNode, ...],
+        candidate_conditions_by_belief: tuple[tuple[str, tuple[ConditionNode, ...]], ...],
+        temporal_context: tuple[EvidenceNode, ...],
+    ) -> list[EvidenceEdge]:
+        ...

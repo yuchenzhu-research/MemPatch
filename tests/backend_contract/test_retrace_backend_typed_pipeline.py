@@ -22,6 +22,28 @@ from retracemem.retrieval.typed_retrievers import (
 from retracemem.evaluation.jsonl import write_jsonl, read_jsonl
 
 
+class ManualBatchedEvidenceEdgeVerifier:
+    def __init__(self, edges_by_belief: dict[str, list[EvidenceEdge]]) -> None:
+        self.edges_by_belief = edges_by_belief
+        self.calls: list[tuple[str, ...]] = []
+
+    def verify_edges_batch(
+        self,
+        new_evidence: EvidenceNode,
+        candidate_beliefs: tuple[BeliefNode, ...],
+        candidate_replacement_beliefs: tuple[BeliefNode, ...],
+        candidate_conditions_by_belief: tuple[tuple[str, tuple[ConditionNode, ...]], ...],
+        temporal_context: tuple[EvidenceNode, ...],
+    ) -> list[EvidenceEdge]:
+        del new_evidence, candidate_replacement_beliefs, candidate_conditions_by_belief, temporal_context
+        batch_ids = tuple(belief.belief_id for belief in candidate_beliefs)
+        self.calls.append(batch_ids)
+        edges: list[EvidenceEdge] = []
+        for belief_id in batch_ids:
+            edges.extend(self.edges_by_belief.get(belief_id, []))
+        return edges
+
+
 class _FailingClient:
     def __init__(self) -> None:
         self.called = False
@@ -464,3 +486,123 @@ def test_pipeline_answer_record_is_jsonl_compatible(tmp_path):
     assert loaded[0]["method"] == "retrace_pipeline"
     assert loaded[0]["authorized_basis"][0]["belief_id"] == "belief_food"
     assert loaded[0]["blocked_beliefs"] == []
+
+
+def test_backend_batched_ingestion_one_batch_within_k():
+    user_id = "user_batch_one"
+    b1 = BeliefNode(belief_id="b1", proposition="Alice bikes.", source_evidence_ids=("s1",))
+    b2 = BeliefNode(belief_id="b2", proposition="Alice runs.", source_evidence_ids=("s1",))
+    edge1 = EvidenceEdge(
+        edge_id="edge_b1_uncertain", edge_type=EvidenceEdgeType.UNCERTAIN,
+        evidence_id="s2", target_kind="belief", target_id="b1", verifier="manual_batch",
+    )
+    edge2 = EvidenceEdge(
+        edge_id="edge_b2_uncertain", edge_type=EvidenceEdgeType.UNCERTAIN,
+        evidence_id="s2", target_kind="belief", target_id="b2", verifier="manual_batch",
+    )
+    batched = ManualBatchedEvidenceEdgeVerifier({"b1": [edge1], "b2": [edge2]})
+    backend = ReTraceBackend.for_development_fixture(
+        extractor=ManualTypedBeliefExtractor({"s1": [b1, b2], "s2": []}),
+        inducer=ManualRequirementInducer([]),
+        edge_verifier=ManualEvidenceEdgeVerifier(),
+        batched_edge_verifier=batched,
+        impact_retriever=ManualImpactCandidateRetriever({"s2": ["b1", "b2"]}),
+        query_retriever=ManualQueryBeliefRetriever({}),
+        max_batch_beliefs=8,
+    )
+    backend.reset_user(user_id)
+    backend.ingest_evidence(user_id, EvidenceNode(evidence_id="s1", session_id="s1", timestamp=None,
+                                                  text="Alice bikes and runs.", source_dataset="manual", source_pointer="test"))
+    admitted = backend.ingest_evidence(user_id, EvidenceNode(evidence_id="s2", session_id="s2", timestamp=None,
+                                                             text="Alice may have changed activity.", source_dataset="manual", source_pointer="test"))
+    assert {edge.edge_id for edge in admitted} == {"edge_b1_uncertain", "edge_b2_uncertain"}
+    assert batched.calls == [("b1", "b2")]
+    assert backend.last_ingest_stats["execution_mode"] == "batched"
+    assert backend.last_ingest_stats["batch_count"] == 1
+    assert backend.last_ingest_stats["verifier_calls"] == 1
+
+
+def test_backend_batched_ingestion_exceeding_k_splits_deterministically():
+    user_id = "user_batch_split"
+    beliefs = tuple(
+        BeliefNode(belief_id=f"b{i}", proposition=f"Belief {i}.", source_evidence_ids=("s1",))
+        for i in range(5)
+    )
+    batched = ManualBatchedEvidenceEdgeVerifier({})
+    backend = ReTraceBackend.for_development_fixture(
+        extractor=ManualTypedBeliefExtractor({"s1": list(beliefs), "s2": []}),
+        inducer=ManualRequirementInducer([]),
+        edge_verifier=ManualEvidenceEdgeVerifier(),
+        batched_edge_verifier=batched,
+        impact_retriever=ManualImpactCandidateRetriever({"s2": [b.belief_id for b in beliefs]}),
+        query_retriever=ManualQueryBeliefRetriever({}),
+        max_batch_beliefs=2,
+    )
+    backend.reset_user(user_id)
+    backend.ingest_evidence(user_id, EvidenceNode(evidence_id="s1", session_id="s1", timestamp=None,
+                                                  text="Initial beliefs.", source_dataset="manual", source_pointer="test"))
+    backend.ingest_evidence(user_id, EvidenceNode(evidence_id="s2", session_id="s2", timestamp=None,
+                                                  text="Update.", source_dataset="manual", source_pointer="test"))
+    assert batched.calls == [("b0", "b1"), ("b2", "b3"), ("b4",)]
+    assert backend.last_ingest_stats["batch_count"] == 3
+    assert backend.last_ingest_stats["verifier_calls"] == 3
+
+
+def test_backend_batched_ingestion_does_not_include_unretrieved_global_beliefs():
+    user_id = "user_batch_scope"
+    b1 = BeliefNode(belief_id="b1", proposition="Impacted.", source_evidence_ids=("s1",))
+    b2 = BeliefNode(belief_id="b2", proposition="Unrelated.", source_evidence_ids=("s1",))
+    batched = ManualBatchedEvidenceEdgeVerifier({})
+    backend = ReTraceBackend.for_development_fixture(
+        extractor=ManualTypedBeliefExtractor({"s1": [b1, b2], "s2": []}),
+        inducer=ManualRequirementInducer([]),
+        edge_verifier=ManualEvidenceEdgeVerifier(),
+        batched_edge_verifier=batched,
+        impact_retriever=ManualImpactCandidateRetriever({"s2": ["b1"]}),
+        query_retriever=ManualQueryBeliefRetriever({}),
+    )
+    backend.reset_user(user_id)
+    backend.ingest_evidence(user_id, EvidenceNode(evidence_id="s1", session_id="s1", timestamp=None,
+                                                  text="Initial.", source_dataset="manual", source_pointer="test"))
+    backend.ingest_evidence(user_id, EvidenceNode(evidence_id="s2", session_id="s2", timestamp=None,
+                                                  text="Update.", source_dataset="manual", source_pointer="test"))
+    assert batched.calls == [("b1",)]
+    assert backend.last_ingest_stats["candidate_count"] == 1
+
+
+def test_backend_per_belief_and_batched_paths_same_query_result():
+    user_id = "user_batch_equiv"
+    b = BeliefNode(belief_id="belief_schedule", proposition="Alice attends standup.", source_evidence_ids=("s1",))
+    edge = EvidenceEdge(
+        edge_id="edge_uncertain_schedule", edge_type=EvidenceEdgeType.UNCERTAIN,
+        evidence_id="s2", target_kind="belief", target_id="belief_schedule", verifier="manual",
+    )
+    query_retriever = ManualQueryBeliefRetriever({"what is schedule?": ["belief_schedule"]})
+
+    per_edge_verifier = ManualEvidenceEdgeVerifier()
+    per_edge_verifier.register(edge, belief_id="belief_schedule")
+    per_backend = ReTraceBackend.for_development_fixture(
+        extractor=ManualTypedBeliefExtractor({"s1": [b], "s2": []}),
+        inducer=ManualRequirementInducer([]),
+        edge_verifier=per_edge_verifier,
+        impact_retriever=ManualImpactCandidateRetriever({"s2": ["belief_schedule"]}),
+        query_retriever=query_retriever,
+    )
+
+    batch_backend = ReTraceBackend.for_development_fixture(
+        extractor=ManualTypedBeliefExtractor({"s1": [b], "s2": []}),
+        inducer=ManualRequirementInducer([]),
+        edge_verifier=ManualEvidenceEdgeVerifier(),
+        batched_edge_verifier=ManualBatchedEvidenceEdgeVerifier({"belief_schedule": [edge]}),
+        impact_retriever=ManualImpactCandidateRetriever({"s2": ["belief_schedule"]}),
+        query_retriever=query_retriever,
+    )
+
+    for backend in (per_backend, batch_backend):
+        backend.reset_user(user_id)
+        backend.ingest_evidence(user_id, EvidenceNode(evidence_id="s1", session_id="s1", timestamp=None,
+                                                      text="Alice attends standup.", source_dataset="manual", source_pointer="test"))
+        backend.ingest_evidence(user_id, EvidenceNode(evidence_id="s2", session_id="s2", timestamp=None,
+                                                      text="Schedule may have changed.", source_dataset="manual", source_pointer="test"))
+
+    assert per_backend.search(user_id, "what is schedule?") == batch_backend.search(user_id, "what is schedule?")
