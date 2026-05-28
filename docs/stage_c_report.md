@@ -1,44 +1,74 @@
 # Stage C Go/No-Go Report: Deferred Learned Local Verifier
 
-**Date**: 2026-05-28  
-**Phase**: V1-4 Final Integration  
-**Recommendation**: **NO-GO** (Defer Stage C Development)
+**Date**: 2026-05-28
+**Status**: **NO-GO** for the current task
+**Scope**: Stage C remains deferred pending real Stage A/B evidence and
+leakage-safe training-data design.
 
 ---
 
 ## 1. Decision Summary
 
-In alignment with the repository execution contract and the ICLR 2027 Paper 1 blueprint, we recommend a strict **NO-GO** on starting Stage C (*ReTrace-Local*: a deferred learned local typed-edge verifier) at this juncture. 
+Do not begin Stage C in the current feasibility packet. Paper 1 must first
+establish whether Stage A (`ReTrace-LLM`: local typed-edge proposal + DPA)
+shows a real advantage over Stage B (`DirectJudge-LLM`) under the same fixed
+`SharedCandidateView` inputs.
 
-Stage C development should be deferred until the prerequisites defined in Section 3 are fully satisfied. The current v1 phase has successfully validated the deterministic DPA routing and established clean-room adapters and evaluators for the official benchmarks (STALE and Memora). Initiating Stage C now would be premature and counter-productive to scientific rigor.
+The current repository contains useful scaffolding, but it does not yet contain
+verified live Stage A/B performance evidence, official STALE results, official
+Memora results, or approved Stage C training labels.
 
 ---
 
 ## 2. Rationale for Deferral
 
-1. **Lack of Verified Ground-Truth Evidence Graphs**: 
-   Stage C requires training or fine-tuning a local semantic model (or small language model) to predict local typed evidence/dependency edges directly. Currently, we lack a large-scale, high-quality, human-audited corpus of ground-truth DPA edge graphs. Training on unverified outputs of Stage A verifiers would propagate semantic errors and compromise DPA's safety guarantees.
-   
-2. **Infrastructure Verification First**: 
-   We have just completed the official evaluation adapters and run pathways (STALE & Memora). We must first run extensive evaluations on the Stage A / Stage B baseline to map the exact performance envelope of LLM-based verification vs. direct LLM adjudication.
-   
-3. **No Performance Baseline for Local Verifiers**:
-   Without complete empirical data from the frozen v1 baseline (Stage A vs. Stage B) on full benchmark tracks, we cannot formulate a concrete target accuracy or compute latency budgets for a local verifier (Stage C).
+1. **No verified Stage A/B advantage yet**:
+   Stage C is only justified if the structured decomposition has empirical
+   value over direct adjudication.
+
+2. **Stage A predictions are not gold labels**:
+   Stage A live traces, admitted edges, and DPA outcomes are model-produced
+   artifacts. They may be useful for error analysis, but they are not
+   ground-truth typed-edge labels.
+
+3. **Official benchmark leakage risk**:
+   Official STALE/Memora scored examples, evaluator outputs, judged results,
+   and scored-run traces must not be converted into Stage C labels,
+   prompt-development material, or training data.
+
+4. **Training is out of scope**:
+   This task may repair safety boundaries and run an internal Stage A/B
+   feasibility diagnostic. It must not train, distill, fine-tune, or start
+   local verifier development.
 
 ---
 
 ## 3. Prerequisites for Stage C Commencement
 
-Before transitioning to Stage C, the following conditions must be met:
+Before any future Stage C task, the following conditions must be met:
 
-1. **Complete Frozen Evaluation Results**:
-   Successfully execute the frozen evaluation pathways (via `run_stale_official_eval.py` and `run_memora_official_eval.py`) in `--live` mode across all evaluation personas/periods to produce a definitive comparison between Stage A (`ReTrace-LLM`) and Stage B (`DirectJudge-LLM`).
-   
-2. **Gold Standard Dataset Extraction**:
-   Extract at least 1,000 high-confidence, audited trace logs of `SharedCandidateView` along with their corresponding admitted `EvidenceEdge` and `DependencyEdge` structures from the Stage A live runs.
-   
-3. **Distillation/Fine-tuning Pipeline**:
-   Establish a reproducible training pipeline (e.g., via LoRA or full parameter fine-tuning on LLama-3-8B-Instruct or smaller models) and define clear evaluation metrics for edge-prediction classification accuracy.
-   
-4. **Safety Boundary Definition**:
-   Define strict fallback rules when the local verifier emits an `UNCERTAIN` edge type, ensuring it defaults gracefully to a stronger remote LLM verifier (hybrid Stage A/C execution).
+1. Real Stage A/B evidence shows that structured typed-edge authorization is
+   promising.
+2. A separately approved data plan uses development-safe sources.
+3. Human-audited typed-edge annotations with provenance are available.
+4. Contamination checks separate training/development data from official
+   evaluation material.
+5. Official STALE/Memora final evaluation instances, evaluator outputs, and
+   scored-run traces remain excluded from training labels and prompt
+   development.
+6. Fallback and uncertainty handling rules are specified before any local
+   verifier is trusted.
+
+## 4. Prohibited Data Sources for Stage C Labels
+
+- Stage A live outputs treated as gold.
+- Official STALE or Memora scored examples.
+- Official evaluator feedback or judged outputs.
+- Traces from frozen official evaluation runs.
+- Synthetic labels derived from official test failures.
+
+## 5. Current Next Step
+
+Complete the internal Ambiguity-and-Scope Stage A/B feasibility diagnostic.
+Interpret the result honestly before considering any external pilot, official
+evaluation, or Stage C planning.

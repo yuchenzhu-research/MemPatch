@@ -5,27 +5,36 @@ repository.
 
 ## Current Phase
 
-Repository branch: `integration/retrace-v1-complete`.
+Repository branch for the current feasibility packet:
+`experiment/retrace-ab-feasibility`.
 
-V1/AB-3 implementation is complete with all phases fully operational:
+Starting scaffold branch:
+`integration/retrace-v1-complete` @
+`5e8d6e2d1a494d572d6d0fa929595bb198154390`.
 
-- **Phase V1-1 / AB-1C**: Added real provider support (`HTTPLLMProvider`), execution limits/budget enforcement, and run manifest generation;
-- **Phase V1-2 / AB-2**: Implemented end-to-end multi-step validation logic in `ReTracePipeline` and created runner datasets with mock replay capability;
-- **Phase V1-3 / AB-3**: Created adapter exporters and wrappers for official STALE and Memora evaluation systems, implementing frozen evaluation pathways with mock API interception;
-- **Phase V1-4**: Established the reproducibility pathway and compiled a formal go/no-go report for Stage C in `docs/stage_c_report.md`.
+The integration branch contains useful provider, manifest, end-to-end, STALE,
+Memora, and Stage C deferral scaffolding. It is not yet a scientifically
+validated v1 result:
+
+- no verified live Stage A/B performance result exists;
+- no official STALE result exists;
+- no official Memora result exists;
+- no evidence yet shows Stage A is better than Stage B;
+- STALE/Memora mock executions are adapter smoke/dry-run validation only.
 
 ## Canonical Reading Order
 
 Read only these active authority documents before method work:
 
-1. `docs/method_spec_dpa.md`
-2. `docs/stage_ab_protocol.md`
-3. `docs/paper1_blueprint_zh.md`
-4. `docs/repository_execution_contract.md`
-5. `docs/coding_contract.md`
-6. `docs/implementation_status.md`
-7. `docs/stage_c_report.md`
+1. `AGENTS.md`
+2. `docs/method_spec_dpa.md`
+3. `docs/stage_ab_protocol.md`
+4. `docs/paper1_blueprint_zh.md`
+5. `docs/repository_execution_contract.md`
+6. `docs/coding_contract.md`
+7. `docs/implementation_status.md`
 8. `docs/upstream_integration.md`
+9. `docs/stage_c_report.md`
 
 Legacy planning documents and old raw source-material files are no longer
 active authority. Git history preserves them.
@@ -104,16 +113,30 @@ work:
 
 ## Safe Next Boundary
 
-The next boundary, when authorized, is to transition from offline simulation to live benchmark evaluation on STALE and Memora under appropriate provider API keys, gathering gold classification graphs to unblock Stage C prerequisites.
+The next boundary is not official benchmark evaluation. The immediate authorized
+boundary is:
 
-Completed:
+- adopt the corrected v3 authority documents;
+- repair provider and adapter-smoke safety issues;
+- run an internal Stage A/B Ambiguity-and-Scope feasibility diagnostic on fixed
+  `SharedCandidateView` inputs;
+- stop after reporting whether Stage A shows any promising signal over Stage B.
 
-- AB-1C live provider adapter;
-- real provider integration;
-- official STALE and Memora evaluation mock-runs.
+Completed and retained:
 
-Deferred:
-- Stage C training.
+- validated AB-1B controlled offline protocol;
+- provider/cache/manifest scaffolding;
+- secondary end-to-end development runner scaffolding;
+- STALE and Memora adapter smoke/dry-run scaffolding.
+
+Deferred or prohibited for the current task:
+
+- Stage C training;
+- model training or distillation;
+- full official STALE/Memora evaluation;
+- prompt tuning or training from official scored examples/evaluator outputs;
+- treating Stage A predictions as gold labels;
+- claiming official results from mock/dry-run infrastructure.
 
 ## Coding Rules
 
