@@ -31,6 +31,7 @@ from retracemem.schemas import (
 )
 
 SCHEMA_VERSION = "ambiguity_scope_controlled_v0"
+HARD_SCHEMA_VERSION = "ambiguity_scope_hard_v1"
 
 REQUIRED_CATEGORIES: tuple[str, ...] = (
     "clear_supersession",
@@ -41,6 +42,14 @@ REQUIRED_CATEGORIES: tuple[str, ...] = (
     "tentative_intention_or_future_possibility",
     "insufficient_evidence_requires_abstention",
     "multi_belief_scope_expansion_trap",
+)
+HARD_REQUIRED_CATEGORIES: tuple[str, ...] = (
+    "dense_semantic_neighborhood_scope_control",
+    "multi_step_temporal_revision",
+    "premise_resistance_under_stale_assumption",
+    "release_or_recovery_with_persistent_history",
+    "competing_partial_evidence_uncertainty",
+    "cross_domain_interference_trap",
 )
 
 CASES_PER_CATEGORY = 4
@@ -205,11 +214,13 @@ def load_dataset(path: str) -> list[AmbiguityScopeCase]:
     with open(path, encoding="utf-8") as f:
         data = json.load(f)
 
-    if data.get("_schema_version") != SCHEMA_VERSION:
+    schema_version = data.get("_schema_version")
+    if schema_version not in {SCHEMA_VERSION, HARD_SCHEMA_VERSION}:
         raise ValueError(
-            f"Unexpected schema version: {data.get('_schema_version')!r}; "
-            f"expected {SCHEMA_VERSION!r}"
+            f"Unexpected schema version: {schema_version!r}; "
+            f"expected {SCHEMA_VERSION!r} or {HARD_SCHEMA_VERSION!r}"
         )
+    required_categories = HARD_REQUIRED_CATEGORIES if schema_version == HARD_SCHEMA_VERSION else REQUIRED_CATEGORIES
 
     cases: list[AmbiguityScopeCase] = []
     seen_ids: set[str] = set()
@@ -220,7 +231,7 @@ def load_dataset(path: str) -> list[AmbiguityScopeCase]:
         seen_ids.add(case_id)
 
         category = raw["category"]
-        if category not in REQUIRED_CATEGORIES:
+        if category not in required_categories:
             raise ValueError(
                 f"Case {case_id} has category {category!r} which is not in the "
                 f"required category set"
@@ -284,6 +295,7 @@ def validate_dataset_balance(cases: list[AmbiguityScopeCase]) -> None:
         if case.review_status not in {
             "model_drafted_pending_human_review",
             "assistant_screened_pending_user_final_review",
+            "model_drafted_pending_assistant_and_user_review",
             "human_reviewed_locked",
         }:
             raise ValueError(

@@ -1,0 +1,3666 @@
+{
+  "_disclaimer": [
+    "Internal hard_v1 exploratory diagnostic only.",
+    "NOT an official benchmark.",
+    "NOT a final paper result."
+  ],
+  "_schema_version": "ambiguity_scope_hard_v1",
+  "_required_categories": [
+    "dense_semantic_neighborhood_scope_control",
+    "multi_step_temporal_revision",
+    "premise_resistance_under_stale_assumption",
+    "release_or_recovery_with_persistent_history",
+    "competing_partial_evidence_uncertainty",
+    "cross_domain_interference_trap"
+  ],
+  "cases": [
+    {
+      "case_id": "ash_dense_01",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "dense_semantic_neighborhood_scope_control",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Dense cycling neighborhood: medical restriction affects commute and near-future race training but not ownership, location, interest, or history.",
+      "scope_trap": true,
+      "temporal_reasoning_required": false,
+      "premise_resistance": false,
+      "query": "Given the user's cycling context, what remains usable after the medical update?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_bike_assets",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I own a touring bicycle, live near the River Loop bike path, watch cycling repair videos, and completed a charity bike race in 2022.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_dense_01/ev_bike_assets"
+        },
+        {
+          "evidence_id": "ev_bike_routine",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "I currently cycle to the office on workdays.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_dense_01/ev_bike_routine"
+        },
+        {
+          "evidence_id": "ev_future_race",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "I planned to train for next month's charity ride.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_dense_01/ev_future_race"
+        },
+        {
+          "evidence_id": "ev_medical_restrict",
+          "session_id": "s4",
+          "timestamp": "2026-04-04T00:00:00Z",
+          "text": "My surgeon ordered me not to cycle for four months after knee surgery, although my bicycle and cycling interests are unchanged.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_dense_01/ev_medical_restrict"
+        }
+      ],
+      "new_evidence_id": "ev_medical_restrict",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_dense_commute_1",
+          "proposition": "The user currently cycles to the office on workdays.",
+          "source_evidence_ids": [
+            "ev_bike_routine"
+          ]
+        },
+        {
+          "belief_id": "b_dense_owns_bike_1",
+          "proposition": "The user owns a touring bicycle.",
+          "source_evidence_ids": [
+            "ev_bike_assets"
+          ]
+        },
+        {
+          "belief_id": "b_dense_bikepath_1",
+          "proposition": "The user lives near the River Loop bike path.",
+          "source_evidence_ids": [
+            "ev_bike_assets"
+          ]
+        },
+        {
+          "belief_id": "b_dense_interest_1",
+          "proposition": "The user enjoys watching cycling repair videos.",
+          "source_evidence_ids": [
+            "ev_bike_assets"
+          ]
+        },
+        {
+          "belief_id": "b_dense_history_1",
+          "proposition": "The user completed a charity bike race in 2022.",
+          "source_evidence_ids": [
+            "ev_bike_assets"
+          ]
+        },
+        {
+          "belief_id": "b_dense_future_race_1",
+          "proposition": "The user can train for next month's charity ride.",
+          "source_evidence_ids": [
+            "ev_future_race"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        [
+          "b_dense_commute_1",
+          [
+            {
+              "condition_id": "c_dense_mobility_1",
+              "scope_id": "user1",
+              "text": "The user currently has medical clearance to cycle to work."
+            }
+          ]
+        ],
+        [
+          "b_dense_future_race_1",
+          [
+            {
+              "condition_id": "c_dense_training_1",
+              "scope_id": "user1",
+              "text": "The user can safely train for the charity ride next month."
+            }
+          ]
+        ]
+      ],
+      "dependency_edges_by_belief": [
+        [
+          "b_dense_commute_1",
+          [
+            {
+              "edge_id": "dep-b_dense_commute_1-c_dense_mobility_1",
+              "belief_id": "b_dense_commute_1",
+              "condition_id": "c_dense_mobility_1",
+              "inducer": "internal_hard_v1_fixture",
+              "edge_type": "REQUIRES"
+            }
+          ]
+        ],
+        [
+          "b_dense_future_race_1",
+          [
+            {
+              "edge_id": "dep-b_dense_future_race_1-c_dense_training_1",
+              "belief_id": "b_dense_future_race_1",
+              "condition_id": "c_dense_training_1",
+              "inducer": "internal_hard_v1_fixture",
+              "edge_type": "REQUIRES"
+            }
+          ]
+        ]
+      ],
+      "expected_stage_a_status": {
+        "b_dense_commute_1": "BLOCKED",
+        "b_dense_owns_bike_1": "AUTHORIZED",
+        "b_dense_bikepath_1": "AUTHORIZED",
+        "b_dense_interest_1": "AUTHORIZED",
+        "b_dense_history_1": "AUTHORIZED",
+        "b_dense_future_race_1": "BLOCKED"
+      },
+      "expected_comparable_status": {
+        "b_dense_commute_1": "NOT_USABLE",
+        "b_dense_owns_bike_1": "USABLE",
+        "b_dense_bikepath_1": "USABLE",
+        "b_dense_interest_1": "USABLE",
+        "b_dense_history_1": "USABLE",
+        "b_dense_future_race_1": "NOT_USABLE"
+      },
+      "protected_belief_ids": [
+        "b_dense_owns_bike_1",
+        "b_dense_bikepath_1",
+        "b_dense_interest_1",
+        "b_dense_history_1"
+      ],
+      "stale_target_belief_ids": [
+        "b_dense_commute_1",
+        "b_dense_future_race_1"
+      ],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_dense_commute_1": [
+          {
+            "edge_type": "BLOCKS",
+            "target_id": "c_dense_mobility_1",
+            "rationale": "No-cycling medical order blocks cycling commute.",
+            "confidence": 0.9
+          }
+        ],
+        "b_dense_future_race_1": [
+          {
+            "edge_type": "BLOCKS",
+            "target_id": "c_dense_training_1",
+            "rationale": "No-cycling medical order blocks next-month training.",
+            "confidence": 0.9
+          }
+        ],
+        "b_dense_owns_bike_1": [],
+        "b_dense_bikepath_1": [],
+        "b_dense_interest_1": [],
+        "b_dense_history_1": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_dense_commute_1",
+          "status": "NOT_USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_owns_bike_1",
+          "status": "USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_bikepath_1",
+          "status": "USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_interest_1",
+          "status": "USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_history_1",
+          "status": "USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_future_race_1",
+          "status": "NOT_USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_dense_02",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "dense_semantic_neighborhood_scope_control",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Dense cycling neighborhood: medical restriction affects commute and near-future race training but not ownership, location, interest, or history.",
+      "scope_trap": true,
+      "temporal_reasoning_required": false,
+      "premise_resistance": false,
+      "query": "Given the user's cycling context, what remains usable after the medical update?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_bike_assets",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I own a touring bicycle, live near the River Loop bike path, watch cycling repair videos, and completed a charity bike race in 2022.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_dense_02/ev_bike_assets"
+        },
+        {
+          "evidence_id": "ev_bike_routine",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "I currently cycle to the office on workdays.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_dense_02/ev_bike_routine"
+        },
+        {
+          "evidence_id": "ev_future_race",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "I planned to train for next month's charity ride.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_dense_02/ev_future_race"
+        },
+        {
+          "evidence_id": "ev_medical_restrict",
+          "session_id": "s4",
+          "timestamp": "2026-04-04T00:00:00Z",
+          "text": "My surgeon ordered me not to cycle for four months after knee surgery, although my bicycle and cycling interests are unchanged.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_dense_02/ev_medical_restrict"
+        }
+      ],
+      "new_evidence_id": "ev_medical_restrict",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_dense_commute_2",
+          "proposition": "The user currently cycles to the office on workdays.",
+          "source_evidence_ids": [
+            "ev_bike_routine"
+          ]
+        },
+        {
+          "belief_id": "b_dense_owns_bike_2",
+          "proposition": "The user owns a touring bicycle.",
+          "source_evidence_ids": [
+            "ev_bike_assets"
+          ]
+        },
+        {
+          "belief_id": "b_dense_bikepath_2",
+          "proposition": "The user lives near the River Loop bike path.",
+          "source_evidence_ids": [
+            "ev_bike_assets"
+          ]
+        },
+        {
+          "belief_id": "b_dense_interest_2",
+          "proposition": "The user enjoys watching cycling repair videos.",
+          "source_evidence_ids": [
+            "ev_bike_assets"
+          ]
+        },
+        {
+          "belief_id": "b_dense_history_2",
+          "proposition": "The user completed a charity bike race in 2022.",
+          "source_evidence_ids": [
+            "ev_bike_assets"
+          ]
+        },
+        {
+          "belief_id": "b_dense_future_race_2",
+          "proposition": "The user can train for next month's charity ride.",
+          "source_evidence_ids": [
+            "ev_future_race"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        [
+          "b_dense_commute_2",
+          [
+            {
+              "condition_id": "c_dense_mobility_2",
+              "scope_id": "user1",
+              "text": "The user currently has medical clearance to cycle to work."
+            }
+          ]
+        ],
+        [
+          "b_dense_future_race_2",
+          [
+            {
+              "condition_id": "c_dense_training_2",
+              "scope_id": "user1",
+              "text": "The user can safely train for the charity ride next month."
+            }
+          ]
+        ]
+      ],
+      "dependency_edges_by_belief": [
+        [
+          "b_dense_commute_2",
+          [
+            {
+              "edge_id": "dep-b_dense_commute_2-c_dense_mobility_2",
+              "belief_id": "b_dense_commute_2",
+              "condition_id": "c_dense_mobility_2",
+              "inducer": "internal_hard_v1_fixture",
+              "edge_type": "REQUIRES"
+            }
+          ]
+        ],
+        [
+          "b_dense_future_race_2",
+          [
+            {
+              "edge_id": "dep-b_dense_future_race_2-c_dense_training_2",
+              "belief_id": "b_dense_future_race_2",
+              "condition_id": "c_dense_training_2",
+              "inducer": "internal_hard_v1_fixture",
+              "edge_type": "REQUIRES"
+            }
+          ]
+        ]
+      ],
+      "expected_stage_a_status": {
+        "b_dense_commute_2": "BLOCKED",
+        "b_dense_owns_bike_2": "AUTHORIZED",
+        "b_dense_bikepath_2": "AUTHORIZED",
+        "b_dense_interest_2": "AUTHORIZED",
+        "b_dense_history_2": "AUTHORIZED",
+        "b_dense_future_race_2": "BLOCKED"
+      },
+      "expected_comparable_status": {
+        "b_dense_commute_2": "NOT_USABLE",
+        "b_dense_owns_bike_2": "USABLE",
+        "b_dense_bikepath_2": "USABLE",
+        "b_dense_interest_2": "USABLE",
+        "b_dense_history_2": "USABLE",
+        "b_dense_future_race_2": "NOT_USABLE"
+      },
+      "protected_belief_ids": [
+        "b_dense_owns_bike_2",
+        "b_dense_bikepath_2",
+        "b_dense_interest_2",
+        "b_dense_history_2"
+      ],
+      "stale_target_belief_ids": [
+        "b_dense_commute_2",
+        "b_dense_future_race_2"
+      ],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_dense_commute_2": [
+          {
+            "edge_type": "BLOCKS",
+            "target_id": "c_dense_mobility_2",
+            "rationale": "No-cycling medical order blocks cycling commute.",
+            "confidence": 0.9
+          }
+        ],
+        "b_dense_future_race_2": [
+          {
+            "edge_type": "BLOCKS",
+            "target_id": "c_dense_training_2",
+            "rationale": "No-cycling medical order blocks next-month training.",
+            "confidence": 0.9
+          }
+        ],
+        "b_dense_owns_bike_2": [],
+        "b_dense_bikepath_2": [],
+        "b_dense_interest_2": [],
+        "b_dense_history_2": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_dense_commute_2",
+          "status": "NOT_USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_owns_bike_2",
+          "status": "USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_bikepath_2",
+          "status": "USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_interest_2",
+          "status": "USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_history_2",
+          "status": "USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_future_race_2",
+          "status": "NOT_USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_dense_03",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "dense_semantic_neighborhood_scope_control",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Dense cycling neighborhood: medical restriction affects commute and near-future race training but not ownership, location, interest, or history.",
+      "scope_trap": true,
+      "temporal_reasoning_required": false,
+      "premise_resistance": false,
+      "query": "Given the user's cycling context, what remains usable after the medical update?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_bike_assets",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I own a touring bicycle, live near the River Loop bike path, watch cycling repair videos, and completed a charity bike race in 2022.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_dense_03/ev_bike_assets"
+        },
+        {
+          "evidence_id": "ev_bike_routine",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "I currently cycle to the office on workdays.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_dense_03/ev_bike_routine"
+        },
+        {
+          "evidence_id": "ev_future_race",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "I planned to train for next month's charity ride.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_dense_03/ev_future_race"
+        },
+        {
+          "evidence_id": "ev_medical_restrict",
+          "session_id": "s4",
+          "timestamp": "2026-04-04T00:00:00Z",
+          "text": "My surgeon ordered me not to cycle for four months after knee surgery, although my bicycle and cycling interests are unchanged.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_dense_03/ev_medical_restrict"
+        }
+      ],
+      "new_evidence_id": "ev_medical_restrict",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_dense_commute_3",
+          "proposition": "The user currently cycles to the office on workdays.",
+          "source_evidence_ids": [
+            "ev_bike_routine"
+          ]
+        },
+        {
+          "belief_id": "b_dense_owns_bike_3",
+          "proposition": "The user owns a touring bicycle.",
+          "source_evidence_ids": [
+            "ev_bike_assets"
+          ]
+        },
+        {
+          "belief_id": "b_dense_bikepath_3",
+          "proposition": "The user lives near the River Loop bike path.",
+          "source_evidence_ids": [
+            "ev_bike_assets"
+          ]
+        },
+        {
+          "belief_id": "b_dense_interest_3",
+          "proposition": "The user enjoys watching cycling repair videos.",
+          "source_evidence_ids": [
+            "ev_bike_assets"
+          ]
+        },
+        {
+          "belief_id": "b_dense_history_3",
+          "proposition": "The user completed a charity bike race in 2022.",
+          "source_evidence_ids": [
+            "ev_bike_assets"
+          ]
+        },
+        {
+          "belief_id": "b_dense_future_race_3",
+          "proposition": "The user can train for next month's charity ride.",
+          "source_evidence_ids": [
+            "ev_future_race"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        [
+          "b_dense_commute_3",
+          [
+            {
+              "condition_id": "c_dense_mobility_3",
+              "scope_id": "user1",
+              "text": "The user currently has medical clearance to cycle to work."
+            }
+          ]
+        ],
+        [
+          "b_dense_future_race_3",
+          [
+            {
+              "condition_id": "c_dense_training_3",
+              "scope_id": "user1",
+              "text": "The user can safely train for the charity ride next month."
+            }
+          ]
+        ]
+      ],
+      "dependency_edges_by_belief": [
+        [
+          "b_dense_commute_3",
+          [
+            {
+              "edge_id": "dep-b_dense_commute_3-c_dense_mobility_3",
+              "belief_id": "b_dense_commute_3",
+              "condition_id": "c_dense_mobility_3",
+              "inducer": "internal_hard_v1_fixture",
+              "edge_type": "REQUIRES"
+            }
+          ]
+        ],
+        [
+          "b_dense_future_race_3",
+          [
+            {
+              "edge_id": "dep-b_dense_future_race_3-c_dense_training_3",
+              "belief_id": "b_dense_future_race_3",
+              "condition_id": "c_dense_training_3",
+              "inducer": "internal_hard_v1_fixture",
+              "edge_type": "REQUIRES"
+            }
+          ]
+        ]
+      ],
+      "expected_stage_a_status": {
+        "b_dense_commute_3": "BLOCKED",
+        "b_dense_owns_bike_3": "AUTHORIZED",
+        "b_dense_bikepath_3": "AUTHORIZED",
+        "b_dense_interest_3": "AUTHORIZED",
+        "b_dense_history_3": "AUTHORIZED",
+        "b_dense_future_race_3": "BLOCKED"
+      },
+      "expected_comparable_status": {
+        "b_dense_commute_3": "NOT_USABLE",
+        "b_dense_owns_bike_3": "USABLE",
+        "b_dense_bikepath_3": "USABLE",
+        "b_dense_interest_3": "USABLE",
+        "b_dense_history_3": "USABLE",
+        "b_dense_future_race_3": "NOT_USABLE"
+      },
+      "protected_belief_ids": [
+        "b_dense_owns_bike_3",
+        "b_dense_bikepath_3",
+        "b_dense_interest_3",
+        "b_dense_history_3"
+      ],
+      "stale_target_belief_ids": [
+        "b_dense_commute_3",
+        "b_dense_future_race_3"
+      ],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_dense_commute_3": [
+          {
+            "edge_type": "BLOCKS",
+            "target_id": "c_dense_mobility_3",
+            "rationale": "No-cycling medical order blocks cycling commute.",
+            "confidence": 0.9
+          }
+        ],
+        "b_dense_future_race_3": [
+          {
+            "edge_type": "BLOCKS",
+            "target_id": "c_dense_training_3",
+            "rationale": "No-cycling medical order blocks next-month training.",
+            "confidence": 0.9
+          }
+        ],
+        "b_dense_owns_bike_3": [],
+        "b_dense_bikepath_3": [],
+        "b_dense_interest_3": [],
+        "b_dense_history_3": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_dense_commute_3",
+          "status": "NOT_USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_owns_bike_3",
+          "status": "USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_bikepath_3",
+          "status": "USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_interest_3",
+          "status": "USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_history_3",
+          "status": "USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_future_race_3",
+          "status": "NOT_USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_dense_04",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "dense_semantic_neighborhood_scope_control",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Dense cycling neighborhood: medical restriction affects commute and near-future race training but not ownership, location, interest, or history.",
+      "scope_trap": true,
+      "temporal_reasoning_required": false,
+      "premise_resistance": false,
+      "query": "Given the user's cycling context, what remains usable after the medical update?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_bike_assets",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I own a touring bicycle, live near the River Loop bike path, watch cycling repair videos, and completed a charity bike race in 2022.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_dense_04/ev_bike_assets"
+        },
+        {
+          "evidence_id": "ev_bike_routine",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "I currently cycle to the office on workdays.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_dense_04/ev_bike_routine"
+        },
+        {
+          "evidence_id": "ev_future_race",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "I planned to train for next month's charity ride.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_dense_04/ev_future_race"
+        },
+        {
+          "evidence_id": "ev_medical_restrict",
+          "session_id": "s4",
+          "timestamp": "2026-04-04T00:00:00Z",
+          "text": "My surgeon ordered me not to cycle for four months after knee surgery, although my bicycle and cycling interests are unchanged.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_dense_04/ev_medical_restrict"
+        }
+      ],
+      "new_evidence_id": "ev_medical_restrict",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_dense_commute_4",
+          "proposition": "The user currently cycles to the office on workdays.",
+          "source_evidence_ids": [
+            "ev_bike_routine"
+          ]
+        },
+        {
+          "belief_id": "b_dense_owns_bike_4",
+          "proposition": "The user owns a touring bicycle.",
+          "source_evidence_ids": [
+            "ev_bike_assets"
+          ]
+        },
+        {
+          "belief_id": "b_dense_bikepath_4",
+          "proposition": "The user lives near the River Loop bike path.",
+          "source_evidence_ids": [
+            "ev_bike_assets"
+          ]
+        },
+        {
+          "belief_id": "b_dense_interest_4",
+          "proposition": "The user enjoys watching cycling repair videos.",
+          "source_evidence_ids": [
+            "ev_bike_assets"
+          ]
+        },
+        {
+          "belief_id": "b_dense_history_4",
+          "proposition": "The user completed a charity bike race in 2022.",
+          "source_evidence_ids": [
+            "ev_bike_assets"
+          ]
+        },
+        {
+          "belief_id": "b_dense_future_race_4",
+          "proposition": "The user can train for next month's charity ride.",
+          "source_evidence_ids": [
+            "ev_future_race"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        [
+          "b_dense_commute_4",
+          [
+            {
+              "condition_id": "c_dense_mobility_4",
+              "scope_id": "user1",
+              "text": "The user currently has medical clearance to cycle to work."
+            }
+          ]
+        ],
+        [
+          "b_dense_future_race_4",
+          [
+            {
+              "condition_id": "c_dense_training_4",
+              "scope_id": "user1",
+              "text": "The user can safely train for the charity ride next month."
+            }
+          ]
+        ]
+      ],
+      "dependency_edges_by_belief": [
+        [
+          "b_dense_commute_4",
+          [
+            {
+              "edge_id": "dep-b_dense_commute_4-c_dense_mobility_4",
+              "belief_id": "b_dense_commute_4",
+              "condition_id": "c_dense_mobility_4",
+              "inducer": "internal_hard_v1_fixture",
+              "edge_type": "REQUIRES"
+            }
+          ]
+        ],
+        [
+          "b_dense_future_race_4",
+          [
+            {
+              "edge_id": "dep-b_dense_future_race_4-c_dense_training_4",
+              "belief_id": "b_dense_future_race_4",
+              "condition_id": "c_dense_training_4",
+              "inducer": "internal_hard_v1_fixture",
+              "edge_type": "REQUIRES"
+            }
+          ]
+        ]
+      ],
+      "expected_stage_a_status": {
+        "b_dense_commute_4": "BLOCKED",
+        "b_dense_owns_bike_4": "AUTHORIZED",
+        "b_dense_bikepath_4": "AUTHORIZED",
+        "b_dense_interest_4": "AUTHORIZED",
+        "b_dense_history_4": "AUTHORIZED",
+        "b_dense_future_race_4": "BLOCKED"
+      },
+      "expected_comparable_status": {
+        "b_dense_commute_4": "NOT_USABLE",
+        "b_dense_owns_bike_4": "USABLE",
+        "b_dense_bikepath_4": "USABLE",
+        "b_dense_interest_4": "USABLE",
+        "b_dense_history_4": "USABLE",
+        "b_dense_future_race_4": "NOT_USABLE"
+      },
+      "protected_belief_ids": [
+        "b_dense_owns_bike_4",
+        "b_dense_bikepath_4",
+        "b_dense_interest_4",
+        "b_dense_history_4"
+      ],
+      "stale_target_belief_ids": [
+        "b_dense_commute_4",
+        "b_dense_future_race_4"
+      ],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_dense_commute_4": [
+          {
+            "edge_type": "BLOCKS",
+            "target_id": "c_dense_mobility_4",
+            "rationale": "No-cycling medical order blocks cycling commute.",
+            "confidence": 0.9
+          }
+        ],
+        "b_dense_future_race_4": [
+          {
+            "edge_type": "BLOCKS",
+            "target_id": "c_dense_training_4",
+            "rationale": "No-cycling medical order blocks next-month training.",
+            "confidence": 0.9
+          }
+        ],
+        "b_dense_owns_bike_4": [],
+        "b_dense_bikepath_4": [],
+        "b_dense_interest_4": [],
+        "b_dense_history_4": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_dense_commute_4",
+          "status": "NOT_USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_owns_bike_4",
+          "status": "USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_bikepath_4",
+          "status": "USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_interest_4",
+          "status": "USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_history_4",
+          "status": "USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_dense_future_race_4",
+          "status": "NOT_USABLE",
+          "rationale": "Matches scoped medical effect.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_temporal_01",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "multi_step_temporal_revision",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Multiple temporal updates require using the latest applicable restriction while preserving history and ownership.",
+      "scope_trap": true,
+      "temporal_reasoning_required": true,
+      "premise_resistance": false,
+      "query": "Can the user currently cycle to campus, and which related facts remain usable?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_bike_owned",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I own a blue commuter bike.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_01/ev_bike_owned"
+        },
+        {
+          "evidence_id": "ev_cycle_old",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "During spring term I cycled to campus every weekday.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_01/ev_cycle_old"
+        },
+        {
+          "evidence_id": "ev_injury",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "In June I fractured my ankle and was told not to cycle.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_01/ev_injury"
+        },
+        {
+          "evidence_id": "ev_clearance",
+          "session_id": "s4",
+          "timestamp": "2026-04-04T00:00:00Z",
+          "text": "In August my doctor cleared gentle cycling again.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_01/ev_clearance"
+        },
+        {
+          "evidence_id": "ev_new_restrict",
+          "session_id": "s5",
+          "timestamp": "2026-05-05T00:00:00Z",
+          "text": "Yesterday the ankle pain returned and the clinic told me not to cycle until new scans are reviewed next week.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_01/ev_new_restrict"
+        }
+      ],
+      "new_evidence_id": "ev_new_restrict",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_temporal_commute_1",
+          "proposition": "The user can currently cycle to campus.",
+          "source_evidence_ids": [
+            "ev_cycle_old"
+          ]
+        },
+        {
+          "belief_id": "b_temporal_history_1",
+          "proposition": "The user cycled to campus during spring term.",
+          "source_evidence_ids": [
+            "ev_cycle_old"
+          ]
+        },
+        {
+          "belief_id": "b_temporal_bike_1",
+          "proposition": "The user owns a blue commuter bike.",
+          "source_evidence_ids": [
+            "ev_bike_owned"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        [
+          "b_temporal_commute_1",
+          [
+            {
+              "condition_id": "c_temporal_clear_1",
+              "scope_id": "user1",
+              "text": "The user currently has medical clearance to cycle to campus."
+            }
+          ]
+        ]
+      ],
+      "dependency_edges_by_belief": [
+        [
+          "b_temporal_commute_1",
+          [
+            {
+              "edge_id": "dep-b_temporal_commute_1-c_temporal_clear_1",
+              "belief_id": "b_temporal_commute_1",
+              "condition_id": "c_temporal_clear_1",
+              "inducer": "internal_hard_v1_fixture",
+              "edge_type": "REQUIRES"
+            }
+          ]
+        ]
+      ],
+      "expected_stage_a_status": {
+        "b_temporal_commute_1": "BLOCKED",
+        "b_temporal_history_1": "AUTHORIZED",
+        "b_temporal_bike_1": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_temporal_commute_1": "NOT_USABLE",
+        "b_temporal_history_1": "USABLE",
+        "b_temporal_bike_1": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_temporal_history_1",
+        "b_temporal_bike_1"
+      ],
+      "stale_target_belief_ids": [
+        "b_temporal_commute_1"
+      ],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_temporal_commute_1": [
+          {
+            "edge_type": "BLOCKS",
+            "target_id": "c_temporal_clear_1",
+            "rationale": "Latest scan-pending restriction blocks current cycling.",
+            "confidence": 0.9
+          }
+        ],
+        "b_temporal_history_1": [],
+        "b_temporal_bike_1": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_temporal_commute_1",
+          "status": "NOT_USABLE",
+          "rationale": "Latest restriction blocks current cycling.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_temporal_history_1",
+          "status": "USABLE",
+          "rationale": "History remains true.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_temporal_bike_1",
+          "status": "USABLE",
+          "rationale": "Ownership unaffected.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_temporal_02",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "multi_step_temporal_revision",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Multiple temporal updates require using the latest applicable restriction while preserving history and ownership.",
+      "scope_trap": true,
+      "temporal_reasoning_required": true,
+      "premise_resistance": false,
+      "query": "Can the user currently cycle to campus, and which related facts remain usable?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_bike_owned",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I own a blue commuter bike.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_02/ev_bike_owned"
+        },
+        {
+          "evidence_id": "ev_cycle_old",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "During spring term I cycled to campus every weekday.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_02/ev_cycle_old"
+        },
+        {
+          "evidence_id": "ev_injury",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "In June I fractured my ankle and was told not to cycle.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_02/ev_injury"
+        },
+        {
+          "evidence_id": "ev_clearance",
+          "session_id": "s4",
+          "timestamp": "2026-04-04T00:00:00Z",
+          "text": "In August my doctor cleared gentle cycling again.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_02/ev_clearance"
+        },
+        {
+          "evidence_id": "ev_new_restrict",
+          "session_id": "s5",
+          "timestamp": "2026-05-05T00:00:00Z",
+          "text": "Yesterday the ankle pain returned and the clinic told me not to cycle until new scans are reviewed next week.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_02/ev_new_restrict"
+        }
+      ],
+      "new_evidence_id": "ev_new_restrict",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_temporal_commute_2",
+          "proposition": "The user can currently cycle to campus.",
+          "source_evidence_ids": [
+            "ev_cycle_old"
+          ]
+        },
+        {
+          "belief_id": "b_temporal_history_2",
+          "proposition": "The user cycled to campus during spring term.",
+          "source_evidence_ids": [
+            "ev_cycle_old"
+          ]
+        },
+        {
+          "belief_id": "b_temporal_bike_2",
+          "proposition": "The user owns a blue commuter bike.",
+          "source_evidence_ids": [
+            "ev_bike_owned"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        [
+          "b_temporal_commute_2",
+          [
+            {
+              "condition_id": "c_temporal_clear_2",
+              "scope_id": "user1",
+              "text": "The user currently has medical clearance to cycle to campus."
+            }
+          ]
+        ]
+      ],
+      "dependency_edges_by_belief": [
+        [
+          "b_temporal_commute_2",
+          [
+            {
+              "edge_id": "dep-b_temporal_commute_2-c_temporal_clear_2",
+              "belief_id": "b_temporal_commute_2",
+              "condition_id": "c_temporal_clear_2",
+              "inducer": "internal_hard_v1_fixture",
+              "edge_type": "REQUIRES"
+            }
+          ]
+        ]
+      ],
+      "expected_stage_a_status": {
+        "b_temporal_commute_2": "BLOCKED",
+        "b_temporal_history_2": "AUTHORIZED",
+        "b_temporal_bike_2": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_temporal_commute_2": "NOT_USABLE",
+        "b_temporal_history_2": "USABLE",
+        "b_temporal_bike_2": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_temporal_history_2",
+        "b_temporal_bike_2"
+      ],
+      "stale_target_belief_ids": [
+        "b_temporal_commute_2"
+      ],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_temporal_commute_2": [
+          {
+            "edge_type": "BLOCKS",
+            "target_id": "c_temporal_clear_2",
+            "rationale": "Latest scan-pending restriction blocks current cycling.",
+            "confidence": 0.9
+          }
+        ],
+        "b_temporal_history_2": [],
+        "b_temporal_bike_2": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_temporal_commute_2",
+          "status": "NOT_USABLE",
+          "rationale": "Latest restriction blocks current cycling.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_temporal_history_2",
+          "status": "USABLE",
+          "rationale": "History remains true.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_temporal_bike_2",
+          "status": "USABLE",
+          "rationale": "Ownership unaffected.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_temporal_03",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "multi_step_temporal_revision",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Multiple temporal updates require using the latest applicable restriction while preserving history and ownership.",
+      "scope_trap": true,
+      "temporal_reasoning_required": true,
+      "premise_resistance": false,
+      "query": "Can the user currently cycle to campus, and which related facts remain usable?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_bike_owned",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I own a blue commuter bike.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_03/ev_bike_owned"
+        },
+        {
+          "evidence_id": "ev_cycle_old",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "During spring term I cycled to campus every weekday.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_03/ev_cycle_old"
+        },
+        {
+          "evidence_id": "ev_injury",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "In June I fractured my ankle and was told not to cycle.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_03/ev_injury"
+        },
+        {
+          "evidence_id": "ev_clearance",
+          "session_id": "s4",
+          "timestamp": "2026-04-04T00:00:00Z",
+          "text": "In August my doctor cleared gentle cycling again.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_03/ev_clearance"
+        },
+        {
+          "evidence_id": "ev_new_restrict",
+          "session_id": "s5",
+          "timestamp": "2026-05-05T00:00:00Z",
+          "text": "Yesterday the ankle pain returned and the clinic told me not to cycle until new scans are reviewed next week.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_03/ev_new_restrict"
+        }
+      ],
+      "new_evidence_id": "ev_new_restrict",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_temporal_commute_3",
+          "proposition": "The user can currently cycle to campus.",
+          "source_evidence_ids": [
+            "ev_cycle_old"
+          ]
+        },
+        {
+          "belief_id": "b_temporal_history_3",
+          "proposition": "The user cycled to campus during spring term.",
+          "source_evidence_ids": [
+            "ev_cycle_old"
+          ]
+        },
+        {
+          "belief_id": "b_temporal_bike_3",
+          "proposition": "The user owns a blue commuter bike.",
+          "source_evidence_ids": [
+            "ev_bike_owned"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        [
+          "b_temporal_commute_3",
+          [
+            {
+              "condition_id": "c_temporal_clear_3",
+              "scope_id": "user1",
+              "text": "The user currently has medical clearance to cycle to campus."
+            }
+          ]
+        ]
+      ],
+      "dependency_edges_by_belief": [
+        [
+          "b_temporal_commute_3",
+          [
+            {
+              "edge_id": "dep-b_temporal_commute_3-c_temporal_clear_3",
+              "belief_id": "b_temporal_commute_3",
+              "condition_id": "c_temporal_clear_3",
+              "inducer": "internal_hard_v1_fixture",
+              "edge_type": "REQUIRES"
+            }
+          ]
+        ]
+      ],
+      "expected_stage_a_status": {
+        "b_temporal_commute_3": "BLOCKED",
+        "b_temporal_history_3": "AUTHORIZED",
+        "b_temporal_bike_3": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_temporal_commute_3": "NOT_USABLE",
+        "b_temporal_history_3": "USABLE",
+        "b_temporal_bike_3": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_temporal_history_3",
+        "b_temporal_bike_3"
+      ],
+      "stale_target_belief_ids": [
+        "b_temporal_commute_3"
+      ],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_temporal_commute_3": [
+          {
+            "edge_type": "BLOCKS",
+            "target_id": "c_temporal_clear_3",
+            "rationale": "Latest scan-pending restriction blocks current cycling.",
+            "confidence": 0.9
+          }
+        ],
+        "b_temporal_history_3": [],
+        "b_temporal_bike_3": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_temporal_commute_3",
+          "status": "NOT_USABLE",
+          "rationale": "Latest restriction blocks current cycling.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_temporal_history_3",
+          "status": "USABLE",
+          "rationale": "History remains true.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_temporal_bike_3",
+          "status": "USABLE",
+          "rationale": "Ownership unaffected.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_temporal_04",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "multi_step_temporal_revision",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Multiple temporal updates require using the latest applicable restriction while preserving history and ownership.",
+      "scope_trap": true,
+      "temporal_reasoning_required": true,
+      "premise_resistance": false,
+      "query": "Can the user currently cycle to campus, and which related facts remain usable?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_bike_owned",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I own a blue commuter bike.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_04/ev_bike_owned"
+        },
+        {
+          "evidence_id": "ev_cycle_old",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "During spring term I cycled to campus every weekday.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_04/ev_cycle_old"
+        },
+        {
+          "evidence_id": "ev_injury",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "In June I fractured my ankle and was told not to cycle.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_04/ev_injury"
+        },
+        {
+          "evidence_id": "ev_clearance",
+          "session_id": "s4",
+          "timestamp": "2026-04-04T00:00:00Z",
+          "text": "In August my doctor cleared gentle cycling again.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_04/ev_clearance"
+        },
+        {
+          "evidence_id": "ev_new_restrict",
+          "session_id": "s5",
+          "timestamp": "2026-05-05T00:00:00Z",
+          "text": "Yesterday the ankle pain returned and the clinic told me not to cycle until new scans are reviewed next week.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_temporal_04/ev_new_restrict"
+        }
+      ],
+      "new_evidence_id": "ev_new_restrict",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_temporal_commute_4",
+          "proposition": "The user can currently cycle to campus.",
+          "source_evidence_ids": [
+            "ev_cycle_old"
+          ]
+        },
+        {
+          "belief_id": "b_temporal_history_4",
+          "proposition": "The user cycled to campus during spring term.",
+          "source_evidence_ids": [
+            "ev_cycle_old"
+          ]
+        },
+        {
+          "belief_id": "b_temporal_bike_4",
+          "proposition": "The user owns a blue commuter bike.",
+          "source_evidence_ids": [
+            "ev_bike_owned"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        [
+          "b_temporal_commute_4",
+          [
+            {
+              "condition_id": "c_temporal_clear_4",
+              "scope_id": "user1",
+              "text": "The user currently has medical clearance to cycle to campus."
+            }
+          ]
+        ]
+      ],
+      "dependency_edges_by_belief": [
+        [
+          "b_temporal_commute_4",
+          [
+            {
+              "edge_id": "dep-b_temporal_commute_4-c_temporal_clear_4",
+              "belief_id": "b_temporal_commute_4",
+              "condition_id": "c_temporal_clear_4",
+              "inducer": "internal_hard_v1_fixture",
+              "edge_type": "REQUIRES"
+            }
+          ]
+        ]
+      ],
+      "expected_stage_a_status": {
+        "b_temporal_commute_4": "BLOCKED",
+        "b_temporal_history_4": "AUTHORIZED",
+        "b_temporal_bike_4": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_temporal_commute_4": "NOT_USABLE",
+        "b_temporal_history_4": "USABLE",
+        "b_temporal_bike_4": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_temporal_history_4",
+        "b_temporal_bike_4"
+      ],
+      "stale_target_belief_ids": [
+        "b_temporal_commute_4"
+      ],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_temporal_commute_4": [
+          {
+            "edge_type": "BLOCKS",
+            "target_id": "c_temporal_clear_4",
+            "rationale": "Latest scan-pending restriction blocks current cycling.",
+            "confidence": 0.9
+          }
+        ],
+        "b_temporal_history_4": [],
+        "b_temporal_bike_4": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_temporal_commute_4",
+          "status": "NOT_USABLE",
+          "rationale": "Latest restriction blocks current cycling.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_temporal_history_4",
+          "status": "USABLE",
+          "rationale": "History remains true.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_temporal_bike_4",
+          "status": "USABLE",
+          "rationale": "Ownership unaffected.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_premise_01",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "premise_resistance_under_stale_assumption",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Query embeds stale employer premise; current employer must be superseded while benefit history remains preserved.",
+      "scope_trap": true,
+      "temporal_reasoning_required": true,
+      "premise_resistance": true,
+      "query": "Which HelioWorks commuter benefit should the user use now?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_old_job",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I work at HelioWorks and use its commuter benefits.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_premise_01/ev_old_job"
+        },
+        {
+          "evidence_id": "ev_benefit_history",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "Last year I used HelioWorks commuter benefits for train passes.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_premise_01/ev_benefit_history"
+        },
+        {
+          "evidence_id": "ev_new_job",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "I left HelioWorks last month and started at Northstar Labs this week.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_premise_01/ev_new_job"
+        }
+      ],
+      "new_evidence_id": "ev_new_job",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_premise_employer_1",
+          "proposition": "The user works at HelioWorks.",
+          "source_evidence_ids": [
+            "ev_old_job"
+          ]
+        },
+        {
+          "belief_id": "b_premise_newrole_1",
+          "proposition": "The user works at Northstar Labs.",
+          "source_evidence_ids": [
+            "ev_new_job"
+          ]
+        },
+        {
+          "belief_id": "b_premise_benefit_1",
+          "proposition": "The user used HelioWorks commuter benefits last year.",
+          "source_evidence_ids": [
+            "ev_benefit_history"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [
+        {
+          "belief_id": "b_premise_replacement_newrole_1",
+          "proposition": "The user works at Northstar Labs.",
+          "source_evidence_ids": [
+            "ev_new_job"
+          ]
+        }
+      ],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {
+        "b_premise_employer_1": "SUPERSEDED",
+        "b_premise_newrole_1": "AUTHORIZED",
+        "b_premise_benefit_1": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_premise_employer_1": "NOT_USABLE",
+        "b_premise_newrole_1": "USABLE",
+        "b_premise_benefit_1": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_premise_newrole_1",
+        "b_premise_benefit_1"
+      ],
+      "stale_target_belief_ids": [
+        "b_premise_employer_1"
+      ],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_premise_employer_1": [
+          {
+            "edge_type": "SUPERSEDES",
+            "target_id": "b_premise_employer_1",
+            "rationale": "Employer changed to Northstar.",
+            "confidence": 0.9,
+            "replacement_belief_id": "b_premise_replacement_newrole_1"
+          }
+        ],
+        "b_premise_newrole_1": [],
+        "b_premise_benefit_1": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_premise_employer_1",
+          "status": "NOT_USABLE",
+          "rationale": "Old employer premise is stale.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_premise_newrole_1",
+          "status": "USABLE",
+          "rationale": "New role is current.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_premise_benefit_1",
+          "status": "USABLE",
+          "rationale": "Historical benefit use remains true.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_premise_02",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "premise_resistance_under_stale_assumption",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Query embeds stale employer premise; current employer must be superseded while benefit history remains preserved.",
+      "scope_trap": true,
+      "temporal_reasoning_required": true,
+      "premise_resistance": true,
+      "query": "Which HelioWorks commuter benefit should the user use now?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_old_job",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I work at HelioWorks and use its commuter benefits.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_premise_02/ev_old_job"
+        },
+        {
+          "evidence_id": "ev_benefit_history",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "Last year I used HelioWorks commuter benefits for train passes.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_premise_02/ev_benefit_history"
+        },
+        {
+          "evidence_id": "ev_new_job",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "I left HelioWorks last month and started at Northstar Labs this week.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_premise_02/ev_new_job"
+        }
+      ],
+      "new_evidence_id": "ev_new_job",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_premise_employer_2",
+          "proposition": "The user works at HelioWorks.",
+          "source_evidence_ids": [
+            "ev_old_job"
+          ]
+        },
+        {
+          "belief_id": "b_premise_newrole_2",
+          "proposition": "The user works at Northstar Labs.",
+          "source_evidence_ids": [
+            "ev_new_job"
+          ]
+        },
+        {
+          "belief_id": "b_premise_benefit_2",
+          "proposition": "The user used HelioWorks commuter benefits last year.",
+          "source_evidence_ids": [
+            "ev_benefit_history"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [
+        {
+          "belief_id": "b_premise_replacement_newrole_2",
+          "proposition": "The user works at Northstar Labs.",
+          "source_evidence_ids": [
+            "ev_new_job"
+          ]
+        }
+      ],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {
+        "b_premise_employer_2": "SUPERSEDED",
+        "b_premise_newrole_2": "AUTHORIZED",
+        "b_premise_benefit_2": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_premise_employer_2": "NOT_USABLE",
+        "b_premise_newrole_2": "USABLE",
+        "b_premise_benefit_2": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_premise_newrole_2",
+        "b_premise_benefit_2"
+      ],
+      "stale_target_belief_ids": [
+        "b_premise_employer_2"
+      ],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_premise_employer_2": [
+          {
+            "edge_type": "SUPERSEDES",
+            "target_id": "b_premise_employer_2",
+            "rationale": "Employer changed to Northstar.",
+            "confidence": 0.9,
+            "replacement_belief_id": "b_premise_replacement_newrole_2"
+          }
+        ],
+        "b_premise_newrole_2": [],
+        "b_premise_benefit_2": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_premise_employer_2",
+          "status": "NOT_USABLE",
+          "rationale": "Old employer premise is stale.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_premise_newrole_2",
+          "status": "USABLE",
+          "rationale": "New role is current.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_premise_benefit_2",
+          "status": "USABLE",
+          "rationale": "Historical benefit use remains true.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_premise_03",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "premise_resistance_under_stale_assumption",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Query embeds stale employer premise; current employer must be superseded while benefit history remains preserved.",
+      "scope_trap": true,
+      "temporal_reasoning_required": true,
+      "premise_resistance": true,
+      "query": "Which HelioWorks commuter benefit should the user use now?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_old_job",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I work at HelioWorks and use its commuter benefits.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_premise_03/ev_old_job"
+        },
+        {
+          "evidence_id": "ev_benefit_history",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "Last year I used HelioWorks commuter benefits for train passes.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_premise_03/ev_benefit_history"
+        },
+        {
+          "evidence_id": "ev_new_job",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "I left HelioWorks last month and started at Northstar Labs this week.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_premise_03/ev_new_job"
+        }
+      ],
+      "new_evidence_id": "ev_new_job",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_premise_employer_3",
+          "proposition": "The user works at HelioWorks.",
+          "source_evidence_ids": [
+            "ev_old_job"
+          ]
+        },
+        {
+          "belief_id": "b_premise_newrole_3",
+          "proposition": "The user works at Northstar Labs.",
+          "source_evidence_ids": [
+            "ev_new_job"
+          ]
+        },
+        {
+          "belief_id": "b_premise_benefit_3",
+          "proposition": "The user used HelioWorks commuter benefits last year.",
+          "source_evidence_ids": [
+            "ev_benefit_history"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [
+        {
+          "belief_id": "b_premise_replacement_newrole_3",
+          "proposition": "The user works at Northstar Labs.",
+          "source_evidence_ids": [
+            "ev_new_job"
+          ]
+        }
+      ],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {
+        "b_premise_employer_3": "SUPERSEDED",
+        "b_premise_newrole_3": "AUTHORIZED",
+        "b_premise_benefit_3": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_premise_employer_3": "NOT_USABLE",
+        "b_premise_newrole_3": "USABLE",
+        "b_premise_benefit_3": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_premise_newrole_3",
+        "b_premise_benefit_3"
+      ],
+      "stale_target_belief_ids": [
+        "b_premise_employer_3"
+      ],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_premise_employer_3": [
+          {
+            "edge_type": "SUPERSEDES",
+            "target_id": "b_premise_employer_3",
+            "rationale": "Employer changed to Northstar.",
+            "confidence": 0.9,
+            "replacement_belief_id": "b_premise_replacement_newrole_3"
+          }
+        ],
+        "b_premise_newrole_3": [],
+        "b_premise_benefit_3": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_premise_employer_3",
+          "status": "NOT_USABLE",
+          "rationale": "Old employer premise is stale.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_premise_newrole_3",
+          "status": "USABLE",
+          "rationale": "New role is current.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_premise_benefit_3",
+          "status": "USABLE",
+          "rationale": "Historical benefit use remains true.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_premise_04",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "premise_resistance_under_stale_assumption",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Query embeds stale employer premise; current employer must be superseded while benefit history remains preserved.",
+      "scope_trap": true,
+      "temporal_reasoning_required": true,
+      "premise_resistance": true,
+      "query": "Which HelioWorks commuter benefit should the user use now?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_old_job",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I work at HelioWorks and use its commuter benefits.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_premise_04/ev_old_job"
+        },
+        {
+          "evidence_id": "ev_benefit_history",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "Last year I used HelioWorks commuter benefits for train passes.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_premise_04/ev_benefit_history"
+        },
+        {
+          "evidence_id": "ev_new_job",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "I left HelioWorks last month and started at Northstar Labs this week.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_premise_04/ev_new_job"
+        }
+      ],
+      "new_evidence_id": "ev_new_job",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_premise_employer_4",
+          "proposition": "The user works at HelioWorks.",
+          "source_evidence_ids": [
+            "ev_old_job"
+          ]
+        },
+        {
+          "belief_id": "b_premise_newrole_4",
+          "proposition": "The user works at Northstar Labs.",
+          "source_evidence_ids": [
+            "ev_new_job"
+          ]
+        },
+        {
+          "belief_id": "b_premise_benefit_4",
+          "proposition": "The user used HelioWorks commuter benefits last year.",
+          "source_evidence_ids": [
+            "ev_benefit_history"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [
+        {
+          "belief_id": "b_premise_replacement_newrole_4",
+          "proposition": "The user works at Northstar Labs.",
+          "source_evidence_ids": [
+            "ev_new_job"
+          ]
+        }
+      ],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {
+        "b_premise_employer_4": "SUPERSEDED",
+        "b_premise_newrole_4": "AUTHORIZED",
+        "b_premise_benefit_4": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_premise_employer_4": "NOT_USABLE",
+        "b_premise_newrole_4": "USABLE",
+        "b_premise_benefit_4": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_premise_newrole_4",
+        "b_premise_benefit_4"
+      ],
+      "stale_target_belief_ids": [
+        "b_premise_employer_4"
+      ],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_premise_employer_4": [
+          {
+            "edge_type": "SUPERSEDES",
+            "target_id": "b_premise_employer_4",
+            "rationale": "Employer changed to Northstar.",
+            "confidence": 0.9,
+            "replacement_belief_id": "b_premise_replacement_newrole_4"
+          }
+        ],
+        "b_premise_newrole_4": [],
+        "b_premise_benefit_4": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_premise_employer_4",
+          "status": "NOT_USABLE",
+          "rationale": "Old employer premise is stale.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_premise_newrole_4",
+          "status": "USABLE",
+          "rationale": "New role is current.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_premise_benefit_4",
+          "status": "USABLE",
+          "rationale": "Historical benefit use remains true.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_release_01",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "release_or_recovery_with_persistent_history",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Later reinstatement releases a prior driving blocker while preserving suspension history and car ownership.",
+      "scope_trap": true,
+      "temporal_reasoning_required": true,
+      "premise_resistance": false,
+      "query": "Can the user drive to work now, and what history remains?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_drive_old",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I own a compact car and usually drive to work.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_release_01/ev_drive_old"
+        },
+        {
+          "evidence_id": "ev_suspend",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "My license was suspended in July, so I cannot legally drive.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_release_01/ev_suspend"
+        },
+        {
+          "evidence_id": "ev_reinstate",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "The DMV reinstated my license today after I completed the required course.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_release_01/ev_reinstate"
+        }
+      ],
+      "new_evidence_id": "ev_reinstate",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_release_drive_1",
+          "proposition": "The user can currently drive to work.",
+          "source_evidence_ids": [
+            "ev_drive_old"
+          ]
+        },
+        {
+          "belief_id": "b_release_suspension_history_1",
+          "proposition": "The user's license was suspended in July.",
+          "source_evidence_ids": [
+            "ev_suspend"
+          ]
+        },
+        {
+          "belief_id": "b_release_car_owner_1",
+          "proposition": "The user owns a compact car.",
+          "source_evidence_ids": [
+            "ev_drive_old"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        [
+          "b_release_drive_1",
+          [
+            {
+              "condition_id": "c_release_license_1",
+              "scope_id": "user1",
+              "text": "The user has a valid license for driving to work."
+            }
+          ]
+        ]
+      ],
+      "dependency_edges_by_belief": [
+        [
+          "b_release_drive_1",
+          [
+            {
+              "edge_id": "dep-b_release_drive_1-c_release_license_1",
+              "belief_id": "b_release_drive_1",
+              "condition_id": "c_release_license_1",
+              "inducer": "internal_hard_v1_fixture",
+              "edge_type": "REQUIRES"
+            }
+          ]
+        ]
+      ],
+      "expected_stage_a_status": {
+        "b_release_drive_1": "AUTHORIZED",
+        "b_release_suspension_history_1": "AUTHORIZED",
+        "b_release_car_owner_1": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_release_drive_1": "USABLE",
+        "b_release_suspension_history_1": "USABLE",
+        "b_release_car_owner_1": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_release_suspension_history_1",
+        "b_release_car_owner_1"
+      ],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_release_drive_1": [
+          {
+            "edge_type": "RELEASES",
+            "target_id": "c_release_license_1",
+            "rationale": "License reinstatement releases the driving-license blocker.",
+            "confidence": 0.9
+          }
+        ],
+        "b_release_suspension_history_1": [],
+        "b_release_car_owner_1": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_release_drive_1",
+          "status": "USABLE",
+          "rationale": "License reinstated.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_release_suspension_history_1",
+          "status": "USABLE",
+          "rationale": "Past suspension remains historical fact.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_release_car_owner_1",
+          "status": "USABLE",
+          "rationale": "Ownership unaffected.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_release_02",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "release_or_recovery_with_persistent_history",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Later reinstatement releases a prior driving blocker while preserving suspension history and car ownership.",
+      "scope_trap": true,
+      "temporal_reasoning_required": true,
+      "premise_resistance": false,
+      "query": "Can the user drive to work now, and what history remains?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_drive_old",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I own a compact car and usually drive to work.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_release_02/ev_drive_old"
+        },
+        {
+          "evidence_id": "ev_suspend",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "My license was suspended in July, so I cannot legally drive.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_release_02/ev_suspend"
+        },
+        {
+          "evidence_id": "ev_reinstate",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "The DMV reinstated my license today after I completed the required course.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_release_02/ev_reinstate"
+        }
+      ],
+      "new_evidence_id": "ev_reinstate",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_release_drive_2",
+          "proposition": "The user can currently drive to work.",
+          "source_evidence_ids": [
+            "ev_drive_old"
+          ]
+        },
+        {
+          "belief_id": "b_release_suspension_history_2",
+          "proposition": "The user's license was suspended in July.",
+          "source_evidence_ids": [
+            "ev_suspend"
+          ]
+        },
+        {
+          "belief_id": "b_release_car_owner_2",
+          "proposition": "The user owns a compact car.",
+          "source_evidence_ids": [
+            "ev_drive_old"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        [
+          "b_release_drive_2",
+          [
+            {
+              "condition_id": "c_release_license_2",
+              "scope_id": "user1",
+              "text": "The user has a valid license for driving to work."
+            }
+          ]
+        ]
+      ],
+      "dependency_edges_by_belief": [
+        [
+          "b_release_drive_2",
+          [
+            {
+              "edge_id": "dep-b_release_drive_2-c_release_license_2",
+              "belief_id": "b_release_drive_2",
+              "condition_id": "c_release_license_2",
+              "inducer": "internal_hard_v1_fixture",
+              "edge_type": "REQUIRES"
+            }
+          ]
+        ]
+      ],
+      "expected_stage_a_status": {
+        "b_release_drive_2": "AUTHORIZED",
+        "b_release_suspension_history_2": "AUTHORIZED",
+        "b_release_car_owner_2": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_release_drive_2": "USABLE",
+        "b_release_suspension_history_2": "USABLE",
+        "b_release_car_owner_2": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_release_suspension_history_2",
+        "b_release_car_owner_2"
+      ],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_release_drive_2": [
+          {
+            "edge_type": "RELEASES",
+            "target_id": "c_release_license_2",
+            "rationale": "License reinstatement releases the driving-license blocker.",
+            "confidence": 0.9
+          }
+        ],
+        "b_release_suspension_history_2": [],
+        "b_release_car_owner_2": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_release_drive_2",
+          "status": "USABLE",
+          "rationale": "License reinstated.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_release_suspension_history_2",
+          "status": "USABLE",
+          "rationale": "Past suspension remains historical fact.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_release_car_owner_2",
+          "status": "USABLE",
+          "rationale": "Ownership unaffected.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_release_03",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "release_or_recovery_with_persistent_history",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Later reinstatement releases a prior driving blocker while preserving suspension history and car ownership.",
+      "scope_trap": true,
+      "temporal_reasoning_required": true,
+      "premise_resistance": false,
+      "query": "Can the user drive to work now, and what history remains?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_drive_old",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I own a compact car and usually drive to work.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_release_03/ev_drive_old"
+        },
+        {
+          "evidence_id": "ev_suspend",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "My license was suspended in July, so I cannot legally drive.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_release_03/ev_suspend"
+        },
+        {
+          "evidence_id": "ev_reinstate",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "The DMV reinstated my license today after I completed the required course.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_release_03/ev_reinstate"
+        }
+      ],
+      "new_evidence_id": "ev_reinstate",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_release_drive_3",
+          "proposition": "The user can currently drive to work.",
+          "source_evidence_ids": [
+            "ev_drive_old"
+          ]
+        },
+        {
+          "belief_id": "b_release_suspension_history_3",
+          "proposition": "The user's license was suspended in July.",
+          "source_evidence_ids": [
+            "ev_suspend"
+          ]
+        },
+        {
+          "belief_id": "b_release_car_owner_3",
+          "proposition": "The user owns a compact car.",
+          "source_evidence_ids": [
+            "ev_drive_old"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        [
+          "b_release_drive_3",
+          [
+            {
+              "condition_id": "c_release_license_3",
+              "scope_id": "user1",
+              "text": "The user has a valid license for driving to work."
+            }
+          ]
+        ]
+      ],
+      "dependency_edges_by_belief": [
+        [
+          "b_release_drive_3",
+          [
+            {
+              "edge_id": "dep-b_release_drive_3-c_release_license_3",
+              "belief_id": "b_release_drive_3",
+              "condition_id": "c_release_license_3",
+              "inducer": "internal_hard_v1_fixture",
+              "edge_type": "REQUIRES"
+            }
+          ]
+        ]
+      ],
+      "expected_stage_a_status": {
+        "b_release_drive_3": "AUTHORIZED",
+        "b_release_suspension_history_3": "AUTHORIZED",
+        "b_release_car_owner_3": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_release_drive_3": "USABLE",
+        "b_release_suspension_history_3": "USABLE",
+        "b_release_car_owner_3": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_release_suspension_history_3",
+        "b_release_car_owner_3"
+      ],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_release_drive_3": [
+          {
+            "edge_type": "RELEASES",
+            "target_id": "c_release_license_3",
+            "rationale": "License reinstatement releases the driving-license blocker.",
+            "confidence": 0.9
+          }
+        ],
+        "b_release_suspension_history_3": [],
+        "b_release_car_owner_3": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_release_drive_3",
+          "status": "USABLE",
+          "rationale": "License reinstated.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_release_suspension_history_3",
+          "status": "USABLE",
+          "rationale": "Past suspension remains historical fact.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_release_car_owner_3",
+          "status": "USABLE",
+          "rationale": "Ownership unaffected.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_release_04",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "release_or_recovery_with_persistent_history",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Later reinstatement releases a prior driving blocker while preserving suspension history and car ownership.",
+      "scope_trap": true,
+      "temporal_reasoning_required": true,
+      "premise_resistance": false,
+      "query": "Can the user drive to work now, and what history remains?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_drive_old",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I own a compact car and usually drive to work.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_release_04/ev_drive_old"
+        },
+        {
+          "evidence_id": "ev_suspend",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "My license was suspended in July, so I cannot legally drive.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_release_04/ev_suspend"
+        },
+        {
+          "evidence_id": "ev_reinstate",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "The DMV reinstated my license today after I completed the required course.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_release_04/ev_reinstate"
+        }
+      ],
+      "new_evidence_id": "ev_reinstate",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_release_drive_4",
+          "proposition": "The user can currently drive to work.",
+          "source_evidence_ids": [
+            "ev_drive_old"
+          ]
+        },
+        {
+          "belief_id": "b_release_suspension_history_4",
+          "proposition": "The user's license was suspended in July.",
+          "source_evidence_ids": [
+            "ev_suspend"
+          ]
+        },
+        {
+          "belief_id": "b_release_car_owner_4",
+          "proposition": "The user owns a compact car.",
+          "source_evidence_ids": [
+            "ev_drive_old"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [
+        [
+          "b_release_drive_4",
+          [
+            {
+              "condition_id": "c_release_license_4",
+              "scope_id": "user1",
+              "text": "The user has a valid license for driving to work."
+            }
+          ]
+        ]
+      ],
+      "dependency_edges_by_belief": [
+        [
+          "b_release_drive_4",
+          [
+            {
+              "edge_id": "dep-b_release_drive_4-c_release_license_4",
+              "belief_id": "b_release_drive_4",
+              "condition_id": "c_release_license_4",
+              "inducer": "internal_hard_v1_fixture",
+              "edge_type": "REQUIRES"
+            }
+          ]
+        ]
+      ],
+      "expected_stage_a_status": {
+        "b_release_drive_4": "AUTHORIZED",
+        "b_release_suspension_history_4": "AUTHORIZED",
+        "b_release_car_owner_4": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_release_drive_4": "USABLE",
+        "b_release_suspension_history_4": "USABLE",
+        "b_release_car_owner_4": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_release_suspension_history_4",
+        "b_release_car_owner_4"
+      ],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [],
+      "stage_a_mock_edges": {
+        "b_release_drive_4": [
+          {
+            "edge_type": "RELEASES",
+            "target_id": "c_release_license_4",
+            "rationale": "License reinstatement releases the driving-license blocker.",
+            "confidence": 0.9
+          }
+        ],
+        "b_release_suspension_history_4": [],
+        "b_release_car_owner_4": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_release_drive_4",
+          "status": "USABLE",
+          "rationale": "License reinstated.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_release_suspension_history_4",
+          "status": "USABLE",
+          "rationale": "Past suspension remains historical fact.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_release_car_owner_4",
+          "status": "USABLE",
+          "rationale": "Ownership unaffected.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_uncertain_01",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "competing_partial_evidence_uncertainty",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Directly relevant partial funding/visa uncertainty affects attendance but not lab membership or passport ownership.",
+      "scope_trap": true,
+      "temporal_reasoning_required": true,
+      "premise_resistance": false,
+      "query": "Will the user attend the Berlin conference?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_group",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I am a member of the lab reading group.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_uncertain_01/ev_group"
+        },
+        {
+          "evidence_id": "ev_passport",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "My passport is valid through 2029.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_uncertain_01/ev_passport"
+        },
+        {
+          "evidence_id": "ev_plan",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "I plan to attend the Berlin conference next month.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_uncertain_01/ev_plan"
+        },
+        {
+          "evidence_id": "ev_pending",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "My travel funding is only partially approved and the visa appointment is pending; I have not cancelled the trip.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_uncertain_01/ev_pending"
+        }
+      ],
+      "new_evidence_id": "ev_pending",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_uncertain_conference_1",
+          "proposition": "The user will attend the Berlin conference next month.",
+          "source_evidence_ids": [
+            "ev_plan"
+          ]
+        },
+        {
+          "belief_id": "b_uncertain_member_1",
+          "proposition": "The user is a member of the lab reading group.",
+          "source_evidence_ids": [
+            "ev_group"
+          ]
+        },
+        {
+          "belief_id": "b_uncertain_passport_1",
+          "proposition": "The user owns a valid passport.",
+          "source_evidence_ids": [
+            "ev_passport"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {
+        "b_uncertain_conference_1": "UNRESOLVED",
+        "b_uncertain_member_1": "AUTHORIZED",
+        "b_uncertain_passport_1": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_uncertain_conference_1": "UNCERTAIN",
+        "b_uncertain_member_1": "USABLE",
+        "b_uncertain_passport_1": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_uncertain_member_1",
+        "b_uncertain_passport_1"
+      ],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [
+        "b_uncertain_conference_1"
+      ],
+      "stage_a_mock_edges": {
+        "b_uncertain_conference_1": [
+          {
+            "edge_type": "UNCERTAIN",
+            "target_id": "b_uncertain_conference_1",
+            "rationale": "Funding and visa status directly affect attendance but remain unresolved.",
+            "confidence": 0.72
+          }
+        ],
+        "b_uncertain_member_1": [],
+        "b_uncertain_passport_1": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_uncertain_conference_1",
+          "status": "UNCERTAIN",
+          "rationale": "Attendance is pending funding and visa.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_uncertain_member_1",
+          "status": "USABLE",
+          "rationale": "Membership unaffected.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_uncertain_passport_1",
+          "status": "USABLE",
+          "rationale": "Passport validity unaffected.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_uncertain_02",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "competing_partial_evidence_uncertainty",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Directly relevant partial funding/visa uncertainty affects attendance but not lab membership or passport ownership.",
+      "scope_trap": true,
+      "temporal_reasoning_required": true,
+      "premise_resistance": false,
+      "query": "Will the user attend the Berlin conference?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_group",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I am a member of the lab reading group.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_uncertain_02/ev_group"
+        },
+        {
+          "evidence_id": "ev_passport",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "My passport is valid through 2029.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_uncertain_02/ev_passport"
+        },
+        {
+          "evidence_id": "ev_plan",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "I plan to attend the Berlin conference next month.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_uncertain_02/ev_plan"
+        },
+        {
+          "evidence_id": "ev_pending",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "My travel funding is only partially approved and the visa appointment is pending; I have not cancelled the trip.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_uncertain_02/ev_pending"
+        }
+      ],
+      "new_evidence_id": "ev_pending",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_uncertain_conference_2",
+          "proposition": "The user will attend the Berlin conference next month.",
+          "source_evidence_ids": [
+            "ev_plan"
+          ]
+        },
+        {
+          "belief_id": "b_uncertain_member_2",
+          "proposition": "The user is a member of the lab reading group.",
+          "source_evidence_ids": [
+            "ev_group"
+          ]
+        },
+        {
+          "belief_id": "b_uncertain_passport_2",
+          "proposition": "The user owns a valid passport.",
+          "source_evidence_ids": [
+            "ev_passport"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {
+        "b_uncertain_conference_2": "UNRESOLVED",
+        "b_uncertain_member_2": "AUTHORIZED",
+        "b_uncertain_passport_2": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_uncertain_conference_2": "UNCERTAIN",
+        "b_uncertain_member_2": "USABLE",
+        "b_uncertain_passport_2": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_uncertain_member_2",
+        "b_uncertain_passport_2"
+      ],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [
+        "b_uncertain_conference_2"
+      ],
+      "stage_a_mock_edges": {
+        "b_uncertain_conference_2": [
+          {
+            "edge_type": "UNCERTAIN",
+            "target_id": "b_uncertain_conference_2",
+            "rationale": "Funding and visa status directly affect attendance but remain unresolved.",
+            "confidence": 0.72
+          }
+        ],
+        "b_uncertain_member_2": [],
+        "b_uncertain_passport_2": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_uncertain_conference_2",
+          "status": "UNCERTAIN",
+          "rationale": "Attendance is pending funding and visa.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_uncertain_member_2",
+          "status": "USABLE",
+          "rationale": "Membership unaffected.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_uncertain_passport_2",
+          "status": "USABLE",
+          "rationale": "Passport validity unaffected.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_uncertain_03",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "competing_partial_evidence_uncertainty",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Directly relevant partial funding/visa uncertainty affects attendance but not lab membership or passport ownership.",
+      "scope_trap": true,
+      "temporal_reasoning_required": true,
+      "premise_resistance": false,
+      "query": "Will the user attend the Berlin conference?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_group",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I am a member of the lab reading group.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_uncertain_03/ev_group"
+        },
+        {
+          "evidence_id": "ev_passport",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "My passport is valid through 2029.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_uncertain_03/ev_passport"
+        },
+        {
+          "evidence_id": "ev_plan",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "I plan to attend the Berlin conference next month.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_uncertain_03/ev_plan"
+        },
+        {
+          "evidence_id": "ev_pending",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "My travel funding is only partially approved and the visa appointment is pending; I have not cancelled the trip.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_uncertain_03/ev_pending"
+        }
+      ],
+      "new_evidence_id": "ev_pending",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_uncertain_conference_3",
+          "proposition": "The user will attend the Berlin conference next month.",
+          "source_evidence_ids": [
+            "ev_plan"
+          ]
+        },
+        {
+          "belief_id": "b_uncertain_member_3",
+          "proposition": "The user is a member of the lab reading group.",
+          "source_evidence_ids": [
+            "ev_group"
+          ]
+        },
+        {
+          "belief_id": "b_uncertain_passport_3",
+          "proposition": "The user owns a valid passport.",
+          "source_evidence_ids": [
+            "ev_passport"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {
+        "b_uncertain_conference_3": "UNRESOLVED",
+        "b_uncertain_member_3": "AUTHORIZED",
+        "b_uncertain_passport_3": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_uncertain_conference_3": "UNCERTAIN",
+        "b_uncertain_member_3": "USABLE",
+        "b_uncertain_passport_3": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_uncertain_member_3",
+        "b_uncertain_passport_3"
+      ],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [
+        "b_uncertain_conference_3"
+      ],
+      "stage_a_mock_edges": {
+        "b_uncertain_conference_3": [
+          {
+            "edge_type": "UNCERTAIN",
+            "target_id": "b_uncertain_conference_3",
+            "rationale": "Funding and visa status directly affect attendance but remain unresolved.",
+            "confidence": 0.72
+          }
+        ],
+        "b_uncertain_member_3": [],
+        "b_uncertain_passport_3": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_uncertain_conference_3",
+          "status": "UNCERTAIN",
+          "rationale": "Attendance is pending funding and visa.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_uncertain_member_3",
+          "status": "USABLE",
+          "rationale": "Membership unaffected.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_uncertain_passport_3",
+          "status": "USABLE",
+          "rationale": "Passport validity unaffected.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_uncertain_04",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "competing_partial_evidence_uncertainty",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Directly relevant partial funding/visa uncertainty affects attendance but not lab membership or passport ownership.",
+      "scope_trap": true,
+      "temporal_reasoning_required": true,
+      "premise_resistance": false,
+      "query": "Will the user attend the Berlin conference?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_group",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I am a member of the lab reading group.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_uncertain_04/ev_group"
+        },
+        {
+          "evidence_id": "ev_passport",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "My passport is valid through 2029.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_uncertain_04/ev_passport"
+        },
+        {
+          "evidence_id": "ev_plan",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "I plan to attend the Berlin conference next month.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_uncertain_04/ev_plan"
+        },
+        {
+          "evidence_id": "ev_pending",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "My travel funding is only partially approved and the visa appointment is pending; I have not cancelled the trip.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_uncertain_04/ev_pending"
+        }
+      ],
+      "new_evidence_id": "ev_pending",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_uncertain_conference_4",
+          "proposition": "The user will attend the Berlin conference next month.",
+          "source_evidence_ids": [
+            "ev_plan"
+          ]
+        },
+        {
+          "belief_id": "b_uncertain_member_4",
+          "proposition": "The user is a member of the lab reading group.",
+          "source_evidence_ids": [
+            "ev_group"
+          ]
+        },
+        {
+          "belief_id": "b_uncertain_passport_4",
+          "proposition": "The user owns a valid passport.",
+          "source_evidence_ids": [
+            "ev_passport"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {
+        "b_uncertain_conference_4": "UNRESOLVED",
+        "b_uncertain_member_4": "AUTHORIZED",
+        "b_uncertain_passport_4": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_uncertain_conference_4": "UNCERTAIN",
+        "b_uncertain_member_4": "USABLE",
+        "b_uncertain_passport_4": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_uncertain_member_4",
+        "b_uncertain_passport_4"
+      ],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [
+        "b_uncertain_conference_4"
+      ],
+      "stage_a_mock_edges": {
+        "b_uncertain_conference_4": [
+          {
+            "edge_type": "UNCERTAIN",
+            "target_id": "b_uncertain_conference_4",
+            "rationale": "Funding and visa status directly affect attendance but remain unresolved.",
+            "confidence": 0.72
+          }
+        ],
+        "b_uncertain_member_4": [],
+        "b_uncertain_passport_4": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_uncertain_conference_4",
+          "status": "UNCERTAIN",
+          "rationale": "Attendance is pending funding and visa.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_uncertain_member_4",
+          "status": "USABLE",
+          "rationale": "Membership unaffected.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_uncertain_passport_4",
+          "status": "USABLE",
+          "rationale": "Passport validity unaffected.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_cross_01",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "cross_domain_interference_trap",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Dietary trial and ocean vocabulary sit near allergy/history facts; only future diet continuation is uncertain.",
+      "scope_trap": true,
+      "temporal_reasoning_required": false,
+      "premise_resistance": false,
+      "query": "Which food and ocean-related facts remain usable?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_allergy",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I am allergic to shellfish.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_cross_01/ev_allergy"
+        },
+        {
+          "evidence_id": "ev_job_history",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I worked as a marine biologist in 2018 and still enjoy documentaries about ocean ecosystems.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_cross_01/ev_job_history"
+        },
+        {
+          "evidence_id": "ev_vegan",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "I have been eating vegan meals this month and expected to continue next month.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_cross_01/ev_vegan"
+        },
+        {
+          "evidence_id": "ev_diet_unclear",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "Next month I may stop the vegan trial while traveling, but I have not decided; this does not change my shellfish allergy or past marine biology work.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_cross_01/ev_diet_unclear"
+        }
+      ],
+      "new_evidence_id": "ev_diet_unclear",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_cross_allergy_1",
+          "proposition": "The user is allergic to shellfish.",
+          "source_evidence_ids": [
+            "ev_allergy"
+          ]
+        },
+        {
+          "belief_id": "b_cross_vegan_trial_1",
+          "proposition": "The user will keep eating vegan meals next month.",
+          "source_evidence_ids": [
+            "ev_vegan"
+          ]
+        },
+        {
+          "belief_id": "b_cross_job_history_1",
+          "proposition": "The user worked as a marine biologist in 2018.",
+          "source_evidence_ids": [
+            "ev_job_history"
+          ]
+        },
+        {
+          "belief_id": "b_cross_seafood_interest_1",
+          "proposition": "The user enjoys documentaries about ocean ecosystems.",
+          "source_evidence_ids": [
+            "ev_job_history"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {
+        "b_cross_allergy_1": "AUTHORIZED",
+        "b_cross_vegan_trial_1": "UNRESOLVED",
+        "b_cross_job_history_1": "AUTHORIZED",
+        "b_cross_seafood_interest_1": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_cross_allergy_1": "USABLE",
+        "b_cross_vegan_trial_1": "UNCERTAIN",
+        "b_cross_job_history_1": "USABLE",
+        "b_cross_seafood_interest_1": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_cross_allergy_1",
+        "b_cross_job_history_1",
+        "b_cross_seafood_interest_1"
+      ],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [
+        "b_cross_vegan_trial_1"
+      ],
+      "stage_a_mock_edges": {
+        "b_cross_allergy_1": [],
+        "b_cross_vegan_trial_1": [
+          {
+            "edge_type": "UNCERTAIN",
+            "target_id": "b_cross_vegan_trial_1",
+            "rationale": "Possible end of vegan trial directly affects next-month diet but is undecided.",
+            "confidence": 0.7
+          }
+        ],
+        "b_cross_job_history_1": [],
+        "b_cross_seafood_interest_1": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_cross_allergy_1",
+          "status": "USABLE",
+          "rationale": "Allergy unaffected.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_cross_vegan_trial_1",
+          "status": "UNCERTAIN",
+          "rationale": "Future diet continuation undecided.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_cross_job_history_1",
+          "status": "USABLE",
+          "rationale": "History unaffected.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_cross_seafood_interest_1",
+          "status": "USABLE",
+          "rationale": "Documentary interest unaffected.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_cross_02",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "cross_domain_interference_trap",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Dietary trial and ocean vocabulary sit near allergy/history facts; only future diet continuation is uncertain.",
+      "scope_trap": true,
+      "temporal_reasoning_required": false,
+      "premise_resistance": false,
+      "query": "Which food and ocean-related facts remain usable?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_allergy",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I am allergic to shellfish.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_cross_02/ev_allergy"
+        },
+        {
+          "evidence_id": "ev_job_history",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I worked as a marine biologist in 2018 and still enjoy documentaries about ocean ecosystems.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_cross_02/ev_job_history"
+        },
+        {
+          "evidence_id": "ev_vegan",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "I have been eating vegan meals this month and expected to continue next month.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_cross_02/ev_vegan"
+        },
+        {
+          "evidence_id": "ev_diet_unclear",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "Next month I may stop the vegan trial while traveling, but I have not decided; this does not change my shellfish allergy or past marine biology work.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_cross_02/ev_diet_unclear"
+        }
+      ],
+      "new_evidence_id": "ev_diet_unclear",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_cross_allergy_2",
+          "proposition": "The user is allergic to shellfish.",
+          "source_evidence_ids": [
+            "ev_allergy"
+          ]
+        },
+        {
+          "belief_id": "b_cross_vegan_trial_2",
+          "proposition": "The user will keep eating vegan meals next month.",
+          "source_evidence_ids": [
+            "ev_vegan"
+          ]
+        },
+        {
+          "belief_id": "b_cross_job_history_2",
+          "proposition": "The user worked as a marine biologist in 2018.",
+          "source_evidence_ids": [
+            "ev_job_history"
+          ]
+        },
+        {
+          "belief_id": "b_cross_seafood_interest_2",
+          "proposition": "The user enjoys documentaries about ocean ecosystems.",
+          "source_evidence_ids": [
+            "ev_job_history"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {
+        "b_cross_allergy_2": "AUTHORIZED",
+        "b_cross_vegan_trial_2": "UNRESOLVED",
+        "b_cross_job_history_2": "AUTHORIZED",
+        "b_cross_seafood_interest_2": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_cross_allergy_2": "USABLE",
+        "b_cross_vegan_trial_2": "UNCERTAIN",
+        "b_cross_job_history_2": "USABLE",
+        "b_cross_seafood_interest_2": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_cross_allergy_2",
+        "b_cross_job_history_2",
+        "b_cross_seafood_interest_2"
+      ],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [
+        "b_cross_vegan_trial_2"
+      ],
+      "stage_a_mock_edges": {
+        "b_cross_allergy_2": [],
+        "b_cross_vegan_trial_2": [
+          {
+            "edge_type": "UNCERTAIN",
+            "target_id": "b_cross_vegan_trial_2",
+            "rationale": "Possible end of vegan trial directly affects next-month diet but is undecided.",
+            "confidence": 0.7
+          }
+        ],
+        "b_cross_job_history_2": [],
+        "b_cross_seafood_interest_2": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_cross_allergy_2",
+          "status": "USABLE",
+          "rationale": "Allergy unaffected.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_cross_vegan_trial_2",
+          "status": "UNCERTAIN",
+          "rationale": "Future diet continuation undecided.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_cross_job_history_2",
+          "status": "USABLE",
+          "rationale": "History unaffected.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_cross_seafood_interest_2",
+          "status": "USABLE",
+          "rationale": "Documentary interest unaffected.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_cross_03",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "cross_domain_interference_trap",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Dietary trial and ocean vocabulary sit near allergy/history facts; only future diet continuation is uncertain.",
+      "scope_trap": true,
+      "temporal_reasoning_required": false,
+      "premise_resistance": false,
+      "query": "Which food and ocean-related facts remain usable?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_allergy",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I am allergic to shellfish.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_cross_03/ev_allergy"
+        },
+        {
+          "evidence_id": "ev_job_history",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I worked as a marine biologist in 2018 and still enjoy documentaries about ocean ecosystems.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_cross_03/ev_job_history"
+        },
+        {
+          "evidence_id": "ev_vegan",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "I have been eating vegan meals this month and expected to continue next month.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_cross_03/ev_vegan"
+        },
+        {
+          "evidence_id": "ev_diet_unclear",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "Next month I may stop the vegan trial while traveling, but I have not decided; this does not change my shellfish allergy or past marine biology work.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_cross_03/ev_diet_unclear"
+        }
+      ],
+      "new_evidence_id": "ev_diet_unclear",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_cross_allergy_3",
+          "proposition": "The user is allergic to shellfish.",
+          "source_evidence_ids": [
+            "ev_allergy"
+          ]
+        },
+        {
+          "belief_id": "b_cross_vegan_trial_3",
+          "proposition": "The user will keep eating vegan meals next month.",
+          "source_evidence_ids": [
+            "ev_vegan"
+          ]
+        },
+        {
+          "belief_id": "b_cross_job_history_3",
+          "proposition": "The user worked as a marine biologist in 2018.",
+          "source_evidence_ids": [
+            "ev_job_history"
+          ]
+        },
+        {
+          "belief_id": "b_cross_seafood_interest_3",
+          "proposition": "The user enjoys documentaries about ocean ecosystems.",
+          "source_evidence_ids": [
+            "ev_job_history"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {
+        "b_cross_allergy_3": "AUTHORIZED",
+        "b_cross_vegan_trial_3": "UNRESOLVED",
+        "b_cross_job_history_3": "AUTHORIZED",
+        "b_cross_seafood_interest_3": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_cross_allergy_3": "USABLE",
+        "b_cross_vegan_trial_3": "UNCERTAIN",
+        "b_cross_job_history_3": "USABLE",
+        "b_cross_seafood_interest_3": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_cross_allergy_3",
+        "b_cross_job_history_3",
+        "b_cross_seafood_interest_3"
+      ],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [
+        "b_cross_vegan_trial_3"
+      ],
+      "stage_a_mock_edges": {
+        "b_cross_allergy_3": [],
+        "b_cross_vegan_trial_3": [
+          {
+            "edge_type": "UNCERTAIN",
+            "target_id": "b_cross_vegan_trial_3",
+            "rationale": "Possible end of vegan trial directly affects next-month diet but is undecided.",
+            "confidence": 0.7
+          }
+        ],
+        "b_cross_job_history_3": [],
+        "b_cross_seafood_interest_3": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_cross_allergy_3",
+          "status": "USABLE",
+          "rationale": "Allergy unaffected.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_cross_vegan_trial_3",
+          "status": "UNCERTAIN",
+          "rationale": "Future diet continuation undecided.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_cross_job_history_3",
+          "status": "USABLE",
+          "rationale": "History unaffected.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_cross_seafood_interest_3",
+          "status": "USABLE",
+          "rationale": "Documentary interest unaffected.",
+          "confidence": 0.9
+        }
+      ]
+    },
+    {
+      "case_id": "ash_cross_04",
+      "schema_version": "ambiguity_scope_hard_v1",
+      "challenge_version": "hard_v1",
+      "category": "cross_domain_interference_trap",
+      "source_type": "newly_authored_internal",
+      "review_status": "model_drafted_pending_assistant_and_user_review",
+      "rationale": "Dietary trial and ocean vocabulary sit near allergy/history facts; only future diet continuation is uncertain.",
+      "scope_trap": true,
+      "temporal_reasoning_required": false,
+      "premise_resistance": false,
+      "query": "Which food and ocean-related facts remain usable?",
+      "evidence_context": [
+        {
+          "evidence_id": "ev_allergy",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I am allergic to shellfish.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_cross_04/ev_allergy"
+        },
+        {
+          "evidence_id": "ev_job_history",
+          "session_id": "s1",
+          "timestamp": "2026-01-01T00:00:00Z",
+          "text": "I worked as a marine biologist in 2018 and still enjoy documentaries about ocean ecosystems.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_cross_04/ev_job_history"
+        },
+        {
+          "evidence_id": "ev_vegan",
+          "session_id": "s2",
+          "timestamp": "2026-02-02T00:00:00Z",
+          "text": "I have been eating vegan meals this month and expected to continue next month.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_cross_04/ev_vegan"
+        },
+        {
+          "evidence_id": "ev_diet_unclear",
+          "session_id": "s3",
+          "timestamp": "2026-03-03T00:00:00Z",
+          "text": "Next month I may stop the vegan trial while traveling, but I have not decided; this does not change my shellfish allergy or past marine biology work.",
+          "source_dataset": "internal_dev_hard_v1",
+          "source_pointer": "ash_cross_04/ev_diet_unclear"
+        }
+      ],
+      "new_evidence_id": "ev_diet_unclear",
+      "candidate_beliefs": [
+        {
+          "belief_id": "b_cross_allergy_4",
+          "proposition": "The user is allergic to shellfish.",
+          "source_evidence_ids": [
+            "ev_allergy"
+          ]
+        },
+        {
+          "belief_id": "b_cross_vegan_trial_4",
+          "proposition": "The user will keep eating vegan meals next month.",
+          "source_evidence_ids": [
+            "ev_vegan"
+          ]
+        },
+        {
+          "belief_id": "b_cross_job_history_4",
+          "proposition": "The user worked as a marine biologist in 2018.",
+          "source_evidence_ids": [
+            "ev_job_history"
+          ]
+        },
+        {
+          "belief_id": "b_cross_seafood_interest_4",
+          "proposition": "The user enjoys documentaries about ocean ecosystems.",
+          "source_evidence_ids": [
+            "ev_job_history"
+          ]
+        }
+      ],
+      "candidate_replacement_beliefs": [],
+      "candidate_conditions_by_belief": [],
+      "dependency_edges_by_belief": [],
+      "expected_stage_a_status": {
+        "b_cross_allergy_4": "AUTHORIZED",
+        "b_cross_vegan_trial_4": "UNRESOLVED",
+        "b_cross_job_history_4": "AUTHORIZED",
+        "b_cross_seafood_interest_4": "AUTHORIZED"
+      },
+      "expected_comparable_status": {
+        "b_cross_allergy_4": "USABLE",
+        "b_cross_vegan_trial_4": "UNCERTAIN",
+        "b_cross_job_history_4": "USABLE",
+        "b_cross_seafood_interest_4": "USABLE"
+      },
+      "protected_belief_ids": [
+        "b_cross_allergy_4",
+        "b_cross_job_history_4",
+        "b_cross_seafood_interest_4"
+      ],
+      "stale_target_belief_ids": [],
+      "abstention_required_belief_ids": [
+        "b_cross_vegan_trial_4"
+      ],
+      "stage_a_mock_edges": {
+        "b_cross_allergy_4": [],
+        "b_cross_vegan_trial_4": [
+          {
+            "edge_type": "UNCERTAIN",
+            "target_id": "b_cross_vegan_trial_4",
+            "rationale": "Possible end of vegan trial directly affects next-month diet but is undecided.",
+            "confidence": 0.7
+          }
+        ],
+        "b_cross_job_history_4": [],
+        "b_cross_seafood_interest_4": []
+      },
+      "stage_b_mock_verdicts": [
+        {
+          "belief_id": "b_cross_allergy_4",
+          "status": "USABLE",
+          "rationale": "Allergy unaffected.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_cross_vegan_trial_4",
+          "status": "UNCERTAIN",
+          "rationale": "Future diet continuation undecided.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_cross_job_history_4",
+          "status": "USABLE",
+          "rationale": "History unaffected.",
+          "confidence": 0.9
+        },
+        {
+          "belief_id": "b_cross_seafood_interest_4",
+          "status": "USABLE",
+          "rationale": "Documentary interest unaffected.",
+          "confidence": 0.9
+        }
+      ]
+    }
+  ]
+}
