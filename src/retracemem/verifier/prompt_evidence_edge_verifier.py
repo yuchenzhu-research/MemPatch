@@ -10,6 +10,7 @@ import json
 import os
 from typing import Any
 
+from retracemem.methods.contracts import EdgePredictionBatch
 from retracemem.providers.cached_client import CachedLLMClient
 from retracemem.schemas import (
     BeliefNode,
@@ -57,10 +58,12 @@ class PromptEvidenceEdgeVerifier:
         client: CachedLLMClient,
         model_id: str = "gemini-pro",
         provider: str = "google",
+        model_revision_or_api_version: str | None = None,
     ) -> None:
         self.client = client
         self.model_id = model_id
         self.provider = provider
+        self.model_revision_or_api_version = model_revision_or_api_version
         self._template = _load_prompt_template()
         self._template_hash = hashlib.sha256(self._template.encode("utf-8")).hexdigest()
 
@@ -72,6 +75,25 @@ class PromptEvidenceEdgeVerifier:
         candidate_conditions: tuple[ConditionNode, ...],
         temporal_context: tuple[EvidenceNode, ...],
     ) -> list[EvidenceEdge]:
+        """Backward-compatible interface returning only proposed edges."""
+        batch = self.verify_edges_with_trace(
+            new_evidence=new_evidence,
+            candidate_belief=candidate_belief,
+            candidate_replacement_beliefs=candidate_replacement_beliefs,
+            candidate_conditions=candidate_conditions,
+            temporal_context=temporal_context,
+        )
+        return list(batch.proposed_edges)
+
+    def verify_edges_with_trace(
+        self,
+        new_evidence: EvidenceNode,
+        candidate_belief: BeliefNode,
+        candidate_replacement_beliefs: tuple[BeliefNode, ...],
+        candidate_conditions: tuple[ConditionNode, ...],
+        temporal_context: tuple[EvidenceNode, ...],
+    ) -> EdgePredictionBatch:
+        """Traced verifier method preserving model_call_trace_id even for zero edges."""
         replacements_str = "\n".join(
             f"  - {b.belief_id}: \"{b.proposition}\""
             for b in candidate_replacement_beliefs
@@ -115,13 +137,22 @@ class PromptEvidenceEdgeVerifier:
         replacement_map = {b.belief_id: b for b in candidate_replacement_beliefs}
         valid_condition_ids = {c.condition_id for c in candidate_conditions}
 
-        return self._parse(
+        edges = self._parse(
             trace.response,
             new_evidence,
             candidate_belief,
             replacement_map,
             valid_condition_ids,
             trace.call_id,
+        )
+
+        return EdgePredictionBatch(
+            proposed_edges=tuple(edges),
+            model_call_trace_id=trace.call_id,
+            prompt_version=_PROMPT_VERSION,
+            model_id=self.model_id,
+            provider=self.provider,
+            model_revision_or_api_version=self.model_revision_or_api_version,
         )
 
     def _parse(

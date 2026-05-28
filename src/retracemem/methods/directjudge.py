@@ -7,6 +7,12 @@ It must NOT import or invoke:
 - RevisionGate, DefeatPathAuthorizationAlgorithm
 - EvidenceEdge, DependencyEdge, EvidenceEdgeType
 - RequirementInducer, EvidenceEdgeVerifier
+
+AB-1A.5 protocol lock:
+- Stage B is explicitly told which evidence is new/current (prompt v1).
+- metadata fields are non-semantic and MUST NOT be consumed.
+- Same fixed SharedCandidateView semantic input does NOT mean identical
+  prompts. Stage A and Stage B instantiate different method interfaces.
 """
 from __future__ import annotations
 
@@ -24,10 +30,10 @@ from retracemem.methods.contracts import (
 from retracemem.providers.cached_client import CachedLLMClient
 
 _PROMPT_DIR = os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir, "prompts", "directjudge")
-_PROMPT_FILE = os.path.join(_PROMPT_DIR, "direct_usability_v0.txt")
-_PROMPT_VERSION = "direct_usability_v0"
-_RESPONSE_SCHEMA_VERSION = "direct_usability_response_v0"
-_PARSER_VERSION = "direct_usability_parser_v0"
+_PROMPT_FILE = os.path.join(_PROMPT_DIR, "direct_usability_v1.txt")
+_PROMPT_VERSION = "direct_usability_v1"
+_RESPONSE_SCHEMA_VERSION = "direct_usability_response_v1"
+_PARSER_VERSION = "direct_usability_parser_v1"
 
 
 def _load_prompt_template() -> str:
@@ -70,10 +76,12 @@ class DirectJudgeLLM:
         client: CachedLLMClient,
         model_id: str = "gemini-pro",
         provider: str = "google",
+        model_revision_or_api_version: str | None = None,
     ) -> None:
         self.client = client
         self.model_id = model_id
         self.provider = provider
+        self.model_revision_or_api_version = model_revision_or_api_version
         self._template = _load_prompt_template()
         self._template_hash = hashlib.sha256(self._template.encode("utf-8")).hexdigest()
 
@@ -81,8 +89,14 @@ class DirectJudgeLLM:
         """Run direct usability adjudication on the shared candidate view."""
         cost_before = self.client.cost_accountant.to_dict()
 
+        # Render new_evidence explicitly for model visibility
+        ne = view.new_evidence
         evidence_str = "\n".join(
-            f"  - [{e.evidence_id}] {e.text}" for e in view.evidence_context
+            f"  - [{e.evidence_id}] (session: {e.session_id}, "
+            f"timestamp: {e.timestamp}, "
+            f"source: {e.source_dataset}/{e.source_pointer}) "
+            f"\"{e.text}\""
+            for e in view.evidence_context
         ) or "  (none)"
         beliefs_str = "\n".join(
             f"  - {b.belief_id}: \"{b.proposition}\""
@@ -99,6 +113,12 @@ class DirectJudgeLLM:
         conditions_str = "\n".join(conditions_str_parts) or "  (none)"
 
         prompt = self._template.replace("{query}", view.query)
+        prompt = prompt.replace("{new_evidence_id}", ne.evidence_id)
+        prompt = prompt.replace("{new_evidence_session_id}", ne.session_id)
+        prompt = prompt.replace("{new_evidence_timestamp}", ne.timestamp or "")
+        prompt = prompt.replace("{new_evidence_source_dataset}", ne.source_dataset)
+        prompt = prompt.replace("{new_evidence_source_pointer}", ne.source_pointer)
+        prompt = prompt.replace("{new_evidence_text}", ne.text)
         prompt = prompt.replace("{evidence_context}", evidence_str)
         prompt = prompt.replace("{candidate_beliefs}", beliefs_str)
         prompt = prompt.replace("{candidate_replacement_beliefs}", replacements_str)
@@ -146,6 +166,7 @@ class DirectJudgeLLM:
                 "prompt_version": _PROMPT_VERSION,
                 "model_id": self.model_id,
                 "provider": self.provider,
+                "model_revision_or_api_version": self.model_revision_or_api_version,
                 "view_fingerprint": view.view_fingerprint,
             },
         )
