@@ -23,46 +23,14 @@ AB-1A.5 auditability guarantees:
 """
 from __future__ import annotations
 
-from typing import Any
-
-from retracemem.memory.belief_store import BeliefStore
-from retracemem.memory.episode_ledger import EpisodeLedger
+from retracemem.methods.authorization_executor import (
+    ProposedEvidenceEdges,
+    cost_delta,
+    execute_authorization,
+)
 from retracemem.methods.contracts import ControlledMethodResult, SharedCandidateView
 from retracemem.providers.cached_client import CachedLLMClient
-from retracemem.schemas import AuthorizationStatus
-from retracemem.tms.authorization import DefeatPathAuthorizationAlgorithm
-from retracemem.tms.gate import RevisionGate
 from retracemem.verifier.prompt_evidence_edge_verifier import PromptEvidenceEdgeVerifier
-
-
-def _cost_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
-    """Compute per-instance cost by subtracting cumulative snapshots."""
-    tokens_before = before.get("tokens", {})
-    tokens_after = after.get("tokens", {})
-    calls_before = before.get("calls", {})
-    calls_after = after.get("calls", {})
-    return {
-        "latency_ms": after.get("latency_ms", 0.0) - before.get("latency_ms", 0.0),
-        "tokens": {
-            "prompt": tokens_after.get("prompt", 0) - tokens_before.get("prompt", 0),
-            "completion": tokens_after.get("completion", 0) - tokens_before.get("completion", 0),
-            "total": tokens_after.get("total", 0) - tokens_before.get("total", 0),
-        },
-        "calls": {
-            k: calls_after.get(k, 0) - calls_before.get(k, 0)
-            for k in set(calls_after) | set(calls_before)
-        },
-        "cache_hits": after.get("cache_hits", 0) - before.get("cache_hits", 0),
-        "cache_misses": after.get("cache_misses", 0) - before.get("cache_misses", 0),
-    }
-
-
-_STATUS_MAP = {
-    AuthorizationStatus.AUTHORIZED: "AUTHORIZED",
-    AuthorizationStatus.BLOCKED: "BLOCKED",
-    AuthorizationStatus.SUPERSEDED: "SUPERSEDED",
-    AuthorizationStatus.UNRESOLVED: "UNRESOLVED",
-}
 
 
 class ControlledReTraceLLM:
@@ -84,51 +52,7 @@ class ControlledReTraceLLM:
         """Execute controlled Stage A on the fixed view."""
         cost_before = self.client.cost_accountant.to_dict()
 
-        # Build isolated typed graph
-        ledger = EpisodeLedger()
-        store = BeliefStore()
-        gate = RevisionGate()
-
-        # 1. Append all evidence to the ledger
-        for ev in view.evidence_context:
-            ledger.append(ev)
-
-        # 2. Add all candidate beliefs and replacement beliefs to the store
-        for b in view.candidate_beliefs:
-            store.add_belief(b)
-        for b in view.candidate_replacement_beliefs:
-            if not store.has_belief(b.belief_id):
-                store.add_belief(b)
-
-        # 3. Add all conditions to the store
-        for _bid, conds in view.candidate_conditions_by_belief:
-            for c in conds:
-                if not store.has_condition(c.condition_id):
-                    store.add_condition(c)
-
-        # 4. Admit supplied dependency edges through the gate
-        # Fixed anchors MUST NOT be silently dropped — fail loudly on rejection.
-        admitted_anchors: list[dict[str, Any]] = []
-        for _bid, deps in view.dependency_edges_by_belief:
-            for dep in deps:
-                decision = gate.admit_dependency_edge(dep, store)
-                if not decision.admitted:
-                    raise ValueError(
-                        f"Fixed supplied DependencyEdge '{dep.edge_id}' "
-                        f"rejected by RevisionGate: {decision.reason}"
-                    )
-                store.add_dependency_edge(dep)
-                admitted_anchors.append({
-                    "edge_id": dep.edge_id,
-                    "belief_id": dep.belief_id,
-                    "condition_id": dep.condition_id,
-                })
-
-        # 5. For each candidate belief, invoke traced edge verifier and
-        #    admit results through the gate with full provenance.
-        all_trace_ids: list[str] = []
-        edge_proposals: list[dict[str, Any]] = []
-
+        proposal_batches: list[ProposedEvidenceEdges] = []
         for belief in view.candidate_beliefs:
             belief_conditions = tuple(
                 c
@@ -143,77 +67,34 @@ class ControlledReTraceLLM:
                 candidate_conditions=belief_conditions,
                 temporal_context=view.evidence_context,
             )
-
-            # Always record the trace id, even for zero edges
-            if batch.model_call_trace_id not in all_trace_ids:
-                all_trace_ids.append(batch.model_call_trace_id)
-
-            for edge in batch.proposed_edges:
-                decision = gate.admit_evidence_edge(edge, store)
-                edge_proposals.append({
-                    "edge_id": edge.edge_id,
-                    "edge_type": edge.edge_type.value,
-                    "target_id": edge.target_id,
-                    "admitted": decision.admitted,
-                    "gate_reason": decision.reason,
-                    "belief_id": belief.belief_id,
-                    "model_call_trace_id": batch.model_call_trace_id,
-                })
-                if decision.admitted:
-                    store.add_evidence_edge(edge)
-
-        # 6. Run DPA for each candidate belief
-        dpa = DefeatPathAuthorizationAlgorithm(store, ledger)
-        authorized_ids: list[str] = []
-        excluded_ids: list[str] = []
-        fine_grained: dict[str, str] = {}
-        defeat_paths: list[dict[str, Any]] = []
-
-        for belief in view.candidate_beliefs:
-            trace = dpa.authorize(
-                belief.belief_id,
-                as_of_evidence_id=view.new_evidence.evidence_id,
-                query_id=view.query_id,
+            proposal_batches.append(
+                ProposedEvidenceEdges(
+                    edges=batch.proposed_edges,
+                    model_call_trace_id=batch.model_call_trace_id,
+                    source_belief_id=belief.belief_id,
+                )
             )
-            status_str = _STATUS_MAP.get(trace.status, trace.status.value)
-            fine_grained[belief.belief_id] = status_str
 
-            if trace.status == AuthorizationStatus.AUTHORIZED:
-                authorized_ids.append(belief.belief_id)
-            else:
-                excluded_ids.append(belief.belief_id)
-                if trace.accepted_defeat_path is not None:
-                    defeat_paths.append({
-                        "belief_id": belief.belief_id,
-                        "path_type": trace.accepted_defeat_path.path_type.value,
-                        "path_id": trace.accepted_defeat_path.path_id,
-                        "evidence_edge_ids": list(trace.accepted_defeat_path.supporting_evidence_edge_ids),
-                        "dependency_edge_ids": list(trace.accepted_defeat_path.supporting_dependency_edge_ids),
-                        "replacement_belief_id": trace.accepted_defeat_path.replacement_belief_id,
-                    })
-
-        # 7. Compute per-instance cost
-        cost_after = self.client.cost_accountant.to_dict()
-        instance_cost = _cost_delta(cost_before, cost_after)
-
-        return ControlledMethodResult(
-            method_name="retrace_llm_controlled",
-            instance_id=view.instance_id,
-            query_id=view.query_id,
-            authorized_belief_ids=tuple(authorized_ids),
-            excluded_belief_ids=tuple(excluded_ids),
-            model_call_trace_ids=tuple(all_trace_ids),
-            cost=instance_cost,
-            provenance={
-                "view_fingerprint": view.view_fingerprint,
-                "fine_grained_statuses": fine_grained,
-                "defeat_paths": defeat_paths,
-                "admitted_fixed_anchors": admitted_anchors,
-                "edge_proposals": edge_proposals,
+        execution = execute_authorization(
+            view,
+            tuple(proposal_batches),
+            base_provenance={
                 "prompt_version": self.edge_verifier.prompt_version,
                 "prompt_hash": self.edge_verifier._template_hash,
                 "model_id": self.edge_verifier.model_id,
                 "provider": self.edge_verifier.provider,
                 "model_revision_or_api_version": self.edge_verifier.model_revision_or_api_version,
             },
+        )
+        cost_after = self.client.cost_accountant.to_dict()
+
+        return ControlledMethodResult(
+            method_name="retrace_llm_controlled",
+            instance_id=view.instance_id,
+            query_id=view.query_id,
+            authorized_belief_ids=execution.authorized_belief_ids,
+            excluded_belief_ids=execution.excluded_belief_ids,
+            model_call_trace_ids=execution.model_call_trace_ids,
+            cost=cost_delta(cost_before, cost_after),
+            provenance=execution.provenance,
         )
