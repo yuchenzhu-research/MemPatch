@@ -11,8 +11,8 @@ storytelling document.
 - Active branch: `experiment/retrace-ab-feasibility`
 - Starting scaffold: `integration/retrace-v1-complete` @
   `5e8d6e2d1a494d572d6d0fa929595bb198154390`
-- Current packet: v3 authority adoption, provider/smoke safety repair, and an
-  internal Ambiguity-and-Scope Stage A/B feasibility diagnostic.
+- Current packet: architecture convergence after the batched Memora
+  oracle-conditioned diagnostic smoke.
 
 ## Validated Offline
 
@@ -22,6 +22,7 @@ storytelling document.
 - Fairness and deterministic-grounding hardening.
 - AB-1A / AB-1A.5 controlled attribution and auditability protocol.
 - AB-1B internal development-case evaluator and replay-only runner.
+- Batched Stage A typed-edge proposal and deterministic DPA execution path.
 
 ## Implemented Scaffolding, Not Yet Scientific Results
 
@@ -42,13 +43,10 @@ storytelling document.
 - Current runner is oracle-conditioned diagnostic only: candidate beliefs
   originate from Memora evaluation annotations (`memory_evidence` /
   `forgetting_evidence`), not from end-to-end memory extraction.
-- One live SiliconFlow DeepSeek-V4-Pro connectivity attempt reached successful
-  model calls but timed out before any final answer or interpretable score.
-- Blocking issue was repeated-context per-belief Stage A complexity (O(B) calls,
-  O(B × |E|) prompt tokens) plus oversized diagnostic input (13 beliefs for one
-  weekly question).
-- Immediate implementation goal is batched Stage A authorization (one model call
-  per candidate neighborhood) and configurable timeout.
+- Batched Stage A has been implemented and offline validated.
+- A one-question SiliconFlow DeepSeek-V4-Pro live smoke completed with zero
+  errors, four total model calls, and one Stage A batched authorization call.
+- This establishes execution connectivity and batching feasibility only.
 - No official Memora result exists.
 
 ## Explicit Non-Claims
@@ -64,8 +62,12 @@ The repository currently has no verified result showing:
 
 ## Current Next Boundary
 
-Complete batched Stage A authorization path, validate offline, then run a small
-Memora oracle-conditioned diagnostic live smoke with SiliconFlow DeepSeek-V4-Pro.
+The current next boundary is code convergence and persistent write/read
+separation, not another large live run. In particular, ReTrace should separate
+write-time memory construction/update from query-time read/evaluation, share
+deterministic authorization execution across Stage A paths, and keep the Memora
+oracle-conditioned diagnostic separate from any future official agent
+evaluation.
 
 ## Verification at Starting Scaffold
 
