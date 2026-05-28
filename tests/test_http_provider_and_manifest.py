@@ -34,22 +34,32 @@ def test_http_provider_resolves_endpoints_and_headers() -> None:
     url, headers = p3._resolve_endpoint_and_headers("openai")
     assert url == "https://custom.api.com/chat"
 
+    p4 = HTTPLLMProvider(api_key="test-key")
+    url, headers = p4._resolve_endpoint_and_headers("siliconflow")
+    assert url == "https://api.siliconflow.cn/v1/chat/completions"
+    assert headers["Authorization"] == "Bearer test-key"
+
 
 def test_http_provider_selects_provider_specific_environment_keys(monkeypatch) -> None:
     monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
     monkeypatch.setenv("OPENAI_API_KEY", "openai-key")
+    monkeypatch.setenv("SILICONFLOW_API_KEY", "siliconflow-key")
 
     provider = HTTPLLMProvider()
     _, openai_headers = provider._resolve_endpoint_and_headers("openai")
     _, gemini_headers = provider._resolve_endpoint_and_headers("gemini")
+    _, siliconflow_headers = provider._resolve_endpoint_and_headers("siliconflow")
 
     assert openai_headers["Authorization"] == "Bearer openai-key"
     assert gemini_headers["Authorization"] == "Bearer gemini-key"
+    assert siliconflow_headers["Authorization"] == "Bearer siliconflow-key"
+    assert provider._provider_env_var("siliconflow") == "SILICONFLOW_API_KEY"
 
 
 def test_http_provider_missing_key_is_provider_specific(monkeypatch) -> None:
     monkeypatch.setenv("GEMINI_API_KEY", "gemini-key")
     monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    monkeypatch.delenv("SILICONFLOW_API_KEY", raising=False)
 
     trace = HTTPLLMProvider().generate(
         prompt="Hello",
@@ -61,6 +71,19 @@ def test_http_provider_missing_key_is_provider_specific(monkeypatch) -> None:
     assert "OPENAI_API_KEY" in trace.error_message
     assert "GEMINI_API_KEY" not in trace.error_message
     assert "gemini-key" not in trace.error_message
+
+    siliconflow_trace = HTTPLLMProvider().generate(
+        prompt="Hello",
+        model_id="MiniMax-test",
+        provider="siliconflow",
+    )
+
+    assert siliconflow_trace.status == "failure"
+    assert siliconflow_trace.provider == "siliconflow"
+    assert siliconflow_trace.model_id == "MiniMax-test"
+    assert "SILICONFLOW_API_KEY" in siliconflow_trace.error_message
+    assert "OPENAI_API_KEY" not in siliconflow_trace.error_message
+    assert "GEMINI_API_KEY" not in siliconflow_trace.error_message
 
 
 def test_http_provider_rejects_unsupported_provider() -> None:
@@ -175,6 +198,64 @@ def test_http_provider_redacts_secret_from_error_message(mock_urlopen) -> None:
     assert "[REDACTED]" in trace.error_message
 
 
+@patch("urllib.request.urlopen")
+def test_http_provider_redacts_siliconflow_secret_from_error_message(mock_urlopen, monkeypatch) -> None:
+    monkeypatch.setenv("SILICONFLOW_API_KEY", "siliconflow-secret")
+    mock_urlopen.side_effect = Exception("token siliconflow-secret appeared in provider error")
+
+    trace = HTTPLLMProvider().generate(
+        prompt="Hello",
+        model_id="MiniMax-test",
+        provider="siliconflow",
+    )
+
+    assert trace.status == "failure"
+    assert trace.provider == "siliconflow"
+    assert trace.model_id == "MiniMax-test"
+    assert "siliconflow-secret" not in trace.error_message
+    assert "[REDACTED]" in trace.error_message
+
+
+@patch("urllib.request.urlopen")
+def test_http_provider_siliconflow_openai_compatible_response(mock_urlopen) -> None:
+    mock_response = MagicMock()
+    response_payload = {
+        "choices": [
+            {
+                "message": {
+                    "role": "assistant",
+                    "content": "{\"status\":\"UNCERTAIN\"}",
+                }
+            }
+        ],
+        "usage": {
+            "prompt_tokens": 11,
+            "completion_tokens": 7,
+            "total_tokens": 18,
+        },
+    }
+    mock_response.read.return_value = json.dumps(response_payload).encode("utf-8")
+    mock_response.__enter__.return_value = mock_response
+    mock_urlopen.return_value = mock_response
+
+    trace = HTTPLLMProvider(api_key="siliconflow-key").generate(
+        prompt="Hello",
+        model_id="MiniMax-test-chat",
+        provider="siliconflow",
+    )
+
+    request = mock_urlopen.call_args.args[0]
+    assert request.full_url == "https://api.siliconflow.cn/v1/chat/completions"
+    assert request.headers["Authorization"] == "Bearer siliconflow-key"
+    assert trace.status == "success"
+    assert trace.provider == "siliconflow"
+    assert trace.model_id == "MiniMax-test-chat"
+    assert trace.response == "{\"status\":\"UNCERTAIN\"}"
+    assert trace.prompt_tokens == 11
+    assert trace.completion_tokens == 7
+    assert trace.total_tokens == 18
+
+
 def test_manifest_and_git_sha_computations() -> None:
     sha = get_git_commit_sha()
     assert isinstance(sha, str)
@@ -193,8 +274,8 @@ def test_manifest_and_git_sha_computations() -> None:
         config = RunConfiguration(
             run_id="test-run-123",
             stage_and_method_name="AB-1C_StageA",
-            provider_name="openai",
-            model_id="gpt-4",
+            provider_name="siliconflow",
+            model_id="MiniMax-test-chat",
             cache_path=test_file,
             dataset_checksum="dataset-hash-123",
         )
@@ -217,6 +298,8 @@ def test_manifest_and_git_sha_computations() -> None:
             manifest_data = json.load(f)
             
         assert manifest_data["config"]["run_id"] == "test-run-123"
+        assert manifest_data["config"]["provider_name"] == "siliconflow"
+        assert manifest_data["config"]["model_id"] == "MiniMax-test-chat"
         assert manifest_data["output_checksum"] == expected
         assert manifest_data["aggregate_cost"]["total_tokens"] == 100
 
