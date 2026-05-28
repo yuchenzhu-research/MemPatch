@@ -27,14 +27,12 @@ kept as raw source materials and should not be edited during implementation.
 
 Use this order when files disagree:
 
-1. Current repository code and tests.
+1. `docs/refactor_plan_defeat_path.md` for refactor architecture, DPA algorithm, and type-safe verifier contracts. (Outranks legacy codebase imports).
 2. `docs/coding_contract.md` for implementation style and local constraints.
-3. `docs/project_logic.md` for current research interpretation.
+3. `docs/project_logic.md` for current research interpretation and paper goals.
 4. `docs/implementation_status.md` for completed vs total first-version scope.
-5. `docs/source_materials/iclr_2027_paper_1_final_blueprint_re_trace.md` for
-   scientific claims, method boundaries, benchmarks, and paper framing.
-6. `docs/source_materials/re_trace_companion_codebase_integration_and_model_handoff.md`
-   for upstream intake, reproducibility discipline, and handoff intent.
+5. `docs/source_materials/iclr_2027_paper_1_final_blueprint_re_trace.md` for scientific boundaries. (Legacy implementation vocabulary therein is superseded by the refactor plan).
+6. `docs/source_materials/re_trace_companion_codebase_integration_and_model_handoff.md` for upstream integration intent.
 7. External repositories under `reference/`.
 
 Important adaptation: the companion suggests an `external/` layout in places.
@@ -43,27 +41,16 @@ using `reference/` unless the project explicitly migrates.
 
 ## Current Codebase State
 
-The first runnable research loop exists:
+The canonical typed DPA core is implemented on `refactor/defeat-path-core`:
+- Typed schemas: `EvidenceNode`, `BeliefNode`, `ConditionNode`, `DependencyEdge`, `EvidenceEdge`, `DefeatPath`, `AuthorizationTrace` (in `schemas.py`)
+- Contracts: `RequirementProposal` (in `contracts.py`)
+- Core logic: `DefeatPathAuthorizationAlgorithm` (in `tms/authorization.py`) and `RevisionGate` (in `tms/gate.py`)
+- Fixtures: `HeuristicRequirementInducer` and `HeuristicEvidenceEdgeVerifier` (development-only deterministic fixtures)
 
-```text
-data/boundary_audit/minimal.jsonl
-→ retracemem.verifier.HeuristicRelationVerifier
-→ retracemem.pipeline.ReTracePipeline
-→ retracemem.tms.RevisionGate
-→ retracemem.tms.AuthorizationEngine
-→ retracemem.generation.BasisBuilder
-→ retracemem.schemas.EvaluationRecord
-→ scripts/run_boundary_audit.py
-```
-
-Smoke runners also exist:
-
-- `scripts/run_stale.py`
-- `scripts/run_memora.py`
-
-The project has not yet implemented full official benchmark scoring, prompt
-verification, learned verification, or heavy baseline wrappers. Those belong to
-later scoped work.
+Wave 2 integration tasks remaining:
+- Integration of `QueryBeliefRetriever` and `ImpactCandidateRetriever` (in `retrieval/`)
+- Integration of query-conditioned basis constructor (in `generation/basis_builder.py`)
+- Integration of backend clients and runners (in `backends/retrace_backend.py` and `pipeline.py`)
 
 ## Paper Method In Code Terms
 
@@ -73,11 +60,12 @@ Use this mapping when writing code:
 |---|---|
 | Immutable episodic evidence | `retracemem/memory/episode_ledger.py` |
 | Open-text belief nodes | `retracemem/memory/belief_store.py` |
-| Relation verifier | `retracemem/verifier/` |
-| Conservative revision authorization | `retracemem/tms/gate.py` |
-| Current belief decision | `retracemem/tms/authorization.py` |
+| Relation verifier contracts | `retracemem/verifier/contracts.py` |
+| Heuristic fixtures (dev-only) | `retracemem/verifier/requirement_inducer.py`, `evidence_edge_verifier.py` |
+| Deterministic revision gate | `retracemem/tms/gate.py` |
+| Defeat-Path Authorization (DPA) | `retracemem/tms/authorization.py` |
 | Query-time authorized basis | `retracemem/generation/basis_builder.py` |
-| End-to-end local method loop | `retracemem/pipeline.py` |
+| End-to-end local method loop | `retracemem/pipeline.py` (To be migrated in Wave 2) |
 | Unified output | `retracemem/schemas.py`, `retracemem/evaluation/` |
 | Diagnostic cases | `data/boundary_audit/minimal.jsonl` |
 | Benchmark adapters | `retracemem/adapters/` |

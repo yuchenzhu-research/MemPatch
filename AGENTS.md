@@ -7,23 +7,20 @@ repository.
 
 Read these files before making code changes:
 
-1. `docs/model_context_index.md`
-2. `docs/source_materials/iclr_2027_paper_1_final_blueprint_re_trace.md`
-3. `docs/source_materials/re_trace_companion_codebase_integration_and_model_handoff.md`
-4. `docs/project_logic.md`
-5. `docs/coding_contract.md`
-6. `docs/implementation_status.md`
-7. `docs/reference_integration_map.md`
+1. `docs/refactor_plan_defeat_path.md` (Governs refactor implementation and DPA core specifications)
+2. `docs/model_context_index.md`
+3. `docs/project_logic.md`
+4. `docs/coding_contract.md`
+5. `docs/implementation_status.md`
+6. `docs/reference_integration_map.md`
+7. `docs/source_materials/iclr_2027_paper_1_final_blueprint_re_trace.md`
+8. `docs/source_materials/re_trace_companion_codebase_integration_and_model_handoff.md`
 
-The two files under `docs/source_materials/` are raw source materials copied from
-the project planning stage. Do not edit them. If they conflict with current
-repository style, follow `docs/model_context_index.md` and
-`docs/coding_contract.md`.
+Note: The two files under `docs/source_materials/` are raw historical planning documents copied from the design stage. They are preserved for original research scope and motivation, but their superseded implementation vocabulary (flat relation labels, legacy pipeline) is outranked by `docs/refactor_plan_defeat_path.md` and current verifier contract specifications.
 
 ## One-Sentence Alignment
 
-ReTrace preserves original evidence and revises only the currently authorized
-belief view through traceable local defeat paths.
+ReTrace preserves immutable evidence and changes a belief's eligibility for current answers only through verified, temporally valid typed defeat paths computed by deterministic DPA.
 
 ## Do Not Drift
 
@@ -35,23 +32,30 @@ Do not turn this codebase into:
 - CUPMem fixed-slot state tracking;
 - RL memory action learning;
 - latent memory consolidation;
-- a new benchmark generator.
+- a new benchmark generator;
+- Do not present heuristic keyword fixtures as the publishable ReTrace method.
+- Do not let legacy RelationPrediction / CONDITION / REQUIRED_BY semantics govern new runtime code.
+- Do not claim that DPA eliminates semantic model judgment; it constrains local edge prediction and makes final authorization deterministic.
 
-## Current First-Version Shape
+## Current Method Status
 
-The current runnable loop is:
+Canonical typed DPA core exists:
+- EvidenceNode / BeliefNode / ConditionNode
+- DependencyEdge(REQUIRES)
+- EvidenceEdge(BLOCKS / RELEASES / SUPERSEDES / REAFFIRMS / UNCERTAIN)
+- DefeatPathAuthorizationAlgorithm
+- typed verifier contracts (`RequirementProposal`)
 
-```text
-BoundaryAudit JSONL
-→ HeuristicRelationVerifier
-→ ReTracePipeline
-→ RevisionGate
-→ AuthorizationEngine / BasisBuilder
-→ EvaluationRecord JSONL
-```
+Not yet integrated (Wave 2+):
+- typed backend ingestion
+- query-conditioned authorized basis
+- generic ReTrace-LLM semantic edge predictor
+- DirectJudge-LLM attribution baseline
+- official frozen benchmark evaluation
 
-Benchmark smoke runners exist for STALE and Memora. They are smoke checks, not
-paper-scale evaluation yet.
+Development-only:
+- heuristic requirement inducer and evidence-edge verifier
+- hand-written gate and contract unit tests
 
 ## Coding Rules
 
@@ -67,16 +71,16 @@ paper-scale evaluation yet.
 
 ## Verification
 
-No-dependency verification:
+To run compilation check:
 
 ```bash
-env PYTHONPYCACHEPREFIX=.pycache_compile python3 -m compileall -q retracemem tests scripts
+env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src tests scripts
 ```
 
-If pytest is installed:
+To run test suites:
 
 ```bash
-python3 -m pytest -q
+.venv/bin/python -m pytest
 ```
 
 ## Commit Style
@@ -91,4 +95,5 @@ Use short English commits with production-level scope:
 
 Do not bundle unrelated method, runner, and documentation changes into one
 commit unless the change is purely mechanical.
+
 
