@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-05-28
+Last updated: 2026-05-29
 
 This document tracks the first research-code version. It intentionally has only
 two sections:
@@ -140,23 +140,39 @@ env PYTHONPYCACHEPREFIX=.pycache_compile python3 -m compileall -q retracemem tes
 - Ignored egg-info and pytest cache metadata.
 - Isolated test cache artifacts to pytest `tmp_path`.
 
+### Wave 2 (Pipeline Closure & Legacy Test Migration)
+- `ReTraceBackend`: removed unused `model_id` / `provider` parameters.
+- `ReTracePipeline`: requires explicit `backend` or all five typed components; no silent fixture default. Added `for_development_fixture()` classmethod.
+- `ReTracePipeline.answer()`: uses query-conditioned `search()` excluded traces instead of scanning all beliefs.
+- Migrated `test_memory_core.py` to typed `BeliefNode` / `EvidenceNode` schemas.
+- Migrated `test_rollback_diagnostics.py` to typed graph construction (no flat fixture dependency).
+- Retired `test_tms_authorization.py` (covered by `tests/gate_unit/`).
+- Retired `test_pipeline.py` (covered by `tests/backend_contract/`; JSONL test migrated).
+- Added regression tests: `test_pipeline_requires_explicit_backend_or_all_components`, `test_pipeline_answer_blocked_beliefs_are_query_conditioned`, `test_pipeline_answer_record_is_jsonl_compatible`.
+- Rewrote `scripts/run_retrace_internal_dev.py` to use typed fixtures only (no API clients, no legacy types).
+- Updated `tests/test_runners.py` to verify typed fixture banner.
+
 ### Legacy Modules (Remaining Migration Tasks)
-- Typed belief/condition/evidence-edge graph structures and DPA logic are implemented.
-- EpisodeLedger and TemporalValidity still use legacy EpisodicEvidence entries and must migrate to EvidenceNode in Wave 2.
-- Backend, pipeline, extraction, retrieval, and query-conditioned basis also remain Wave 2 integration work.
+- Typed belief/condition/evidence-edge graph structures, DPA logic, typed pipeline, and dev runner are implemented.
 - Obsolete HeuristicRelationVerifier pipeline results are archived as prototype-only milestones.
+- Wave 3+ remaining: typed backend ingestion for benchmark adapters, generic ReTrace-LLM semantic edge predictor, DirectJudge-LLM attribution baseline, official frozen benchmark evaluation.
 
 ### Tests And Verification
 
-- Passed test suites (with Python 3.10.20 and pytest 9.0.3):
+- Full green suite: 129 tests passed (Python 3.10.20, pytest 9.0.3).
+- Passed test suites:
   * `tests/test_schema_roundtrip.py`
   * `tests/gate_unit/`
   * `tests/verifier_contract/`
+  * `tests/backend_contract/`
+  * `tests/test_memory_core.py`
+  * `tests/test_rollback_diagnostics.py`
+  * `tests/test_runners.py`
 - Verified local compile check:
   ```bash
   env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src tests scripts
   ```
-- Command to run verification tests:
+- Command to run full verification:
   ```bash
-  .venv/bin/python -m pytest -q tests/test_schema_roundtrip.py tests/gate_unit tests/verifier_contract
+  .venv/bin/python -m pytest
   ```
