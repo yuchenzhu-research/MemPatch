@@ -101,3 +101,91 @@ class ManualQueryBeliefRetriever:
             if bid in belief_dict:
                 results.append(belief_dict[bid])
         return results
+
+
+class OverlapImpactCandidateRetriever:
+    """Production-capable overlap candidate retriever for impact prior beliefs.
+
+    Matches prior beliefs based on token overlap with the new evidence.
+    """
+
+    def __init__(self, stopwords: set[str] | None = None) -> None:
+        self.stopwords = stopwords or {
+            "a", "an", "the", "and", "or", "but", "is", "are", "was", "were",
+            "in", "on", "at", "to", "for", "of", "with", "by", "user", "i", "my",
+            "me", "you", "your", "he", "she", "it", "we", "they", "this", "that",
+        }
+
+    def _tokenize(self, text: str) -> set[str]:
+        text_lower = text.lower()
+        for char in ".,!?()[]{}'\":;-/":
+            text_lower = text_lower.replace(char, " ")
+        return set(text_lower.split()) - self.stopwords
+
+    def retrieve_impacts(
+        self,
+        new_evidence: EvidenceNode,
+        prior_beliefs: tuple[BeliefNode, ...],
+        store: BeliefStore,
+        limit: int = 10,
+    ) -> list[ImpactCandidate]:
+        ev_words = self._tokenize(new_evidence.text)
+        if not ev_words:
+            return []
+
+        candidates_with_score = []
+        for belief in prior_beliefs:
+            b_words = self._tokenize(belief.proposition)
+            overlap = ev_words.intersection(b_words)
+            if overlap:
+                score = len(overlap)
+                dep_edges = store.dependencies_of(belief.belief_id)
+                conditions = []
+                for edge in dep_edges:
+                    if store.has_condition(edge.condition_id):
+                        conditions.append(store.get_condition(edge.condition_id))
+                candidates_with_score.append(
+                    (score, ImpactCandidate(belief=belief, conditions=tuple(conditions)))
+                )
+
+        candidates_with_score.sort(key=lambda x: x[0], reverse=True)
+        return [candidate for _, candidate in candidates_with_score[:limit]]
+
+
+class OverlapQueryBeliefRetriever:
+    """Production-capable query-time belief retriever based on token overlap."""
+
+    def __init__(self, stopwords: set[str] | None = None) -> None:
+        self.stopwords = stopwords or {
+            "a", "an", "the", "and", "or", "but", "is", "are", "was", "were",
+            "in", "on", "at", "to", "for", "of", "with", "by", "user", "i", "my",
+            "me", "you", "your", "he", "she", "it", "we", "they", "this", "that",
+        }
+
+    def _tokenize(self, text: str) -> set[str]:
+        text_lower = text.lower()
+        for char in ".,!?()[]{}'\":;-/":
+            text_lower = text_lower.replace(char, " ")
+        return set(text_lower.split()) - self.stopwords
+
+    def retrieve_for_query(
+        self,
+        query: str,
+        beliefs: tuple[BeliefNode, ...],
+        limit: int = 10,
+    ) -> list[BeliefNode]:
+        q_words = self._tokenize(query)
+        if not q_words:
+            return list(beliefs[:limit])
+
+        candidates_with_score = []
+        for belief in beliefs:
+            b_words = self._tokenize(belief.proposition)
+            overlap = q_words.intersection(b_words)
+            score = len(overlap)
+            candidates_with_score.append((score, belief))
+
+        # Sort: first by overlap score descending, then by belief ID for determinism
+        candidates_with_score.sort(key=lambda x: (-x[0], x[1].belief_id))
+        return [b for _, b in candidates_with_score[:limit]]
+
