@@ -54,6 +54,8 @@ def test_http_provider_selects_provider_specific_environment_keys(monkeypatch) -
     assert gemini_headers["Authorization"] == "Bearer gemini-key"
     assert siliconflow_headers["Authorization"] == "Bearer siliconflow-key"
     assert provider._provider_env_var("siliconflow") == "SILICONFLOW_API_KEY"
+    assert provider._provider_env_var("gemini") == "GEMINI_API_KEY"
+    assert provider._provider_env_var("google") == "GEMINI_API_KEY"
 
 
 def test_http_provider_missing_key_is_provider_specific(monkeypatch) -> None:
@@ -274,8 +276,8 @@ def test_manifest_and_git_sha_computations() -> None:
         config = RunConfiguration(
             run_id="test-run-123",
             stage_and_method_name="AB-1C_StageA",
-            provider_name="siliconflow",
-            model_id="MiniMax-test-chat",
+            provider_name="gemini",
+            model_id="gemini-3.5-flash",
             cache_path=test_file,
             dataset_checksum="dataset-hash-123",
         )
@@ -298,15 +300,15 @@ def test_manifest_and_git_sha_computations() -> None:
             manifest_data = json.load(f)
             
         assert manifest_data["config"]["run_id"] == "test-run-123"
-        assert manifest_data["config"]["provider_name"] == "siliconflow"
-        assert manifest_data["config"]["model_id"] == "MiniMax-test-chat"
+        assert manifest_data["config"]["provider_name"] == "gemini"
+        assert manifest_data["config"]["model_id"] == "gemini-3.5-flash"
         assert manifest_data["output_checksum"] == expected
         assert manifest_data["aggregate_cost"]["total_tokens"] == 100
 
 
 def test_capped_provider_wrapper() -> None:
-    from scripts.run_controlled_ab_dev import CappedProviderWrapper
     from retracemem.providers.base import MockLLMProvider
+    from retracemem.providers.capped import CappedProviderWrapper
 
     mock_provider = MockLLMProvider(default_response="response")
     # Wrap with 2 calls max, and 100 tokens max
@@ -319,6 +321,8 @@ def test_capped_provider_wrapper() -> None:
     # Second call: OK
     trace2 = capped.generate(prompt="Hello", model_id="m", provider="p")
     assert trace2.total_tokens == 2
+    assert capped.to_dict()["outbound_network_calls"] == 2
+    assert capped.to_dict()["tokens_from_outbound_calls"] == 4
 
     # Third call: Exceeds call cap!
     with pytest.raises(RuntimeError) as excinfo:

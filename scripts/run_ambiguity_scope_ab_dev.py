@@ -39,8 +39,8 @@ from retracemem.evaluation.manifest import (
 )
 from retracemem.cache.jsonl_cache import JSONLCache
 from retracemem.evaluation.cost_accounting import CostAccounting
-from retracemem.providers.base import BaseLLMProvider
 from retracemem.providers.cached_client import CachedLLMClient
+from retracemem.providers.capped import CappedProviderWrapper
 from retracemem.providers.http_provider import HTTPLLMProvider
 
 DEFAULT_DATASET = os.path.join(
@@ -67,27 +67,6 @@ DEFAULT_STAGE_A_PROMPT_VERSION = "evidence_edge_prediction_v1"
 _PROMPT_JUDGE = os.path.join(
     os.path.dirname(__file__), os.pardir, "prompts", "directjudge", "direct_usability_v1.txt"
 )
-
-
-class CappedProviderWrapper(BaseLLMProvider):
-    def __init__(self, inner: BaseLLMProvider, max_calls: int, max_tokens: int) -> None:
-        self.inner = inner
-        self.max_calls = max_calls
-        self.max_tokens = max_tokens
-        self.calls_made = 0
-        self.tokens_used = 0
-
-    def generate(self, *args: Any, **kwargs: Any) -> Any:
-        if self.calls_made >= self.max_calls:
-            raise RuntimeError(f"Hard call cap of {self.max_calls} reached.")
-        if self.tokens_used >= self.max_tokens:
-            raise RuntimeError(f"Hard token cap of {self.max_tokens} reached.")
-        trace = self.inner.generate(*args, **kwargs)
-        self.calls_made += 1
-        self.tokens_used += trace.total_tokens
-        if self.tokens_used >= self.max_tokens:
-            raise RuntimeError(f"Hard token cap of {self.max_tokens} reached during call.")
-        return trace
 
 
 def _file_hash(path: str) -> str:
@@ -197,12 +176,12 @@ def main() -> None:
     )
     parser.add_argument(
         "--provider",
-        default=os.getenv("RETRACE_LIVE_PROVIDER", "openai"),
+        default=os.getenv("RETRACE_LIVE_PROVIDER", "gemini"),
         help="Live provider name (used only with --mode live-dev).",
     )
     parser.add_argument(
         "--model",
-        default=os.getenv("RETRACE_LIVE_MODEL", "gpt-4o-mini"),
+        default=os.getenv("RETRACE_LIVE_MODEL", "gemini-3.5-flash"),
         help="Live model id (used only with --mode live-dev).",
     )
     parser.add_argument("--api-key", default=None, help="Explicit API key for live-dev; otherwise provider env var is used.")
@@ -210,8 +189,8 @@ def main() -> None:
     parser.add_argument("--live-approved", action="store_true", help="Required explicit approval flag for live-dev API calls.")
     parser.add_argument("--case-ids", default="", help="Comma-separated case ids to run without editing the dataset.")
     parser.add_argument("--pilot-only", action="store_true", help="Run the fixed 8-case human-review pilot subset.")
-    parser.add_argument("--max-calls", type=int, default=int(os.getenv("RETRACE_LIVE_MAX_CALLS", "24")), help="Hard live-dev total call cap across both stages.")
-    parser.add_argument("--max-tokens", type=int, default=int(os.getenv("RETRACE_LIVE_MAX_TOKENS", "60000")), help="Hard live-dev total token cap across both stages.")
+    parser.add_argument("--max-calls", type=int, default=int(os.getenv("RETRACE_LIVE_MAX_CALLS", "1000")), help="Hard live-dev total call cap across both stages.")
+    parser.add_argument("--max-tokens", type=int, default=int(os.getenv("RETRACE_LIVE_MAX_TOKENS", "2000000")), help="Hard live-dev total token cap across both stages.")
     parser.add_argument("--stage-a-prompt-version", default=DEFAULT_STAGE_A_PROMPT_VERSION, help="Stage A evidence-edge prompt version.")
     parser.add_argument("--run-type", choices=("replay_correctness", "live_regression", "live_fresh_challenge", "replay_verification"), default=None, help="Explicit run type recorded in report and manifest.")
     parser.add_argument("--cache-path", default="", help="Optional cache path for live-dev or replay-verification runs.")
