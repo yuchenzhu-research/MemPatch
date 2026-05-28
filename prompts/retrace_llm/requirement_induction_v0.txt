@@ -18,7 +18,6 @@ Respond in raw JSON format:
 {{
   "requirements": [
     {{
-      "condition_id": "unique string identifier",
       "condition_text": "atomic prerequisite proposition",
       "rationale": "why this condition is required",
       "confidence": float between 0.0 and 1.0

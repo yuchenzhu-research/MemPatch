@@ -36,13 +36,15 @@ def _make_view() -> SharedCandidateView:
         proposition="The user commutes by car.",
         source_evidence_ids=("ev_leg",),
     )
+    c_leg = ConditionNode(condition_id="c_leg", scope_id="user1", text="User is physically able.")
     return SharedCandidateView(
         instance_id="case_1",
         query_id="q_1",
         query="How does the user commute?",
         evidence_context=(ev,),
         candidate_beliefs=(b_bike, b_car),
-        candidate_replacement_beliefs=(),
+        candidate_replacement_beliefs=(b_car,),
+        candidate_conditions_by_belief={"b_bike": (c_leg,)},
     )
 
 
@@ -156,3 +158,46 @@ def test_uncertain_status_roundtrip(tmp_path: str) -> None:
     assert len(result.excluded_belief_ids) == 2
     for v in result.verdicts:
         assert v.status == DirectUsabilityStatus.UNCERTAIN
+
+
+def test_omitted_candidate_belief_fails(tmp_path: str) -> None:
+    response = json.dumps({
+        "verdicts": [
+            {"belief_id": "b_bike", "status": "NOT_USABLE", "rationale": "r"},
+        ]
+    })
+    judge = _make_judge(response, str(tmp_path))
+    with pytest.raises(ValueError, match="omitted verdicts"):
+        judge.judge(_make_view())
+
+
+def test_duplicate_verdict_fails(tmp_path: str) -> None:
+    response = json.dumps({
+        "verdicts": [
+            {"belief_id": "b_bike", "status": "NOT_USABLE", "rationale": "r"},
+            {"belief_id": "b_bike", "status": "USABLE", "rationale": "r"},
+            {"belief_id": "b_car", "status": "USABLE", "rationale": "r"},
+        ]
+    })
+    judge = _make_judge(response, str(tmp_path))
+    with pytest.raises(ValueError, match="duplicate verdict"):
+        judge.judge(_make_view())
+
+
+def test_full_view_rendered_in_prompt(tmp_path: str) -> None:
+    response = json.dumps({
+        "verdicts": [
+            {"belief_id": "b_bike", "status": "NOT_USABLE", "rationale": "r"},
+            {"belief_id": "b_car", "status": "USABLE", "rationale": "r"},
+        ]
+    })
+    mock = MockLLMProvider(default_response=response)
+    cache = JSONLCache(os.path.join(str(tmp_path), "cache.jsonl"))
+    client = CachedLLMClient(cache=cache, provider_client=mock)
+    judge = DirectJudgeLLM(client=client, model_id="mock", provider="mock")
+    judge.judge(_make_view())
+    prompt = mock.last_prompt
+    assert "b_car" in prompt
+    assert "commutes by car" in prompt
+    assert "c_leg" in prompt
+    assert "physically able" in prompt

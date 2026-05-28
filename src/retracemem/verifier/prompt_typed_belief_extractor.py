@@ -9,7 +9,6 @@ from __future__ import annotations
 import hashlib
 import json
 import os
-import uuid
 from typing import Any
 
 from retracemem.providers.cached_client import CachedLLMClient
@@ -26,6 +25,16 @@ def _load_prompt_template() -> str:
     path = os.path.normpath(_PROMPT_FILE)
     with open(path, encoding="utf-8") as f:
         return f.read()
+
+
+def _stable_belief_id(scope_id: str, evidence_id: str, normalized_proposition: str) -> str:
+    """Compute deterministic belief_id from grounded inputs."""
+    payload = f"{scope_id}|{evidence_id}|{normalized_proposition}"
+    return f"b-{hashlib.sha256(payload.encode('utf-8')).hexdigest()[:16]}"
+
+
+def _normalize_proposition(text: str) -> str:
+    return " ".join(text.strip().split())
 
 
 class PromptTypedBeliefExtractor:
@@ -92,26 +101,37 @@ class PromptTypedBeliefExtractor:
         if not isinstance(data, dict) or "beliefs" not in data:
             raise ValueError(f"Invalid belief extraction response: missing 'beliefs' key")
 
+        seen_normalized: set[str] = set()
         beliefs: list[BeliefNode] = []
         for item in data["beliefs"]:
-            bid = item.get("belief_id")
             prop = item.get("proposition")
-            if not bid or not prop:
-                raise ValueError(f"Belief item missing belief_id or proposition: {item}")
+            if not prop or not prop.strip():
+                raise ValueError(f"Belief item missing or empty proposition: {item}")
+
+            normalized = _normalize_proposition(prop)
+            if normalized in seen_normalized:
+                raise ValueError(
+                    f"Duplicate normalized proposition in extraction response: '{normalized}'"
+                )
+            seen_normalized.add(normalized)
+
+            confidence = item.get("confidence")
+            if confidence is not None:
+                if not isinstance(confidence, (int, float)) or confidence < 0.0 or confidence > 1.0:
+                    raise ValueError(
+                        f"Confidence must be a number in [0.0, 1.0], got {confidence!r}: {item}"
+                    )
+
+            bid = _stable_belief_id(scope_id, evidence.evidence_id, normalized)
 
             belief = BeliefNode(
                 belief_id=bid,
-                proposition=prop,
+                proposition=normalized,
                 source_evidence_ids=(evidence.evidence_id,),
                 extractor_version=_PROMPT_VERSION,
-                confidence=item.get("confidence"),
+                confidence=confidence,
                 metadata={"scope_id": scope_id, "model_call_trace_id": call_id},
             )
-            if evidence.evidence_id not in belief.source_evidence_ids:
-                raise ValueError(
-                    f"Grounding violation: belief {bid} does not list "
-                    f"evidence {evidence.evidence_id} in source_evidence_ids"
-                )
             beliefs.append(belief)
 
         return beliefs
