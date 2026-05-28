@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import time
 from typing import Any
 from retracemem.schemas import (
     EvidenceNode,
@@ -10,7 +11,7 @@ from retracemem.memory.belief_store import BeliefStore
 from retracemem.memory.episode_ledger import EpisodeLedger
 from retracemem.tms.authorization import DefeatPathAuthorizationAlgorithm
 from retracemem.extraction.typed_extractor import TypedBeliefExtractor, ManualTypedBeliefExtractor
-from retracemem.verifier.contracts import RequirementInducer, EvidenceEdgeVerifier
+from retracemem.verifier.contracts import RequirementInducer, EvidenceEdgeVerifier, BatchedEvidenceEdgeVerifier
 from retracemem.verifier.requirement_inducer import HeuristicRequirementInducer
 from retracemem.verifier.evidence_edge_verifier import HeuristicEvidenceEdgeVerifier
 from retracemem.retrieval.typed_retrievers import (
@@ -31,8 +32,10 @@ class ReTraceBackend:
         extractor: TypedBeliefExtractor | None = None,
         inducer: RequirementInducer | None = None,
         edge_verifier: EvidenceEdgeVerifier | None = None,
+        batched_edge_verifier: BatchedEvidenceEdgeVerifier | None = None,
         impact_retriever: ImpactCandidateRetriever | None = None,
         query_retriever: QueryBeliefRetriever | None = None,
+        max_batch_beliefs: int = 8,
         client: Any | None = None,
         disable_ledger: bool = False,
         disable_gate: bool = False,
@@ -62,8 +65,13 @@ class ReTraceBackend:
         self.extractor = extractor
         self.inducer = inducer
         self.edge_verifier = edge_verifier
+        self.batched_edge_verifier = batched_edge_verifier
         self.impact_retriever = impact_retriever
         self.query_retriever = query_retriever
+        if max_batch_beliefs < 1:
+            raise ValueError("max_batch_beliefs must be >= 1")
+        self.max_batch_beliefs = max_batch_beliefs
+        self.last_ingest_stats: dict[str, Any] = {}
         self.gate = RevisionGate()
 
     @classmethod
@@ -72,6 +80,7 @@ class ReTraceBackend:
         extractor: TypedBeliefExtractor | None = None,
         inducer: RequirementInducer | None = None,
         edge_verifier: EvidenceEdgeVerifier | None = None,
+        batched_edge_verifier: BatchedEvidenceEdgeVerifier | None = None,
         impact_retriever: ImpactCandidateRetriever | None = None,
         query_retriever: QueryBeliefRetriever | None = None,
         **kwargs: Any,
@@ -81,6 +90,7 @@ class ReTraceBackend:
             extractor=extractor or ManualTypedBeliefExtractor(),
             inducer=inducer or HeuristicRequirementInducer(),
             edge_verifier=edge_verifier or HeuristicEvidenceEdgeVerifier(),
+            batched_edge_verifier=batched_edge_verifier,
             impact_retriever=impact_retriever or ManualImpactCandidateRetriever(),
             query_retriever=query_retriever or ManualQueryBeliefRetriever(),
             **kwargs,
@@ -176,23 +186,71 @@ class ReTraceBackend:
         temporal_context = tuple(ledger.all())
         admitted_edges: list[EvidenceEdge] = []
 
-        # Verify edges
-        for candidate in impact_candidates:
-            evidence_edges = self.edge_verifier.verify_edges(
-                new_evidence=evidence,
-                candidate_belief=candidate.belief,
-                candidate_replacement_beliefs=tuple(new_beliefs),
-                candidate_conditions=candidate.conditions,
-                temporal_context=temporal_context,
-            )
-            for edge in evidence_edges:
-                gate_decision = self.gate.admit_evidence_edge(edge, store)
-                if gate_decision.admitted:
-                    if not store.has_evidence_edge(edge.edge_id):
-                        store.add_evidence_edge(edge)
-                        admitted_edges.append(edge)
+        verifier_started = time.perf_counter()
+        verifier_calls = 0
+        batch_count = 0
+
+        if self.batched_edge_verifier is not None:
+            for batch in self._impact_batches(impact_candidates):
+                batch_count += 1
+                verifier_calls += 1
+                conditions_by_belief = tuple(
+                    (candidate.belief.belief_id, candidate.conditions)
+                    for candidate in batch
+                )
+                raw_edges = self.batched_edge_verifier.verify_edges_batch(
+                    new_evidence=evidence,
+                    candidate_beliefs=tuple(candidate.belief for candidate in batch),
+                    candidate_replacement_beliefs=tuple(new_beliefs),
+                    candidate_conditions_by_belief=conditions_by_belief,
+                    temporal_context=temporal_context,
+                )
+                evidence_edges = tuple(getattr(raw_edges, "proposed_edges", raw_edges))
+                self._admit_evidence_edges(evidence_edges, store, admitted_edges)
+        else:
+            for candidate in impact_candidates:
+                batch_count += 1
+                verifier_calls += 1
+                evidence_edges = self.edge_verifier.verify_edges(
+                    new_evidence=evidence,
+                    candidate_belief=candidate.belief,
+                    candidate_replacement_beliefs=tuple(new_beliefs),
+                    candidate_conditions=candidate.conditions,
+                    temporal_context=temporal_context,
+                )
+                self._admit_evidence_edges(evidence_edges, store, admitted_edges)
+
+        verifier_latency_ms = (time.perf_counter() - verifier_started) * 1000.0
+        self.last_ingest_stats = {
+            "candidate_count": len(impact_candidates),
+            "batch_count": batch_count,
+            "max_batch_beliefs": self.max_batch_beliefs,
+            "verifier_calls": verifier_calls,
+            "evidence_chars": len(evidence.text),
+            "latency_ms": verifier_latency_ms,
+            "execution_mode": "batched" if self.batched_edge_verifier is not None else "per_belief",
+        }
 
         return admitted_edges
+
+    def _impact_batches(self, impact_candidates: list[Any]) -> list[list[Any]]:
+        return [
+            impact_candidates[index:index + self.max_batch_beliefs]
+            for index in range(0, len(impact_candidates), self.max_batch_beliefs)
+        ]
+
+    def _admit_evidence_edges(
+        self,
+        evidence_edges: tuple[EvidenceEdge, ...] | list[EvidenceEdge],
+        store: BeliefStore,
+        admitted_edges: list[EvidenceEdge],
+    ) -> None:
+        for edge in evidence_edges:
+            gate_decision = self.gate.admit_evidence_edge(edge, store)
+            if gate_decision.admitted:
+                if not store.has_evidence_edge(edge.edge_id):
+                    store.add_evidence_edge(edge)
+                    admitted_edges.append(edge)
 
     def search(
         self,
