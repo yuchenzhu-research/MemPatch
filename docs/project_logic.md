@@ -117,7 +117,7 @@ Paper 1 depend on a graph database or open-world temporal KG discovery.
 
 ### 2. Evidence Updates (`EvidenceEdge`)
 *   `BLOCKS`: evidence --BLOCKS--> condition. Defeats a prerequisite.
-*   `RELEASES`: evidence --RELEASES--> condition. Clears a blocker.
+*   `RELEASES`: evidence --RELEASES--> condition. Clears a blocker. RELEASES removes an active blocker and may restore eligibility; it never itself reasserts current truth and never overrides a later SUPERSEDES edge.
 *   `SUPERSEDES`: evidence --SUPERSEDES--> belief. Replaces the prior belief. Requires a real `replacement_belief_id` from candidate beliefs extracted from the new evidence.
 *   `REAFFIRMS`: evidence --REAFFIRMS--> belief. Clears belief-level uncertainty.
 *   `UNCERTAIN`: evidence --UNCERTAIN--> belief. Signals information is insufficient, removing default authorization.

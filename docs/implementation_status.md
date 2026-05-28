@@ -1,6 +1,6 @@
 # Implementation Status
 
-Last updated: 2026-05-27
+Last updated: 2026-05-28
 
 This document tracks the first research-code version. It intentionally has only
 two sections:
@@ -24,8 +24,7 @@ definition.
 
 ### Core Data Contracts
 
-- Stable dataclass schemas for evidence, beliefs, relation predictions,
-  authorization decisions, and evaluation records.
+- Stable dataclass schemas for EvidenceNode, BeliefNode, ConditionNode, DependencyEdge, EvidenceEdge, and evaluation records.
 - Unified JSONL output for all methods.
 - Cost/call tracking helpers.
 
@@ -34,20 +33,18 @@ definition.
 - Append-only `EpisodeLedger`.
 - Open-text `BeliefStore`.
 - Conservative `RevisionGate`.
-- `AuthorizationEngine` for deciding whether a belief can govern current
+- `DefeatPathAuthorizationAlgorithm` for deciding whether a belief can govern current
   answers.
-- `BasisBuilder` for query-time authorized basis construction.
+- `query-conditioned basis` construction at query-time.
 
 ### Verifier Layer
 
-- Deterministic `HeuristicRelationVerifier` for local smoke runs.
-- Relation labels:
-  - `SUPPORT`
-  - `SUPERSEDE`
-  - `BLOCK`
-  - `CONDITION`
-  - `NONE`
-  - `UNCERTAIN`
+- Deterministic `RequirementInducer` and `EvidenceEdgeVerifier` for local smoke runs.
+- `RequirementProposal` and typed verifier contracts.
+- Evidence edge verifiers including `ReTrace-LLM`, `DirectJudge-LLM`, and `ReTrace-Local`.
+- Edge types:
+  - `DependencyEdge(REQUIRES)`
+  - `EvidenceEdge(BLOCKS, RELEASES, SUPERSEDES, REAFFIRMS, UNCERTAIN)`
 - Fail-closed behavior for ambiguous or empty inputs.
 
 ### ReTrace Pipeline
@@ -57,18 +54,13 @@ definition.
   - belief store;
   - verifier;
   - revision gate;
-  - authorized basis;
+  - query-conditioned basis;
   - deterministic evaluation record output.
 
 ### BoundaryAudit Diagnostic Loop
 
 - 20 local JSONL diagnostic cases.
-- Balanced case buckets:
-  - `SUPERSEDE`
-  - `BLOCK`
-  - `CONDITION`
-  - `NONE`
-  - `UNCERTAIN`
+- Balanced case buckets covering `SUPERSEDES`, `BLOCKS`, `RELEASES`, `REAFFIRMS`, `UNCERTAIN`, and dependency prerequisites.
 - Runner for:
   - `retrieval_baseline`
   - `retrace_heuristic`
@@ -149,7 +141,9 @@ env PYTHONPYCACHEPREFIX=.pycache_compile python3 -m compileall -q retracemem tes
 - Isolated test cache artifacts to pytest `tmp_path`.
 
 ### Legacy Modules (Remaining Migration Tasks)
-- Pipeline (`retracemem/pipeline.py`), backend clients (`retracemem/backends/retrace_backend.py`), and retrievers (`retracemem/retrieval/`) remain untouched and operate under legacy schemas. They are scheduled for migration in Wave 2.
+- Typed belief/condition/evidence-edge graph structures and DPA logic are implemented.
+- EpisodeLedger and TemporalValidity still use legacy EpisodicEvidence entries and must migrate to EvidenceNode in Wave 2.
+- Backend, pipeline, extraction, retrieval, and query-conditioned basis also remain Wave 2 integration work.
 - Obsolete HeuristicRelationVerifier pipeline results are archived as prototype-only milestones.
 
 ### Tests And Verification
