@@ -14,11 +14,11 @@ def test_env_example_exists_without_real_secret() -> None:
     env_example = REPO_ROOT / ".env.example"
     text = env_example.read_text(encoding="utf-8")
 
-    assert "SILICONFLOW_API_KEY=" in text
-    assert "RETRACE_LIVE_PROVIDER=siliconflow" in text
-    assert "RETRACE_LIVE_MODEL=" in text
-    assert "RETRACE_LIVE_MAX_CALLS=24" in text
-    assert "RETRACE_LIVE_MAX_TOKENS=60000" in text
+    assert "GEMINI_API_KEY=" in text
+    assert "RETRACE_LIVE_PROVIDER=gemini" in text
+    assert "RETRACE_LIVE_MODEL=gemini-3.5-flash" in text
+    assert "RETRACE_LIVE_MAX_CALLS=1000" in text
+    assert "RETRACE_LIVE_MAX_TOKENS=2000000" in text
     assert "sk-" not in text
     assert "Bearer " not in text
 
@@ -31,9 +31,9 @@ def test_env_file_remains_gitignored() -> None:
 def test_ambiguity_scope_runner_reads_env_defaults_without_serializing_secret(tmp_path) -> None:
     env = os.environ.copy()
     env["PYTHONPATH"] = str(REPO_ROOT / "src")
-    env["SILICONFLOW_API_KEY"] = "test-secret-should-not-appear"
-    env["RETRACE_LIVE_PROVIDER"] = "siliconflow"
-    env["RETRACE_LIVE_MODEL"] = "MiniMax-env-model"
+    env["GEMINI_API_KEY"] = "test-secret-should-not-appear"
+    env["RETRACE_LIVE_PROVIDER"] = "gemini"
+    env["RETRACE_LIVE_MODEL"] = "gemini-env-model"
     env["RETRACE_LIVE_MAX_CALLS"] = "0"
     env["RETRACE_LIVE_MAX_TOKENS"] = "1234"
 
@@ -56,7 +56,7 @@ def test_ambiguity_scope_runner_reads_env_defaults_without_serializing_secret(tm
     )
 
     combined = result.stdout + result.stderr
-    assert "provider=siliconflow, model=MiniMax-env-model" in combined
+    assert "provider=gemini, model=gemini-env-model" in combined
     assert "max_calls=0, max_tokens=1234" in combined
     report_text = (tmp_path / "ambiguity_scope_report.json").read_text(encoding="utf-8")
     manifest_text = (tmp_path / "ambiguity_scope_manifest.json").read_text(encoding="utf-8")
@@ -68,9 +68,9 @@ def test_ambiguity_scope_runner_reads_env_defaults_without_serializing_secret(tm
 def test_ambiguity_scope_runner_cli_overrides_env_defaults(tmp_path) -> None:
     env = os.environ.copy()
     env["PYTHONPATH"] = str(REPO_ROOT / "src")
-    env["SILICONFLOW_API_KEY"] = "test-secret-should-not-appear"
-    env["RETRACE_LIVE_PROVIDER"] = "siliconflow"
-    env["RETRACE_LIVE_MODEL"] = "MiniMax-env-model"
+    env["GEMINI_API_KEY"] = "test-secret-should-not-appear"
+    env["RETRACE_LIVE_PROVIDER"] = "gemini"
+    env["RETRACE_LIVE_MODEL"] = "gemini-env-model"
     env["RETRACE_LIVE_MAX_CALLS"] = "3"
     env["RETRACE_LIVE_MAX_TOKENS"] = "1234"
 
@@ -83,9 +83,9 @@ def test_ambiguity_scope_runner_cli_overrides_env_defaults(tmp_path) -> None:
             "--live-approved",
             "--pilot-only",
             "--provider",
-            "siliconflow",
+            "gemini",
             "--model",
-            "MiniMax-cli-model",
+            "gemini-cli-model",
             "--max-calls",
             "0",
             "--max-tokens",
@@ -101,9 +101,9 @@ def test_ambiguity_scope_runner_cli_overrides_env_defaults(tmp_path) -> None:
     )
 
     combined = result.stdout + result.stderr
-    assert "provider=siliconflow, model=MiniMax-cli-model" in combined
+    assert "provider=gemini, model=gemini-cli-model" in combined
     assert "max_calls=0, max_tokens=2345" in combined
-    assert "MiniMax-env-model" not in combined
+    assert "gemini-env-model" not in combined
     report_text = (tmp_path / "ambiguity_scope_report.json").read_text(encoding="utf-8")
     manifest_text = (tmp_path / "ambiguity_scope_manifest.json").read_text(encoding="utf-8")
     assert "test-secret-should-not-appear" not in combined
