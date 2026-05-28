@@ -97,7 +97,8 @@ class DirectJudgeLLM:
             f"source: {e.source_dataset}/{e.source_pointer}) "
             f"\"{e.text}\""
             for e in view.evidence_context
-        ) or "  (none)"
+            if e.evidence_id != ne.evidence_id
+        ) or "  (none beyond current/new evidence)"
         beliefs_str = "\n".join(
             f"  - {b.belief_id}: \"{b.proposition}\""
             for b in view.candidate_beliefs
