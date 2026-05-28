@@ -75,6 +75,7 @@ class StaleLiveRunConfig:
     max_calls: int = 500
     max_tokens: int = 2_000_000
     evaluator_concurrency: int = 2
+    ingest_chunk_size: int = 10
 
 
 class _NoEdgeBatchedVerifier:
@@ -182,25 +183,62 @@ def ingest_method_visible_sessions(
     pipeline: ReTracePipeline,
     user_id: str,
     scenario: StaleMethodVisibleScenario,
+    chunk_size: int = 1,
+    progress_method: str | None = None,
 ) -> list[str]:
     """Ingest haystack sessions in declared (timestamp-aligned) order, exactly once."""
     pipeline.reset_user(user_id)
     ingested_evidence_ids: list[str] = []
-    for index, (turns, ts) in enumerate(
-        zip(scenario.haystack_sessions, scenario.timestamps, strict=True)
-    ):
-        evidence_id = f"{scenario.uid}:session:{index}"
-        evidence = EvidenceNode(
-            evidence_id=evidence_id,
-            session_id=f"{scenario.uid}:s{index}",
-            timestamp=ts,
-            text="\n".join(turns),
-            source_dataset="stale_official",
-            source_pointer=f"{scenario.uid}#{index}",
-        )
+    chunks = build_chronological_evidence_chunks(scenario, chunk_size)
+    for chunk_number, evidence in enumerate(chunks, start=1):
+        if progress_method:
+            raw_count = evidence.metadata.get("raw_session_count", 0)
+            print(
+                f"[INGEST] method={progress_method} uid={scenario.uid} "
+                f"chunk={chunk_number}/{len(chunks)} raw_sessions={raw_count}",
+                flush=True,
+            )
         pipeline.ingest_evidence(user_id, evidence)
-        ingested_evidence_ids.append(evidence_id)
+        ingested_evidence_ids.append(evidence.evidence_id)
     return ingested_evidence_ids
+
+
+def build_chronological_evidence_chunks(
+    scenario: StaleMethodVisibleScenario,
+    chunk_size: int,
+) -> tuple[EvidenceNode, ...]:
+    if chunk_size <= 0:
+        raise ValueError("chunk_size must be positive")
+    chunks: list[EvidenceNode] = []
+    raw_total = len(scenario.haystack_sessions)
+    for start in range(0, raw_total, chunk_size):
+        end = min(start + chunk_size, raw_total)
+        raw_indices = tuple(range(start, end))
+        chunk_sessions = scenario.haystack_sessions[start:end]
+        chunk_timestamps = scenario.timestamps[start:end]
+        text_parts: list[str] = []
+        for raw_index, turns in zip(raw_indices, chunk_sessions, strict=True):
+            text_parts.append(
+                f"[raw_session_index={raw_index}]\n" + "\n".join(turns)
+            )
+        chunk_index = len(chunks)
+        evidence = EvidenceNode(
+            evidence_id=f"{scenario.uid}:chunk:{chunk_index}",
+            session_id=f"{scenario.uid}:chunk:{chunk_index}",
+            timestamp=chunk_timestamps[-1] if chunk_timestamps else None,
+            text="\n\n---\n\n".join(text_parts),
+            source_dataset="stale_official",
+            source_pointer=f"{scenario.uid}#chunk:{chunk_index}",
+            metadata={
+                "chunk_index": chunk_index,
+                "raw_session_indices": raw_indices,
+                "timestamps": chunk_timestamps,
+                "raw_session_count": len(raw_indices),
+                "ingest_chunk_size": chunk_size,
+            },
+        )
+        chunks.append(evidence)
+    return tuple(chunks)
 
 
 def answer_probing_queries(
@@ -230,9 +268,17 @@ def run_scenario(
     pipeline: ReTracePipeline,
     record: StaleOfficialRecord,
     method: str,
+    chunk_size: int = 1,
+    progress_method: str | None = None,
 ) -> tuple[dict[str, str], dict[str, Any], list[str]]:
     user_id = f"stale:{method}:{record.method_visible.uid}"
-    evidence_ids = ingest_method_visible_sessions(pipeline, user_id, record.method_visible)
+    evidence_ids = ingest_method_visible_sessions(
+        pipeline,
+        user_id,
+        record.method_visible,
+        chunk_size=chunk_size,
+        progress_method=progress_method,
+    )
     responses, meta = answer_probing_queries(pipeline, user_id, record.method_visible, method)
     return responses, meta, evidence_ids
 
@@ -273,6 +319,53 @@ def select_subset(
         if all(counts.get(key, 0) >= targets.get(key, 0) for key in targets):
             break
     return tuple(selected)
+
+
+def estimate_live_calls(config: StaleLiveRunConfig) -> dict[str, Any]:
+    adapter = StaleOfficialAdapter(config.dataset_path)
+    selected = select_subset(adapter.load(), config.limit_t1, config.limit_t2)
+    scenario_rows: list[dict[str, Any]] = []
+    total_chunks = 0
+    for record in selected:
+        raw_sessions = len(record.method_visible.haystack_sessions)
+        chunks = len(build_chronological_evidence_chunks(record.method_visible, config.ingest_chunk_size))
+        total_chunks += chunks
+        scenario_rows.append(
+            {
+                "uid": record.method_visible.uid,
+                "type": record.evaluator_only.type,
+                "raw_sessions": raw_sessions,
+                "chunks": chunks,
+            }
+        )
+    scenario_count = len(selected)
+    stage_a_answer_calls = scenario_count * 3
+    stage_b_directjudge_calls = scenario_count * 3
+    stage_b_answer_calls = scenario_count * 3
+    estimate = {
+        "selected_scenario_count": scenario_count,
+        "composition": {
+            "T1": sum(1 for r in selected if r.evaluator_only.type == "T1"),
+            "T2": sum(1 for r in selected if r.evaluator_only.type == "T2"),
+        },
+        "ingest_chunk_size": config.ingest_chunk_size,
+        "scenarios": scenario_rows,
+        "expected_shared_extraction_network_calls": total_chunks,
+        "stage_a_edge_call_upper_bound": total_chunks,
+        "stage_a_answer_calls": stage_a_answer_calls,
+        "stage_b_directjudge_calls": stage_b_directjudge_calls,
+        "stage_b_answer_calls": stage_b_answer_calls,
+        "approx_target_method_total_call_upper_bound_excluding_evaluator": (
+            total_chunks
+            + total_chunks
+            + stage_a_answer_calls
+            + stage_b_directjudge_calls
+            + stage_b_answer_calls
+        ),
+        "zero_api_calls": True,
+        "shared_extraction_cache": True,
+    }
+    return estimate
 
 
 def run_offline_wiring_demo(
@@ -384,14 +477,13 @@ def run_live_stageab_generation(config: StaleLiveRunConfig) -> dict[str, Any]:
     subset_path = output_dir / "selected_official_subset.json"
     write_selected_subset(selected, config.dataset_path, subset_path)
 
-    client_a_extract = make_live_client(cache_dir / "stage_a_extract.jsonl", budget, "stage_a_extract", config.http_timeout_seconds)
+    client_shared_extract = make_live_client(cache_dir / "shared_extract.jsonl", budget, "shared_extract", config.http_timeout_seconds)
     client_a_edges = make_live_client(cache_dir / "stage_a_edges.jsonl", budget, "stage_a_edges", config.http_timeout_seconds)
     client_a_answer = make_live_client(cache_dir / "stage_a_answer.jsonl", budget, "stage_a_answer", config.http_timeout_seconds)
-    client_b_extract = make_live_client(cache_dir / "stage_b_extract.jsonl", budget, "stage_b_extract", config.http_timeout_seconds)
     client_b_answer_judge = make_live_client(cache_dir / "stage_b_directjudge_answer.jsonl", budget, "stage_b_directjudge_answer", config.http_timeout_seconds)
 
-    pipeline_a = build_live_stage_a_pipeline(client_a_extract, client_a_edges, client_a_answer, config)
-    pipeline_b = build_live_stage_b_pipeline(client_b_extract, client_b_answer_judge, config)
+    pipeline_a = build_live_stage_a_pipeline(client_shared_extract, client_a_edges, client_a_answer, config)
+    pipeline_b = build_live_stage_b_pipeline(client_shared_extract, client_b_answer_judge, config)
     rows_a: list[dict[str, Any]] = []
     rows_b: list[dict[str, Any]] = []
     errors: list[str] = []
@@ -402,7 +494,13 @@ def run_live_stageab_generation(config: StaleLiveRunConfig) -> dict[str, Any]:
         rtype = record.evaluator_only.type
         print(f"[SCENARIO_START] {idx}/{total} uid={uid} type={rtype} calls={budget.calls}/{budget.max_calls} tokens={budget.tokens}/{budget.max_tokens}", flush=True)
         try:
-            responses, meta, evidence_ids = run_scenario(pipeline_a, record, method="retrace")
+            responses, meta, evidence_ids = run_scenario(
+                pipeline_a,
+                record,
+                method="retrace",
+                chunk_size=config.ingest_chunk_size,
+                progress_method="stage_a",
+            )
             rows_a.append({"uid": uid, "type": rtype, "target_model_responses": responses, "target_model_meta": meta, "ingested_evidence_ids": evidence_ids})
             print(f"[STAGE_A_DONE] {idx}/{total} uid={uid} sessions={len(evidence_ids)} calls={budget.calls}/{budget.max_calls} tokens={budget.tokens}/{budget.max_tokens}", flush=True)
         except Exception as exc:
@@ -411,7 +509,13 @@ def run_live_stageab_generation(config: StaleLiveRunConfig) -> dict[str, Any]:
             rows_a.append({"uid": uid, "type": rtype, "target_model_responses": _empty_responses(), "target_model_meta": {}, "error": msg})
             print(f"[STAGE_A_ERROR] {idx}/{total} uid={uid} error={type(exc).__name__}", flush=True)
         try:
-            responses, meta, evidence_ids = run_scenario(pipeline_b, record, method="directjudge")
+            responses, meta, evidence_ids = run_scenario(
+                pipeline_b,
+                record,
+                method="directjudge",
+                chunk_size=config.ingest_chunk_size,
+                progress_method="stage_b",
+            )
             rows_b.append({"uid": uid, "type": rtype, "target_model_responses": responses, "target_model_meta": meta, "ingested_evidence_ids": evidence_ids})
             print(f"[STAGE_B_DONE] {idx}/{total} uid={uid} sessions={len(evidence_ids)} calls={budget.calls}/{budget.max_calls} tokens={budget.tokens}/{budget.max_tokens}", flush=True)
         except Exception as exc:
@@ -435,6 +539,15 @@ def run_live_stageab_generation(config: StaleLiveRunConfig) -> dict[str, Any]:
         "provider": config.provider,
         "model": config.model,
         "selected_records": [{"uid": r.method_visible.uid, "type": r.evaluator_only.type} for r in selected],
+        "ingest_chunk_size": config.ingest_chunk_size,
+        "raw_session_count_by_uid": {
+            r.method_visible.uid: len(r.method_visible.haystack_sessions) for r in selected
+        },
+        "shared_extraction_cache": True,
+        "authorization_state_isolated": True,
+        "stage_b_authorization_timing": "query_time_directjudge_baseline",
+        "stage_a_authorization_timing": "ingest_time_retrace",
+        "strict_update_time_authorization_matching": False,
         "selected_subset_path": str(subset_path),
         "stage_a_export": str(stage_a_path),
         "stage_b_export": str(stage_b_path),
@@ -448,6 +561,7 @@ def run_live_stageab_generation(config: StaleLiveRunConfig) -> dict[str, Any]:
             "stage_a_authorization": "batched_typed_edges_revision_gate_dpa",
             "stage_b_authorization": "directjudge_query_authorization",
             "shared_answer_generator": True,
+            "shared_extraction_cache_only": True,
         },
     }
     manifest_path = output_dir / "generation_manifest.json"
