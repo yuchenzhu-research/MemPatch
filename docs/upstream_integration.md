@@ -40,42 +40,54 @@ normal ReTrace implementation.
 
 Role:
 
-- primary external stale-memory benchmark and closest executable CUPMem
-  comparison.
+- primary external benchmark: official frozen STALE 400-case dataset;
+- closest executable CUPMem comparison.
 
 Use:
 
+- official dataset `STALEproj/STALE::T1_T2_400_FULL.json` downloaded into the
+  gitignored `data_external/stale_official_frozen/` directory;
 - adapter and official-evaluator integration;
 - CUPMem wrapper or reproduction where licensed and executable;
 - provenance records for upstream commit, inputs, and outputs.
+
+Leakage boundary:
+
+- method-visible fields are `uid`, ordered `haystack_session`, aligned
+  `timestamps`, and one probing query at a time from `probing_queries`;
+- evaluator-only fields are `M_old`, `M_new`, `explanation`,
+  `relevant_session_index`, and `type`;
+- `type` may be used only after execution for stratified reporting;
+- if the text of `M_old` or `M_new` appears inside genuine haystack sessions,
+  that session text is legitimately method-visible. The prohibition is against
+  directly injecting the separate gold fields or relevant-session indices.
 
 Do not inherit:
 
 - fixed state-slot ontology as ReTrace core;
 - CUPMem prompts or adjudications as ReTrace supervision;
-- official examples as prompt-development data.
+- official examples or evaluator outputs as prompt-development/training data.
 
 ### Memora
 
 Role:
 
-- primary evolving-history evaluation harness with repeated mutation and FAMA
-  scoring.
+- secondary upstream retained for rejected-pilot analysis only. The
+  oracle-conditioned 30-question diagnostic showed adapter/objective mismatch
+  and must not be treated as a positive method result.
 
 Use:
 
-- read-only adapter;
-- official evaluator invocation where possible;
-- separate preservation of raw evaluator output and local summaries;
-- evaluation annotations may be consumed only in explicitly labelled
-  oracle-conditioned authorization diagnostics.
+- preserve local negative-pilot artifacts and summaries;
+- consume evaluation annotations only in explicitly labelled
+  oracle-conditioned diagnostics, not as official end-to-end results.
 
 Do not:
 
 - turn Memora into a method template;
 - expose official evaluation evidence or labels to training/prompt tuning;
 - call oracle-conditioned annotation-driven diagnostics official end-to-end
-  Memora evaluation.
+  Memora evaluation or FAMA.
 
 ## Secondary or Optional Upstreams
 
