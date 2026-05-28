@@ -249,8 +249,14 @@ def run_case(case: InternalDevCase, tmp_dir: str) -> CaseResult:
         result.stage_a_result = runner_a.run(case.view)
     except Exception as exc:
         result.stage_a_error = f"{type(exc).__name__}: {exc}"
-        exc_str = str(exc).lower()
-        if isinstance(exc, (json.JSONDecodeError, ValueError)) or "json" in exc_str or "parse" in exc_str or "decoder" in exc_str or "unknown condition" in exc_str:
+        is_parse = False
+        if isinstance(exc, json.JSONDecodeError):
+            is_parse = True
+        elif isinstance(exc, ValueError):
+            exc_msg = str(exc)
+            if not (exc_msg.startswith("Evidence-edge prediction failed") or exc_msg.startswith("Fixed supplied DependencyEdge")):
+                is_parse = True
+        if is_parse:
             result.is_stage_a_parse_error = True
     finally:
         if client_a is not None:
@@ -267,8 +273,14 @@ def run_case(case: InternalDevCase, tmp_dir: str) -> CaseResult:
         result.stage_b_result = judge.judge(case.view)
     except Exception as exc:
         result.stage_b_error = f"{type(exc).__name__}: {exc}"
-        exc_str = str(exc).lower()
-        if isinstance(exc, (json.JSONDecodeError, ValueError)) or "json" in exc_str or "parse" in exc_str or "decoder" in exc_str or "unknown" in exc_str:
+        is_parse = False
+        if isinstance(exc, json.JSONDecodeError):
+            is_parse = True
+        elif isinstance(exc, ValueError):
+            exc_msg = str(exc)
+            if not exc_msg.startswith("DirectJudge failed"):
+                is_parse = True
+        if is_parse:
             result.is_stage_b_parse_error = True
     finally:
         if client_b is not None:
@@ -404,19 +416,29 @@ def format_report(
             "case_id": r.case_id,
             "case_type": r.case_type,
         }
+        stage_a_entry: dict[str, Any] = {}
         if r.stage_a_result is not None:
-            entry["stage_a"] = {
+            stage_a_entry.update({
                 "method_name": r.stage_a_result.method_name,
                 "authorized_belief_ids": list(r.stage_a_result.authorized_belief_ids),
                 "excluded_belief_ids": list(r.stage_a_result.excluded_belief_ids),
                 "model_call_trace_ids": list(r.stage_a_result.model_call_trace_ids),
                 "cost": r.stage_a_result.cost,
                 "provenance": r.stage_a_result.provenance,
-            }
+            })
+        else:
+            stage_a_entry.update({
+                "cost": r.stage_a_cost,
+                "error": r.stage_a_error,
+                "is_parse_error": r.is_stage_a_parse_error,
+            })
+        entry["stage_a"] = stage_a_entry
         if r.stage_a_error:
             entry["stage_a_error"] = r.stage_a_error
+
+        stage_b_entry: dict[str, Any] = {}
         if r.stage_b_result is not None:
-            entry["stage_b"] = {
+            stage_b_entry.update({
                 "method_name": r.stage_b_result.method_name,
                 "authorized_belief_ids": list(r.stage_b_result.authorized_belief_ids),
                 "excluded_belief_ids": list(r.stage_b_result.excluded_belief_ids),
@@ -427,7 +449,14 @@ def format_report(
                     {"belief_id": v.belief_id, "status": v.status.value, "rationale": v.rationale}
                     for v in r.stage_b_result.verdicts
                 ],
-            }
+            })
+        else:
+            stage_b_entry.update({
+                "cost": r.stage_b_cost,
+                "error": r.stage_b_error,
+                "is_parse_error": r.is_stage_b_parse_error,
+            })
+        entry["stage_b"] = stage_b_entry
         if r.stage_b_error:
             entry["stage_b_error"] = r.stage_b_error
         per_instance.append(entry)

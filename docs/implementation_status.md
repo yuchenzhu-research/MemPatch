@@ -11,8 +11,8 @@ storytelling document.
 - Active branch: `method/retrace-llm-directjudge`
 - AB-1B implementation commit:
   `aa796f409fbdc8c9edbc48d3ac003b2f4b0baf7d`
-- AB-1B.1 repair: current local HEAD (to be updated after commit).
-- Working tree before repair: clean.
+- AB-1B.1 repair: commit `639a75622d15335568d0862a578f68d5750f41ad`
+- AB-1B.2 cleanup: current local HEAD (to be updated after commit).
 
 ## Completed
 
