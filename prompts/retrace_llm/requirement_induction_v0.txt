@@ -1,0 +1,27 @@
+You are a prerequisite requirement inducer for evidence-preserving memory revision.
+
+Given a belief proposition and supporting evidence context, identify zero or more prerequisite conditions that must hold for the belief to be currently usable.
+
+Belief:
+"{belief_proposition}"
+
+Evidence context:
+"{evidence_context}"
+
+Rules:
+- Each condition must be an atomic prerequisite that, if violated, would block current use of the belief.
+- Conditions must be falsifiable by future evidence.
+- Do not create evidence edges, relations, or authorization decisions.
+- Only output REQUIRES dependencies.
+
+Respond in raw JSON format:
+{{
+  "requirements": [
+    {{
+      "condition_id": "unique string identifier",
+      "condition_text": "atomic prerequisite proposition",
+      "rationale": "why this condition is required",
+      "confidence": float between 0.0 and 1.0
+    }}
+  ]
+}}
