@@ -1,44 +1,55 @@
 # ReTrace
 
-ReTrace is the working codebase for an evidence-preserving reversible belief
-revision method for dynamic agent memory.
+ReTrace is the working codebase for ICLR 2027 Paper 1:
 
-Current scope:
+> Evidence-preserving reversible authorization for evolving agent memory.
 
-- Preserve episodic evidence immutably.
-- Maintain open-text belief propositions.
-- Verify local evidence-to-belief relations.
-- Authorize current beliefs through a conservative TMS-inspired gate.
-- Evaluate first on STALE and Memora.
+ReTrace is not latent memory learning, RL memory-action training, or a generic
+memory framework clone. It preserves original evidence and changes whether a
+belief may govern current answers through typed, auditable defeat paths.
 
-External repositories are kept under `reference/` and should not be edited as
-part of the local implementation.
+The method core is:
 
-## Current Documents
+```text
+immutable EvidenceNode ledger
+→ BeliefNode / ConditionNode graph
+→ DependencyEdge(REQUIRES)
+→ EvidenceEdge(BLOCKS / RELEASES / SUPERSEDES / REAFFIRMS / UNCERTAIN)
+→ RevisionGate structural admission
+→ deterministic Defeat-Path Authorization Algorithm
+```
 
-- `AGENTS.md`: first-read instructions for any coding model.
-- `docs/model_context_index.md`: multi-model reading order and authority rules.
-- `implementation_plan.md`: execution plan and milestone ownership.
-- `docs/project_logic.md`: research alignment and method boundaries.
-- `docs/coding_contract.md`: coding rules for all future agents.
-- `docs/agent_handoff.md`: short handoff instructions for Gemini/Opus/Codex.
-- `docs/today_execution_plan.md`: concrete first-version completion plan.
-- `docs/implementation_status.md`: total first-version plan and completed work.
-- `docs/code_direction.md`: code direction from the paper blueprint.
-- `docs/reference_integration_map.md`: how cloned references map into local
-  modules.
-- `docs/source_materials/`: raw source blueprint and companion handoff files.
+## Current Status
+
+The active branch is `method/retrace-llm-directjudge`.
+
+Completed through Stage AB-1A.5:
+
+- typed DPA execution spine;
+- offline Stage A/B contracts, prompts, sibling DirectJudge path, and
+  mock/replay tests;
+- fairness and deterministic-grounding hardening;
+- offline controlled attribution harness;
+- auditability and comparison-protocol lock.
+
+No live-provider result, official STALE result, official Memora result, or
+Stage C result is claimed yet.
+
+## Canonical Docs
+
+- `AGENTS.md`: first-read instructions for coding models.
+- `docs/method_spec_dpa.md`: technical authority for runtime semantics.
+- `docs/stage_ab_protocol.md`: active Stage A/B protocol authority.
+- `docs/paper1_blueprint_zh.md`: canonical Chinese scientific blueprint.
+- `docs/repository_execution_contract.md`: reproducibility and handoff
+  contract.
+- `docs/coding_contract.md`: package-boundary and editing rules.
+- `docs/implementation_status.md`: concise live repository status.
+- `docs/upstream_integration.md`: upstream roles and clean-room integration.
 
 ## Verification
 
-No dependency check:
-
 ```bash
-python3 -m compileall -q retracemem tests
-```
-
-After a local test environment includes pytest:
-
-```bash
-python3 -m pytest -q
+env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src tests scripts
+.venv/bin/python -m pytest
 ```
