@@ -49,6 +49,36 @@ def _make_view() -> SharedCandidateView:
     )
 
 
+def _make_prefix_collision_view() -> SharedCandidateView:
+    ev = EvidenceNode(
+        evidence_id="ev",
+        session_id="s1",
+        timestamp="2026-01-02T00:00:00Z",
+        text="Evidence.",
+        source_dataset="test",
+        source_pointer="ptr",
+    )
+    b_short = BeliefNode(
+        belief_id="b:weekly:x:q:forget:0",
+        proposition="Short id.",
+        source_evidence_ids=("ev",),
+    )
+    b_long = BeliefNode(
+        belief_id="b:weekly:x:q:forget:0:child",
+        proposition="Long id.",
+        source_evidence_ids=("ev",),
+    )
+    return SharedCandidateView(
+        instance_id="case_prefix",
+        query_id="q_prefix",
+        query="Q?",
+        evidence_context=(ev,),
+        new_evidence=ev,
+        candidate_beliefs=(b_short, b_long),
+        candidate_replacement_beliefs=(),
+    )
+
+
 def _make_judge(
     response: str,
     tmp_path: str,
@@ -99,6 +129,42 @@ def test_unknown_belief_verdict_rejected(tmp_path: str) -> None:
     judge = _make_judge(response, str(tmp_path))
     with pytest.raises(ValueError, match="unknown belief_id"):
         judge.judge(_make_view())
+
+
+def test_appended_belief_id_formatting_canonicalized(tmp_path: str) -> None:
+    response = json.dumps({
+        "verdicts": [
+            {
+                "belief_id": "b_bike: The user commutes by bicycle.",
+                "status": "NOT_USABLE",
+                "rationale": "r",
+            },
+        ]
+    })
+    judge = _make_judge(response, str(tmp_path))
+    result = judge.judge(_make_view())
+    assert result.verdicts[0].belief_id == "b_bike"
+    assert result.excluded_belief_ids == ("b_bike",)
+
+
+def test_ambiguous_appended_belief_id_prefix_rejected(tmp_path: str) -> None:
+    response = json.dumps({
+        "verdicts": [
+            {
+                "belief_id": "b:weekly:x:q:forget:0:child text",
+                "status": "USABLE",
+                "rationale": "r",
+            },
+            {
+                "belief_id": "b:weekly:x:q:forget:0:child",
+                "status": "USABLE",
+                "rationale": "r",
+            },
+        ]
+    })
+    judge = _make_judge(response, str(tmp_path))
+    with pytest.raises(ValueError, match="ambiguous belief_id prefix"):
+        judge.judge(_make_prefix_collision_view())
 
 
 def test_malformed_json_failure(tmp_path: str) -> None:
