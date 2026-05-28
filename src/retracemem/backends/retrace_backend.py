@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import time
 from typing import Any
 from retracemem.schemas import (
     EvidenceNode,
@@ -12,6 +11,11 @@ from retracemem.memory.episode_ledger import EpisodeLedger
 from retracemem.tms.authorization import DefeatPathAuthorizationAlgorithm
 from retracemem.extraction.typed_extractor import TypedBeliefExtractor, ManualTypedBeliefExtractor
 from retracemem.verifier.contracts import RequirementInducer, EvidenceEdgeVerifier, BatchedEvidenceEdgeVerifier
+from retracemem.verifier.proposal_strategy import (
+    BatchedEvidenceEdgeProposalStrategy,
+    EvidenceEdgeProposalStrategy,
+    PerBeliefEvidenceEdgeProposalStrategy,
+)
 from retracemem.verifier.requirement_inducer import HeuristicRequirementInducer
 from retracemem.verifier.evidence_edge_verifier import HeuristicEvidenceEdgeVerifier
 from retracemem.retrieval.typed_retrievers import (
@@ -33,6 +37,7 @@ class ReTraceBackend:
         inducer: RequirementInducer | None = None,
         edge_verifier: EvidenceEdgeVerifier | None = None,
         batched_edge_verifier: BatchedEvidenceEdgeVerifier | None = None,
+        edge_proposal_strategy: EvidenceEdgeProposalStrategy | None = None,
         impact_retriever: ImpactCandidateRetriever | None = None,
         query_retriever: QueryBeliefRetriever | None = None,
         max_batch_beliefs: int = 8,
@@ -50,7 +55,7 @@ class ReTraceBackend:
         required_components = {
             "extractor": extractor,
             "inducer": inducer,
-            "edge_verifier": edge_verifier,
+            "edge_proposal_strategy": edge_proposal_strategy or edge_verifier or batched_edge_verifier,
             "impact_retriever": impact_retriever,
             "query_retriever": query_retriever,
         }
@@ -64,8 +69,17 @@ class ReTraceBackend:
         self.stores: dict[str, BeliefStore] = {}
         self.extractor = extractor
         self.inducer = inducer
-        self.edge_verifier = edge_verifier
-        self.batched_edge_verifier = batched_edge_verifier
+        if edge_proposal_strategy is not None:
+            self.edge_proposal_strategy = edge_proposal_strategy
+        elif batched_edge_verifier is not None:
+            self.edge_proposal_strategy = BatchedEvidenceEdgeProposalStrategy(
+                batched_edge_verifier,
+                max_batch_beliefs=max_batch_beliefs,
+            )
+        elif edge_verifier is not None:
+            self.edge_proposal_strategy = PerBeliefEvidenceEdgeProposalStrategy(edge_verifier)
+        else:
+            raise ValueError("ReTraceBackend requires an evidence-edge proposal strategy or verifier")
         self.impact_retriever = impact_retriever
         self.query_retriever = query_retriever
         if max_batch_beliefs < 1:
@@ -81,6 +95,7 @@ class ReTraceBackend:
         inducer: RequirementInducer | None = None,
         edge_verifier: EvidenceEdgeVerifier | None = None,
         batched_edge_verifier: BatchedEvidenceEdgeVerifier | None = None,
+        edge_proposal_strategy: EvidenceEdgeProposalStrategy | None = None,
         impact_retriever: ImpactCandidateRetriever | None = None,
         query_retriever: QueryBeliefRetriever | None = None,
         **kwargs: Any,
@@ -91,6 +106,7 @@ class ReTraceBackend:
             inducer=inducer or HeuristicRequirementInducer(),
             edge_verifier=edge_verifier or HeuristicEvidenceEdgeVerifier(),
             batched_edge_verifier=batched_edge_verifier,
+            edge_proposal_strategy=edge_proposal_strategy,
             impact_retriever=impact_retriever or ManualImpactCandidateRetriever(),
             query_retriever=query_retriever or ManualQueryBeliefRetriever(),
             **kwargs,
@@ -186,58 +202,25 @@ class ReTraceBackend:
         temporal_context = tuple(ledger.all())
         admitted_edges: list[EvidenceEdge] = []
 
-        verifier_started = time.perf_counter()
-        verifier_calls = 0
-        batch_count = 0
+        proposal_result = self.edge_proposal_strategy.propose_edges(
+            new_evidence=evidence,
+            impact_candidates=tuple(impact_candidates),
+            candidate_replacement_beliefs=tuple(new_beliefs),
+            temporal_context=temporal_context,
+        )
+        self._admit_evidence_edges(proposal_result.edges, store, admitted_edges)
 
-        if self.batched_edge_verifier is not None:
-            for batch in self._impact_batches(impact_candidates):
-                batch_count += 1
-                verifier_calls += 1
-                conditions_by_belief = tuple(
-                    (candidate.belief.belief_id, candidate.conditions)
-                    for candidate in batch
-                )
-                raw_edges = self.batched_edge_verifier.verify_edges_batch(
-                    new_evidence=evidence,
-                    candidate_beliefs=tuple(candidate.belief for candidate in batch),
-                    candidate_replacement_beliefs=tuple(new_beliefs),
-                    candidate_conditions_by_belief=conditions_by_belief,
-                    temporal_context=temporal_context,
-                )
-                evidence_edges = tuple(getattr(raw_edges, "proposed_edges", raw_edges))
-                self._admit_evidence_edges(evidence_edges, store, admitted_edges)
-        else:
-            for candidate in impact_candidates:
-                batch_count += 1
-                verifier_calls += 1
-                evidence_edges = self.edge_verifier.verify_edges(
-                    new_evidence=evidence,
-                    candidate_belief=candidate.belief,
-                    candidate_replacement_beliefs=tuple(new_beliefs),
-                    candidate_conditions=candidate.conditions,
-                    temporal_context=temporal_context,
-                )
-                self._admit_evidence_edges(evidence_edges, store, admitted_edges)
-
-        verifier_latency_ms = (time.perf_counter() - verifier_started) * 1000.0
         self.last_ingest_stats = {
             "candidate_count": len(impact_candidates),
-            "batch_count": batch_count,
+            "batch_count": proposal_result.batch_count,
             "max_batch_beliefs": self.max_batch_beliefs,
-            "verifier_calls": verifier_calls,
+            "verifier_calls": proposal_result.verifier_calls,
             "evidence_chars": len(evidence.text),
-            "latency_ms": verifier_latency_ms,
-            "execution_mode": "batched" if self.batched_edge_verifier is not None else "per_belief",
+            "latency_ms": proposal_result.latency_ms,
+            "execution_mode": proposal_result.execution_mode,
         }
 
         return admitted_edges
-
-    def _impact_batches(self, impact_candidates: list[Any]) -> list[list[Any]]:
-        return [
-            impact_candidates[index:index + self.max_batch_beliefs]
-            for index in range(0, len(impact_candidates), self.max_batch_beliefs)
-        ]
 
     def _admit_evidence_edges(
         self,

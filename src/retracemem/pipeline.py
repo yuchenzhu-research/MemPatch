@@ -14,7 +14,8 @@ from retracemem.schemas import (
 from retracemem.memory.belief_store import BeliefStore
 from retracemem.memory.episode_ledger import EpisodeLedger
 from retracemem.extraction.typed_extractor import TypedBeliefExtractor
-from retracemem.verifier.contracts import RequirementInducer, EvidenceEdgeVerifier
+from retracemem.verifier.contracts import BatchedEvidenceEdgeVerifier, RequirementInducer, EvidenceEdgeVerifier
+from retracemem.verifier.proposal_strategy import EvidenceEdgeProposalStrategy
 from retracemem.retrieval.typed_retrievers import ImpactCandidateRetriever, QueryBeliefRetriever
 from retracemem.tms.authorization import DefeatPathAuthorizationAlgorithm
 
@@ -29,6 +30,8 @@ class ReTracePipeline:
         extractor: TypedBeliefExtractor | None = None,
         inducer: RequirementInducer | None = None,
         edge_verifier: EvidenceEdgeVerifier | None = None,
+        batched_edge_verifier: BatchedEvidenceEdgeVerifier | None = None,
+        edge_proposal_strategy: EvidenceEdgeProposalStrategy | None = None,
         impact_retriever: ImpactCandidateRetriever | None = None,
         query_retriever: QueryBeliefRetriever | None = None,
         client: CachedLLMClient | None = None,
@@ -45,7 +48,7 @@ class ReTracePipeline:
             components = {
                 "extractor": extractor,
                 "inducer": inducer,
-                "edge_verifier": edge_verifier,
+                "edge_verifier": edge_proposal_strategy or edge_verifier or batched_edge_verifier,
                 "impact_retriever": impact_retriever,
                 "query_retriever": query_retriever,
             }
@@ -60,6 +63,8 @@ class ReTracePipeline:
                 extractor=extractor,
                 inducer=inducer,
                 edge_verifier=edge_verifier,
+                batched_edge_verifier=batched_edge_verifier,
+                edge_proposal_strategy=edge_proposal_strategy,
                 impact_retriever=impact_retriever,
                 query_retriever=query_retriever,
             )
@@ -77,6 +82,8 @@ class ReTracePipeline:
         extractor: TypedBeliefExtractor | None = None,
         inducer: RequirementInducer | None = None,
         edge_verifier: EvidenceEdgeVerifier | None = None,
+        batched_edge_verifier: BatchedEvidenceEdgeVerifier | None = None,
+        edge_proposal_strategy: EvidenceEdgeProposalStrategy | None = None,
         impact_retriever: ImpactCandidateRetriever | None = None,
         query_retriever: QueryBeliefRetriever | None = None,
         client: CachedLLMClient | None = None,
@@ -88,6 +95,8 @@ class ReTracePipeline:
             extractor=extractor,
             inducer=inducer,
             edge_verifier=edge_verifier,
+            batched_edge_verifier=batched_edge_verifier,
+            edge_proposal_strategy=edge_proposal_strategy,
             impact_retriever=impact_retriever,
             query_retriever=query_retriever,
         )
