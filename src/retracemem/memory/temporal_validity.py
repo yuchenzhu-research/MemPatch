@@ -40,7 +40,9 @@ class TemporalValidity:
 
     def __init__(self, ledger: EpisodeLedger) -> None:
         self.ledger = ledger
-        self._index: dict[str, int] = {ev.id: idx for idx, ev in enumerate(ledger.all())}
+        self._index: dict[str, int] = {
+            ev.evidence_id: idx for idx, ev in enumerate(ledger.all())
+        }
 
     # ------------------------------------------------------------------
     # Single-evidence accessors

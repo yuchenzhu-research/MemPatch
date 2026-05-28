@@ -4,78 +4,81 @@ from dataclasses import replace
 from typing import Any
 
 from retracemem.evaluation.records import evaluation_record_from_backend_output
-from retracemem.generation.basis_builder import BasisBuilder
+from retracemem.backends.retrace_backend import ReTraceBackend
+from retracemem.schemas import (
+    EvidenceNode,
+    BeliefNode,
+    ConditionNode,
+    DependencyEdge,
+    EvidenceEdge,
+    AuthorizationStatus,
+    EvaluationRecord,
+)
 from retracemem.memory.belief_store import BeliefStore
 from retracemem.memory.episode_ledger import EpisodeLedger
-from retracemem.schemas import Belief, EpisodicEvidence, EvaluationRecord, RelationPrediction, RelationType
-from retracemem.tms.authorization import AuthorizationEngine
-from retracemem.tms.gate import RevisionGate
-from retracemem.verifier.base import RelationVerifier
-
-try:
-    from retracemem.verifier.heuristic_verifier import HeuristicRelationVerifier
-except ImportError:  # pragma: no cover - another worker may add this module later.
-    HeuristicRelationVerifier = None  # type: ignore[assignment]
+from retracemem.tms.authorization import DefeatPathAuthorizationAlgorithm
+from retracemem.extraction.typed_extractor import TypedBeliefExtractor
+from retracemem.verifier.contracts import RequirementInducer, EvidenceEdgeVerifier
+from retracemem.retrieval.typed_retrievers import ImpactCandidateRetriever, QueryBeliefRetriever
 
 
 class ReTracePipeline:
-    """Local evidence-preserving belief revision pipeline."""
+    """Local evidence-preserving belief revision pipeline routing to typed backend."""
 
-    def __init__(self, verifier: RelationVerifier | None = None) -> None:
-        self.verifier = verifier if verifier is not None else self._default_verifier()
-        self.ledgers: dict[str, EpisodeLedger] = {}
-        self.stores: dict[str, BeliefStore] = {}
-        self.gate = RevisionGate()
+    def __init__(
+        self,
+        extractor: TypedBeliefExtractor | None = None,
+        inducer: RequirementInducer | None = None,
+        edge_verifier: EvidenceEdgeVerifier | None = None,
+        impact_retriever: ImpactCandidateRetriever | None = None,
+        query_retriever: QueryBeliefRetriever | None = None,
+    ) -> None:
+        self.backend = ReTraceBackend(
+            extractor=extractor,
+            inducer=inducer,
+            edge_verifier=edge_verifier,
+            impact_retriever=impact_retriever,
+            query_retriever=query_retriever,
+        )
+
+    @property
+    def stores(self) -> dict[str, BeliefStore]:
+        return self.backend.stores
+
+    @property
+    def ledgers(self) -> dict[str, EpisodeLedger]:
+        return self.backend.ledgers
 
     def reset_user(self, user_id: str) -> None:
-        self.ledgers[user_id] = EpisodeLedger()
-        self.stores[user_id] = BeliefStore()
+        self.backend.reset_user(user_id)
 
-    def add_belief(self, user_id: str, belief: Belief) -> None:
-        self._ensure_user(user_id)
-        self.stores[user_id].add_belief(belief)
+    def add_belief(self, user_id: str, belief: BeliefNode) -> None:
+        self.backend._ensure_user(user_id)
+        # Ensure scope_id is in belief.metadata
+        meta = dict(belief.metadata) if belief.metadata else {}
+        meta["scope_id"] = user_id
+        updated_belief = replace(belief, metadata=meta)
+        self.backend.stores[user_id].add_belief(updated_belief)
 
-    def ingest_evidence(self, user_id: str, evidence: EpisodicEvidence) -> list[RelationPrediction]:
-        self._ensure_user(user_id)
-        ledger = self.ledgers[user_id]
-        store = self.stores[user_id]
-        ledger.append(evidence)
+    def ingest_evidence(self, user_id: str, evidence: EvidenceNode) -> list[EvidenceEdge]:
+        return self.backend.ingest_evidence(user_id, evidence)
 
-        accepted: list[RelationPrediction] = []
-        for belief in list(store.all_beliefs()):
-            prediction = self.verifier.verify(
-                new_evidence=evidence,
-                candidate_belief=belief,
-                context={
-                    "user_id": user_id,
-                    "evidence_ids": ledger.ids(),
-                    "relation_count": len(store.all_relations()),
-                },
-            )
-            normalized = self._normalize_prediction(prediction, evidence, belief)
-            if not self.gate.accept_local_relation(normalized):
-                continue
-            self._ensure_target_belief(store, normalized, evidence)
-            store.add_relation(normalized)
-            accepted.append(normalized)
-        return accepted
-
-    def authorized_basis(self, user_id: str, query: str, limit: int = 10) -> list[dict[str, str]]:
-        self._ensure_user(user_id)
-        return BasisBuilder(self.stores[user_id]).build(query=query, limit=limit)
+    def authorized_basis(self, user_id: str, query: str, limit: int = 10) -> list[dict[str, Any]]:
+        return self.backend.search(user_id, query, limit=limit)
 
     def answer(self, user_id: str, query: str, limit: int = 10) -> EvaluationRecord:
-        self._ensure_user(user_id)
-        store = self.stores[user_id]
+        self.backend._ensure_user(user_id)
+        store = self.backend.stores[user_id]
+        ledger = self.backend.ledgers[user_id]
         basis = self.authorized_basis(user_id, query, limit=limit)
-        blocked = self._blocked_beliefs(store)
-        context = "\n".join(item["text"] for item in basis)
+        blocked = self._blocked_beliefs(store, ledger)
+        context = "\n".join(item.get("proposition") or item.get("text", "") for item in basis)
         answer_text = f"Query: {query}\nAuthorized basis:\n{context}"
 
         record = evaluation_record_from_backend_output(
             query_id=f"{user_id}:{query}",
             method="retrace_pipeline",
-            retrieved=[self._evidence_record(evidence) for evidence in self.ledgers[user_id].all()],
+            retrieved=[self._evidence_record(evidence) for evidence in ledger.all()],
             candidate_beliefs=[self._belief_record(belief) for belief in store.all_beliefs()],
             authorized_basis=basis,
             blocked_beliefs=blocked,
@@ -83,104 +86,40 @@ class ReTracePipeline:
         )
         return replace(record, authorized_basis=basis)
 
-    def _ensure_user(self, user_id: str) -> None:
-        if user_id not in self.ledgers:
-            self.reset_user(user_id)
-
     @staticmethod
-    def _normalize_prediction(
-        prediction: RelationPrediction,
-        evidence: EpisodicEvidence,
-        belief: Belief,
-    ) -> RelationPrediction:
-        if not isinstance(prediction, RelationPrediction):
-            raise TypeError("verifier.verify must return RelationPrediction")
-        return replace(
-            prediction,
-            evidence_id=prediction.evidence_id or evidence.id,
-            belief_id=prediction.belief_id or belief.id,
-        )
-
-    @staticmethod
-    def _ensure_target_belief(
-        store: BeliefStore,
-        prediction: RelationPrediction,
-        evidence: EpisodicEvidence,
-    ) -> None:
-        if prediction.relation != RelationType.SUPERSEDE:
-            return
-        if not prediction.target_belief_id or prediction.target_belief_id == prediction.belief_id:
-            return
-        if store.has_belief(prediction.target_belief_id):
-            return
-        store.add_belief(
-            Belief(
-                id=prediction.target_belief_id,
-                proposition=evidence.text,
-                supported_by=[evidence.id],
-                metadata={"derived_from_relation": prediction.belief_id},
-            )
-        )
-
-    @staticmethod
-    def _blocked_beliefs(store: BeliefStore) -> list[dict[str, Any]]:
-        engine = AuthorizationEngine(store)
+    def _blocked_beliefs(store: BeliefStore, ledger: EpisodeLedger) -> list[dict[str, Any]]:
+        engine = DefeatPathAuthorizationAlgorithm(store, ledger)
         blocked: list[dict[str, Any]] = []
         for belief in store.all_beliefs():
-            decision = engine.decide(belief)
-            if decision.authorized:
+            trace = engine.authorize(belief.belief_id)
+            if trace.status == AuthorizationStatus.AUTHORIZED:
                 continue
             blocked.append(
                 {
-                    "belief_id": belief.id,
+                    "belief_id": belief.belief_id,
                     "text": belief.proposition,
-                    "reason": decision.reason,
-                    "justification_path": decision.justification_path,
+                    "reason": trace.status.value if hasattr(trace.status, "value") else str(trace.status),
+                    "justification_path": [trace.accepted_defeat_path.path_id] if trace.accepted_defeat_path else [],
                 }
             )
         return blocked
 
     @staticmethod
-    def _belief_record(belief: Belief) -> dict[str, Any]:
+    def _belief_record(belief: BeliefNode) -> dict[str, Any]:
         return {
-            "belief_id": belief.id,
+            "belief_id": belief.belief_id,
             "text": belief.proposition,
-            "supported_by": list(belief.supported_by),
-            "status": belief.status.value,
+            "supported_by": list(belief.source_evidence_ids),
+            "status": "authorized",
             "metadata": dict(belief.metadata),
         }
 
     @staticmethod
-    def _evidence_record(evidence: EpisodicEvidence) -> dict[str, Any]:
+    def _evidence_record(evidence: EvidenceNode) -> dict[str, Any]:
         return {
-            "evidence_id": evidence.id,
+            "evidence_id": evidence.evidence_id,
             "timestamp": evidence.timestamp,
             "text": evidence.text,
-            "source_id": evidence.source_id,
+            "source_id": evidence.source_dataset,
             "metadata": dict(evidence.metadata),
         }
-
-    @staticmethod
-    def _default_verifier() -> RelationVerifier:
-        if HeuristicRelationVerifier is not None:
-            return HeuristicRelationVerifier()
-        return _UncertainVerifier()
-
-
-class _UncertainVerifier:
-    """Fallback used only when the heuristic verifier module is unavailable."""
-
-    def verify(
-        self,
-        new_evidence: EpisodicEvidence,
-        candidate_belief: Belief,
-        context: dict[str, object] | None = None,
-    ) -> RelationPrediction:
-        del context
-        return RelationPrediction(
-            relation=RelationType.UNCERTAIN,
-            evidence_id=new_evidence.id,
-            belief_id=candidate_belief.id,
-            rationale="No relation verifier is installed; defaulting to uncertain.",
-            confidence=0.0,
-        )

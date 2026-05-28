@@ -14,25 +14,21 @@ from retracemem.schemas import (
     BeliefNode,
     ConditionNode,
     DependencyEdge,
-    EpisodicEvidence,
+    EvidenceNode,
     EvidenceEdge,
     EvidenceEdgeType,
 )
 
 
-def make_evidence(evidence_id: str, timestamp: str, text: str = "") -> EpisodicEvidence:
-    """Build a legacy ``EpisodicEvidence`` with a deterministic timestamp.
-
-    The legacy type is still the ledger's canonical entry per the Wave-1A
-    file-ownership constraint (`episode_ledger.py` is out of scope). Its
-    fields suffice for `TemporalValidity` because only `id` and `timestamp`
-    matter for ordering.
-    """
-    return EpisodicEvidence(
-        id=evidence_id,
+def make_evidence(evidence_id: str, timestamp: str, text: str = "") -> EvidenceNode:
+    """Build an EvidenceNode with a deterministic timestamp."""
+    return EvidenceNode(
+        evidence_id=evidence_id,
+        session_id="session_default",
         timestamp=timestamp,
         text=text or f"evidence {evidence_id}",
-        source_id="gate_unit_fixture",
+        source_dataset="manual_audit",
+        source_pointer="gate_unit_fixture",
     )
 
 
@@ -97,7 +93,7 @@ def make_evidence_edge(
 
 def build_world(
     *,
-    evidences: list[EpisodicEvidence],
+    evidences: list[EvidenceNode],
     beliefs: list[BeliefNode],
     conditions: list[ConditionNode] | None = None,
     dependency_edges: list[DependencyEdge] | None = None,
