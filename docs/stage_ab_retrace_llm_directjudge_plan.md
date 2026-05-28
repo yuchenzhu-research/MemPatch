@@ -244,6 +244,76 @@ Locked requirements before AB-1 may begin:
 6. **Gate condition.**
    AB-1 remains blocked until AB-0.5 passes full tests offline.
 
+### Wave AB-1A: Offline Controlled Attribution Harness
+
+AB-1A is offline-only and precedes any live provider adapter.
+
+**Design decisions locked for AB-1A:**
+
+1. The primary controlled track does NOT run extraction, requirement
+   induction, or retrieval. Beliefs, conditions, and dependency edges are
+   fixed controlled inputs, not generated inside the comparison.
+
+2. `SharedCandidateView` is extended with:
+   - `new_evidence: EvidenceNode` — the triggering evidence for edge
+     prediction (must appear in `evidence_context`);
+   - `dependency_edges_by_belief: tuple[tuple[str, tuple[DependencyEdge, ...]], ...]`
+     — immutable representation of pre-supplied REQUIRES anchors per
+     candidate belief;
+   - `view_fingerprint: str` — deterministic hash over all normalized
+     fixed-input content, computed at construction.
+
+3. `ControlledReTraceLLM` is a method-layer runner. It does NOT modify
+   `ReTraceBackend`, DPA core, pipeline, or verifier source files.
+
+4. `ControlledReTraceLLM` execution pipeline:
+   ```
+   fixed SharedCandidateView
+   → PromptEvidenceEdgeVerifier (evidence-edge prediction only)
+   → isolated typed graph (fresh EpisodeLedger + BeliefStore)
+   → RevisionGate (structural admission)
+   → DefeatPathAuthorizationAlgorithm
+   → ControlledMethodResult
+   ```
+
+5. `DirectJudgeLLM` receives the exact same `SharedCandidateView` and
+   records the same `view_fingerprint` in its result provenance.
+
+6. Per-instance cost reporting is required. Cumulative `CostAccounting`
+   totals must not be written as per-instance method cost. Each method
+   computes a delta around its own run.
+
+7. Primary status mapping:
+   - Stage A `AUTHORIZED` → `USABLE`
+   - Stage A `BLOCKED` → `NOT_USABLE`
+   - Stage A `SUPERSEDED` → `NOT_USABLE`
+   - Stage A `UNRESOLVED` → `UNCERTAIN`
+   Fine-grained Stage A statuses preserved in provenance for structural
+   diagnostics.
+
+8. No live API/provider SDK, official evaluation, end-to-end extraction/
+   retrieval wiring, or Stage C until AB-1A passes offline tests.
+
+**Files to create:**
+- `src/retracemem/methods/controlled_retrace.py`
+- `tests/method_contract/test_controlled_retrace.py`
+
+**Files to modify:**
+- `src/retracemem/methods/contracts.py` (SharedCandidateView extension)
+- `src/retracemem/methods/directjudge.py` (fingerprint + per-instance cost)
+- `tests/method_contract/test_shared_candidate_view.py`
+- `tests/method_contract/test_directjudge.py`
+- `tests/method_contract/test_controlled_ab_fairness.py`
+
+**Forbidden modifications in AB-1A:**
+- `src/retracemem/schemas.py`
+- `src/retracemem/memory/**`, `src/retracemem/tms/**`
+- `src/retracemem/backends/**`, `src/retracemem/pipeline.py`
+- `src/retracemem/verifier/**`, `src/retracemem/retrieval/**`
+- `src/retracemem/providers/**`, `src/retracemem/cache/**`
+- `src/retracemem/evaluation/**`
+- `prompts/**`, `scripts/**`, `configs/**`, `pyproject.toml`, `reference/**`
+
 ### Wave AB-1: ReTrace-LLM Generic Semantic Components
 
 **Files to implement (from AB-0 stubs):**
