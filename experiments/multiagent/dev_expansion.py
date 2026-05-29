@@ -59,6 +59,10 @@ def generate_expanded_episodes() -> List[Tuple[FixedCandidateInputEpisode, Fixed
                     "label_source": "template_authored_pending_review",
                 }
 
+                # Local expectation holders to prevent leakage
+                downstream_target_belief_id = None
+                expected_target_status = "UNRESOLVED"
+
                 # 3. FAILURE-TYPE-SPECIFIC SEMANTIC TEMPLATES
                 if f_type == "direct_supersession":
                     if domain == "software_engineering":
@@ -92,6 +96,8 @@ def generate_expanded_episodes() -> List[Tuple[FixedCandidateInputEpisode, Fixed
                         TypedRevisionTarget(sub2_id, "SUPERSEDES", target_belief_id=b1_id, replacement_belief_id=b2_id, rationale="Explicit migration supersedes old config.", evidence_ids=(ev2_id,)),
                     ]
                     gold_statuses = {b1_id: "SUPERSEDED", b2_id: "AUTHORIZED"}
+                    downstream_target_belief_id = b2_id
+                    expected_target_status = "AUTHORIZED"
 
                 elif f_type == "stale_propagation":
                     if domain == "software_engineering":
@@ -101,6 +107,8 @@ def generate_expanded_episodes() -> List[Tuple[FixedCandidateInputEpisode, Fixed
                         ev_init_text = f"Initial deploy configuration lists pool_config=v1."
                         ev_rev_text = f"Database administrator upgraded Stack {v} database pool to config v2."
                         c_text = f"Database pool config v1 is active."
+                        rationale_block = "Database pool config v1 is no longer active."
+                        rationale_super = "Root database pool superseded."
                     else: # research_workflow
                         query = f"Verify pipeline configuration for experiment {v}"
                         b_init_text = f"Experiment {v} parser depends on base parser library v1.0."
@@ -108,6 +116,8 @@ def generate_expanded_episodes() -> List[Tuple[FixedCandidateInputEpisode, Fixed
                         ev_init_text = f"Experiment setup lists base_parser_version=1.0."
                         ev_rev_text = f"System log confirms main parser version upgraded to 2.0."
                         c_text = f"Base parser library v1.0 is active."
+                        rationale_block = "Base parser library v1.0 is no longer active."
+                        rationale_super = "Root parser library superseded."
                         
                     sub1_id, sub2_id = f"sub_{episode_id}_1", f"sub_{episode_id}_2"
                     ev1_id, ev2_id = f"ev_{episode_id}_1", f"ev_{episode_id}_2"
@@ -134,9 +144,12 @@ def generate_expanded_episodes() -> List[Tuple[FixedCandidateInputEpisode, Fixed
                     )
                     submissions = (sub1, sub2)
                     targets = [
-                        TypedRevisionTarget(sub2_id, "SUPERSEDES", target_belief_id=b1_id, replacement_belief_id=b2_id, rationale="Root database pool superseded.", evidence_ids=(ev2_id,)),
+                        TypedRevisionTarget(sub2_id, "SUPERSEDES", target_belief_id=b1_id, replacement_belief_id=b2_id, rationale=rationale_super, evidence_ids=(ev2_id,)),
+                        TypedRevisionTarget(sub2_id, "BLOCKS", target_condition_id=c1_id, rationale=rationale_block, evidence_ids=(ev2_id,)),
                     ]
-                    gold_statuses = {b1_id: "SUPERSEDED", b2_id: "AUTHORIZED", b_child_id: "UNRESOLVED"}
+                    gold_statuses = {b1_id: "SUPERSEDED", b2_id: "AUTHORIZED", b_child_id: "BLOCKED"}
+                    downstream_target_belief_id = b_child_id
+                    expected_target_status = "BLOCKED"
 
                 elif f_type == "scope_expansion":
                     # Local versus Protected beliefs
@@ -187,6 +200,8 @@ def generate_expanded_episodes() -> List[Tuple[FixedCandidateInputEpisode, Fixed
                         TypedRevisionTarget(sub2_id, "BLOCKS", target_condition_id=c_staging_id, rationale="Staging key expiration blocks staging route.", evidence_ids=(ev2_id,)),
                     ]
                     gold_statuses = {b_local_id: "BLOCKED", b_protected_id: "AUTHORIZED"}
+                    downstream_target_belief_id = b_local_id
+                    expected_target_status = "BLOCKED"
 
                 elif f_type == "cross_agent_conflict":
                     if domain == "software_engineering":
@@ -219,7 +234,9 @@ def generate_expanded_episodes() -> List[Tuple[FixedCandidateInputEpisode, Fixed
                     targets = [
                         TypedRevisionTarget(sub2_id, "UNCERTAIN", target_belief_id=b1_id, rationale="Conflicting agents report conflicting statuses.", evidence_ids=(ev2_id,)),
                     ]
-                    gold_statuses = {b1_id: "UNRESOLVED", b2_id: "UNRESOLVED"}
+                    gold_statuses = {b1_id: "UNRESOLVED", b2_id: "AUTHORIZED"}
+                    downstream_target_belief_id = b1_id
+                    expected_target_status = "UNRESOLVED"
 
                 elif f_type == "temporary_blocker_recovery":
                     # REQUIRES 3 temporally ordered submissions
@@ -267,12 +284,13 @@ def generate_expanded_episodes() -> List[Tuple[FixedCandidateInputEpisode, Fixed
                     submissions = (sub1, sub2, sub3)
                     
                     # We have targets across sub2 and sub3
-                    # For E1 fixed candidate gold targets, we collect them across submissions
                     targets = [
                         TypedRevisionTarget(sub2_id, "BLOCKS", target_condition_id=c1_id, rationale="Full disk or ethics board suspension blocks prerequisite.", evidence_ids=(ev2_id,)),
                         TypedRevisionTarget(sub3_id, "RELEASES", target_condition_id=c1_id, rationale="Disk cleanup or suspension lifted releases prerequisite.", evidence_ids=(ev3_id,)),
                     ]
                     gold_statuses = {b1_id: "AUTHORIZED"}
+                    downstream_target_belief_id = b1_id
+                    expected_target_status = "AUTHORIZED"
 
                 elif f_type == "duplicate_evidence":
                     if domain == "software_engineering":
@@ -296,7 +314,6 @@ def generate_expanded_episodes() -> List[Tuple[FixedCandidateInputEpisode, Fixed
                     b1 = BeliefNode(b1_id, b_init_text, (ev1_id,))
                     
                     sub1 = FixedCandidateSubmission(sub1_id, "writer", "writer", f"task_{episode_id}", "snapshot_init", "2026-05-30T00:00:00Z", f"inst_{episode_id}_1", f"q_{episode_id}_1", query, (ev1,), ev1_id, (b1,), ())
-                    # Metadata documents duplicate mapping
                     sub2 = FixedCandidateSubmission(sub2_id, "reviewer", "reviewer", f"task_{episode_id}", f"snapshot_{episode_id}_1", "2026-05-30T01:00:00Z", f"inst_{episode_id}_2", f"q_{episode_id}_2", query, (ev1, ev2), ev2_id, (b1,), (), metadata={"duplicates_evidence_id": ev1_id})
                     
                     submissions = (sub1, sub2)
@@ -304,6 +321,8 @@ def generate_expanded_episodes() -> List[Tuple[FixedCandidateInputEpisode, Fixed
                         TypedRevisionTarget(sub2_id, "NO_REVISION", rationale="Duplicate log reports no state changes.", evidence_ids=(ev2_id,)),
                     ]
                     gold_statuses = {b1_id: "AUTHORIZED"}
+                    downstream_target_belief_id = b1_id
+                    expected_target_status = "AUTHORIZED"
 
                 elif f_type == "ambiguous_update":
                     if domain == "software_engineering":
@@ -322,7 +341,6 @@ def generate_expanded_episodes() -> List[Tuple[FixedCandidateInputEpisode, Fixed
                     b1_id = f"b_{episode_id}_1"
                     
                     ev1 = EvidenceNode(ev1_id, f"sess_{episode_id}_1", "2026-05-30T00:00:00Z", ev_init_text, "dev_expansion", f"file:///src/{domain}/v{v}/1.txt")
-                    # Metadata documents uncertainty cue
                     ev2 = EvidenceNode(ev2_id, f"sess_{episode_id}_2", "2026-05-30T01:00:00Z", ev_rev_text, "dev_expansion", f"file:///src/{domain}/v{v}/2.txt", metadata={"uncertainty_cue": "warning/potential"})
                     
                     b1 = BeliefNode(b1_id, b_init_text, (ev1_id,))
@@ -335,13 +353,16 @@ def generate_expanded_episodes() -> List[Tuple[FixedCandidateInputEpisode, Fixed
                         TypedRevisionTarget(sub2_id, "UNCERTAIN", target_belief_id=b1_id, rationale="Hedged log warning creates uncertainty on compliance.", evidence_ids=(ev2_id,)),
                     ]
                     gold_statuses = {b1_id: "UNRESOLVED"}
+                    downstream_target_belief_id = b1_id
+                    expected_target_status = "UNRESOLVED"
 
                 # Downstream tasks
                 tasks = (
                     DownstreamTask(
                         task_id=f"task_{episode_id}",
                         query=query,
-                        expected_answer_or_action="AUTHORIZED" if gold_statuses.get(b2_id) == "AUTHORIZED" else "UNRESOLVED",
+                        expected_answer_or_action=expected_target_status,
+                        relevant_belief_ids=(downstream_target_belief_id,) if downstream_target_belief_id else (),
                     ),
                 )
 
@@ -403,6 +424,8 @@ def generate_expanded_episodes() -> List[Tuple[FixedCandidateInputEpisode, Fixed
                 episode_meta.update({
                     "semantic_checklist": checklist,
                     "semantic_validation_status": validation_status,
+                    "downstream_target_belief_id": downstream_target_belief_id,
+                    "expected_target_status": expected_target_status,
                 })
 
                 episode = FixedCandidateInputEpisode(
