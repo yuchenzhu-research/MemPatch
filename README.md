@@ -53,6 +53,10 @@ Implemented after this packet:
     strict evidence-grounding Stage C parser,
     and live-smoke preflight boundary.
 
+The seven-case prompt-smoke pack must pass executable gold-consistency validation
+and receive explicit recorded human decisions before any live invocation.
+No automatic approval constitutes human review.
+
 Not yet established:
     approved smoke examples, live prompt results, trained Stage C policy,
     frozen primary-test results, official external-validation scores.

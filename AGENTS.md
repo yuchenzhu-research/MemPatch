@@ -74,6 +74,8 @@ Only human-approved reviewed examples may be used for live smoke or training exp
 
 No development-candidate episode may be promoted for smoke or training until a human review decision has been recorded. All live Stage C actions must explicitly cite the visible new evidence that grounds the proposed revision.
 
+Approval for prompt smoke or training must be derived from an explicit human decision record tied to an immutable review-pack manifest hash. Scripts must not automatically promote pending examples to approved.
+
 ## One-Function Public API Boundary
 
 The sole public entrypoint for executing authorization is `authorize(...)`:

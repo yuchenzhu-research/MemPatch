@@ -7,12 +7,24 @@ from typing import Any, Dict, List, Tuple
 from experiments.multiagent.dev_expansion import generate_expanded_episodes
 from experiments.multiagent.export_stagec_sft import format_user_prompt
 from experiments.multiagent.contracts import StageCTrainingExample
+from experiments.multiagent.validate_candidate_semantics import validate_episode
 
 def compute_sha256(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
 def export_smoke_review_pack() -> Dict[str, Any]:
     episodes_with_gold = generate_expanded_episodes()
+    
+    # Enforce executable validation
+    print("[*] Performing executable semantic consistency validation on all candidates before exporting review pack...")
+    for ep, gold in episodes_with_gold:
+        is_pass, detail = validate_episode(ep, gold)
+        if not is_pass:
+            raise ValueError(
+                f"Candidate consistency error: Episode '{ep.episode_id}' is inconsistent with expected gold statuses. "
+                f"Mismatches: {detail['mismatches']}"
+            )
+    print("[+] All candidates successfully passed executable semantic validation!")
     
     # 7 failure types in strict order, alternating domains
     selected_targets = [
@@ -93,10 +105,10 @@ def export_smoke_review_pack() -> Dict[str, Any]:
         md_lines.append(user_prompt_text)
         md_lines.append("```")
         md_lines.append("")
-        md_lines.append("### Evaluator-Side Gold Targets")
+        md_lines.append("### Evaluator-Side Intended Actions")
         md_lines.append(gold_targets_str)
         md_lines.append("")
-        md_lines.append("### Expected Final Snapshot Statuses")
+        md_lines.append("### Executable Gold Final Snapshot")
         md_lines.append(snapshot_str)
         md_lines.append("")
         md_lines.append("### Semantic Checklist")

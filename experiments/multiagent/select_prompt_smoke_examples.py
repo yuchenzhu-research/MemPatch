@@ -20,6 +20,12 @@ def select_smoke_examples(review_file: str, confirm_live_run: bool) -> List[Dict
             try:
                 record = json.loads(line)
                 if record.get("review_status") == "approved":
+                    # Enforce review provenance checking
+                    prov = record.get("review_provenance")
+                    if not prov or not prov.get("reviewer") or not prov.get("reviewed_at") or not prov.get("source_manifest_sha256"):
+                        print(f"Error: Approved example '{record.get('episode_id')}' lacks valid review provenance.")
+                        print("Promotion rejected due to missing human review decisions.")
+                        sys.exit(1)
                     approved_examples.append(record)
             except Exception as e:
                 print(f"Error parsing JSON line: {e}")
