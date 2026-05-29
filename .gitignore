@@ -18,3 +18,10 @@ venv/
 *.egg-info/
 .pytest_cache/
 
+
+# Local MLX / model-training artifacts.
+.venv-mlx/
+adapters/
+checkpoints/
+*.safetensors
+*.npz
