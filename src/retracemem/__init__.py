@@ -1,9 +1,7 @@
 """ReTrace memory package."""
 
-from retracemem.methods import (
-    AuthorizationRequest,
+from retracemem.authorization import (
+    authorize,
+    EvidenceProposalBatch,
     AuthorizationResult,
-    AuthorizationFacade,
-    ProposedEvidenceEdges,
 )
-

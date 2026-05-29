@@ -3,34 +3,35 @@
 Consumes a fixed ``SharedCandidateView`` and returns authorization
 decisions using the full typed DPA pipeline without running extraction,
 induction, or retrieval.
-
-Execution pipeline:
-    SharedCandidateView
-    → PromptEvidenceEdgeVerifier.verify_edges_with_trace (edge prediction)
-    → isolated typed graph (fresh EpisodeLedger + BeliefStore)
-    → RevisionGate (structural admission)
-    → DefeatPathAuthorizationAlgorithm
-    → ControlledMethodResult (full provenance)
-
-AB-1A.5 auditability guarantees:
-    - Every verifier invocation preserves its model_call_trace_id, including
-      zero-edge invocations.
-    - Rejected fixed DependencyEdge anchors fail immediately and loudly.
-    - Rejected EvidenceEdge proposals are recorded in provenance with their
-      gate rejection reason; they do not enter the store.
-    - Admitted fixed anchors are recorded in provenance.
-    - metadata fields are non-semantic and MUST NOT be consumed.
 """
 from __future__ import annotations
 
-from retracemem.methods.authorization_executor import (
-    ProposedEvidenceEdges,
-    cost_delta,
-    execute_authorization,
-)
+from typing import Any
+from retracemem.authorization import authorize, EvidenceProposalBatch
 from retracemem.methods.contracts import ControlledMethodResult, SharedCandidateView
 from retracemem.providers.cached_client import CachedLLMClient
 from retracemem.verifier.prompt_evidence_edge_verifier import PromptEvidenceEdgeVerifier
+
+
+def cost_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
+    tokens_before = before.get("tokens", {})
+    tokens_after = after.get("tokens", {})
+    calls_before = before.get("calls", {})
+    calls_after = after.get("calls", {})
+    return {
+        "latency_ms": after.get("latency_ms", 0.0) - before.get("latency_ms", 0.0),
+        "tokens": {
+            "prompt": tokens_after.get("prompt", 0) - tokens_before.get("prompt", 0),
+            "completion": tokens_after.get("completion", 0) - tokens_before.get("completion", 0),
+            "total": tokens_after.get("total", 0) - tokens_before.get("total", 0),
+        },
+        "calls": {
+            key: calls_after.get(key, 0) - calls_before.get(key, 0)
+            for key in set(calls_after) | set(calls_before)
+        },
+        "cache_hits": after.get("cache_hits", 0) - before.get("cache_hits", 0),
+        "cache_misses": after.get("cache_misses", 0) - before.get("cache_misses", 0),
+    }
 
 
 class ControlledReTraceLLM:
@@ -52,7 +53,7 @@ class ControlledReTraceLLM:
         """Execute controlled Stage A on the fixed view."""
         cost_before = self.client.cost_accountant.to_dict()
 
-        proposal_batches: list[ProposedEvidenceEdges] = []
+        proposal_batches: list[EvidenceProposalBatch] = []
         for belief in view.candidate_beliefs:
             belief_conditions = tuple(
                 c
@@ -68,17 +69,17 @@ class ControlledReTraceLLM:
                 temporal_context=view.evidence_context,
             )
             proposal_batches.append(
-                ProposedEvidenceEdges(
+                EvidenceProposalBatch(
                     edges=batch.proposed_edges,
                     model_call_trace_id=batch.model_call_trace_id,
                     source_belief_id=belief.belief_id,
                 )
             )
 
-        execution = execute_authorization(
+        execution = authorize(
             view,
             tuple(proposal_batches),
-            base_provenance={
+            audit_metadata={
                 "prompt_version": self.edge_verifier.prompt_version,
                 "prompt_hash": self.edge_verifier._template_hash,
                 "model_id": self.edge_verifier.model_id,
@@ -94,7 +95,7 @@ class ControlledReTraceLLM:
             query_id=view.query_id,
             authorized_belief_ids=execution.authorized_belief_ids,
             excluded_belief_ids=execution.excluded_belief_ids,
-            model_call_trace_ids=execution.model_call_trace_ids,
+            model_call_trace_ids=execution.trace.get("model_call_trace_ids", ()),
             cost=cost_delta(cost_before, cost_after),
-            provenance=execution.provenance,
+            provenance=execution.trace,
         )
