@@ -21,15 +21,17 @@ ReTrace preserves immutable evidence and changes a belief's eligibility for curr
 
 ## Method Boundary / Identity
 
-Paper 1 studies evidence-preserving reversible authorization for evolving agent memory:
+Paper 1 is centered on multi-agent/subagent shared-memory revision authorization.
 
-```text
-immutable evidence ledger
-+ typed belief/condition/evidence-edge graph
-+ deterministic Defeat-Path Authorization Algorithm
-```
+Multiple subagents may submit evidence-bearing memory updates to a shared long-term memory. ReTrace controls which revisions are allowed to affect the shared usable memory basis.
 
-ReTrace restricts semantic-model judgment to local typed proposals and delegates final belief authorization to deterministic DPA. It is a pluggable authorization kernel, not a full memory system.
+The existing `authorize(...)` kernel is the canonical algorithm core.
+
+The next implementation layer is a thin multiagent submission/commit layer around `authorize(...)`, preserving producer provenance and deterministic traces.
+
+STALE/CUPMem is an external validation/baseline pathway, not the definition of the paper.
+
+Latent memory, RL consolidation, and delayed-utility learning belong to Paper 2.
 
 ## One-Function Public API Boundary
 
@@ -81,14 +83,13 @@ To ensure absolute clean methodology and avoid test-set leakage:
 
 ## Do Not Drift (No-Go List)
 
-Do not turn this codebase into:
-- generic RAG;
-- a Mem0 clone;
-- a Graphiti clone;
-- CUPMem fixed-slot state tracking;
-- RL memory action learning;
-- latent memory, memory-token, or learned consolidation work;
-- an unconstrained LLM judge that directly rewrites memory.
+- do not turn the repository into a generic orchestration framework;
+- do not implement agent debate/voting;
+- do not duplicate the `authorize(...)` kernel;
+- do not change DPA semantics without a demonstrated deterministic bug;
+- do not leak STALE gold fields into method inputs;
+- do not use official scored examples for prompt tuning.
+- do not turn this codebase into generic RAG, Mem0 clone, or Graphiti clone.
 
 ## Test and Clean-Worktree Rules
 

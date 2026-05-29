@@ -155,35 +155,68 @@ def test_authorize_with_proposals():
     assert "trace_zero" in res_zero.trace["model_call_trace_ids"]
 
 
-def test_map_cupmem_candidate_to_retrace_view():
-    from experiments.stale_adapter import CupMemRevisionCandidate, map_cupmem_candidate_to_retrace_view
-    
+def test_map_cupmem_candidate_to_subagent_submission():
+    from experiments.cupmem_adapter import CupMemRevisionCandidate, map_cupmem_candidate_to_subagent_submission
+    import pytest
+
+    ev_old = EvidenceNode(
+        evidence_id="e_old", session_id="s_0", timestamp="2026-01-01T00:00:00Z",
+        text="User commutes by bicycle.", source_dataset="test", source_pointer="ptr"
+    )
+    ev_new = EvidenceNode(
+        evidence_id="e_new", session_id="s_1", timestamp="2026-01-02T00:00:00Z",
+        text="User broke their leg.", source_dataset="test", source_pointer="ptr"
+    )
+    b_bike = BeliefNode(belief_id="b_bike", proposition="User commutes by bicycle.", source_evidence_ids=("e_old",))
+
     candidate = CupMemRevisionCandidate(
-        old_state_id="b_0",
-        old_state_text="User lives in Seattle.",
-        old_source_evidence=("e_0",),
-        new_evidence_id="e_1",
-        new_evidence_text="User lives in Denver.",
-        candidate_replacement_text="User lives in Denver.",
-        affected_region="location",
-        upstream_trace={"instance_id": "inst_123", "query_id": "q_999", "query": "Where does user live?"}
+        submission_id="sub_1",
+        producer_id="subagent_1",
+        producer_role="role_1",
+        parent_snapshot_id="snap_0",
+        observed_at="2026-05-29T10:00:00Z",
+        instance_id="inst_123",
+        query_id="q_999",
+        query="Where does user live?",
+        evidence_context=(ev_old, ev_new),
+        new_evidence_id="e_new",
+        candidate_beliefs=(b_bike,),
+        candidate_replacement_beliefs=(),
+        upstream_trace={"task_id": "task_1", "extra": "info"}
     )
-    
-    req_edge = DependencyEdge(
-        edge_id="dep_edge_1",
-        belief_id="b_0",
-        condition_id="c_physically_able",
-        inducer="test_fixture"
+
+    submission = map_cupmem_candidate_to_subagent_submission(candidate)
+    assert submission.submission_id == "sub_1"
+    assert submission.producer_id == "subagent_1"
+    assert submission.producer_role == "role_1"
+    assert submission.parent_snapshot_id == "snap_0"
+    assert submission.observed_at == "2026-05-29T10:00:00Z"
+    assert submission.instance_id == "inst_123"
+    assert submission.query_id == "q_999"
+    assert submission.query == "Where does user live?"
+    assert submission.evidence_context == (ev_old, ev_new)
+    assert submission.new_evidence_id == "e_new"
+    assert submission.candidate_beliefs == (b_bike,)
+    assert submission.task_id == "task_1"
+    assert submission.metadata == {"task_id": "task_1", "extra": "info"}
+
+    # Test leakage prevention in CupMemRevisionCandidate upstream_trace
+    leaky_candidate = CupMemRevisionCandidate(
+        submission_id="sub_1",
+        producer_id="subagent_1",
+        producer_role="role_1",
+        parent_snapshot_id="snap_0",
+        observed_at="2026-05-29T10:00:00Z",
+        instance_id="inst_123",
+        query_id="q_999",
+        query="Where does user live?",
+        evidence_context=(ev_old, ev_new),
+        new_evidence_id="e_new",
+        candidate_beliefs=(b_bike,),
+        upstream_trace={"M_old": "some gold memory"}
     )
-    
-    view = map_cupmem_candidate_to_retrace_view(candidate, pre_induced_requirements=(req_edge,))
-    assert view.instance_id == "inst_123"
-    assert view.query_id == "q_999"
-    assert view.new_evidence.text == "User lives in Denver."
-    assert view.candidate_beliefs[0].belief_id == "b_0"
-    assert view.candidate_replacement_beliefs[0].belief_id == "rep_b_0"
-    assert view.dependency_edges_by_belief[0][0] == "b_0"
-    assert view.dependency_edges_by_belief[0][1][0].condition_id == "c_physically_able"
+    with pytest.raises(ValueError, match="Evaluation leakage detected"):
+        map_cupmem_candidate_to_subagent_submission(leaky_candidate)
 
 
 def test_revision_safety_diagnostic_cases():
