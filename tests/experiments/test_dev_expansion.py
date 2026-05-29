@@ -89,7 +89,7 @@ def test_select_smoke_examples_error(tmp_path) -> None:
         
     # 2. Test when approved exists but not confirmed
     review_file.write_text(
-        '{"episode_id": "ep_1", "review_status": "approved", "failure_type": "direct_supersession"}\n'
+        '{"episode_id": "ep_1", "review_status": "approved", "failure_type": "direct_supersession", "review_provenance": {"reviewer": "Yuchen Zhu", "reviewed_at": "2026-05-30T00:00:00Z", "source_manifest_sha256": "dummy_sha"}}\n'
     )
     with pytest.raises(SystemExit):
         select_smoke_examples(str(review_file), confirm_live_run=False)
