@@ -7,6 +7,9 @@ import os
 import sys
 from typing import Any, Dict, List
 
+QUEUE_PATH = "outputs/stagec_dev_review_queue_70.jsonl"
+DEV_MANIFEST_PATH = "outputs/stagec_dev_review_manifest.json"
+
 def compute_sha256(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()
 
@@ -119,14 +122,13 @@ def main() -> None:
         }
         updated_records.append(r)
 
-    # Apply decisions to outputs/stagec_dev_review_queue_70.jsonl
-    queue_path = "outputs/stagec_dev_review_queue_70.jsonl"
-    if not os.path.exists(queue_path):
-        print(f"Error: Queue file not found: {queue_path}")
+    # Apply decisions to QUEUE_PATH
+    if not os.path.exists(QUEUE_PATH):
+        print(f"Error: Queue file not found: {QUEUE_PATH}")
         sys.exit(1)
         
     queue_records = []
-    with open(queue_path, "r", encoding="utf-8") as f:
+    with open(QUEUE_PATH, "r", encoding="utf-8") as f:
         for line in f:
             if line.strip():
                 queue_records.append(json.loads(line))
@@ -145,7 +147,7 @@ def main() -> None:
             }
             
     # Write updated queue JSONL
-    with open(queue_path, "w", encoding="utf-8") as f:
+    with open(QUEUE_PATH, "w", encoding="utf-8") as f:
         for qr in queue_records:
             f.write(json.dumps(qr) + "\n")
             
@@ -193,12 +195,41 @@ def main() -> None:
     # Recompute hashes for manifests
     new_jsonl_sha256 = compute_file_sha256(jsonl_path)
     new_md_sha256 = compute_file_sha256(md_path)
-    new_queue_sha256 = compute_file_sha256(queue_path)
+    new_queue_sha256 = compute_file_sha256(QUEUE_PATH)
+
+    # Calculate aggregate status and stats
+    approve_count = 0
+    revise_count = 0
+    reject_count = 0
+    for ep_id, (dec, _) in decision_map.items():
+        if dec == "APPROVE":
+            approve_count += 1
+        elif dec == "REVISE":
+            revise_count += 1
+        elif dec == "REJECT":
+            reject_count += 1
+
+    decision_counts = {
+        "APPROVE": approve_count,
+        "REVISE": revise_count,
+        "REJECT": reject_count
+    }
+    
+    eligible_for_smoke = (approve_count == len(episodes_in_pack))
+
+    if eligible_for_smoke:
+        agg_status = "approved_for_smoke"
+    elif revise_count > 0 and reject_count == 0:
+        agg_status = "requires_revision"
+    else:
+        agg_status = "not_approved"
 
     # Write stagec_smoke7_review_manifest.json
     manifest["md_sha256"] = new_md_sha256
     manifest["jsonl_sha256"] = new_jsonl_sha256
-    manifest["review_status"] = "approved"
+    manifest["review_status"] = agg_status
+    manifest["eligible_for_smoke"] = eligible_for_smoke
+    manifest["decision_counts"] = decision_counts
     manifest["review_provenance"] = {
         "reviewer": reviewer,
         "reviewed_at": reviewed_at,
@@ -208,16 +239,15 @@ def main() -> None:
     with open(args.review_manifest, "w", encoding="utf-8") as f:
         json.dump(manifest, f, indent=2)
 
-    # Update stagec_dev_review_manifest.json
-    dev_manifest_path = "outputs/stagec_dev_review_manifest.json"
-    if os.path.exists(dev_manifest_path):
-        with open(dev_manifest_path, "r", encoding="utf-8") as f:
+    # Update DEV_MANIFEST_PATH
+    if os.path.exists(DEV_MANIFEST_PATH):
+        with open(DEV_MANIFEST_PATH, "r", encoding="utf-8") as f:
             dev_manifest = json.load(f)
         dev_manifest["jsonl_sha256"] = new_queue_sha256
         # Count approved
         approved_count = sum(1 for qr in queue_records if qr.get("review_status") == "approved")
         dev_manifest["notes"] = f"Expanded 70-example dev review queue. Approved count: {approved_count}/70."
-        with open(dev_manifest_path, "w", encoding="utf-8") as f:
+        with open(DEV_MANIFEST_PATH, "w", encoding="utf-8") as f:
             json.dump(dev_manifest, f, indent=2)
 
     print("[+] Review decisions applied successfully!")
