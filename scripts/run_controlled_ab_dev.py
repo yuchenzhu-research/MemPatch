@@ -21,9 +21,14 @@ import os
 import sys
 import tempfile
 import uuid
+from pathlib import Path
+from dotenv import load_dotenv
 
 # Ensure src is importable when running from repo root
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.pardir, "src"))
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+load_dotenv(REPO_ROOT / ".env", override=False)
 
 from retracemem.cache.jsonl_cache import JSONLCache
 from retracemem.evaluation.controlled_ab import (
@@ -93,12 +98,12 @@ def main() -> None:
     )
     parser.add_argument(
         "--provider",
-        default="openai",
+        default=os.getenv("RETRACE_LIVE_PROVIDER", "openai"),
         help="LLM provider name (e.g. openai, google).",
     )
     parser.add_argument(
         "--model",
-        default="gpt-4o",
+        default=os.getenv("RETRACE_LIVE_MODEL", "gpt-4o"),
         help="Model ID to use for live generation.",
     )
     parser.add_argument(
@@ -120,6 +125,18 @@ def main() -> None:
         "--cases",
         default=_CASES_PATH,
         help="Path to internal dev cases JSON file.",
+    )
+    parser.add_argument(
+        "--max-calls",
+        type=int,
+        default=1000,
+        help="Hard call cap across the entire run.",
+    )
+    parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=2000000,
+        help="Hard token cap across the entire run.",
     )
     args = parser.parse_args()
 
@@ -163,15 +180,15 @@ def main() -> None:
         cache_path = os.path.join(output_dir, "controlled_ab_live_cache.jsonl")
         cache = JSONLCache(cache_path)
         
-        # Instantiate HTTP provider and wrap with safety cap (max 5 calls, 10000 tokens)
+        # Instantiate HTTP provider and wrap with safety cap
         http_provider = HTTPLLMProvider(api_key=args.api_key, base_url=args.base_url)
-        capped_provider = CappedProviderWrapper(http_provider, max_calls=5, max_tokens=10000)
+        capped_provider = CappedProviderWrapper(http_provider, max_calls=args.max_calls, max_tokens=args.max_tokens)
         
         cost_accountant_a = CostAccounting()
         cost_accountant_b = CostAccounting()
         client_a = CachedLLMClient(cache=cache, provider_client=capped_provider, cost_accountant=cost_accountant_a)
         client_b = CachedLLMClient(cache=cache, provider_client=capped_provider, cost_accountant=cost_accountant_b)
-        print("  ✓ Setup live provider client with cache and safety caps (max 5 calls, 10000 tokens).")
+        print(f"  ✓ Setup live provider client with cache and safety caps (max {args.max_calls} calls, {args.max_tokens} tokens).")
         print()
 
     # Execute all cases
@@ -213,10 +230,13 @@ def main() -> None:
     print(f"  Total belief decisions:   {agg['total_belief_decisions']}")
     print(f"  Stage A accuracy:         {agg['stage_a_accuracy']}")
     print(f"  Stage B accuracy:         {agg['stage_b_accuracy']}")
+    print(f"  Stage A Ablation accuracy:{agg['stage_a_ablation_accuracy']}")
     print(f"  Stage A coverage:         {agg['stage_a_coverage']}")
     print(f"  Stage B coverage:         {agg['stage_b_coverage']}")
+    print(f"  Stage A Ablation coverage:{agg['stage_a_ablation_coverage']}")
     print(f"  Stage A status breakdown: {agg['stage_a_status_breakdown']}")
     print(f"  Stage B verdict breakdown:{agg['stage_b_verdict_breakdown']}")
+    print(f"  Stage A Ablation breakdown:{agg['stage_a_ablation_status_breakdown']}")
     print(f"  Obsolete misuse:          {agg['obsolete_misuse']}")
     print(f"  Protected preserved:      {agg['protected_belief_preserved']}")
     print(f"  Rollback recovery:        {agg['rollback_recovery']}")
@@ -225,7 +245,7 @@ def main() -> None:
     print(f"  Parse errors:             {agg.get('parse_errors', 0)}")
     print()
     print("  Observed cost (NOT matched):")
-    for stage, label in [("stage_a", "Stage A"), ("stage_b", "Stage B")]:
+    for stage, label in [("stage_a", "Stage A"), ("stage_b", "Stage B"), ("stage_a_ablation", "Stage A Ablation")]:
         c = agg["observed_cost"][stage]
         print(f"    {label}: calls={c['calls']}, tokens={c['tokens']}, "
               f"cache_hits={c['cache_hits']}, latency_ms={c['latency_ms']}")

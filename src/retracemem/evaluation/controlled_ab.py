@@ -61,23 +61,27 @@ class InternalDevCase:
 
 @dataclass
 class CaseResult:
-    """Paired Stage A + Stage B result for one case."""
+    """Paired Stage A + Stage B result for one case (with ablation)."""
 
     case_id: str
     case_type: str
     stage_a_result: ControlledMethodResult | None = None
     stage_b_result: ControlledMethodResult | None = None
+    stage_a_ablation_result: ControlledMethodResult | None = None
     stage_a_error: str | None = None
     stage_b_error: str | None = None
+    stage_a_ablation_error: str | None = None
     stage_a_cost: dict[str, Any] = field(default_factory=dict)
     stage_b_cost: dict[str, Any] = field(default_factory=dict)
+    stage_a_ablation_cost: dict[str, Any] = field(default_factory=dict)
     is_stage_a_parse_error: bool = False
     is_stage_b_parse_error: bool = False
+    is_stage_a_ablation_parse_error: bool = False
 
 
 @dataclass
 class AggregateMetrics:
-    """Aggregate metrics over all internal development cases."""
+    """Aggregate metrics over all internal development cases (with ablation)."""
 
     total_cases: int = 0
     total_belief_decisions: int = 0
@@ -85,22 +89,30 @@ class AggregateMetrics:
     stage_a_total: int = 0
     stage_b_correct: int = 0
     stage_b_total: int = 0
+    stage_a_ablation_correct: int = 0
+    stage_a_ablation_total: int = 0
     stage_a_completed: int = 0
     stage_b_completed: int = 0
+    stage_a_ablation_completed: int = 0
     stage_a_status_breakdown: dict[str, int] = field(default_factory=dict)
     stage_b_verdict_breakdown: dict[str, int] = field(default_factory=dict)
+    stage_a_ablation_status_breakdown: dict[str, int] = field(default_factory=dict)
     obsolete_misuse_count: int = 0
     obsolete_misuse_total: int = 0
     obsolete_misuse_count_a: int = 0
     obsolete_misuse_total_a: int = 0
     obsolete_misuse_count_b: int = 0
     obsolete_misuse_total_b: int = 0
+    obsolete_misuse_count_ablation: int = 0
+    obsolete_misuse_total_ablation: int = 0
     protected_belief_preserved_count: int = 0
     protected_belief_total: int = 0
     protected_belief_preserved_count_a: int = 0
     protected_belief_preserved_count_b: int = 0
+    protected_belief_preserved_count_ablation: int = 0
     protected_belief_total_a: int = 0
     protected_belief_total_b: int = 0
+    protected_belief_total_ablation: int = 0
     rollback_recovery_count: int = 0
     rollback_recovery_total: int = 0
     stage_a_calls: int = 0
@@ -111,6 +123,10 @@ class AggregateMetrics:
     stage_b_tokens: int = 0
     stage_b_cache_hits: int = 0
     stage_b_latency_ms: float = 0.0
+    stage_a_ablation_calls: int = 0
+    stage_a_ablation_tokens: int = 0
+    stage_a_ablation_cache_hits: int = 0
+    stage_a_ablation_latency_ms: float = 0.0
     execution_errors: int = 0
     parse_errors: int = 0
 
@@ -303,6 +319,30 @@ def run_case(
         if active_client_b is not None:
             result.stage_b_cost = active_client_b.cost_accountant.to_dict()
 
+    # --- Stage A Ablation ---
+    try:
+        verifier_ab = PromptEvidenceEdgeVerifier(
+            client=active_client_a,
+            model_id=model_id,
+            provider=provider,
+            prompt_version=stage_a_prompt_version,
+        )
+        runner_ab = ControlledReTraceLLM(edge_verifier=verifier_ab, client=active_client_a)
+        result.stage_a_ablation_result = runner_ab.run(case.view, bypass_gate=True)
+        if result.stage_a_ablation_result is not None:
+            result.stage_a_ablation_cost = result.stage_a_ablation_result.cost
+    except Exception as exc:
+        result.stage_a_ablation_error = f"{type(exc).__name__}: {exc}"
+        is_parse = False
+        if isinstance(exc, json.JSONDecodeError):
+            is_parse = True
+        elif isinstance(exc, ValueError):
+            exc_msg = str(exc)
+            if not (exc_msg.startswith("Evidence-edge prediction failed") or exc_msg.startswith("Fixed supplied DependencyEdge")):
+                is_parse = True
+        if is_parse:
+            result.is_stage_a_ablation_parse_error = True
+
     return result
 
 
@@ -315,10 +355,23 @@ def compute_metrics(
     m.total_cases = len(cases)
 
     for case, res in zip(cases, results):
+        # Dedup stage_a and stage_a_ablation errors since they share the same verifier call
+        has_a_error = False
+        is_a_parse = False
         if res.stage_a_error:
-            m.execution_errors += 1
+            has_a_error = True
             if res.is_stage_a_parse_error:
+                is_a_parse = True
+        elif res.stage_a_ablation_error:
+            has_a_error = True
+            if res.is_stage_a_ablation_parse_error:
+                is_a_parse = True
+
+        if has_a_error:
+            m.execution_errors += 1
+            if is_a_parse:
                 m.parse_errors += 1
+
         if res.stage_b_error:
             m.execution_errors += 1
             if res.is_stage_b_parse_error:
@@ -348,6 +401,26 @@ def compute_metrics(
                     if actual_comp == "USABLE":
                         m.obsolete_misuse_count += 1
                         m.obsolete_misuse_count_a += 1
+
+        # Stage A Ablation metrics
+        for bid, expected_status in case.expected_stage_a_status.items():
+            m.stage_a_ablation_total += 1
+            
+            if res.stage_a_ablation_result is not None:
+                m.stage_a_ablation_completed += 1
+                prov = res.stage_a_ablation_result.provenance
+                fg = prov.get("fine_grained_statuses", {})
+                actual = fg.get(bid, "")
+                m.stage_a_ablation_status_breakdown[actual] = m.stage_a_ablation_status_breakdown.get(actual, 0) + 1
+                if actual == expected_status:
+                    m.stage_a_ablation_correct += 1
+                
+                expected_comp = case.expected_comparable_status.get(bid, "")
+                if expected_comp == "NOT_USABLE":
+                    m.obsolete_misuse_total_ablation += 1
+                    actual_comp = _STATUS_MAP_A_TO_COMPARABLE.get(actual, "")
+                    if actual_comp == "USABLE":
+                        m.obsolete_misuse_count_ablation += 1
 
         # Stage B metrics
         for bid, expected_status in case.expected_comparable_status.items():
@@ -388,6 +461,13 @@ def compute_metrics(
                     m.protected_belief_preserved_count += 1
                     m.protected_belief_preserved_count_a += 1
 
+            # Stage A Ablation
+            m.protected_belief_total_ablation += 1
+            if res.stage_a_ablation_result is not None:
+                fg = res.stage_a_ablation_result.provenance.get("fine_grained_statuses", {})
+                if fg.get(bid) == "AUTHORIZED":
+                    m.protected_belief_preserved_count_ablation += 1
+
             # Stage B
             m.protected_belief_total_b += 1
             if res.stage_b_result is not None:
@@ -418,6 +498,14 @@ def compute_metrics(
         m.stage_b_calls += calls_b.get("total", 0)
         m.stage_b_cache_hits += cost_b.get("cache_hits", 0)
         m.stage_b_latency_ms += cost_b.get("latency_ms", 0.0)
+
+        cost_ab = res.stage_a_ablation_cost
+        tokens_ab = cost_ab.get("tokens", {})
+        calls_ab = cost_ab.get("calls", {})
+        m.stage_a_ablation_tokens += tokens_ab.get("total", 0)
+        m.stage_a_ablation_calls += calls_ab.get("total", 0)
+        m.stage_a_ablation_cache_hits += cost_ab.get("cache_hits", 0)
+        m.stage_a_ablation_latency_ms += cost_ab.get("latency_ms", 0.0)
 
     return m
 
@@ -452,6 +540,26 @@ def format_report(
         entry["stage_a"] = stage_a_entry
         if r.stage_a_error:
             entry["stage_a_error"] = r.stage_a_error
+
+        stage_a_ablation_entry: dict[str, Any] = {}
+        if r.stage_a_ablation_result is not None:
+            stage_a_ablation_entry.update({
+                "method_name": r.stage_a_ablation_result.method_name,
+                "authorized_belief_ids": list(r.stage_a_ablation_result.authorized_belief_ids),
+                "excluded_belief_ids": list(r.stage_a_ablation_result.excluded_belief_ids),
+                "model_call_trace_ids": list(r.stage_a_ablation_result.model_call_trace_ids),
+                "cost": r.stage_a_ablation_result.cost,
+                "provenance": r.stage_a_ablation_result.provenance,
+            })
+        else:
+            stage_a_ablation_entry.update({
+                "cost": r.stage_a_ablation_cost,
+                "error": r.stage_a_ablation_error,
+                "is_parse_error": r.is_stage_a_ablation_parse_error,
+            })
+        entry["stage_a_ablation"] = stage_a_ablation_entry
+        if r.stage_a_ablation_error:
+            entry["stage_a_ablation_error"] = r.stage_a_ablation_error
 
         stage_b_entry: dict[str, Any] = {}
         if r.stage_b_result is not None:
@@ -491,17 +599,22 @@ def format_report(
             "total_belief_decisions": metrics.total_belief_decisions,
             "stage_a_accuracy": f"{metrics.stage_a_correct}/{metrics.stage_a_total}",
             "stage_b_accuracy": f"{metrics.stage_b_correct}/{metrics.stage_b_total}",
+            "stage_a_ablation_accuracy": f"{metrics.stage_a_ablation_correct}/{metrics.stage_a_ablation_total}",
             "stage_a_coverage": f"{metrics.stage_a_completed}/{metrics.total_belief_decisions}",
             "stage_b_coverage": f"{metrics.stage_b_completed}/{metrics.total_belief_decisions}",
+            "stage_a_ablation_coverage": f"{metrics.stage_a_ablation_completed}/{metrics.total_belief_decisions}",
             "stage_a_status_breakdown": metrics.stage_a_status_breakdown,
             "stage_b_verdict_breakdown": metrics.stage_b_verdict_breakdown,
+            "stage_a_ablation_status_breakdown": metrics.stage_a_ablation_status_breakdown,
             "obsolete_misuse": {
                 "stage_a": f"{metrics.obsolete_misuse_count_a}/{metrics.obsolete_misuse_total_a}",
                 "stage_b": f"{metrics.obsolete_misuse_count_b}/{metrics.obsolete_misuse_total_b}",
+                "stage_a_ablation": f"{metrics.obsolete_misuse_count_ablation}/{metrics.obsolete_misuse_total_ablation}",
             },
             "protected_belief_preserved": {
                 "stage_a": f"{metrics.protected_belief_preserved_count_a}/{metrics.protected_belief_total_a}",
                 "stage_b": f"{metrics.protected_belief_preserved_count_b}/{metrics.protected_belief_total_b}",
+                "stage_a_ablation": f"{metrics.protected_belief_preserved_count_ablation}/{metrics.protected_belief_total_ablation}",
             },
             "rollback_recovery": "NOT YET OPERATIONALIZED in AB-1B. The current fixed-view controlled interface does not preload prior accepted evidence-edge history.",
             "unsupported_revision_rate": "NOT YET OPERATIONALIZED in AB-1B. Requires explicit annotation of valid defeat-path structure in case gold fields and unambiguous denominator definition.",
@@ -517,6 +630,12 @@ def format_report(
                     "tokens": metrics.stage_b_tokens,
                     "cache_hits": metrics.stage_b_cache_hits,
                     "latency_ms": round(metrics.stage_b_latency_ms, 2),
+                },
+                "stage_a_ablation": {
+                    "calls": metrics.stage_a_ablation_calls,
+                    "tokens": metrics.stage_a_ablation_tokens,
+                    "cache_hits": metrics.stage_a_ablation_cache_hits,
+                    "latency_ms": round(metrics.stage_a_ablation_latency_ms, 2),
                 },
             },
             "execution_errors": metrics.execution_errors,
