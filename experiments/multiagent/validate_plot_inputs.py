@@ -46,7 +46,10 @@ def validate_plot_inputs(
             "scientific_status", "split", "method_name", "backbone_model", "proposal_source",
             "candidate_source", "number_of_subagents", "number_of_submissions", "role_diversity",
             "conflict_density", "delay_depth", "recovery_present", "metric_name", "metric_value",
-            "trace_available", "calls", "tokens", "latency_ms"
+            "trace_available", "calls", "tokens", "latency_ms",
+            "policy_variant", "checkpoint_id", "training_split", "training_step",
+            "training_examples_seen", "reward_variant", "authorization_reward",
+            "downstream_task_reward", "scope_expansion_penalty", "stale_penalty", "total_reward"
         ]
         for fld in required_general:
             if fld not in r:

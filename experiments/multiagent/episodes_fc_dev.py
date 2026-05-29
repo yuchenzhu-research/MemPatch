@@ -1,6 +1,5 @@
-from __future__ import annotations
-
-from typing import List
+from dataclasses import dataclass, field
+from typing import List, Tuple, Dict, Any
 from retracemem.schemas import (
     EvidenceNode,
     BeliefNode,
@@ -9,15 +8,150 @@ from retracemem.schemas import (
 )
 from experiments.multiagent.contracts import (
     FixedCandidateSubmission,
-    FixedCandidateEpisode,
+    FixedCandidateInputEpisode,
+    FixedCandidateGoldRecord,
+    MethodDecisionArtifact,
     MethodDecisionRecord,
     DownstreamTask,
     GoldSnapshotExpectation,
+    TypedRevisionTarget,
+    _proposal_batch_to_dict,
 )
+from retracemem import EvidenceProposalBatch
 
+@dataclass
+class _FCSubmissionBuilder:
+    submission_id: str
+    producer_id: str
+    producer_role: str
+    timestamp: str
+    evidence_context: Tuple[EvidenceNode, ...]
+    candidate_beliefs: Tuple[BeliefNode, ...]
+    candidate_edges: Tuple[EvidenceEdge, ...] = ()
+    metadata: Dict[str, Any] = field(default_factory=dict)
 
-def get_fc_dev_episodes() -> List[FixedCandidateEpisode]:
-    """Return 14 fixed-candidate development episodes.
+@dataclass
+class _FCEpisodeBuilder:
+    episode_id: str
+    domain: str
+    failure_type: str
+    subagent_roles: Tuple[str, ...]
+    submissions: Tuple[_FCSubmissionBuilder, ...]
+    downstream_tasks: Tuple[DownstreamTask, ...]
+    gold_snapshot: GoldSnapshotExpectation
+    replay_decisions: Tuple[MethodDecisionRecord, ...] = ()
+    stress_factors: Dict[str, Any] = field(default_factory=dict)
+    protocol_mode: str = "fixed_candidate_revision"
+    proposal_source: str = "hand_authored_development"
+    split: str = "development_only"
+    metadata: Dict[str, Any] = field(default_factory=dict)
+
+def _convert_builder_to_fair_contracts(
+    builder: _FCEpisodeBuilder
+) -> Tuple[FixedCandidateInputEpisode, FixedCandidateGoldRecord, MethodDecisionArtifact]:
+    fair_submissions = []
+    typed_proposal_batches_by_submission = []
+    gold_targets = []
+    
+    for sub in builder.submissions:
+        proposal_batches = ()
+        if sub.candidate_edges:
+            proposal_batches = (
+                EvidenceProposalBatch(
+                    edges=sub.candidate_edges,
+                    model_call_trace_id=sub.metadata.get("model_call_trace_id"),
+                    source_belief_id=sub.metadata.get("source_belief_id"),
+                ),
+            )
+            typed_proposal_batches_by_submission.append((sub.submission_id, proposal_batches))
+            
+            for edge in sub.candidate_edges:
+                gold_targets.append(
+                    TypedRevisionTarget(
+                        submission_id=sub.submission_id,
+                        action_type=edge.edge_type.value if hasattr(edge.edge_type, "value") else str(edge.edge_type),
+                        target_belief_id=edge.target_id if edge.target_kind == "belief" else None,
+                        target_condition_id=edge.target_id if edge.target_kind == "condition" else None,
+                        replacement_belief_id=edge.replacement_belief_id,
+                        rationale=edge.rationale or "",
+                        evidence_ids=(edge.evidence_id,),
+                    )
+                )
+
+        replacement_beliefs = []
+        replacement_ids = set()
+        for edge in sub.candidate_edges:
+            if edge.edge_type == EvidenceEdgeType.SUPERSEDES and edge.replacement_belief_id:
+                for b in sub.candidate_beliefs:
+                    if b.belief_id == edge.replacement_belief_id:
+                        replacement_beliefs.append(b)
+                        replacement_ids.add(b.belief_id)
+                        break
+
+        normal_candidate_beliefs = [b for b in sub.candidate_beliefs if b.belief_id not in replacement_ids]
+        
+        fair_sub = FixedCandidateSubmission(
+            submission_id=sub.submission_id,
+            producer_id=sub.producer_id,
+            producer_role=sub.producer_role,
+            task_id=sub.metadata.get("task_id"),
+            parent_snapshot_id=sub.metadata.get("parent_snapshot_id", "snapshot_init"),
+            observed_at=sub.timestamp,
+            instance_id=sub.metadata.get("instance_id", "instance_0"),
+            query_id=sub.metadata.get("query_id", "query_0"),
+            query=sub.metadata.get("query", "Default query"),
+            evidence_context=sub.evidence_context,
+            new_evidence_id=sub.evidence_context[-1].evidence_id if sub.evidence_context else "ev_unknown",
+            candidate_beliefs=tuple(normal_candidate_beliefs),
+            candidate_replacement_beliefs=tuple(replacement_beliefs),
+            candidate_conditions_by_belief=(),
+            dependency_edges_by_belief=(),
+            metadata=sub.metadata,
+        )
+        fair_submissions.append(fair_sub)
+
+    direct_verdicts_by_submission = ()
+    if builder.submissions and builder.replay_decisions:
+        last_sub_id = builder.submissions[-1].submission_id
+        direct_verdicts_by_submission = ((last_sub_id, builder.replay_decisions),)
+
+    artifact = MethodDecisionArtifact(
+        episode_id=builder.episode_id,
+        method_name="DirectJudge_Replay",
+        protocol_mode="oracle_edge_replay",
+        proposal_source="oracle_replay",
+        backbone_model=None,
+        typed_proposal_batches_by_submission=tuple(typed_proposal_batches_by_submission),
+        direct_verdicts_by_submission=direct_verdicts_by_submission,
+        scientific_status="pipeline_validation_only",
+    )
+
+    input_episode = FixedCandidateInputEpisode(
+        episode_id=builder.episode_id,
+        domain=builder.domain,
+        failure_type_public_or_controlled=builder.failure_type,
+        subagent_roles=builder.subagent_roles,
+        submissions=tuple(fair_submissions),
+        downstream_tasks=builder.downstream_tasks,
+        stress_factors=builder.stress_factors,
+        split=builder.split,
+        protocol_mode=builder.protocol_mode,
+        proposal_source=builder.proposal_source,
+        metadata=builder.metadata,
+    )
+
+    gold_record = FixedCandidateGoldRecord(
+        episode_id=builder.episode_id,
+        gold_snapshot=builder.gold_snapshot,
+        gold_typed_targets=tuple(gold_targets),
+        failure_type=builder.failure_type,
+        metadata=builder.metadata,
+    )
+
+    return input_episode, gold_record, artifact
+
+def get_fc_dev_episodes() -> List[Tuple[FixedCandidateInputEpisode, FixedCandidateGoldRecord, MethodDecisionArtifact]]:
+    """Return 14 fixed-candidate development episodes as (input_episode, gold_record, decision_artifact) tuples.
 
     Coverage matrix:
         7 failure_types × 2 domains = 14 episodes
@@ -30,7 +164,7 @@ def get_fc_dev_episodes() -> List[FixedCandidateEpisode]:
     Domains:
         software_engineering, research_workflow
     """
-    episodes: List[FixedCandidateEpisode] = []
+    episodes: List[_FCEpisodeBuilder] = []
 
     # ========================================================================
     # Domain: software_engineering
@@ -61,19 +195,19 @@ def get_fc_dev_episodes() -> List[FixedCandidateEpisode]:
         verifier="deploy_agent_b", replacement_belief_id="b_se1_west",
     )
 
-    episodes.append(FixedCandidateEpisode(
+    episodes.append(_FCEpisodeBuilder(
         episode_id="fc_se_cross_agent_conflict",
         domain="software_engineering",
         failure_type="cross_agent_conflict",
         subagent_roles=("deploy_agent_a", "deploy_agent_b"),
         submissions=(
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_se1_sub1", producer_id="deploy_agent_a",
                 producer_role="deploy_agent", timestamp="2026-01-10T10:00:00Z",
                 evidence_context=(ev_se1_a,),
                 candidate_beliefs=(b_se1_east,), candidate_edges=(),
             ),
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_se1_sub2", producer_id="deploy_agent_b",
                 producer_role="deploy_agent", timestamp="2026-01-10T11:00:00Z",
                 evidence_context=(ev_se1_a, ev_se1_b),
@@ -123,19 +257,19 @@ def get_fc_dev_episodes() -> List[FixedCandidateEpisode]:
         verifier="api_monitor", replacement_belief_id="b_se2_v3",
     )
 
-    episodes.append(FixedCandidateEpisode(
+    episodes.append(_FCEpisodeBuilder(
         episode_id="fc_se_direct_supersession",
         domain="software_engineering",
         failure_type="direct_supersession",
         subagent_roles=("api_monitor",),
         submissions=(
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_se2_sub1", producer_id="api_monitor",
                 producer_role="api_monitor", timestamp="2026-01-10T09:00:00Z",
                 evidence_context=(ev_se2_v2,),
                 candidate_beliefs=(b_se2_v2,), candidate_edges=(),
             ),
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_se2_sub2", producer_id="api_monitor",
                 producer_role="api_monitor", timestamp="2026-01-10T12:00:00Z",
                 evidence_context=(ev_se2_v2, ev_se2_v3),
@@ -194,20 +328,20 @@ def get_fc_dev_episodes() -> List[FixedCandidateEpisode]:
         verifier="ci_cache_agent",
     )
 
-    episodes.append(FixedCandidateEpisode(
+    episodes.append(_FCEpisodeBuilder(
         episode_id="fc_se_stale_propagation",
         domain="software_engineering",
         failure_type="stale_propagation",
         subagent_roles=("ci_monitor", "ci_cache_agent"),
         submissions=(
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_se3_sub1", producer_id="ci_monitor",
                 producer_role="ci_monitor", timestamp="2026-01-10T10:00:00Z",
                 evidence_context=(ev_se3_pass, ev_se3_fail),
                 candidate_beliefs=(b_se3_pass, b_se3_fail),
                 candidate_edges=(edge_se3_super,),
             ),
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_se3_sub2", producer_id="ci_cache_agent",
                 producer_role="ci_cache_agent", timestamp="2026-01-10T10:30:00Z",
                 evidence_context=(ev_se3_pass, ev_se3_fail, ev_se3_stale),
@@ -244,13 +378,13 @@ def get_fc_dev_episodes() -> List[FixedCandidateEpisode]:
         source_evidence_ids=("ev_se4_style",),
     )
 
-    episodes.append(FixedCandidateEpisode(
+    episodes.append(_FCEpisodeBuilder(
         episode_id="fc_se_scope_expansion",
         domain="software_engineering",
         failure_type="scope_expansion",
         subagent_roles=("style_checker",),
         submissions=(
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_se4_sub1", producer_id="style_checker",
                 producer_role="style_checker", timestamp="2026-01-10T09:00:00Z",
                 evidence_context=(ev_se4_style,),
@@ -299,20 +433,20 @@ def get_fc_dev_episodes() -> List[FixedCandidateEpisode]:
         verifier="infra_monitor",
     )
 
-    episodes.append(FixedCandidateEpisode(
+    episodes.append(_FCEpisodeBuilder(
         episode_id="fc_se_temporary_blocker_recovery",
         domain="software_engineering",
         failure_type="temporary_blocker_recovery",
         subagent_roles=("infra_monitor", "infra_monitor"),
         submissions=(
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_se5_sub1", producer_id="infra_monitor",
                 producer_role="infra_monitor", timestamp="2026-01-10T14:00:00Z",
                 evidence_context=(ev_se5_down,),
-                candidate_beliefs=(b_se5_avail,),
+                candidate_beliefs=(),
                 candidate_edges=(edge_se5_block,),
             ),
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_se5_sub2", producer_id="infra_monitor",
                 producer_role="infra_monitor", timestamp="2026-01-10T15:00:00Z",
                 evidence_context=(ev_se5_down, ev_se5_up),
@@ -347,19 +481,19 @@ def get_fc_dev_episodes() -> List[FixedCandidateEpisode]:
         source_evidence_ids=("ev_se6_mem",),
     )
 
-    episodes.append(FixedCandidateEpisode(
+    episodes.append(_FCEpisodeBuilder(
         episode_id="fc_se_duplicate_evidence",
         domain="software_engineering",
         failure_type="duplicate_evidence",
         subagent_roles=("perf_monitor_a", "perf_monitor_b"),
         submissions=(
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_se6_sub1", producer_id="perf_monitor_a",
                 producer_role="perf_monitor", timestamp="2026-01-10T11:00:00Z",
                 evidence_context=(ev_se6_mem,),
                 candidate_beliefs=(b_se6_mem,), candidate_edges=(),
             ),
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_se6_sub2", producer_id="perf_monitor_b",
                 producer_role="perf_monitor", timestamp="2026-01-10T11:05:00Z",
                 evidence_context=(ev_se6_mem,),
@@ -398,13 +532,13 @@ def get_fc_dev_episodes() -> List[FixedCandidateEpisode]:
         verifier="config_auditor",
     )
 
-    episodes.append(FixedCandidateEpisode(
+    episodes.append(_FCEpisodeBuilder(
         episode_id="fc_se_ambiguous_update",
         domain="software_engineering",
         failure_type="ambiguous_update",
         subagent_roles=("config_auditor",),
         submissions=(
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_se7_sub1", producer_id="config_auditor",
                 producer_role="config_auditor", timestamp="2026-01-10T13:00:00Z",
                 evidence_context=(ev_se7_config,),
@@ -456,19 +590,19 @@ def get_fc_dev_episodes() -> List[FixedCandidateEpisode]:
         verifier="crawler_b", replacement_belief_id="b_rw1_2025",
     )
 
-    episodes.append(FixedCandidateEpisode(
+    episodes.append(_FCEpisodeBuilder(
         episode_id="fc_rw_cross_agent_conflict",
         domain="research_workflow",
         failure_type="cross_agent_conflict",
         subagent_roles=("crawler_a", "crawler_b"),
         submissions=(
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_rw1_sub1", producer_id="crawler_a",
                 producer_role="crawler", timestamp="2026-02-01T10:00:00Z",
                 evidence_context=(ev_rw1_2024,),
                 candidate_beliefs=(b_rw1_2024,), candidate_edges=(),
             ),
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_rw1_sub2", producer_id="crawler_b",
                 producer_role="crawler", timestamp="2026-02-01T11:00:00Z",
                 evidence_context=(ev_rw1_2024, ev_rw1_2025),
@@ -518,19 +652,19 @@ def get_fc_dev_episodes() -> List[FixedCandidateEpisode]:
         verifier="data_curator", replacement_belief_id="b_rw2_50k",
     )
 
-    episodes.append(FixedCandidateEpisode(
+    episodes.append(_FCEpisodeBuilder(
         episode_id="fc_rw_direct_supersession",
         domain="research_workflow",
         failure_type="direct_supersession",
         subagent_roles=("data_curator",),
         submissions=(
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_rw2_sub1", producer_id="data_curator",
                 producer_role="data_curator", timestamp="2026-02-01T09:00:00Z",
                 evidence_context=(ev_rw2_10k,),
                 candidate_beliefs=(b_rw2_10k,), candidate_edges=(),
             ),
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_rw2_sub2", producer_id="data_curator",
                 producer_role="data_curator", timestamp="2026-02-01T14:00:00Z",
                 evidence_context=(ev_rw2_10k, ev_rw2_50k),
@@ -589,20 +723,20 @@ def get_fc_dev_episodes() -> List[FixedCandidateEpisode]:
         verifier="abstract_crawler",
     )
 
-    episodes.append(FixedCandidateEpisode(
+    episodes.append(_FCEpisodeBuilder(
         episode_id="fc_rw_stale_propagation",
         domain="research_workflow",
         failure_type="stale_propagation",
         subagent_roles=("benchmark_reader", "abstract_crawler"),
         submissions=(
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_rw3_sub1", producer_id="benchmark_reader",
                 producer_role="benchmark_reader", timestamp="2026-02-01T12:00:00Z",
                 evidence_context=(ev_rw3_old, ev_rw3_new),
                 candidate_beliefs=(b_rw3_old, b_rw3_new),
                 candidate_edges=(edge_rw3_super,),
             ),
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_rw3_sub2", producer_id="abstract_crawler",
                 producer_role="abstract_crawler", timestamp="2026-02-01T12:30:00Z",
                 evidence_context=(ev_rw3_old, ev_rw3_new, ev_rw3_stale),
@@ -639,13 +773,13 @@ def get_fc_dev_episodes() -> List[FixedCandidateEpisode]:
         source_evidence_ids=("ev_rw4_method",),
     )
 
-    episodes.append(FixedCandidateEpisode(
+    episodes.append(_FCEpisodeBuilder(
         episode_id="fc_rw_scope_expansion",
         domain="research_workflow",
         failure_type="scope_expansion",
         subagent_roles=("methodology_reader",),
         submissions=(
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_rw4_sub1", producer_id="methodology_reader",
                 producer_role="methodology_reader", timestamp="2026-02-01T09:00:00Z",
                 evidence_context=(ev_rw4_method,),
@@ -694,20 +828,20 @@ def get_fc_dev_episodes() -> List[FixedCandidateEpisode]:
         verifier="crawl_agent",
     )
 
-    episodes.append(FixedCandidateEpisode(
+    episodes.append(_FCEpisodeBuilder(
         episode_id="fc_rw_temporary_blocker_recovery",
         domain="research_workflow",
         failure_type="temporary_blocker_recovery",
         subagent_roles=("crawl_agent", "crawl_agent"),
         submissions=(
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_rw5_sub1", producer_id="crawl_agent",
                 producer_role="crawl_agent", timestamp="2026-02-01T13:00:00Z",
                 evidence_context=(ev_rw5_paywall,),
-                candidate_beliefs=(b_rw5_cited,),
+                candidate_beliefs=(),
                 candidate_edges=(edge_rw5_block,),
             ),
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_rw5_sub2", producer_id="crawl_agent",
                 producer_role="crawl_agent", timestamp="2026-02-01T16:00:00Z",
                 evidence_context=(ev_rw5_paywall, ev_rw5_preprint),
@@ -742,19 +876,19 @@ def get_fc_dev_episodes() -> List[FixedCandidateEpisode]:
         source_evidence_ids=("ev_rw6_cite",),
     )
 
-    episodes.append(FixedCandidateEpisode(
+    episodes.append(_FCEpisodeBuilder(
         episode_id="fc_rw_duplicate_evidence",
         domain="research_workflow",
         failure_type="duplicate_evidence",
         subagent_roles=("citation_crawler_a", "citation_crawler_b"),
         submissions=(
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_rw6_sub1", producer_id="citation_crawler_a",
                 producer_role="citation_crawler", timestamp="2026-02-01T11:00:00Z",
                 evidence_context=(ev_rw6_cite,),
                 candidate_beliefs=(b_rw6_cite,), candidate_edges=(),
             ),
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_rw6_sub2", producer_id="citation_crawler_b",
                 producer_role="citation_crawler", timestamp="2026-02-01T11:05:00Z",
                 evidence_context=(ev_rw6_cite,),
@@ -793,13 +927,13 @@ def get_fc_dev_episodes() -> List[FixedCandidateEpisode]:
         verifier="repro_checker",
     )
 
-    episodes.append(FixedCandidateEpisode(
+    episodes.append(_FCEpisodeBuilder(
         episode_id="fc_rw_ambiguous_update",
         domain="research_workflow",
         failure_type="ambiguous_update",
         subagent_roles=("repro_checker",),
         submissions=(
-            FixedCandidateSubmission(
+            _FCSubmissionBuilder(
                 submission_id="fc_rw7_sub1", producer_id="repro_checker",
                 producer_role="repro_checker", timestamp="2026-02-01T15:00:00Z",
                 evidence_context=(ev_rw7_repro,),
@@ -823,4 +957,4 @@ def get_fc_dev_episodes() -> List[FixedCandidateEpisode]:
         stress_factors={"conflict_density": 0.3, "delay_depth": 0},
     ))
 
-    return episodes
+    return [_convert_builder_to_fair_contracts(ep) for ep in episodes]
