@@ -5,23 +5,14 @@ repository.
 
 ## Current State
 
-Dynamic branch, HEAD, smoke, and validation status live only in
-`docs/implementation_status.md`. This file contains stable agent instructions,
-not volatile run status.
+Dynamic branch, HEAD, smoke, and validation status live only in `README.md`. This file contains stable agent instructions, not volatile run status.
 
 ## Canonical Reading Order
 
 Read only these active authority documents before method work:
 
 1. `AGENTS.md`
-2. `docs/method_spec_dpa.md`
-3. `docs/stage_ab_protocol.md`
-4. `docs/implementation_status.md`
-5. `docs/upstream_integration.md`
-6. `docs/coding_contract.md`
-7. `docs/repository_execution_contract.md`
-8. `docs/stage_c_report.md`
-9. `docs/paper1_blueprint_zh.md`
+2. `README.md`
 
 Legacy planning documents and old raw source-material files are no longer
 active authority. Git history preserves them.
@@ -188,3 +179,72 @@ Full offline tests:
 
 Do not run live providers or official benchmark evaluation unless a later task
 explicitly authorizes that stage.
+
+## Pluggable Authorization Algorithm Contract
+
+### 1. State
+At update step `t`:
+```text
+S_t = (E_t, B_t, C_t, R_t, D_t)
+```
+where:
+- `E_t`: append-only evidence ledger;
+- `B_t`: open-text belief nodes;
+- `C_t`: scoped condition nodes;
+- `R_t`: `REQUIRES` dependency edges from beliefs to conditions;
+- `D_t`: admitted typed evidence-effect edges.
+
+### 2. Evidence preservation
+For new evidence `e_t`:
+```text
+E_t = E_(t-1) ∪ {e_t}
+```
+Revision does not delete or silently rewrite original evidence.
+
+### 3. Bounded local semantic proposal
+Given new evidence `e_t` and a bounded candidate neighborhood `N_t`, a semantic proposer may generate:
+```text
+Δ_hat_t = g_theta(e_t, N_t)
+```
+with candidate typed effects only from:
+- `BLOCKS(evidence, condition)`
+- `RELEASES(evidence, condition)`
+- `SUPERSEDES(evidence, prior_belief, replacement_belief)`
+- `REAFFIRMS(evidence, belief)`
+- `UNCERTAIN(evidence, belief)`
+
+### 4. Structural admission
+`RevisionGate` admits structurally valid and grounded proposed effects:
+```text
+Δ_t = Γ(Δ_hat_t ; S_(t-1))
+```
+Rejected proposals are recorded for audit and do not enter the admitted graph.
+
+### 5. Deterministic authorization
+For any candidate belief `b`:
+```text
+A_t(b) = DPA(b, S_t) ∈ {AUTHORIZED, BLOCKED, SUPERSEDED, UNRESOLVED}
+```
+with canonical precedence:
+```text
+SUPERSEDES > PREREQUISITE_BLOCK > UNRESOLVED_UNCERTAIN > AUTHORIZED
+```
+Temporal tie-breaking must remain deterministic using canonical ordering data already present in the implementation.
+
+### 6. Query-time authorized basis
+For a candidate set `K(q)` supplied by an external upstream component:
+```text
+M_t(q) = { b ∈ K(q) | A_t(b) = AUTHORIZED }
+```
+ReTrace authorizes candidates. It does not need to become the extractor, retriever, answer generator, agent runtime, or memory database.
+
+### 7. Trace output
+For excluded or unresolved beliefs, return or preserve traceable records including, as supported by current types:
+- `belief_id`
+- `final_status`
+- `source_evidence_ids`
+- `admitted typed edge ids`
+- `rejected proposal records and rejection reasons`
+- `accepted defeat path`
+- `model call trace ids`, where relevant
+- optional external producer provenance
