@@ -180,3 +180,40 @@ class TestFixedCandidateRunner:
         """14 episodes × 4 methods × 8 metrics = 448 rows."""
         res = run_fc_comparison("offline_replay")
         assert res["results_count"] == 14 * 4 * 8
+
+    def test_output_rows_contain_all_fields(self):
+        res = run_fc_comparison("offline_replay")
+        required_fields = {
+            "run_id", "episode_id", "domain", "failure_type", "protocol_mode",
+            "scientific_status", "split", "method_name", "backbone_model", "proposal_source",
+            "candidate_source", "number_of_subagents", "number_of_submissions", "role_diversity",
+            "conflict_density", "delay_depth", "recovery_present", "metric_name", "metric_value",
+            "trace_available", "calls", "tokens", "latency_ms"
+        }
+        with open(res["jsonl_path"], "r", encoding="utf-8") as f:
+            for line in f:
+                row = json.loads(line)
+                for fld in required_fields:
+                    assert fld in row, f"Missing field {fld} in output row"
+
+
+class TestPlotDataValidator:
+    def test_validator_accepts_valid_inputs(self):
+        from experiments.multiagent.validate_plot_inputs import validate_plot_inputs
+        # Should run without raising SystemExit or Exception
+        validate_plot_inputs(
+            results_path="outputs/fc_method_results.jsonl",
+            details_path="outputs/fc_run_details.json",
+            official=False
+        )
+
+    def test_validator_fails_on_official_with_development_data(self):
+        from experiments.multiagent.validate_plot_inputs import validate_plot_inputs
+        with pytest.raises(SystemExit) as excinfo:
+            validate_plot_inputs(
+                results_path="outputs/fc_method_results.jsonl",
+                details_path="outputs/fc_run_details.json",
+                official=True
+            )
+        assert excinfo.value.code == 1
+
