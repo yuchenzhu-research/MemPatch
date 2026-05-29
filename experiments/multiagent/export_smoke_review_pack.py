@@ -165,6 +165,12 @@ def export_smoke_review_pack() -> Dict[str, Any]:
         "md_sha256": md_hash,
         "jsonl_sha256": jsonl_hash,
         "review_status": "pending_human_review",
+        "eligible_for_smoke": False,
+        "decision_counts": {
+            "APPROVE": 0,
+            "REVISE": 0,
+            "REJECT": 0
+        },
         "notes": "Selects 7 pending examples for human review before execution."
     }
     manifest_path = "outputs/stagec_smoke7_review_manifest.json"
