@@ -107,7 +107,7 @@ work:
 
 ## Safe Next Boundary
 
-The next boundary is not official benchmark evaluation.
+The next boundary is the scientific hardening of the STALE pathway and evaluation protocol. It is not Stage C and not another Memora expansion.
 
 Stage A v1 controlled semantics are retained. The per-belief verifier path
 (`ControlledReTraceLLM`) is the auditable controlled reference implementation.
@@ -120,11 +120,12 @@ path that preserves the same typed-edge vocabulary, RevisionGate, and DPA
 semantics while reducing repeated semantic-model calls.
 
 The primary external benchmark is the official frozen STALE 400-case dataset
-(`STALEproj/STALE`, file `T1_T2_400_FULL.json`, license CC BY 4.0). It is
-publicly released and is downloaded into the gitignored
-`data_external/stale_official_frozen/` directory. The previously claimed
-unavailability of the frozen STALE data is no longer accurate and must not be
-repeated.
+(`STALEproj/STALE`, file `T1_T2_400_FULL.json`, license CC BY 4.0), which is
+publicly released and downloaded into the gitignored
+`data_external/stale_official_frozen/` directory. STALE end-to-end evaluation
+is explicitly labeled as a secondary external answer-level evaluation. The
+primary controlled structural-attribution proof remains the fixed
+`SharedCandidateView` comparison.
 
 The Memora oracle-conditioned 30-question execution is retained only as an
 internal rejected-pilot/adapter-misalignment artifact. It must not be rerun and
@@ -142,14 +143,14 @@ prohibition is against directly injecting the separate gold fields or
 
 Completed and retained:
 
-- validated AB-1B controlled offline protocol;
+- validated AB-1A.5 and AB-1B controlled offline protocol;
 - provider/cache/manifest scaffolding;
 - secondary end-to-end development runner scaffolding;
 - official frozen STALE adapter and offline non-leaking Stage A/B wiring
   scaffolding;
 - legacy STALE smoke/dry-run scaffolding (kept for history, not the canonical
   STALE entrypoint);
-- Ambiguity-and-Scope internal feasibility diagnostic.
+- Ambiguity-and-Scope internal feasibility diagnostic (completed and retained as a feasibility diagnostic).
 
 Deferred or prohibited for the current task:
 
