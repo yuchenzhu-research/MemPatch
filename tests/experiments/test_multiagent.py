@@ -11,7 +11,7 @@ from retracemem.schemas import (
 )
 from retracemem.authorization import EvidenceProposalBatch
 from retracemem.multiagent.contracts import SubagentMemorySubmission, SharedMemoryCommitResult
-from retracemem.multiagent.commit import commit_subagent_submission, order_subagent_submissions
+from retracemem.multiagent.commit import commit_subagent_submission, order_subagent_submissions, commit_submission_sequence
 from experiments.cupmem_adapter import CupMemRevisionCandidate, map_cupmem_candidate_to_subagent_submission
 
 
@@ -124,3 +124,52 @@ def test_cupmem_candidate_mapping():
     assert sub.submission_id == "sub_c_1"
     assert sub.task_id == "task_cup"
     assert sub.metadata == {"task_id": "task_cup"}
+
+
+def test_commit_submission_sequence_basic():
+    ev_1 = EvidenceNode(
+        evidence_id="e_1", session_id="s_1", timestamp="2026-05-29T10:00:00Z",
+        text="Deploy in us-east-1.", source_dataset="t", source_pointer="p"
+    )
+    ev_2 = EvidenceNode(
+        evidence_id="e_2", session_id="s_1", timestamp="2026-05-29T11:00:00Z",
+        text="Deploy changed to eu-west-1.", source_dataset="t", source_pointer="p"
+    )
+    b_east = BeliefNode(belief_id="b_east", proposition="Deploy in us-east-1.", source_evidence_ids=("e_1",))
+    b_west = BeliefNode(belief_id="b_west", proposition="Deploy in eu-west-1.", source_evidence_ids=("e_2",))
+
+    edge_super = EvidenceEdge(
+        edge_id="edge_super", edge_type=EvidenceEdgeType.SUPERSEDES,
+        evidence_id="e_2", target_kind="belief", target_id="b_east",
+        verifier="deployer", replacement_belief_id="b_west"
+    )
+
+    sub1 = SubagentMemorySubmission(
+        submission_id="sub_1", producer_id="agent_1", producer_role="role",
+        parent_snapshot_id="snap_0", observed_at="2026-05-29T10:00:00Z",
+        instance_id="inst_1", query_id="q_1", query="Q",
+        evidence_context=(ev_1,), new_evidence_id="e_1",
+        candidate_beliefs=(b_east,)
+    )
+
+    sub2 = SubagentMemorySubmission(
+        submission_id="sub_2", producer_id="agent_1", producer_role="role",
+        parent_snapshot_id="snap_1", observed_at="2026-05-29T11:00:00Z",
+        instance_id="inst_1", query_id="q_1", query="Q",
+        evidence_context=(ev_1, ev_2), new_evidence_id="e_2",
+        candidate_beliefs=(),
+        candidate_replacement_beliefs=(b_west,),
+        proposal_batches=(EvidenceProposalBatch(edges=(edge_super,)),)
+    )
+
+    # Execute sequence commit
+    seq_res = commit_submission_sequence((sub1, sub2), final_snapshot_evaluation=True)
+
+    assert seq_res.initial_snapshot_id == "snap_0"
+    assert seq_res.final_snapshot_id is not None
+    assert len(seq_res.submission_results) == 2
+    assert seq_res.final_belief_statuses.get("b_east") == "SUPERSEDED"
+    assert seq_res.final_belief_statuses.get("b_west") == "AUTHORIZED"
+    assert seq_res.final_authorized_belief_ids == ("b_west",)
+    assert seq_res.final_excluded_belief_ids == ("b_east",)
+    assert seq_res.trace["number_of_submissions"] == 2
