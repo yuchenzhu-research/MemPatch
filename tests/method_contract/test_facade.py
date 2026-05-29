@@ -4,12 +4,7 @@ import json
 import pytest
 
 from retracemem.methods.contracts import SharedCandidateView
-from retracemem.methods.facade import (
-    AuthorizationRequest,
-    AuthorizationResult,
-    AuthorizationFacade,
-)
-from retracemem.methods.authorization_executor import ProposedEvidenceEdges
+from retracemem.authorization import authorize, EvidenceProposalBatch
 from retracemem.schemas import (
     BeliefNode,
     ConditionNode,
@@ -83,12 +78,11 @@ def _make_view() -> SharedCandidateView:
     )
 
 
-def test_facade_basic_authorization() -> None:
+def test_authorize_basic_functionality() -> None:
     view = _make_view()
-    req = AuthorizationRequest(view=view, provenance={"source_system": "subagent_1"})
 
     # BLOCKS edge proposal
-    proposed = ProposedEvidenceEdges(
+    proposed = EvidenceProposalBatch(
         edges=(
             EvidenceEdge(
                 edge_id="ev:ev_new:BLOCKS:c_leg",
@@ -102,18 +96,17 @@ def test_facade_basic_authorization() -> None:
         model_call_trace_id="call_trace_123",
     )
 
-    res = AuthorizationFacade.authorize(req, (proposed,))
+    res = authorize(view, (proposed,), audit_metadata={"source_system": "subagent_1"})
 
     assert "b_bike" in res.excluded_belief_ids
     assert "b_bike" not in res.authorized_belief_ids
-    assert res.fine_grained_statuses["b_bike"] == "BLOCKED"
-    assert res.provenance == {"source_system": "subagent_1"}
+    assert res.trace["fine_grained_statuses"]["b_bike"] == "BLOCKED"
     assert res.trace["source_system"] == "subagent_1"
 
 
-def test_facade_provenance_invariance() -> None:
+def test_authorize_provenance_invariance() -> None:
     view = _make_view()
-    proposed = ProposedEvidenceEdges(
+    proposed = EvidenceProposalBatch(
         edges=(
             EvidenceEdge(
                 edge_id="ev:ev_new:BLOCKS:c_leg",
@@ -127,26 +120,22 @@ def test_facade_provenance_invariance() -> None:
         model_call_trace_id="call_trace_123",
     )
 
-    req1 = AuthorizationRequest(view=view, provenance={"source_system": "sys_a", "run_id": "1"})
-    req2 = AuthorizationRequest(view=view, provenance={"source_system": "sys_b", "run_id": "2"})
-
-    res1 = AuthorizationFacade.authorize(req1, (proposed,))
-    res2 = AuthorizationFacade.authorize(req2, (proposed,))
+    res1 = authorize(view, (proposed,), audit_metadata={"source_system": "sys_a", "run_id": "1"})
+    res2 = authorize(view, (proposed,), audit_metadata={"source_system": "sys_b", "run_id": "2"})
 
     # The metadata should not change DPA outcomes
-    assert res1.fine_grained_statuses == res2.fine_grained_statuses
+    assert res1.trace["fine_grained_statuses"] == res2.trace["fine_grained_statuses"]
     assert res1.authorized_belief_ids == res2.authorized_belief_ids
     assert res1.excluded_belief_ids == res2.excluded_belief_ids
 
 
-def test_facade_json_serializable() -> None:
+def test_authorize_json_serializable() -> None:
     view = _make_view()
-    proposed = ProposedEvidenceEdges(
+    proposed = EvidenceProposalBatch(
         edges=(),
         model_call_trace_id="trace_empty",
     )
-    req = AuthorizationRequest(view=view, provenance={"producer_kind": "agent"})
-    res = AuthorizationFacade.authorize(req, (proposed,))
+    res = authorize(view, (proposed,), audit_metadata={"producer_kind": "agent"})
 
     # Verify serialization does not raise error
     serialized_trace = json.dumps(res.trace)

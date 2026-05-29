@@ -3,20 +3,35 @@
 Uses a single semantic-model call to predict typed edges for all candidate
 beliefs, then admits each through RevisionGate and runs DPA identically to
 the per-belief ``ControlledReTraceLLM`` reference path.
-
-Critical invariant: for the same accepted edge set, batched and per-belief
-paths yield identical Gate/DPA authorization results.
 """
 from __future__ import annotations
 
-from retracemem.methods.authorization_executor import (
-    ProposedEvidenceEdges,
-    cost_delta,
-    execute_authorization,
-)
+from typing import Any
+from retracemem.authorization import authorize, EvidenceProposalBatch
 from retracemem.methods.contracts import ControlledMethodResult, SharedCandidateView
 from retracemem.providers.cached_client import CachedLLMClient
 from retracemem.verifier.prompt_batched_evidence_edge_verifier import PromptBatchedEvidenceEdgeVerifier
+
+
+def cost_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
+    tokens_before = before.get("tokens", {})
+    tokens_after = after.get("tokens", {})
+    calls_before = before.get("calls", {})
+    calls_after = after.get("calls", {})
+    return {
+        "latency_ms": after.get("latency_ms", 0.0) - before.get("latency_ms", 0.0),
+        "tokens": {
+            "prompt": tokens_after.get("prompt", 0) - tokens_before.get("prompt", 0),
+            "completion": tokens_after.get("completion", 0) - tokens_before.get("completion", 0),
+            "total": tokens_after.get("total", 0) - tokens_before.get("total", 0),
+        },
+        "calls": {
+            key: calls_after.get(key, 0) - calls_before.get(key, 0)
+            for key in set(calls_after) | set(calls_before)
+        },
+        "cache_hits": after.get("cache_hits", 0) - before.get("cache_hits", 0),
+        "cache_misses": after.get("cache_misses", 0) - before.get("cache_misses", 0),
+    }
 
 
 class BatchedControlledReTraceLLM:
@@ -45,16 +60,16 @@ class BatchedControlledReTraceLLM:
             temporal_context=view.evidence_context,
         )
 
-        execution = execute_authorization(
+        execution = authorize(
             view,
             (
-                ProposedEvidenceEdges(
+                EvidenceProposalBatch(
                     edges=batch.proposed_edges,
                     model_call_trace_id=batch.model_call_trace_id,
                     metadata=batch.metadata,
                 ),
             ),
-            base_provenance={
+            audit_metadata={
                 "execution_mode": "batched_local_edges_v1",
                 "prompt_version": self.edge_verifier.prompt_version,
                 "prompt_hash": self.edge_verifier._template_hash,
@@ -73,7 +88,8 @@ class BatchedControlledReTraceLLM:
             query_id=view.query_id,
             authorized_belief_ids=execution.authorized_belief_ids,
             excluded_belief_ids=execution.excluded_belief_ids,
-            model_call_trace_ids=execution.model_call_trace_ids,
+            model_call_trace_ids=execution.trace.get("model_call_trace_ids", ()),
             cost=cost_delta(cost_before, cost_after),
-            provenance=execution.provenance,
+            provenance=execution.trace,
         )
+
