@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 
@@ -278,3 +279,78 @@ def test_loads_real_official_dataset_when_available() -> None:
     assert len(records) == 400
     types = {r.evaluator_only.type for r in records}
     assert types == {"T1", "T2"}
+
+
+def test_stale_runner_modes_and_ingestion_gating(tmp_path: Path) -> None:
+    # 1. Test StaleLiveRunConfig default chunk size is 1
+    config = StaleLiveRunConfig()
+    assert config.ingest_chunk_size == 1
+
+    # 2. Test run_stale_official_frozen_eval argparse defaults and parser
+    import sys
+    from unittest.mock import patch
+    import scripts.run_stale_official_frozen_eval as run_script
+
+    # Helper to run main with mocked args
+    def run_main_with_args(args_list):
+        with patch.object(sys, "argv", ["run_stale_official_frozen_eval.py"] + args_list):
+            run_script.main()
+
+    # Test estimate mode works and prints JSON without network
+    with patch("builtins.print") as mock_print:
+        run_main_with_args(["--mode", "estimate", "--dataset-path", str(_write_dataset(tmp_path, [_record("u1")]))])
+        assert mock_print.called
+
+    # Test official-eval fails without confirm flag
+    with pytest.raises(SystemExit) as exc:
+        run_main_with_args(["--mode", "official-eval"])
+    assert "requires the explicit opt-in confirmation flag" in str(exc.value)
+
+    # Test official-eval fails if chunk_size > 1 and not allowed
+    with pytest.raises(ValueError) as exc_val:
+        run_main_with_args(["--mode", "official-eval", "--i-confirm-official-evaluation", "--ingest-chunk-size", "2"])
+    assert "Official evaluation must use canonical ingest_chunk_size = 1" in str(exc_val.value)
+
+
+def test_manifest_canonical_ingestion_flag(tmp_path: Path) -> None:
+    # Test canonical_ingestion value in live generation logic
+    from retracemem.adapters.stale_official_runner import run_live_stageab_generation
+    
+    path = _write_dataset(tmp_path, [_record("u1")])
+    config_canonical = StaleLiveRunConfig(
+        dataset_path=str(path),
+        output_dir=str(tmp_path / "out_canonical"),
+        limit_t1=1,
+        limit_t2=0,
+        ingest_chunk_size=1,
+    )
+    
+    # We mock the make_live_client and pipeline builders to avoid network
+    with patch("retracemem.adapters.stale_official_runner.make_live_client"), \
+         patch("retracemem.adapters.stale_official_runner.build_live_stage_a_pipeline"), \
+         patch("retracemem.adapters.stale_official_runner.build_live_stage_b_pipeline"), \
+         patch("retracemem.adapters.stale_official_runner.run_scenario", return_value=({}, {}, ["ev1"])):
+        
+        res = run_live_stageab_generation(config_canonical)
+        manifest = res["manifest"]
+        assert manifest["canonical_ingestion"] is True
+        assert manifest["approximate_chunked_ingestion"] is False
+
+    config_non_canonical = StaleLiveRunConfig(
+        dataset_path=str(path),
+        output_dir=str(tmp_path / "out_non_canonical"),
+        limit_t1=1,
+        limit_t2=0,
+        ingest_chunk_size=2,
+    )
+
+    with patch("retracemem.adapters.stale_official_runner.make_live_client"), \
+         patch("retracemem.adapters.stale_official_runner.build_live_stage_a_pipeline"), \
+         patch("retracemem.adapters.stale_official_runner.build_live_stage_b_pipeline"), \
+         patch("retracemem.adapters.stale_official_runner.run_scenario", return_value=({}, {}, ["ev1"])):
+        
+        res = run_live_stageab_generation(config_non_canonical)
+        manifest = res["manifest"]
+        assert manifest["canonical_ingestion"] is False
+        assert manifest["approximate_chunked_ingestion"] is True
+

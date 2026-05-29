@@ -46,7 +46,7 @@ def main() -> None:
     parser = argparse.ArgumentParser(
         description="Official frozen STALE Stage A/B runner.",
     )
-    parser.add_argument("--mode", choices=("replay", "estimate", "live-dev", "evaluate"), default="replay")
+    parser.add_argument("--mode", choices=("replay", "estimate", "live-dev", "official-eval"), default="replay")
     parser.add_argument(
         "--dataset-path",
         default="data_external/stale_official_frozen/T1_T2_400_FULL.json",
@@ -65,10 +65,18 @@ def main() -> None:
     parser.add_argument("--max-calls", type=int, default=500)
     parser.add_argument("--max-tokens", type=int, default=2_000_000)
     parser.add_argument("--evaluator-concurrency", type=int, default=2)
-    parser.add_argument("--ingest-chunk-size", type=int, default=10)
+    parser.add_argument("--ingest-chunk-size", type=int, default=1)
+    parser.add_argument("--i-confirm-official-evaluation", action="store_true")
+    parser.add_argument("--allow-non-canonical-chunk-evaluation", action="store_true")
     args = parser.parse_args()
 
-    if args.mode in ("estimate", "live-dev"):
+    if args.mode in ("estimate", "live-dev", "official-eval"):
+        if args.mode == "official-eval":
+            if not args.i_confirm_official_evaluation:
+                raise SystemExit("Error: --mode official-eval requires the explicit opt-in confirmation flag --i-confirm-official-evaluation")
+            if args.ingest_chunk_size > 1 and not args.allow_non_canonical_chunk_evaluation:
+                raise ValueError("Error: Official evaluation must use canonical ingest_chunk_size = 1. To override, use --allow-non-canonical-chunk-evaluation")
+
         if load_dotenv is not None:
             load_dotenv(Path(__file__).resolve().parents[1] / ".env")
         config = StaleLiveRunConfig(
@@ -94,33 +102,37 @@ def main() -> None:
         if manifest["errors"]:
             print(json.dumps(manifest, indent=2, ensure_ascii=False))
             raise SystemExit(1)
-        run_official_evaluator(
-            answers_path=manifest["stage_a_export"],
-            dataset_path=manifest["selected_subset_path"],
-            output_path=str(Path(args.output_dir) / "stage_a_official_eval.json"),
-            model_method="stage_a_retrace",
-            conflict_type="stage_a",
-            judge_provider=args.judge_provider,
-            judge_model=args.judge_model,
-            concurrency=args.evaluator_concurrency,
-            timeout=args.http_timeout_seconds,
-        )
-        run_official_evaluator(
-            answers_path=manifest["stage_b_export"],
-            dataset_path=manifest["selected_subset_path"],
-            output_path=str(Path(args.output_dir) / "stage_b_official_eval.json"),
-            model_method="stage_b_directjudge",
-            conflict_type="stage_b",
-            judge_provider=args.judge_provider,
-            judge_model=args.judge_model,
-            concurrency=args.evaluator_concurrency,
-            timeout=args.http_timeout_seconds,
-        )
+
+        if args.mode == "official-eval":
+            run_official_evaluator(
+                answers_path=manifest["stage_a_export"],
+                dataset_path=manifest["selected_subset_path"],
+                output_path=str(Path(args.output_dir) / "stage_a_official_eval.json"),
+                model_method="stage_a_retrace",
+                conflict_type="stage_a",
+                judge_provider=args.judge_provider,
+                judge_model=args.judge_model,
+                concurrency=args.evaluator_concurrency,
+                timeout=args.http_timeout_seconds,
+            )
+            run_official_evaluator(
+                answers_path=manifest["stage_b_export"],
+                dataset_path=manifest["selected_subset_path"],
+                output_path=str(Path(args.output_dir) / "stage_b_official_eval.json"),
+                model_method="stage_b_directjudge",
+                conflict_type="stage_b",
+                judge_provider=args.judge_provider,
+                judge_model=args.judge_model,
+                concurrency=args.evaluator_concurrency,
+                timeout=args.http_timeout_seconds,
+            )
+            manifest["official_judge_evaluation_executed"] = True
+            # Write updated manifest back with evaluation status
+            manifest_path = Path(result["manifest_path"])
+            manifest_path.write_text(json.dumps(manifest, indent=2, ensure_ascii=False), encoding="utf-8")
+
         print(json.dumps(manifest, indent=2, ensure_ascii=False))
         return
-
-    if args.mode == "evaluate":
-        raise SystemExit("--mode evaluate is reserved; use --mode live-dev to run generation plus evaluator.")
 
     cache_dir = Path(args.output_dir) / "caches"
     client_a = make_offline_client(cache_dir / "stage_a.jsonl")
