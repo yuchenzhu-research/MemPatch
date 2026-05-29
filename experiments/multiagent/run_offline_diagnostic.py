@@ -52,6 +52,31 @@ def evaluate_scenario(
     return retrace_statuses, naive_statuses, traces
 
 
+def check_trace_completeness(all_traces: dict[str, list[dict[str, Any]]]) -> bool:
+    for name, traces in all_traces.items():
+        for commit_trace in traces:
+            # 1. Check producer/submission provenance present in commit trace
+            required_prov = {"producer_id", "producer_role", "submission_id", "observed_at", "next_snapshot_id"}
+            if not all(k in commit_trace for k in required_prov):
+                return False
+            # 2. Check view_fingerprint present
+            if "view_fingerprint" not in commit_trace:
+                return False
+            # 3. Check auth_trace / fine_grained_statuses / defeat path when blocked/superseded
+            auth_trace = commit_trace.get("auth_trace", {})
+            fine_grained = auth_trace.get("fine_grained_statuses", {})
+            if not fine_grained:
+                return False
+            defeat_paths = auth_trace.get("defeat_paths", [])
+            for bid, status in fine_grained.items():
+                if status in ("BLOCKED", "SUPERSEDED"):
+                    # Check if any defeat path targets this belief
+                    has_path = any(p.get("belief_id") == bid for p in defeat_paths)
+                    if not has_path:
+                        return False
+    return True
+
+
 def main() -> None:
     fixtures = get_diagnostic_fixtures()
     results: dict[str, Any] = {}
@@ -76,7 +101,6 @@ def main() -> None:
     total_retrace = 0
     protected_preservations = []
     unsupported_overwrite_count = 0
-    recovery_correct = 0
     replay_consistent = True
 
     all_scenario_traces = {}
@@ -113,19 +137,29 @@ def main() -> None:
             first_commute_status = first_commit.authorization_result.trace["fine_grained_statuses"].get("b_commute")
             if first_commute_status != "BLOCKED":
                 unsupported_overwrite_count += 1
-            # Recovery Correctness
-            if retrace_res.get("b_commute") == "AUTHORIZED":
-                recovery_correct += 1
+
+    # Recovery Correctness
+    recovery_correctness = 1.0
+    temp_blocker_subs = fixtures.get("temporary_blocker")
+    if temp_blocker_subs:
+        retrace_res, _, _ = evaluate_scenario("temporary_blocker", temp_blocker_subs)
+        if retrace_res.get("b_commute") == "AUTHORIZED":
+            recovery_correctness = 1.0
+        else:
+            recovery_correctness = 0.0
+
+    trace_completeness = check_trace_completeness(all_scenario_traces)
 
     # Summarize Metrics
     metrics = {
         "authorization_status_accuracy": correct_retrace / total_retrace if total_retrace > 0 else 0.0,
         "protected_belief_preservation": sum(protected_preservations) / len(protected_preservations) if protected_preservations else 1.0,
         "unsupported_overwrite_count": unsupported_overwrite_count,
-        "recovery_correctness": recovery_correct / 1.0 if name == "temporary_blocker" else 1.0,
-        "trace_completeness": True,
+        "recovery_correctness": recovery_correctness,
+        "trace_completeness": trace_completeness,
         "deterministic_replay_consistency": replay_consistent,
     }
+
 
     output_data = {
         "metrics": metrics,
