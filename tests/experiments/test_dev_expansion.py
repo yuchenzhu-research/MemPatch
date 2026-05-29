@@ -47,6 +47,32 @@ def test_dev_expansion_generation() -> None:
             else: # UNCERTAIN, REAFFIRMS
                 assert t.target_belief_id is not None
                 
+        # Verify Checklist
+        checklist = meta.get("semantic_checklist")
+        assert checklist is not None
+        assert checklist["has_visible_new_evidence"] is True
+        assert checklist["typed_target_ids_visible"] is True
+        assert checklist["downstream_task_defined"] is True
+        assert meta.get("semantic_validation_status", {}).get("passes_structural_checks") is True
+
+        if ep.failure_type_public_or_controlled == "temporary_blocker_recovery":
+            assert len(ep.submissions) == 3
+            assert gold.gold_typed_targets[0].action_type == "BLOCKS"
+            assert gold.gold_typed_targets[1].action_type == "RELEASES"
+            
+        elif ep.failure_type_public_or_controlled == "scope_expansion":
+            has_prot = any(b.belief_id.endswith("protected") for b in ep.submissions[-1].candidate_beliefs)
+            assert has_prot is True
+            assert gold.gold_snapshot.belief_statuses[f"b_{ep.episode_id}_protected"] == "AUTHORIZED"
+            
+        elif ep.failure_type_public_or_controlled == "duplicate_evidence":
+            assert "duplicates_evidence_id" in ep.submissions[-1].metadata
+            assert gold.gold_typed_targets[0].action_type == "NO_REVISION"
+            
+        elif ep.failure_type_public_or_controlled == "ambiguous_update":
+            assert gold.gold_typed_targets[0].action_type == "UNCERTAIN"
+            assert any("uncertainty_cue" in ev.metadata for ev in ep.submissions[-1].evidence_context)
+
     assert len(seen_combinations) == len(DOMAINS) * len(FAILURE_TYPES)
 
 
@@ -72,3 +98,28 @@ def test_select_smoke_examples_error(tmp_path) -> None:
     selected = select_smoke_examples(str(review_file), confirm_live_run=True)
     assert len(selected) == 1
     assert selected[0]["episode_id"] == "ep_1"
+
+
+def test_smoke_runner_preflight_and_live(tmp_path) -> None:
+    import json
+    config_file = tmp_path / "smoke_config.json"
+    config_file.write_text(json.dumps({
+        "run_config": {"run_id_prefix": "test_smoke", "requires_explicit_user_approval": True},
+        "model_config": {"provider": "<openai>", "backbone_model": "<select_before_run>"},
+        "dataset_config": {"split": "development_only"}
+    }))
+    
+    review_file = tmp_path / "review.jsonl"
+    review_file.write_text(
+        '{"episode_id": "ep_1", "review_status": "pending_human_review", "failure_type": "direct_supersession"}\n'
+    )
+    
+    from experiments.multiagent.run_stagec_prompt_smoke import run_preflight, run_live
+    
+    run_preflight(str(config_file), str(review_file))
+    
+    with pytest.raises(SystemExit):
+        run_live(str(config_file), str(review_file), confirm_live_run=True)
+        
+    with pytest.raises(SystemExit):
+        run_live(str(config_file), str(review_file), confirm_live_run=False)
