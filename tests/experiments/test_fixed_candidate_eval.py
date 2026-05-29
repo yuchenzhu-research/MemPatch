@@ -8,7 +8,7 @@ from experiments.multiagent.methods import (
     NaiveLastWriteWinsFixedCandidateMethod,
     AppendOnlyLexicalTopKMethod,
     DirectJudgeReplayMethod,
-    ReTraceStageAReplayMethod,
+    ReTraceProposalReplayMethod,
 )
 from experiments.multiagent.metrics import (
     compute_fixed_candidate_metrics,
@@ -24,7 +24,7 @@ class TestFixedCandidateEpisodesSchema:
 
     def test_7_failure_types_covered(self):
         episodes = get_fc_dev_episodes()
-        failure_types = {ep.failure_type for ep in episodes}
+        failure_types = {gold.failure_type for _, gold, _ in episodes}
         expected = {
             "cross_agent_conflict",
             "direct_supersession",
@@ -38,84 +38,89 @@ class TestFixedCandidateEpisodesSchema:
 
     def test_2_domains_covered(self):
         episodes = get_fc_dev_episodes()
-        domains = {ep.domain for ep in episodes}
+        domains = {ep.domain for ep, _, _ in episodes}
         assert domains == {"software_engineering", "research_workflow"}
 
     def test_each_failure_type_has_2_domains(self):
         episodes = get_fc_dev_episodes()
         coverage = {}
-        for ep in episodes:
-            coverage.setdefault(ep.failure_type, set()).add(ep.domain)
+        for ep, gold, _ in episodes:
+            coverage.setdefault(gold.failure_type, set()).add(ep.domain)
         for ft, domains in coverage.items():
             assert len(domains) == 2, f"failure_type {ft} missing domain coverage: {domains}"
 
     def test_serialization(self):
         episodes = get_fc_dev_episodes()
-        for ep in episodes:
-            data = ep.to_dict()
-            assert isinstance(data, dict)
-            assert data["episode_id"] == ep.episode_id
-            assert data["protocol_mode"] == "oracle_edge_replay"
-            assert data["proposal_source"] == "hand_authored_development"
-            assert data["split"] == "development_only"
+        for ep, gold, artifact in episodes:
+            ep_data = ep.to_dict()
+            gold_data = gold.to_dict()
+            art_data = artifact.to_dict()
+
+            assert isinstance(ep_data, dict)
+            assert isinstance(gold_data, dict)
+            assert isinstance(art_data, dict)
+
+            assert ep_data["episode_id"] == ep.episode_id
+            assert ep_data["protocol_mode"] == "fixed_candidate_revision"
+            assert ep_data["split"] == "development_only"
+            assert gold_data["failure_type"] == gold.failure_type
 
     def test_all_have_replay_decisions(self):
         episodes = get_fc_dev_episodes()
-        for ep in episodes:
-            assert len(ep.replay_decisions) > 0, f"{ep.episode_id} has no replay_decisions"
+        for ep, _, artifact in episodes:
+            # Replay decisions are sidecars inside artifact
+            assert len(artifact.direct_verdicts_by_submission) > 0, f"{ep.episode_id} has no replay direct verdicts"
 
     def test_gold_snapshot_not_empty(self):
         episodes = get_fc_dev_episodes()
-        for ep in episodes:
-            assert len(ep.gold_snapshot.belief_statuses) > 0
+        for _, gold, _ in episodes:
+            assert len(gold.gold_snapshot.belief_statuses) > 0
 
 
 class TestFixedCandidateMethods:
     def test_naive_lww_fc_authorizes_all(self):
         episodes = get_fc_dev_episodes()
         method = NaiveLastWriteWinsFixedCandidateMethod()
-        for ep in episodes:
+        for ep, _, _ in episodes:
             result = method.run_fixed_episode(ep)
             assert result.method_name == "Naive_LWW_FC"
             assert result.protocol_mode == ep.protocol_mode
             assert result.proposal_source == ep.proposal_source
-            # Should have at least one decision per episode
             assert len(result.decisions) > 0
 
     def test_append_only_topk_respects_k(self):
         episodes = get_fc_dev_episodes()
         method = AppendOnlyLexicalTopKMethod(k=2)
-        for ep in episodes:
+        for ep, _, _ in episodes:
             result = method.run_fixed_episode(ep)
             authorized = [bid for bid, s in result.final_belief_statuses.items() if s == "AUTHORIZED"]
-            # With k=2, at most 2 beliefs should be AUTHORIZED
             assert len(authorized) <= 2
 
     def test_direct_judge_replay_follows_decisions(self):
         episodes = get_fc_dev_episodes()
         method = DirectJudgeReplayMethod()
-        for ep in episodes:
-            result = method.run_fixed_episode(ep)
+        for ep, _, artifact in episodes:
+            result = method.run_fixed_episode(ep, artifact=artifact)
             assert result.method_name == "DirectJudge_Replay"
-            # Decisions should match the episode's replay_decisions
-            assert len(result.decisions) == len(ep.replay_decisions)
+            expected_len = sum(len(verdicts) for _, verdicts in artifact.direct_verdicts_by_submission)
+            assert len(result.decisions) == expected_len
 
-    def test_retrace_stage_a_replay(self):
+    def test_retrace_proposal_replay(self):
         episodes = get_fc_dev_episodes()
-        method = ReTraceStageAReplayMethod()
-        for ep in episodes:
-            result = method.run_fixed_episode(ep)
+        method = ReTraceProposalReplayMethod()
+        for ep, _, artifact in episodes:
+            result = method.run_fixed_episode(ep, artifact=artifact)
             assert result.method_name == "ReTrace_StageA_Replay"
             assert len(result.decisions) > 0
 
     def test_replay_methods_match_gold(self):
         """Both replay methods should match gold on all episodes."""
         episodes = get_fc_dev_episodes()
-        for method_cls in [DirectJudgeReplayMethod, ReTraceStageAReplayMethod]:
+        for method_cls in [DirectJudgeReplayMethod, ReTraceProposalReplayMethod]:
             method = method_cls()
-            for ep in episodes:
-                result = method.run_fixed_episode(ep)
-                for bid, expected in ep.gold_snapshot.belief_statuses.items():
+            for ep, gold, artifact in episodes:
+                result = method.run_fixed_episode(ep, artifact=artifact)
+                for bid, expected in gold.gold_snapshot.belief_statuses.items():
                     actual = result.final_belief_statuses.get(bid)
                     assert actual == expected, (
                         f"{method.method_name} on {ep.episode_id}: "
@@ -127,13 +132,12 @@ class TestFixedCandidateMetrics:
     def test_compute_metrics_per_episode(self):
         episodes = get_fc_dev_episodes()
         method = DirectJudgeReplayMethod()
-        for ep in episodes:
-            result = method.run_fixed_episode(ep)
-            metrics = compute_fixed_candidate_metrics(ep, result)
+        for ep, gold, artifact in episodes:
+            result = method.run_fixed_episode(ep, artifact=artifact)
+            metrics = compute_fixed_candidate_metrics(gold, ep.downstream_tasks, result)
             assert "authorization_accuracy" in metrics
             assert "stale_propagation_error_rate" in metrics
             assert "decision_count" in metrics
-            # DirectJudge replay should have perfect accuracy on gold-aligned episodes
             assert metrics["authorization_accuracy"] == 1.0, (
                 f"{ep.episode_id}: auth accuracy should be 1.0, got {metrics['authorization_accuracy']}"
             )
@@ -143,13 +147,15 @@ class TestFixedCandidateMetrics:
         results = []
         for method_cls in [NaiveLastWriteWinsFixedCandidateMethod, DirectJudgeReplayMethod]:
             method = method_cls()
-            for ep in episodes:
-                result = method.run_fixed_episode(ep)
-                results.append((ep, result))
+            for ep, gold, artifact in episodes:
+                if method.method_name == "DirectJudge_Replay":
+                    result = method.run_fixed_episode(ep, artifact=artifact)
+                else:
+                    result = method.run_fixed_episode(ep)
+                results.append((gold, ep, result))
 
         aggregated = aggregate_fixed_candidate_metrics(results)
         assert len(aggregated) > 0
-        # DirectJudge replay overall accuracy should be 1.0
         assert "DirectJudge_Replay__overall__all" in aggregated
         assert aggregated["DirectJudge_Replay__overall__all"]["authorization_accuracy"] == 1.0
 
@@ -167,7 +173,7 @@ class TestFixedCandidateRunner:
             first_row = json.loads(f.readline())
             assert "protocol_mode" in first_row
             assert "proposal_source" in first_row
-            assert first_row["protocol_mode"] == "oracle_edge_replay"
+            assert first_row["protocol_mode"] == "fixed_candidate_revision"
             assert first_row["proposal_source"] == "hand_authored_development"
 
         # Verify manifest
@@ -188,7 +194,10 @@ class TestFixedCandidateRunner:
             "scientific_status", "split", "method_name", "backbone_model", "proposal_source",
             "candidate_source", "number_of_subagents", "number_of_submissions", "role_diversity",
             "conflict_density", "delay_depth", "recovery_present", "metric_name", "metric_value",
-            "trace_available", "calls", "tokens", "latency_ms"
+            "trace_available", "calls", "tokens", "latency_ms",
+            "policy_variant", "checkpoint_id", "training_split", "training_step",
+            "training_examples_seen", "reward_variant", "authorization_reward",
+            "downstream_task_reward", "scope_expansion_penalty", "stale_penalty", "total_reward"
         }
         with open(res["jsonl_path"], "r", encoding="utf-8") as f:
             for line in f:
@@ -200,7 +209,6 @@ class TestFixedCandidateRunner:
 class TestPlotDataValidator:
     def test_validator_accepts_valid_inputs(self):
         from experiments.multiagent.validate_plot_inputs import validate_plot_inputs
-        # Should run without raising SystemExit or Exception
         validate_plot_inputs(
             results_path="outputs/fc_method_results.jsonl",
             details_path="outputs/fc_run_details.json",
@@ -216,4 +224,3 @@ class TestPlotDataValidator:
                 official=True
             )
         assert excinfo.value.code == 1
-

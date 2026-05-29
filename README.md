@@ -45,21 +45,26 @@ from retracemem.multiagent.commit import commit_subagent_submission
 # Call commit_subagent_submission(submission)
 ```
 
-## Non-Claims
+## Implemented State and Milestones
+
+Currently implemented:
+    kernel, multiagent commit layer, replay/fixed-candidate evaluation infrastructure.
+
+Next method milestone:
+    Stage C training surface for an explicit typed revision proposal policy.
+
+## Non-claims
 
 The repository currently does not establish:
 
-- Stage A superiority over Stage B;
-- official STALE or Memora scores;
-- paper-facing retrieval validity;
-- Stage C training labels;
-- benchmark-general live-provider performance.
+- trained Stage C performance;
+- live backbone comparisons;
+- frozen primary test results;
+- official STALE/CUPMem external-validation scores.
 
 ## Future Validation Plans
 
 Next primary experiment:
-    controlled multi-agent shared-memory method comparison.
-
 External validation:
     STALE/CUPMem bridge remains available for later frozen evaluation.
 

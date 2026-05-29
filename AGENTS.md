@@ -33,6 +33,39 @@ STALE/CUPMem is an external validation/baseline pathway, not the definition of t
 
 Latent memory, RL consolidation, and delayed-utility learning belong to Paper 2.
 
+## Paper 1 Stage C Training Boundary
+
+Paper 1 includes Stage C: learning an explicit typed revision proposal policy
+for multi-agent/subagent shared-memory updates.
+
+The Stage C policy consumes only method-visible inputs:
+a prior shared-memory context or bounded candidate view, an evidence-bearing
+subagent submission, candidate beliefs/replacements, conditions, and
+pre-existing dependency anchors.
+
+It proposes explicit revision actions from the canonical vocabulary:
+
+- `SUPERSEDES`
+- `BLOCKS`
+- `RELEASES`
+- `UNCERTAIN`
+- `REAFFIRMS`
+- `NO_REVISION`
+
+Final memory commit remains deterministic and API-free:
+
+```text
+Stage C policy proposal
+    -> RevisionGate
+    -> deterministic DPA / authorize(...)
+    -> SharedMemoryCommitResult
+```
+
+Paper 2, not Paper 1, owns latent-memory representations,
+long-horizon delayed-future-utility consolidation, and RL over hidden memory states.
+Paper 1 may later test short-horizon explicit-action refinement only if it
+does not introduce latent memory or hidden-state consolidation.
+
 ## One-Function Public API Boundary
 
 The sole public entrypoint for executing authorization is `authorize(...)`:
@@ -103,12 +136,21 @@ To ensure absolute clean methodology and avoid test-set leakage:
 
 ## Paper Experiment Hierarchy
 
-Primary evaluation:
-    ReTrace on a controlled multi-agent/subagent shared-memory episode suite,
-    compared with memory/revision baselines under identical submissions.
+E0 — Oracle/Replay Kernel Validation:
+     hand-authored typed proposals; engineering/mechanism verification only.
 
-Secondary external validation:
-    STALE/CUPMem-style evaluation and compatibility analysis.
+E1 — Fixed-Candidate Revision Evaluation:
+     same evidence/candidate context for all methods; methods must decide revisions;
+     primary controlled method comparison.
+
+E2 — Stage C Training and Model-Driven Proposal Evaluation:
+     training and evaluating learning-based proposal policies.
+
+E3 — Closed-Loop Multi-Agent Workflow:
+     shared memory affects downstream agent actions and future submissions.
+
+E4 — STALE/CUPMem External Validation:
+     external stale-memory validation and compatibility analysis.
 
 Do not let external STALE/CUPMem bridge code redefine the primary Paper 1
 method identity or the main evaluation data model.

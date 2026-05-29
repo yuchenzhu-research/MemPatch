@@ -12,7 +12,7 @@ from experiments.multiagent.methods import (
     NaiveLastWriteWinsFixedCandidateMethod,
     AppendOnlyLexicalTopKMethod,
     DirectJudgeReplayMethod,
-    ReTraceStageAReplayMethod,
+    ReTraceProposalReplayMethod,
 )
 from experiments.multiagent.metrics import (
     compute_fixed_candidate_metrics,
@@ -42,18 +42,22 @@ def run_fc_comparison(mode: str) -> Dict[str, Any]:
         NaiveLastWriteWinsFixedCandidateMethod(),
         AppendOnlyLexicalTopKMethod(k=5),
         DirectJudgeReplayMethod(),
-        ReTraceStageAReplayMethod(),
+        ReTraceProposalReplayMethod(),
     ]
 
     results_rows: List[Dict[str, Any]] = []
     run_results = []
 
-    for ep in episodes:
+    for ep, gold, artifact in episodes:
         for method in methods:
-            res = method.run_fixed_episode(ep)
-            run_results.append((ep, res))
+            if method.method_name in ("DirectJudge_Replay", "ReTrace_StageA_Replay"):
+                res = method.run_fixed_episode(ep, artifact=artifact)
+            else:
+                res = method.run_fixed_episode(ep)
+                
+            run_results.append((gold, ep, res))
 
-            ep_metrics = compute_fixed_candidate_metrics(ep, res)
+            ep_metrics = compute_fixed_candidate_metrics(gold, ep.downstream_tasks, res)
 
             conflict_density = ep.stress_factors.get("conflict_density", 0.0)
             delay_depth = ep.stress_factors.get("delay_depth", 0)
@@ -61,14 +65,14 @@ def run_fc_comparison(mode: str) -> Dict[str, Any]:
             num_subagents = len(set(s.producer_id for s in ep.submissions))
             num_submissions = len(ep.submissions)
             role_diversity = len(set(ep.subagent_roles))
-            recovery_present = ep.failure_type == "temporary_blocker_recovery"
+            recovery_present = gold.failure_type == "temporary_blocker_recovery"
 
             for m_name, m_val in ep_metrics.items():
                 results_rows.append({
                     "run_id": run_id,
                     "episode_id": ep.episode_id,
                     "domain": ep.domain,
-                    "failure_type": ep.failure_type,
+                    "failure_type": gold.failure_type,
                     "protocol_mode": ep.protocol_mode,
                     "scientific_status": "pipeline_validation_only",
                     "split": ep.split,
@@ -88,6 +92,18 @@ def run_fc_comparison(mode: str) -> Dict[str, Any]:
                     "calls": res.metadata.get("calls", 0) if res.metadata else 0,
                     "tokens": res.metadata.get("tokens", None) if res.metadata else None,
                     "latency_ms": res.metadata.get("latency_ms", None) if res.metadata else None,
+                    # Stage C Fields Placeholder
+                    "policy_variant": "oracle_replay" if "Replay" in method.method_name else None,
+                    "checkpoint_id": None,
+                    "training_split": "development_only",
+                    "training_step": 0,
+                    "training_examples_seen": 0,
+                    "reward_variant": None,
+                    "authorization_reward": 0.0,
+                    "downstream_task_reward": 0.0,
+                    "scope_expansion_penalty": 0.0,
+                    "stale_penalty": 0.0,
+                    "total_reward": 0.0,
                 })
 
     aggregated = aggregate_fixed_candidate_metrics(run_results)
@@ -96,7 +112,7 @@ def run_fc_comparison(mode: str) -> Dict[str, Any]:
         run_id=run_id,
         split="development_only",
         methods=tuple(m.method_name for m in methods),
-        episode_ids=tuple(ep.episode_id for ep in episodes),
+        episode_ids=tuple(ep.episode_id for ep, _, _ in episodes),
         model_config={"api": "offline_replay", "protocol_mode": "oracle_edge_replay"},
         prompt_hashes={},
         code_commit_sha=get_git_commit_sha(),
@@ -130,7 +146,7 @@ def run_fc_comparison(mode: str) -> Dict[str, Any]:
 
     details_path = "outputs/fc_run_details.json"
     with open(details_path, "w", encoding="utf-8") as f:
-        json.dump([res.to_dict() for _, res in run_results], f, indent=2)
+        json.dump([res.to_dict() for _, _, res in run_results], f, indent=2)
 
     return {
         "results_count": len(results_rows),
