@@ -362,16 +362,13 @@ class ReTraceProposalReplayMethod:
         artifact: MethodDecisionArtifact | None = None
     ) -> FixedCandidateEpisodeMethodResult:
         
-        # We will sequentially commit submissions
-        active_statuses: Dict[str, str] = {}
-        decisions: List[MethodDecisionRecord] = []
-        
         # Build proposal batch mapping
         proposal_map = {}
         if artifact:
             for sub_id, batches in artifact.typed_proposal_batches_by_submission:
                 proposal_map[sub_id] = batches
 
+        subagent_subs = []
         for sub in episode.submissions:
             # 1. Fetch proposal batches for this submission
             batches = proposal_map.get(sub.submission_id, ())
@@ -424,86 +421,14 @@ class ReTraceProposalReplayMethod:
                 task_id=sub.task_id,
                 metadata=sub.metadata,
             )
+            subagent_subs.append(subagent_sub)
 
-            # 3. Invoke deterministic commit layer
-            commit_res = commit_subagent_submission(subagent_sub)
-            
-            # 4. Extract statuses from DPA
-            auth_res = commit_res.authorization_result
-            
-            # Map authorized and excluded statuses
-            for bid in auth_res.authorized_belief_ids:
-                active_statuses[bid] = "AUTHORIZED"
-            for bid in auth_res.excluded_belief_ids:
-                # Find why it was excluded (superseded vs unresolved vs blocked)
-                # TMS trace has the final statuses
-                status_str = commit_res.commit_trace.get("final_statuses", {}).get(bid, "SUPERSEDED")
-                active_statuses[bid] = status_str
+        # 3. Call the sequence commit engine in multiagent core
+        from retracemem.multiagent.commit import commit_submission_sequence
+        seq_res = commit_submission_sequence(tuple(subagent_subs), final_snapshot_evaluation=True)
+        active_statuses = seq_res.final_belief_statuses
 
-        # In the end, to obtain the final un-truncated usable memory basis status,
-        # we rebuild the global store and ledger from all submissions and run DPA with no cutoff.
-        from retracemem.tms.authorization import DefeatPathAuthorizationAlgorithm
-        from retracemem.memory.belief_store import BeliefStore
-        from retracemem.memory.episode_ledger import EpisodeLedger
-        from retracemem.schemas import AuthorizationStatus
-        
-        global_store = BeliefStore()
-        global_ledger = EpisodeLedger()
-        
-        for sub in episode.submissions:
-            for ev in sub.evidence_context:
-                if ev.evidence_id not in global_ledger:
-                    global_ledger.append(ev)
-            for b in sub.candidate_beliefs:
-                if not global_store.has_belief(b.belief_id):
-                    global_store.add_belief(b)
-            for b in sub.candidate_replacement_beliefs:
-                if not global_store.has_belief(b.belief_id):
-                    global_store.add_belief(b)
-            
-            # Admit all edges submitted in the episode
-            batches = proposal_map.get(sub.submission_id, ())
-            from retracemem.tms.gate import RevisionGate
-            gate = RevisionGate()
-            for batch in batches:
-                # Deserialize edges if needed
-                edges = batch.edges if not isinstance(batch, dict) else batch.get("edges", [])
-                for edge in edges:
-                    clean_edge = edge
-                    if isinstance(edge, dict):
-                        clean_edge = EvidenceEdge(
-                            edge_id=edge["edge_id"],
-                            edge_type=EvidenceEdgeType(edge["edge_type"]) if hasattr(EvidenceEdgeType, edge["edge_type"]) else edge["edge_type"],
-                            evidence_id=edge["evidence_id"],
-                            target_kind=edge["target_kind"],
-                            target_id=edge["target_id"],
-                            verifier=edge["verifier"],
-                            replacement_belief_id=edge.get("replacement_belief_id"),
-                        )
-                    dec = gate.admit_evidence_edge(clean_edge, global_store)
-                    if dec.admitted and not global_store.has_evidence_edge(clean_edge.edge_id):
-                        global_store.add_evidence_edge(clean_edge)
-
-        # Collect all belief ids that were candidates or replacements in the episode
-        all_episode_bids = set()
-        for sub in episode.submissions:
-            for b in sub.candidate_beliefs:
-                all_episode_bids.add(b.belief_id)
-            for b in sub.candidate_replacement_beliefs:
-                all_episode_bids.add(b.belief_id)
-                
-        global_dpa = DefeatPathAuthorizationAlgorithm(global_store, global_ledger)
-        for bid in all_episode_bids:
-            trace = global_dpa.authorize(bid, as_of_evidence_id=None)
-            status_str = "SUPERSEDED"
-            if trace.status == AuthorizationStatus.AUTHORIZED:
-                status_str = "AUTHORIZED"
-            elif trace.status == AuthorizationStatus.BLOCKED:
-                status_str = "BLOCKED"
-            elif trace.status == AuthorizationStatus.UNRESOLVED:
-                status_str = "UNRESOLVED"
-            active_statuses[bid] = status_str
-
+        decisions: List[MethodDecisionRecord] = []
         # Build method decision records based on final statuses
         for bid, status in active_statuses.items():
             dec = "AUTHORIZE"

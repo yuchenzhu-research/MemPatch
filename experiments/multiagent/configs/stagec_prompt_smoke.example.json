@@ -1,0 +1,21 @@
+{
+  "run_config": {
+    "run_id_prefix": "stagec_smoke_live",
+    "mode": "smoke_live",
+    "random_seed": 42
+  },
+  "model_config": {
+    "backbone_model": "gpt-4o-2024-05-13",
+    "temperature": 0.0,
+    "max_tokens": 1024,
+    "api_base": "https://api.openai.com/v1"
+  },
+  "dataset_config": {
+    "split": "development_only",
+    "episodes_source": "fc_dev_v1"
+  },
+  "prompt_config": {
+    "system_prompt_path": "experiments/multiagent/prompts/system_prompt.txt",
+    "user_instruction_template": "Analyze the following multi-agent memory submissions and propose typed revision edges..."
+  }
+}
