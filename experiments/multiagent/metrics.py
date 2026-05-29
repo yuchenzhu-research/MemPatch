@@ -5,8 +5,9 @@ from typing import Any, Dict, List, Tuple
 from experiments.multiagent.contracts import (
     MultiAgentMemoryEpisode,
     EpisodeMethodResult,
-    FixedCandidateEpisode,
+    FixedCandidateGoldRecord,
     FixedCandidateEpisodeMethodResult,
+    DownstreamTask,
 )
 
 
@@ -152,11 +153,12 @@ def aggregate_metrics(
 
 
 def compute_fixed_candidate_metrics(
-    episode: FixedCandidateEpisode,
+    gold_record: FixedCandidateGoldRecord,
+    downstream_tasks: Tuple[DownstreamTask, ...],
     result: FixedCandidateEpisodeMethodResult,
 ) -> Dict[str, float]:
     """Calculate granular metrics for a single fixed-candidate episode method run."""
-    gold = episode.gold_snapshot.belief_statuses
+    gold = gold_record.gold_snapshot.belief_statuses
     actual = result.final_belief_statuses
 
     # 1. Authorization Accuracy
@@ -190,7 +192,7 @@ def compute_fixed_candidate_metrics(
     # 4. Conflict Resolution Accuracy
     conflict_correct = 0
     total_conflict_checks = 0
-    if episode.failure_type in ("cross_agent_conflict", "direct_supersession"):
+    if gold_record.failure_type in ("cross_agent_conflict", "direct_supersession"):
         for bid, exp_status in gold.items():
             total_conflict_checks += 1
             if actual.get(bid) == exp_status:
@@ -200,7 +202,7 @@ def compute_fixed_candidate_metrics(
     # 5. Recovery Accuracy
     recovery_correct = 0
     total_recovery_checks = 0
-    if episode.failure_type == "temporary_blocker_recovery":
+    if gold_record.failure_type == "temporary_blocker_recovery":
         for bid, exp_status in gold.items():
             if exp_status == "AUTHORIZED":
                 total_recovery_checks += 1
@@ -211,7 +213,7 @@ def compute_fixed_candidate_metrics(
     # 6. Uncertainty Handling Accuracy
     uncertain_correct = 0
     total_uncertain_checks = 0
-    if episode.failure_type == "ambiguous_update":
+    if gold_record.failure_type == "ambiguous_update":
         for bid, exp_status in gold.items():
             if exp_status == "UNRESOLVED":
                 total_uncertain_checks += 1
@@ -222,7 +224,7 @@ def compute_fixed_candidate_metrics(
     # 7. Protected Belief Preservation
     protected_correct = 0
     total_protected = 0
-    for task in episode.downstream_tasks:
+    for task in downstream_tasks:
         for bid in task.protected_belief_ids:
             total_protected += 1
             if actual.get(bid) == "AUTHORIZED":
@@ -245,13 +247,13 @@ def compute_fixed_candidate_metrics(
 
 
 def aggregate_fixed_candidate_metrics(
-    results: List[Tuple[FixedCandidateEpisode, FixedCandidateEpisodeMethodResult]]
+    results: List[Tuple[FixedCandidateGoldRecord, FixedCandidateInputEpisode, FixedCandidateEpisodeMethodResult]]
 ) -> Dict[str, Any]:
     """Aggregate metrics for fixed-candidate evaluation runs."""
     aggregated = defaultdict(lambda: defaultdict(list))
 
-    for ep, res in results:
-        ep_metrics = compute_fixed_candidate_metrics(ep, res)
+    for gold, ep, res in results:
+        ep_metrics = compute_fixed_candidate_metrics(gold, ep.downstream_tasks, res)
         conflict_density = ep.stress_factors.get("conflict_density", 0.0)
         delay_depth = ep.stress_factors.get("delay_depth", 0)
 
@@ -259,7 +261,7 @@ def aggregate_fixed_candidate_metrics(
             "overall": "all",
             "method_name": res.method_name,
             "domain": ep.domain,
-            "failure_type": ep.failure_type,
+            "failure_type": gold.failure_type,
             "protocol_mode": res.protocol_mode,
             "conflict_density": conflict_density,
             "delay_depth": delay_depth,
