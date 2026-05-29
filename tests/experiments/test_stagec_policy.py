@@ -206,3 +206,71 @@ def test_parse_response_incompatible_actions(fake_submission):
     assert out.parsing_valid is False
     assert len(out.errors) == 1
     assert "Conflict: Condition 'c1' is both BLOCKED and RELEASED." in out.errors[0]
+
+
+def test_allowed_actions_filtering(fake_submission):
+    # Only allow SUPERSEDES and NO_REVISION
+    policy = PromptTypedRevisionPolicy(allowed_actions=("SUPERSEDES", "NO_REVISION"))
+    
+    # Try to parse BLOCKS (which is not allowed)
+    valid_blocks_json = """
+    [
+      {
+        "action_type": "BLOCKS",
+        "target_condition_id": "c1",
+        "evidence_ids": ["ev_1"]
+      }
+    ]
+    """
+    out = policy.parse_response(valid_blocks_json, example_id="ex_1", submission=fake_submission)
+    assert out.parsing_valid is False
+    assert len(out.errors) == 1
+    assert "not allowed in current vocabulary configuration" in out.errors[0]
+
+
+def test_icl_proposer_retrieval_and_propose(fake_submission):
+    from experiments.multiagent.stagec_policy import ClosedAPIICLProposer
+    from experiments.multiagent.contracts import ApprovedRevisionExemplar
+    from retracemem.providers.base import MockLLMProvider
+    
+    valid_json = """
+    [
+      {
+        "action_type": "NO_REVISION",
+        "target_belief_id": null,
+        "target_condition_id": null,
+        "replacement_belief_id": null,
+        "rationale": "No revision needed",
+        "evidence_ids": ["ev_1"]
+      }
+    ]
+    """
+    mock_client = MockLLMProvider(default_response=valid_json)
+    proposer = ClosedAPIICLProposer(
+        provider_kind="mock",
+        model_id="mock-model",
+        client=mock_client,
+        top_k=1,
+    )
+    
+    exemplar = ApprovedRevisionExemplar(
+        exemplar_id="ex_1",
+        source_episode_id="ep_1",
+        domain="software_engineering",
+        failure_type="direct_supersession",
+        method_visible_input=fake_submission,
+        approved_typed_actions=(),
+        reviewer="Test Reviewer",
+        review_manifest_hash="dummy_hash",
+        training_or_icl_eligibility="eligible",
+    )
+    
+    selected = proposer.retrieve_exemplars(fake_submission, (exemplar,))
+    assert len(selected) == 1
+    assert selected[0].exemplar_id == "ex_1"
+    
+    # Propose should run and return proposal policy output
+    out = proposer.propose(fake_submission, exemplars=(exemplar,))
+    assert out.parsing_valid is True
+    assert len(out.parsed_actions) == 1
+    assert out.parsed_actions[0].action_type == "NO_REVISION"

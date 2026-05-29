@@ -1,0 +1,25 @@
+# MLX LoRA training preflight config (Packet 4H)
+# Labeled as: scientific_status = "training_pipeline_smoke_only", not_for_paper_results = true
+
+# Model & Data Configuration
+model: "mlx-community/Qwen2.5-1.5B-Instruct-4bit"
+train: true
+data: "experiments/multiagent/local_training/data/"
+
+# LoRA Hyperparameters (Ultra light for preflight smoke on 8 GB Mac)
+lora_layers: 4
+lora_parameters:
+  rank: 8
+  alpha: 16
+  dropout: 0.05
+  scale: 10.0
+
+# Optimization parameters
+batch_size: 1
+iters: 10
+learning_rate: 1e-5
+steps_per_report: 2
+steps_per_eval: 5
+val_batches: 2
+save_every: 5
+adapter_path: "outputs/mlx_adapters/stagec_smoke_adapters"

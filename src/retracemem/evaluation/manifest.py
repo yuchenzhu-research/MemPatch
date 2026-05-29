@@ -59,6 +59,8 @@ class RunConfiguration:
     dataset_checksum: str = ""
     comparison_regime: str | None = None
     upstream_commit_sha: str | None = None
+    scientific_status: str = "development_live"
+    not_for_main_table: bool = False
     metadata: dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> dict[str, Any]:

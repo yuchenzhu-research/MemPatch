@@ -320,6 +320,11 @@ class FixedCandidateGoldRecord:
     gold_snapshot: GoldSnapshotExpectation
     gold_typed_targets: Tuple[TypedRevisionTarget, ...] = ()
     failure_type: str | None = None
+    representable_by_core_actions: bool = True
+    minimum_core_action_count: int | None = None
+    requires_multi_action: bool = False
+    missing_extension: str = "NONE"
+    missing_extension_notes: str = ""
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -328,6 +333,11 @@ class FixedCandidateGoldRecord:
             "gold_snapshot": self.gold_snapshot.to_dict(),
             "gold_typed_targets": [t.to_dict() for t in self.gold_typed_targets],
             "failure_type": self.failure_type,
+            "representable_by_core_actions": self.representable_by_core_actions,
+            "minimum_core_action_count": self.minimum_core_action_count,
+            "requires_multi_action": self.requires_multi_action,
+            "missing_extension": self.missing_extension,
+            "missing_extension_notes": self.missing_extension_notes,
             "metadata": self.metadata,
         }
 
@@ -533,6 +543,34 @@ class TypedRevisionPolicy(Protocol):
     """Protocol for Stage C learned models proposing typed edges."""
     policy_variant: str
     def propose(self, example_or_submission: FixedCandidateSubmission) -> ProposalPolicyOutput:
+        ...
+
+
+@dataclass(frozen=True)
+class ApprovedRevisionExemplar:
+    exemplar_id: str
+    source_episode_id: str
+    domain: str
+    failure_type: str
+    method_visible_input: FixedCandidateSubmission
+    approved_typed_actions: tuple[TypedRevisionTarget, ...]
+    reviewer: str
+    review_manifest_hash: str
+    training_or_icl_eligibility: str
+
+
+class TypedRevisionProposer(Protocol):
+    proposer_name: str
+    policy_variant: str
+    provider_kind: str | None
+    model_id: str | None
+
+    def propose(
+        self,
+        submission: FixedCandidateSubmission,
+        *,
+        exemplars: tuple[ApprovedRevisionExemplar, ...] = (),
+    ) -> ProposalPolicyOutput:
         ...
 
 

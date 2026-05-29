@@ -342,6 +342,8 @@ def main() -> None:
         cache_path=cache_path,
         dataset_checksum=compute_file_sha256(dataset_path),
         comparison_regime="ambiguity_scope_controlled",
+        scientific_status="exploratory_pilot" if args.mode == "live-dev" else "development_live",
+        not_for_main_table=True if args.mode == "live-dev" else False,
         metadata={
             "max_calls": args.max_calls if args.mode == "live-dev" else None,
             "max_tokens": args.max_tokens if args.mode == "live-dev" else None,
