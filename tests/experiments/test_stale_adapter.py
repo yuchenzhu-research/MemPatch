@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import pytest
 from typing import Any
-from retracemem.schemas import EvidenceNode, EvidenceEdge, BeliefNode, EvidenceEdgeType
+from retracemem.schemas import (
+    EvidenceNode,
+    EvidenceEdge,
+    BeliefNode,
+    EvidenceEdgeType,
+    ConditionNode,
+    DependencyEdge,
+)
 from retracemem.methods.contracts import SharedCandidateView
 from experiments.stale_adapter import (
     split_stale_record,
@@ -13,6 +20,7 @@ from experiments.stale_adapter import (
     StaleGoldRecord,
 )
 from retracemem.authorization import authorize, EvidenceProposalBatch
+
 
 @pytest.fixture
 def sample_raw_record() -> dict[str, Any]:
@@ -41,22 +49,20 @@ def sample_raw_record() -> dict[str, Any]:
         "type": "T1"
     }
 
+
 def test_split_stale_record(sample_raw_record):
     history, probes, gold = split_stale_record(sample_raw_record)
     
-    # 1. Verify StaleWriteHistory
     assert history.uid == "test_uid_123"
     assert len(history.sessions) == 2
     assert history.sessions[0][0].role == "user"
     assert history.sessions[0][0].content == "I live in Seattle."
     assert history.timestamps == ("2026-01-01T00:00:00Z", "2026-01-02T00:00:00Z")
     
-    # 2. Verify StaleProbeTask
     assert len(probes) == 3
     assert {p.dimension for p in probes} == {"dim1_query", "dim2_query", "dim3_query"}
     assert probes[0].uid == "test_uid_123"
     
-    # 3. Verify StaleGoldRecord
     assert gold.uid == "test_uid_123"
     assert gold.m_old == "User lives in Seattle."
     assert gold.m_new == "User lives in Denver."
@@ -64,8 +70,8 @@ def test_split_stale_record(sample_raw_record):
     assert gold.relevant_session_index == (49,)
     assert gold.conflict_type == "T1"
 
+
 def test_leakage_assertion():
-    # Direct dictionary check
     assert_no_evaluation_leakage({"clean_key": "clean_val"})
     
     with pytest.raises(ValueError, match="Evaluation leakage detected"):
@@ -80,9 +86,9 @@ def test_leakage_assertion():
             sessions=((),),
             timestamps=(),
         )
-        # Manually injecting attribute after creation to test assert_no_evaluation_leakage
         object.__setattr__(bad_history, "m_old", "leak")
         assert_no_evaluation_leakage(bad_history)
+
 
 def test_iter_chronological_sessions(sample_raw_record):
     history, _, _ = split_stale_record(sample_raw_record)
@@ -96,9 +102,9 @@ def test_iter_chronological_sessions(sample_raw_record):
     assert nodes[0].source_dataset == "stale"
     assert nodes[0].source_pointer == "stale://test_uid_123/0"
 
+
 def test_frozen_probes_binding(sample_raw_record):
     history, probes, _ = split_stale_record(sample_raw_record)
-    # Bind probes to one frozen snapshot identifier
     snapshot_id = "snap_789"
     bound_probes = [
         StaleProbeTask(
@@ -111,6 +117,7 @@ def test_frozen_probes_binding(sample_raw_record):
     ]
     for bp in bound_probes:
         assert bp.memory_snapshot_id == "snap_789"
+
 
 def test_authorize_with_proposals():
     ev_node = EvidenceNode(
@@ -138,7 +145,6 @@ def test_authorize_with_proposals():
     res = authorize(view, proposal_batches=())
     assert "b_0" in res.authorized_belief_ids
     
-    # Prove zero-edge proposal batch retains trace provenance
     res_zero = authorize(
         view,
         proposal_batches=(
@@ -147,3 +153,80 @@ def test_authorize_with_proposals():
     )
     assert "b_0" in res_zero.authorized_belief_ids
     assert "trace_zero" in res_zero.trace["model_call_trace_ids"]
+
+
+def test_map_cupmem_candidate_to_retrace_view():
+    from experiments.stale_adapter import CupMemRevisionCandidate, map_cupmem_candidate_to_retrace_view
+    
+    candidate = CupMemRevisionCandidate(
+        old_state_id="b_0",
+        old_state_text="User lives in Seattle.",
+        old_source_evidence=("e_0",),
+        new_evidence_id="e_1",
+        new_evidence_text="User lives in Denver.",
+        candidate_replacement_text="User lives in Denver.",
+        affected_region="location",
+        upstream_trace={"instance_id": "inst_123", "query_id": "q_999", "query": "Where does user live?"}
+    )
+    
+    req_edge = DependencyEdge(
+        edge_id="dep_edge_1",
+        belief_id="b_0",
+        condition_id="c_physically_able",
+        inducer="test_fixture"
+    )
+    
+    view = map_cupmem_candidate_to_retrace_view(candidate, pre_induced_requirements=(req_edge,))
+    assert view.instance_id == "inst_123"
+    assert view.query_id == "q_999"
+    assert view.new_evidence.text == "User lives in Denver."
+    assert view.candidate_beliefs[0].belief_id == "b_0"
+    assert view.candidate_replacement_beliefs[0].belief_id == "rep_b_0"
+    assert view.dependency_edges_by_belief[0][0] == "b_0"
+    assert view.dependency_edges_by_belief[0][1][0].condition_id == "c_physically_able"
+
+
+def test_revision_safety_diagnostic_cases():
+    ev_old = EvidenceNode(
+        evidence_id="e_old", session_id="s_0", timestamp="2026-01-01T00:00:00Z",
+        text="User commutes by bicycle.", source_dataset="test", source_pointer="ptr"
+    )
+    ev_new = EvidenceNode(
+        evidence_id="e_new", session_id="s_1", timestamp="2026-01-02T00:00:00Z",
+        text="User broke their leg.", source_dataset="test", source_pointer="ptr"
+    )
+    b_bike = BeliefNode(belief_id="b_bike", proposition="User commutes by bicycle.", source_evidence_ids=("e_old",))
+    c_phys = ConditionNode(condition_id="c_phys", scope_id="user1", text="User is physically able.")
+    dep = DependencyEdge(edge_id="dep1", belief_id="b_bike", condition_id="c_phys", inducer="test")
+    
+    view = SharedCandidateView(
+        instance_id="inst_diag",
+        query_id="q_diag",
+        query="How does user commute?",
+        evidence_context=(ev_old, ev_new),
+        new_evidence=ev_new,
+        candidate_beliefs=(b_bike,),
+        candidate_replacement_beliefs=(),
+        candidate_conditions_by_belief=(("b_bike", (c_phys,)),),
+        dependency_edges_by_belief=(("b_bike", (dep,)),)
+    )
+    
+    res_protected = authorize(view, proposal_batches=())
+    assert "b_bike" in res_protected.authorized_belief_ids
+    
+    block_edge = EvidenceEdge(
+        edge_id="edge_block",
+        edge_type=EvidenceEdgeType.BLOCKS,
+        evidence_id="e_new",
+        target_kind="condition",
+        target_id="c_phys",
+        verifier="test"
+    )
+    res_block = authorize(
+        view,
+        proposal_batches=(
+            EvidenceProposalBatch(edges=(block_edge,), model_call_trace_id="trace_block"),
+        )
+    )
+    assert "b_bike" in res_block.excluded_belief_ids
+    assert res_block.trace["fine_grained_statuses"]["b_bike"] == "BLOCKED"
