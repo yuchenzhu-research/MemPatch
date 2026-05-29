@@ -54,3 +54,12 @@ The repository currently does not establish:
 - paper-facing retrieval validity;
 - Stage C training labels;
 - benchmark-general live-provider performance.
+
+## Future Validation Plans
+
+Next primary experiment:
+    controlled multi-agent shared-memory method comparison.
+
+External validation:
+    STALE/CUPMem bridge remains available for later frozen evaluation.
+
