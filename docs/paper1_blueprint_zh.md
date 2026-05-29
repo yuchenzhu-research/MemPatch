@@ -250,9 +250,9 @@ Stage B: direct usability verdict
 允许声称：same fixed semantic view、same model family/revision when configured、observed cost reported。
 禁止声称：strict matched call budget、identical prompts、已完成 budget-normalized analysis。
 
-### 7.2 P0：Ambiguity-and-Scope Feasibility Gate - 必须先做
+### 7.2 P0：Ambiguity-and-Scope Feasibility Gate - 已完成并保留
 
-在任何正式 benchmark 花费前，新增并冻结一个内部诊断 split，初始建议 30-50 个高质量 cases，覆盖：
+内部诊断 split（又称 AB-1B 内部评估器）已完成并保留作为可行性诊断。它覆盖：
 
 - clear supersession；
 - clear prerequisite blocking；
@@ -326,23 +326,15 @@ Memora oracle-conditioned 30-question pilot 当前保留为 internal rejected-pi
 
 ## 9. 近期工程顺序：小心测试优先
 
-### P0 - 立即修复实验边界与明显代码问题
+### P0 - 科学对齐与安全修复 (当前 packet)
 
-- 修复真实 provider endpoint / provider-specific key selection / live smoke tests；
-- 将 “official evaluation mock-run” 重命名为 adapter smoke/dry-run；
-- 禁止 adapter 在 `reference/` 内写入生成数据或 official result artifacts；
-- 修正 Stage C report 的 gold/leakage 表述；
-- 将 overlap retrieval 明确标注为 development baseline 或替换为经过设计的 shared retrieval layer；
+- 修复 STALE runner 的运行模式，实现 replay、dev-live 和 official-eval 的严格隔离。
+- 强制引入 `--i-confirm-official-evaluation` 确认 flag，禁止在非评测模式下或未确认时调用 official evaluator。
+- 纠正 STALE 摄入 chunk_size 默认值为 1，将大于 1 的 chunking 标记为非 canonical（approximate）。
+- 编写 focused 单元测试验证这些模式安全 and chunk 规则。
 - 同步所有 canonical docs。
 
-### P1 - 运行 Ambiguity-and-Scope Feasibility Gate
-
-- 创建 30-50 个 internal diagnostic cases；
-- 使用同一真实模型配置运行 Stage A/B；
-- 输出 PBP、abstention、unsupported commitment、stale blocking 与成本；
-- 根据结果决定是否继续正式 benchmark。
-
-### P2 - 外部 benchmark pathway validation
+### P1 - 外部 benchmark pathway validation
 
 - STALE：以官方 frozen 400-case dataset 为 primary external benchmark；先完成 non-leaking offline wiring，再进入授权的 official judge / live-provider run；
 - Memora：不继续扩大；仅保留 negative-pilot artifact；

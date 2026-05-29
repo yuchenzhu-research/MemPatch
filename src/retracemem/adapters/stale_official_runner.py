@@ -75,7 +75,7 @@ class StaleLiveRunConfig:
     max_calls: int = 500
     max_tokens: int = 2_000_000
     evaluator_concurrency: int = 2
-    ingest_chunk_size: int = 10
+    ingest_chunk_size: int = 1
 
 
 class _NoEdgeBatchedVerifier:
@@ -540,6 +540,8 @@ def run_live_stageab_generation(config: StaleLiveRunConfig) -> dict[str, Any]:
         "model": config.model,
         "selected_records": [{"uid": r.method_visible.uid, "type": r.evaluator_only.type} for r in selected],
         "ingest_chunk_size": config.ingest_chunk_size,
+        "canonical_ingestion": config.ingest_chunk_size == 1,
+        "approximate_chunked_ingestion": config.ingest_chunk_size > 1,
         "raw_session_count_by_uid": {
             r.method_visible.uid: len(r.method_visible.haystack_sessions) for r in selected
         },

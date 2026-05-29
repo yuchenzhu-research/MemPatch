@@ -69,6 +69,4 @@ Before any future Stage C task, the following conditions must be met:
 
 ## 5. Current Next Step
 
-Complete the internal Ambiguity-and-Scope Stage A/B feasibility diagnostic.
-Interpret the result honestly before considering any external pilot, official
-evaluation, or Stage C planning.
+The internal Ambiguity-and-Scope Stage A/B feasibility diagnostic is completed and retained. The next step is the scientific hardening of the STALE pathway and evaluation protocol. Interpret all results honestly before considering any external pilot, official evaluation, or Stage C planning.

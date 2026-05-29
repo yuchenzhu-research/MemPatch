@@ -122,7 +122,7 @@ Required action:
 
 ## 4. Mandatory Immediate Scientific Gate Before Heavy Evaluation
 
-Before expensive official execution or any Stage C planning, implement and run an internal **Ambiguity-and-Scope Feasibility Gate**.
+The internal **Ambiguity-and-Scope Feasibility Gate** has been implemented, executed, and retained as a feasibility diagnostic. Before any future expensive official execution or Stage C planning, this gate's findings must be reviewed.
 
 ### 4.1 Purpose
 
@@ -289,20 +289,15 @@ Official evaluator logic must not be silently patched. If a wrapper is required,
 
 The next authorized coding packet should not be “live benchmark evaluation.” It is:
 
-### Packet P0/P1 - Repair and Early Feasibility Test
+### Packet P0/P1 - Repair and Early Feasibility Test (Factual Update: Feasibility Gate is completed)
 
-Required deliverables:
+Factual status: The Ambiguity-and-Scope internal feasibility diagnostic has already been executed/retained. The current packet focuses on:
 
-1. Provider endpoint/key-selection correction and contract tests.
-2. Terminology correction: mock STALE/Memora executions are adapter smoke/dry-run only.
-3. Output isolation: no generated artifact writes inside `reference/`.
-4. Stage C report correction: no self-labelled or official-test-derived gold graphs.
-5. Clear labelling of manual/overlap retrieval as development or secondary baseline components.
-6. Versioned Ambiguity-and-Scope internal split with 30-50 cases.
-7. Capped real-provider Stage A/B execution on that split, if credentials are available; otherwise complete mock/replay path and report the external blocker.
-8. A go/no-go diagnostic report before frozen external evaluation.
+1. Safety mode gating (strict separation between replay, dev-live, and official-eval modes).
+2. Canonical per-session ingestion (defaulting ingest_chunk_size = 1) and explicit approximate/non-canonical metadata tagging for chunk sizes > 1.
+3. Focused tests for runner safety gating and chunk policy.
 
-Only after P0/P1 gives a meaningful signal may a separate task authorize STALE/Memora frozen official execution.
+Only after this safety repair packet is complete and approved may a separate task authorize STALE/Memora frozen official execution.
 
 ---
 

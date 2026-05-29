@@ -40,7 +40,9 @@ storytelling document.
   evidence.
 - Official frozen STALE adapter/runner entrypoints exist. Current offline/mock
   execution is schema/wiring validation only and is not an official STALE
-  result.
+  result. STALE end-to-end evaluation is officially classified as a secondary
+  answer-level evaluation; the primary structural attribution is the fixed
+  SharedCandidateView comparison.
 - Stage C remains deferred.
 
 ## Official Frozen STALE Benchmark
@@ -133,12 +135,11 @@ The repository currently has no verified result showing:
 
 ## Current Next Boundary
 
-The current next boundary is not another Memora run and not a live STALE result.
-The next work should harden the official frozen STALE runner until Stage A and
-Stage B are scientifically fair persistent-state executions, then separately
-authorize live provider and official judge evaluation. Do not tune Stage A on
-the failed Memora pilot, do not run Memora expansion, and do not change DPA or
-RevisionGate unless a deterministic offline repro shows a Gate/DPA failure.
+The current next boundary is the scientific hardening of the STALE pathway and
+evaluation protocol. It is not Stage C and not another Memora expansion. Do not
+tune Stage A on the failed Memora pilot, do not run Memora expansion, and do not
+change DPA or RevisionGate unless a deterministic offline repro shows a
+Gate/DPA failure.
 
 ## Canonical Entrypoints
 

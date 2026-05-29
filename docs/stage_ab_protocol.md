@@ -224,19 +224,16 @@ Forbidden before future evidence exists:
 
 ## Current and Future Boundaries
 
-The Ambiguity-and-Scope internal feasibility diagnostic is complete.
+The Ambiguity-and-Scope internal feasibility diagnostic is complete and retained.
 
-The current development boundary is a Memora Oracle-Conditioned Authorization
-Diagnostic using the batched Stage A path and DirectJudge Stage B, with
-SiliconFlow DeepSeek-V4-Pro as the development provider. Candidate beliefs
-originate from Memora evaluation annotations (`memory_evidence` /
-`forgetting_evidence`), so this is not official end-to-end Memora evaluation.
-No failed or timed-out live diagnostic is a scientific result.
+The current next boundary is the scientific hardening of the STALE pathway and evaluation protocol.
+
+The Memora oracle-conditioned 30-question pilot is retained only as an internal rejected-pilot/adapter-misalignment artifact. It must not be rerun and must not be expanded.
 
 The following remain future or deferred only. They do not start automatically:
 
 - official end-to-end Memora evaluation with FAMA scoring;
-- frozen official STALE evaluation;
+- frozen official STALE evaluation (which is classified as a secondary answer-level evaluation, while the primary structural-attribution proof remains the fixed SharedCandidateView comparison);
 - Stage C learned local typed-edge verifier using the same DPA core.
 
 No official STALE/Memora evaluation, full benchmark run, provider-generalization
