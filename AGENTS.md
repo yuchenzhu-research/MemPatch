@@ -101,7 +101,20 @@ To ensure absolute clean methodology and avoid test-set leakage:
 - Preserve the canonical dataclass contracts in `src/retracemem/schemas.py`.
 - Add or update tests for every new behavior.
 
+## Paper Experiment Hierarchy
+
+Primary evaluation:
+    ReTrace on a controlled multi-agent/subagent shared-memory episode suite,
+    compared with memory/revision baselines under identical submissions.
+
+Secondary external validation:
+    STALE/CUPMem-style evaluation and compatibility analysis.
+
+Do not let external STALE/CUPMem bridge code redefine the primary Paper 1
+method identity or the main evaluation data model.
+
 ## Verification
+
 
 Compile:
 ```bash
