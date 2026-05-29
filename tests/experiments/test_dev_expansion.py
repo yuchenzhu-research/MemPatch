@@ -77,25 +77,37 @@ def test_dev_expansion_generation() -> None:
 
 
 def test_select_smoke_examples_error(tmp_path) -> None:
+    import json
+    from unittest.mock import patch
     # 1. Test when no approved examples exist
     review_file = tmp_path / "review.jsonl"
     review_file.write_text(
         '{"episode_id": "ep_1", "review_status": "pending_human_review", "failure_type": "direct_supersession"}\n'
     )
     
+    # Create mock eligible manifest
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(json.dumps({
+        "eligible_for_smoke": True,
+        "review_status": "approved_for_smoke"
+    }))
+    
     from experiments.multiagent.select_prompt_smoke_examples import select_smoke_examples
-    with pytest.raises(SystemExit):
-        select_smoke_examples(str(review_file), confirm_live_run=True)
+    with patch("experiments.multiagent.select_prompt_smoke_examples.MANIFEST_PATH", str(manifest_path)):
+        with pytest.raises(SystemExit):
+            select_smoke_examples(str(review_file), confirm_live_run=True)
         
     # 2. Test when approved exists but not confirmed
     review_file.write_text(
         '{"episode_id": "ep_1", "review_status": "approved", "failure_type": "direct_supersession", "review_provenance": {"reviewer": "Yuchen Zhu", "reviewed_at": "2026-05-30T00:00:00Z", "source_manifest_sha256": "dummy_sha"}}\n'
     )
-    with pytest.raises(SystemExit):
-        select_smoke_examples(str(review_file), confirm_live_run=False)
+    with patch("experiments.multiagent.select_prompt_smoke_examples.MANIFEST_PATH", str(manifest_path)):
+        with pytest.raises(SystemExit):
+            select_smoke_examples(str(review_file), confirm_live_run=False)
         
     # 3. Test successful selection
-    selected = select_smoke_examples(str(review_file), confirm_live_run=True)
+    with patch("experiments.multiagent.select_prompt_smoke_examples.MANIFEST_PATH", str(manifest_path)):
+        selected = select_smoke_examples(str(review_file), confirm_live_run=True)
     assert len(selected) == 1
     assert selected[0]["episode_id"] == "ep_1"
 

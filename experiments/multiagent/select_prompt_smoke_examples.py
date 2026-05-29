@@ -6,7 +6,23 @@ import os
 import sys
 from typing import Any, Dict, List
 
+MANIFEST_PATH = "outputs/stagec_smoke7_review_manifest.json"
+
 def select_smoke_examples(review_file: str, confirm_live_run: bool) -> List[Dict[str, Any]]:
+    # 1. Enforce the 7-case manifest eligibility first
+    if not os.path.exists(MANIFEST_PATH):
+        print(f"Error: Stage C smoke review manifest not found: {MANIFEST_PATH}")
+        sys.exit(1)
+        
+    with open(MANIFEST_PATH, "r", encoding="utf-8") as f:
+        manifest_data = json.load(f)
+        
+    if not manifest_data.get("eligible_for_smoke", False):
+        print("Error: The seven-case smoke pack is not eligible for smoke execution.")
+        print(f"Manifest status is: {manifest_data.get('review_status')}")
+        sys.exit(1)
+
+    # 2. Check individual records
     if not os.path.exists(review_file):
         print(f"Error: Review file not found: {review_file}")
         sys.exit(1)
