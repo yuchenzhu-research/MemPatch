@@ -1,21 +1,23 @@
 {
   "run_config": {
-    "run_id_prefix": "stagec_smoke_live",
+    "run_id_prefix": "stagec_prompt_smoke",
     "mode": "smoke_live",
-    "random_seed": 42
+    "random_seed": 42,
+    "requires_explicit_user_approval": true
   },
   "model_config": {
-    "backbone_model": "gpt-4o-2024-05-13",
+    "provider": "<openai|google|anthropic|open_source>",
+    "backbone_model": "<select_before_run>",
     "temperature": 0.0,
-    "max_tokens": 1024,
-    "api_base": "https://api.openai.com/v1"
+    "max_output_tokens": 1024
   },
   "dataset_config": {
     "split": "development_only",
-    "episodes_source": "fc_dev_v1"
+    "max_examples": 7,
+    "selection": "one_reviewed_example_per_failure_type"
   },
-  "prompt_config": {
-    "system_prompt_path": "experiments/multiagent/prompts/system_prompt.txt",
-    "user_instruction_template": "Analyze the following multi-agent memory submissions and propose typed revision edges..."
+  "output_config": {
+    "output_dir": "outputs/",
+    "scientific_status": "smoke_validation_only"
   }
 }
