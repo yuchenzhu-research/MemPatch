@@ -42,3 +42,14 @@ class SharedMemoryCommitResult:
     next_snapshot_id: str
     authorization_result: AuthorizationResult
     commit_trace: dict[str, Any]
+
+
+@dataclass(frozen=True)
+class SharedMemorySnapshotResult:
+    initial_snapshot_id: str
+    final_snapshot_id: str
+    submission_results: tuple[SharedMemoryCommitResult, ...]
+    final_belief_statuses: dict[str, str]
+    final_authorized_belief_ids: tuple[str, ...]
+    final_excluded_belief_ids: tuple[str, ...]
+    trace: dict[str, Any]
