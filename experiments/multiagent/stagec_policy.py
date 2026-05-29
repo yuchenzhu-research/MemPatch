@@ -103,6 +103,10 @@ class PromptTypedRevisionPolicy:
                 evidence_ids = item.get("evidence_ids", [])
                 if not isinstance(evidence_ids, list):
                     raise ValueError(f"Action '{action}' evidence_ids must be an array.")
+                if not evidence_ids:
+                    raise ValueError(f"Action '{action}' requires a non-empty evidence_ids array.")
+                if submission.new_evidence_id not in evidence_ids:
+                    raise ValueError(f"Action '{action}' evidence_ids must explicitly include submission's new_evidence_id '{submission.new_evidence_id}'.")
                 for ev_id in evidence_ids:
                     if ev_id not in valid_evidence_ids:
                         raise ValueError(f"Evidence ID '{ev_id}' in action '{action}' is not visible in submission evidence context.")
@@ -192,7 +196,7 @@ class PromptTypedRevisionPolicy:
                 edge = EvidenceEdge(
                     edge_id=edge_id,
                     edge_type=EvidenceEdgeType(t.action_type) if hasattr(EvidenceEdgeType, t.action_type) else t.action_type,
-                    evidence_id=str(t.evidence_ids[0]) if t.evidence_ids else submission.new_evidence_id,
+                    evidence_id=str(t.evidence_ids[0]),
                     target_kind=target_kind,
                     target_id=target_id,
                     verifier="stagec_policy",

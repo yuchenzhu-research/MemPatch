@@ -72,6 +72,8 @@ typed gold revision targets or evaluator final statuses.
 
 Only human-approved reviewed examples may be used for live smoke or training export.
 
+No development-candidate episode may be promoted for smoke or training until a human review decision has been recorded. All live Stage C actions must explicitly cite the visible new evidence that grounds the proposed revision.
+
 ## One-Function Public API Boundary
 
 The sole public entrypoint for executing authorization is `authorize(...)`:
