@@ -38,6 +38,7 @@ def authorize(
     view: SharedCandidateView,
     proposal_batches: tuple[EvidenceProposalBatch, ...],
     *,
+    bypass_gate: bool = False,
     audit_metadata: dict[str, Any] | None = None,
 ) -> AuthorizationResult:
     """Pluggable deterministic authorization kernel."""
@@ -81,19 +82,25 @@ def authorize(
         if batch.model_call_trace_id and batch.model_call_trace_id not in trace_ids:
             trace_ids.append(batch.model_call_trace_id)
         for edge in batch.edges:
-            decision = gate.admit_evidence_edge(edge, store)
+            if bypass_gate:
+                admitted = True
+                reason = "Bypassed RevisionGate (Ablation)"
+            else:
+                decision = gate.admit_evidence_edge(edge, store)
+                admitted = decision.admitted
+                reason = decision.reason
             proposal = {
                 "edge_id": edge.edge_id,
                 "edge_type": edge.edge_type.value,
                 "target_id": edge.target_id,
-                "admitted": decision.admitted,
-                "gate_reason": decision.reason,
+                "admitted": admitted,
+                "gate_reason": reason,
                 "model_call_trace_id": batch.model_call_trace_id,
             }
             if batch.source_belief_id is not None:
                 proposal["belief_id"] = batch.source_belief_id
             edge_proposals.append(proposal)
-            if decision.admitted:
+            if admitted:
                 store.add_evidence_edge(edge)
 
     dpa = DefeatPathAuthorizationAlgorithm(store, ledger)

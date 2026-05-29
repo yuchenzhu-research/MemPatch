@@ -49,7 +49,7 @@ class ControlledReTraceLLM:
         self.edge_verifier = edge_verifier
         self.client = client
 
-    def run(self, view: SharedCandidateView) -> ControlledMethodResult:
+    def run(self, view: SharedCandidateView, *, bypass_gate: bool = False) -> ControlledMethodResult:
         """Execute controlled Stage A on the fixed view."""
         cost_before = self.client.cost_accountant.to_dict()
 
@@ -79,18 +79,21 @@ class ControlledReTraceLLM:
         execution = authorize(
             view,
             tuple(proposal_batches),
+            bypass_gate=bypass_gate,
             audit_metadata={
                 "prompt_version": self.edge_verifier.prompt_version,
                 "prompt_hash": self.edge_verifier._template_hash,
                 "model_id": self.edge_verifier.model_id,
                 "provider": self.edge_verifier.provider,
                 "model_revision_or_api_version": self.edge_verifier.model_revision_or_api_version,
+                "bypass_gate": bypass_gate,
             },
         )
         cost_after = self.client.cost_accountant.to_dict()
 
+        method_name = "retrace_llm_controlled_ablation" if bypass_gate else "retrace_llm_controlled"
         return ControlledMethodResult(
-            method_name="retrace_llm_controlled",
+            method_name=method_name,
             instance_id=view.instance_id,
             query_id=view.query_id,
             authorized_belief_ids=execution.authorized_belief_ids,
