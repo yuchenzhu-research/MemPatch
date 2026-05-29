@@ -272,6 +272,8 @@ def main() -> None:
         cache_path=cache_path,
         dataset_checksum=compute_file_sha256(cases_path),
         comparison_regime="controlled_candidate_view",
+        scientific_status="exploratory_pilot" if args.live else "development_live",
+        not_for_main_table=True if args.live else False,
     )
     
     # Capture final cost accounting from client accountants if they exist
