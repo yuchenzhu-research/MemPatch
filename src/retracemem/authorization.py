@@ -12,19 +12,18 @@ from retracemem.tms.gate import RevisionGate
 
 
 @dataclass(frozen=True)
-class ProposedEvidenceEdges:
+class EvidenceProposalBatch:
     edges: tuple[EvidenceEdge, ...]
-    model_call_trace_id: str
+    model_call_trace_id: str | None = None
     source_belief_id: str | None = None
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
-class AuthorizationExecutionResult:
+class AuthorizationResult:
     authorized_belief_ids: tuple[str, ...]
     excluded_belief_ids: tuple[str, ...]
-    model_call_trace_ids: tuple[str, ...]
-    provenance: dict[str, Any]
+    trace: dict[str, Any]
 
 
 _STATUS_MAP = {
@@ -35,12 +34,13 @@ _STATUS_MAP = {
 }
 
 
-def execute_authorization(
+def authorize(
     view: SharedCandidateView,
-    proposal_batches: tuple[ProposedEvidenceEdges, ...],
+    proposal_batches: tuple[EvidenceProposalBatch, ...],
     *,
-    base_provenance: dict[str, Any] | None = None,
-) -> AuthorizationExecutionResult:
+    audit_metadata: dict[str, Any] | None = None,
+) -> AuthorizationResult:
+    """Pluggable deterministic authorization kernel."""
     ledger = EpisodeLedger()
     store = BeliefStore()
     gate = RevisionGate()
@@ -78,7 +78,7 @@ def execute_authorization(
     trace_ids: list[str] = []
     edge_proposals: list[dict[str, Any]] = []
     for batch in proposal_batches:
-        if batch.model_call_trace_id not in trace_ids:
+        if batch.model_call_trace_id and batch.model_call_trace_id not in trace_ids:
             trace_ids.append(batch.model_call_trace_id)
         for edge in batch.edges:
             decision = gate.admit_evidence_edge(edge, store)
@@ -131,34 +131,13 @@ def execute_authorization(
         "defeat_paths": defeat_paths,
         "admitted_fixed_anchors": admitted_anchors,
         "edge_proposals": edge_proposals,
+        "model_call_trace_ids": tuple(trace_ids),
     }
-    if base_provenance:
-        provenance.update(base_provenance)
+    if audit_metadata:
+        provenance.update(audit_metadata)
 
-    return AuthorizationExecutionResult(
+    return AuthorizationResult(
         authorized_belief_ids=tuple(authorized_ids),
         excluded_belief_ids=tuple(excluded_ids),
-        model_call_trace_ids=tuple(trace_ids),
-        provenance=provenance,
+        trace=provenance,
     )
-
-
-def cost_delta(before: dict[str, Any], after: dict[str, Any]) -> dict[str, Any]:
-    tokens_before = before.get("tokens", {})
-    tokens_after = after.get("tokens", {})
-    calls_before = before.get("calls", {})
-    calls_after = after.get("calls", {})
-    return {
-        "latency_ms": after.get("latency_ms", 0.0) - before.get("latency_ms", 0.0),
-        "tokens": {
-            "prompt": tokens_after.get("prompt", 0) - tokens_before.get("prompt", 0),
-            "completion": tokens_after.get("completion", 0) - tokens_before.get("completion", 0),
-            "total": tokens_after.get("total", 0) - tokens_before.get("total", 0),
-        },
-        "calls": {
-            key: calls_after.get(key, 0) - calls_before.get(key, 0)
-            for key in set(calls_after) | set(calls_before)
-        },
-        "cache_hits": after.get("cache_hits", 0) - before.get("cache_hits", 0),
-        "cache_misses": after.get("cache_misses", 0) - before.get("cache_misses", 0),
-    }

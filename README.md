@@ -13,64 +13,51 @@ immutable EvidenceNode ledger
 + deterministic Defeat-Path Authorization Algorithm
 ```
 
-ReTrace is designed as a **pluggable authorization module** that can be integrated with any external memory database or agent runtime. It does not perform memory storage, retrieval, or agent orchestration itself; instead, it consumes candidate views and deterministically adjudicates belief eligibility.
+ReTrace is designed as a **pluggable authorization kernel** that can be integrated with any external memory database or agent runtime. It does not perform memory storage, retrieval, or agent orchestration itself; instead, it consumes candidate views and deterministically adjudicates belief eligibility.
 
 ## Implemented Core
 
 - Deterministic DPA over admitted typed edges.
 - Stage A `ReTrace-LLM`: local typed-edge proposal plus RevisionGate plus DPA.
 - Stage B `DirectJudge-LLM`: direct shared-view adjudication baseline.
-- `AuthorizationFacade`: pluggable integration facade allowing optional external provenance metadata.
+- Sole public entrypoint `authorize(...)` in the root namespace.
 
 ## Offline Validation
 
 ```bash
-env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src tests scripts
+env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src tests experiments
 .venv/bin/python -m pytest
 ```
 
 ## Integration Example
 
-External memory producers can easily request authorization from ReTrace using the facade:
+External memory producers can easily request authorization from ReTrace using the public kernel function:
 
 ```python
 from retracemem import (
-    AuthorizationRequest,
-    AuthorizationFacade,
-    ProposedEvidenceEdges,
+    authorize,
+    EvidenceProposalBatch,
 )
 from retracemem.methods.contracts import SharedCandidateView
 
-# 1. Construct the shared view and request
+# 1. Construct the shared view
 view = SharedCandidateView(...)
-request = AuthorizationRequest(
-    view=view,
-    provenance={
-        "source_system": "my_subagent_runner",
-        "producer_kind": "subagent",
-        "producer_id": "agent_x",
-    }
-)
 
 # 2. Package proposed typed edges
 proposals = (
-    ProposedEvidenceEdges(
+    EvidenceProposalBatch(
         edges=tuple(predicted_edges),
         model_call_trace_id="call_trace_uuid",
     ),
 )
 
 # 3. Request authorization
-result = AuthorizationFacade.authorize(request, proposals)
+result = authorize(view, proposals)
 
 print(result.authorized_belief_ids)
-print(result.fine_grained_statuses)
+print(result.excluded_belief_ids)
+print(result.trace)
 ```
-
-## Canonical Docs
-
-- `README.md`: public project overview and usage.
-- `AGENTS.md`: sole coding-agent operational instructions and algorithmic contract.
 
 ## Non-Claims
 
