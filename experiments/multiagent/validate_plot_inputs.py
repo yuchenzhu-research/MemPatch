@@ -84,9 +84,14 @@ def validate_plot_inputs(
         # 2. Strict Scientific Status check
         # "The validation script should fail if official/paper-ready plotting is attempted using only records tagged:
         #  scientific_status = 'mechanism_validation_only'"
-        if official and r.get("scientific_status") in ("mechanism_validation_only", "pipeline_validation_only"):
-            print(f"[Error] Official plotting rejected: Row {idx} is tagged with scientific_status '{r.get('scientific_status')}'")
-            sys.exit(1)
+        if official:
+            sci_status = r.get("scientific_status")
+            if sci_status in ("mechanism_validation_only", "pipeline_validation_only", "not_evaluated", "smoke_validation_only"):
+                print(f"[Error] Official plotting rejected: Row {idx} is tagged with scientific_status '{sci_status}'")
+                sys.exit(1)
+            if r.get("split") in ("development_candidate", "unreviewed_candidate"):
+                print(f"[Error] Official plotting rejected: Row {idx} is from unreviewed development_candidate split.")
+                sys.exit(1)
 
     print("[+] All metric rows successfully validated for Figures 3, 4, 5, 6.")
 

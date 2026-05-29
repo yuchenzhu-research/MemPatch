@@ -42,20 +42,28 @@ def get_git_commit_sha() -> str:
         return "unknown_commit"
 
 
-def generate_mock_llm_response(targets) -> str:
+def generate_mock_llm_response(targets, new_evidence_id: str) -> str:
     """Generate a valid mock JSON response based on gold targets."""
     items = []
     for t in targets:
         if t.action_type == "NO_REVISION":
-            continue
-        items.append({
-            "action_type": t.action_type,
-            "target_belief_id": t.target_belief_id,
-            "target_condition_id": t.target_condition_id,
-            "replacement_belief_id": t.replacement_belief_id,
-            "rationale": t.rationale or "Oracle replay rationale",
-            "evidence_ids": list(t.evidence_ids),
-        })
+            items.append({
+                "action_type": "NO_REVISION",
+                "target_belief_id": None,
+                "target_condition_id": None,
+                "replacement_belief_id": None,
+                "rationale": t.rationale or "No evidence-grounded revision is warranted.",
+                "evidence_ids": list(t.evidence_ids) if t.evidence_ids else [new_evidence_id],
+            })
+        else:
+            items.append({
+                "action_type": t.action_type,
+                "target_belief_id": t.target_belief_id,
+                "target_condition_id": t.target_condition_id,
+                "replacement_belief_id": t.replacement_belief_id,
+                "rationale": t.rationale or "Oracle replay rationale",
+                "evidence_ids": list(t.evidence_ids),
+            })
     return json.dumps(items, indent=2)
 
 
@@ -83,13 +91,13 @@ def run_stagec_policy_eval(mode: str) -> Dict[str, Any]:
                 
             # Simulate LLM call: build user messages and use mock fixture response
             messages = policy.build_messages(sub)
-            mock_response = generate_mock_llm_response(ex.targets)
+            mock_response = generate_mock_llm_response(ex.targets, sub.new_evidence_id)
             
             # Parse responses
             policy_out = policy.parse_response(
                 mock_response,
                 example_id=example_id,
-                submission_id=sub.submission_id,
+                submission=sub,
             )
             
             # Extract proposal batches

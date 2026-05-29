@@ -66,6 +66,12 @@ long-horizon delayed-future-utility consolidation, and RL over hidden memory sta
 Paper 1 may later test short-horizon explicit-action refinement only if it
 does not introduce latent memory or hidden-state consolidation.
 
+A Stage C live policy may see conditions and pre-existing REQUIRES anchors
+because they are method-visible candidate structure, but may never see
+typed gold revision targets or evaluator final statuses.
+
+Only human-approved reviewed examples may be used for live smoke or training export.
+
 ## One-Function Public API Boundary
 
 The sole public entrypoint for executing authorization is `authorize(...)`:
