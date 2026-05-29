@@ -480,6 +480,7 @@ class ProposalPolicyOutput:
     calls: int = 0
     tokens: int | None = None
     latency_ms: float | None = None
+    parsed_actions: Tuple[TypedRevisionTarget, ...] = ()
     metadata: Dict[str, Any] = field(default_factory=dict)
 
     def to_dict(self) -> Dict[str, Any]:
@@ -496,6 +497,7 @@ class ProposalPolicyOutput:
             "calls": self.calls,
             "tokens": self.tokens,
             "latency_ms": self.latency_ms,
+            "parsed_actions": [a.to_dict() for a in self.parsed_actions],
             "metadata": self.metadata,
         }
 

@@ -18,6 +18,10 @@ SYSTEM_PROMPT = (
     "- UNCERTAIN\n"
     "- REAFFIRMS\n"
     "- NO_REVISION\n\n"
+    "Constraints:\n"
+    "- BLOCKS and RELEASES must target only listed condition IDs (target_condition_id).\n"
+    "- SUPERSEDES, UNCERTAIN, and REAFFIRMS must target only listed belief IDs (target_belief_id).\n"
+    "- NO_REVISION must specify target_belief_id, target_condition_id, and replacement_belief_id as null, and include the new_evidence_id in evidence_ids.\n\n"
     "Return your response as a strict JSON array of objects with the following fields:\n"
     "- action_type (string)\n"
     "- target_belief_id (string or null)\n"
@@ -25,10 +29,11 @@ SYSTEM_PROMPT = (
     "- replacement_belief_id (string or null)\n"
     "- rationale (string)\n"
     "- evidence_ids (array of strings)\n\n"
-    "Example format:\n"
-    '[\n  {\n    "action_type": "SUPERSEDES",\n    "target_belief_id": "b_old",\n'
-    '    "replacement_belief_id": "b_new",\n    "rationale": "...",\n'
-    '    "evidence_ids": ["ev_1"]\n  }\n]'
+    "Example format for NO_REVISION:\n"
+    '[\n  {\n    "action_type": "NO_REVISION",\n    "target_belief_id": null,\n'
+    '    "target_condition_id": null,\n    "replacement_belief_id": null,\n'
+    '    "rationale": "No evidence-grounded revision is warranted.",\n'
+    '    "evidence_ids": ["ev_new"]\n  }\n]'
 )
 
 
@@ -36,31 +41,59 @@ def format_user_prompt(ex: StageCTrainingExample) -> str:
     """Format the method-visible context of a submission for the user message."""
     sub = ex.method_visible_input
     
-    # 1. Candidate Beliefs
+    # 1. Submission Metadata
+    meta_lines = [
+        f"- Submission ID: {sub.submission_id}",
+        f"- Producer ID: {sub.producer_id}",
+        f"- Producer Role: {sub.producer_role}",
+        f"- Observed At: {sub.observed_at}",
+        f"- Parent Snapshot ID: {sub.parent_snapshot_id}",
+    ]
+    if sub.task_id:
+        meta_lines.append(f"- Task ID: {sub.task_id}")
+        
+    # 2. Evidence Context
+    evidence_lines = []
+    for ev in sub.evidence_context:
+        source_ptr_str = f", Source: {ev.source_pointer}" if hasattr(ev, "source_pointer") and ev.source_pointer else ""
+        timestamp_str = f", Timestamp: {ev.timestamp}" if hasattr(ev, "timestamp") and ev.timestamp else ""
+        evidence_lines.append(f"- ID: {ev.evidence_id}{timestamp_str}{source_ptr_str}, Content: {ev.text}")
+        
+    # 3. Candidate Beliefs
     candidates = []
     for b in sub.candidate_beliefs:
-        candidates.append(f"- ID: {b.belief_id}, Proposition: {b.proposition}")
+        ev_ids_str = ", ".join(b.source_evidence_ids) if b.source_evidence_ids else "None"
+        candidates.append(f"- ID: {b.belief_id}, Proposition: {b.proposition}, Source Evidence: [{ev_ids_str}]")
         
-    # 2. Candidate Replacement Beliefs
+    # 4. Candidate Replacement Beliefs
     replacements = []
     for b in sub.candidate_replacement_beliefs:
-        replacements.append(f"- ID: {b.belief_id}, Proposition: {b.proposition}")
+        ev_ids_str = ", ".join(b.source_evidence_ids) if b.source_evidence_ids else "None"
+        replacements.append(f"- ID: {b.belief_id}, Proposition: {b.proposition}, Source Evidence: [{ev_ids_str}]")
         
-    # 3. Evidence Context
-    evidence = []
-    for ev in sub.evidence_context:
-        evidence.append(f"- ID: {ev.evidence_id}, Content: {ev.text}")
-        
+    # 5. Candidate Conditions by Belief
+    conditions = []
+    for bid, conds in sub.candidate_conditions_by_belief:
+        for c in conds:
+            conditions.append(f"- Owning Belief: {bid}, Condition ID: {c.condition_id}, Scope: {c.scope_id}, Text: {c.text}")
+            
+    # 6. Pre-existing Dependency Anchors
+    dependencies = []
+    for bid, deps in sub.dependency_edges_by_belief:
+        for d in deps:
+            dependencies.append(f"- {d.belief_id} --REQUIRES--> {d.condition_id}")
+            
     prompt = (
-        f"Episode ID: {ex.episode_id}\n"
-        f"Submission ID: {sub.submission_id}\n"
-        f"Domain: {ex.domain}\n"
+        f"Episode ID: {ex.episode_id}\n\n"
+        "Submission Metadata:\n" + "\n".join(meta_lines) + "\n\n"
         f"Query: {sub.query}\n\n"
+        "Evidence Context:\n" + ("\n".join(evidence_lines) if evidence_lines else "None") + "\n\n"
+        f"New Evidence ID: {sub.new_evidence_id}\n\n"
         "Candidate Beliefs:\n" + ("\n".join(candidates) if candidates else "None") + "\n\n"
         "Candidate Replacement Beliefs:\n" + ("\n".join(replacements) if replacements else "None") + "\n\n"
-        "Evidence Context:\n" + ("\n".join(evidence) if evidence else "None") + "\n\n"
-        f"New Evidence ID: {sub.new_evidence_id}\n"
-        "Identify the correct revision actions."
+        "Candidate Conditions by Belief:\n" + ("\n".join(conditions) if conditions else "None") + "\n\n"
+        "Pre-existing Dependency Anchors:\n" + ("\n".join(dependencies) if dependencies else "None") + "\n\n"
+        "Identify the correct revision actions. Return a strict JSON array of objects."
     )
     return prompt
 
@@ -68,17 +101,27 @@ def format_user_prompt(ex: StageCTrainingExample) -> str:
 def format_assistant_response(ex: StageCTrainingExample) -> str:
     """Format targets into a strict JSON string."""
     targets_dict = []
+    new_evidence_id = ex.method_visible_input.new_evidence_id
     for t in ex.targets:
         if t.action_type == "NO_REVISION":
-            continue
-        targets_dict.append({
-            "action_type": t.action_type,
-            "target_belief_id": t.target_belief_id,
-            "target_condition_id": t.target_condition_id,
-            "replacement_belief_id": t.replacement_belief_id,
-            "rationale": t.rationale,
-            "evidence_ids": list(t.evidence_ids),
-        })
+            ev_ids = list(t.evidence_ids) if t.evidence_ids else [new_evidence_id]
+            targets_dict.append({
+                "action_type": "NO_REVISION",
+                "target_belief_id": None,
+                "target_condition_id": None,
+                "replacement_belief_id": None,
+                "rationale": t.rationale or "No evidence-grounded revision is warranted.",
+                "evidence_ids": ev_ids,
+            })
+        else:
+            targets_dict.append({
+                "action_type": t.action_type,
+                "target_belief_id": t.target_belief_id,
+                "target_condition_id": t.target_condition_id,
+                "replacement_belief_id": t.replacement_belief_id,
+                "rationale": t.rationale,
+                "evidence_ids": list(t.evidence_ids),
+            })
     return json.dumps(targets_dict, indent=2)
 
 

@@ -47,20 +47,13 @@ from retracemem.multiagent.commit import commit_subagent_submission
 
 ## Implemented State and Milestones
 
-Currently implemented:
-    kernel, multiagent commit layer, replay/fixed-candidate evaluation infrastructure.
+Implemented:
+    Stage C prompt-visible contract, response validation, dev-review queue
+    construction, and live-smoke selection/configuration infrastructure.
 
-Next method milestone:
-    Stage C training surface for an explicit typed revision proposal policy.
-
-## Non-claims
-
-The repository currently does not establish:
-
-- trained Stage C performance;
-- live backbone comparisons;
-- frozen primary test results;
-- official STALE/CUPMem external-validation scores.
+Not yet established:
+    human-reviewed expanded data, live Stage C performance, trained SFT policy,
+    frozen primary test results, official STALE/CUPMem scores.
 
 ## Future Validation Plans
 
