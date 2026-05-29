@@ -57,6 +57,11 @@ def run_fc_comparison(mode: str) -> Dict[str, Any]:
 
             conflict_density = ep.stress_factors.get("conflict_density", 0.0)
             delay_depth = ep.stress_factors.get("delay_depth", 0)
+            trace_available = method.method_name in ("ReTrace_StageA_Replay", "DirectJudge_Replay")
+            num_subagents = len(set(s.producer_id for s in ep.submissions))
+            num_submissions = len(ep.submissions)
+            role_diversity = len(set(ep.subagent_roles))
+            recovery_present = ep.failure_type == "temporary_blocker_recovery"
 
             for m_name, m_val in ep_metrics.items():
                 results_rows.append({
@@ -64,14 +69,25 @@ def run_fc_comparison(mode: str) -> Dict[str, Any]:
                     "episode_id": ep.episode_id,
                     "domain": ep.domain,
                     "failure_type": ep.failure_type,
-                    "method_name": method.method_name,
                     "protocol_mode": ep.protocol_mode,
+                    "scientific_status": "pipeline_validation_only",
+                    "split": ep.split,
+                    "method_name": method.method_name,
+                    "backbone_model": None,
                     "proposal_source": ep.proposal_source,
+                    "candidate_source": "fixed_candidate",
+                    "number_of_subagents": num_subagents,
+                    "number_of_submissions": num_submissions,
+                    "role_diversity": role_diversity,
                     "conflict_density": conflict_density,
                     "delay_depth": delay_depth,
+                    "recovery_present": recovery_present,
                     "metric_name": m_name,
                     "metric_value": m_val,
-                    "decision_count": len(res.decisions),
+                    "trace_available": trace_available,
+                    "calls": res.metadata.get("calls", 0) if res.metadata else 0,
+                    "tokens": res.metadata.get("tokens", None) if res.metadata else None,
+                    "latency_ms": res.metadata.get("latency_ms", None) if res.metadata else None,
                 })
 
     aggregated = aggregate_fixed_candidate_metrics(run_results)
@@ -99,9 +115,22 @@ def run_fc_comparison(mode: str) -> Dict[str, Any]:
     with open(summary_path, "w", encoding="utf-8") as f:
         json.dump(aggregated, f, indent=2)
 
+    manifest_dict = manifest.to_dict()
+    manifest_dict.update({
+        "dataset_version": "fc_dev_v1",
+        "episode_factory_hash": "hash_placeholder",
+        "method_config": {},
+        "random_seed": 42,
+        "notes": "Fixed-candidate development-only offline replay."
+    })
+
     manifest_path = "outputs/fc_run_manifest.json"
     with open(manifest_path, "w", encoding="utf-8") as f:
-        json.dump(manifest.to_dict(), f, indent=2)
+        json.dump(manifest_dict, f, indent=2)
+
+    details_path = "outputs/fc_run_details.json"
+    with open(details_path, "w", encoding="utf-8") as f:
+        json.dump([res.to_dict() for _, res in run_results], f, indent=2)
 
     return {
         "results_count": len(results_rows),
@@ -109,6 +138,7 @@ def run_fc_comparison(mode: str) -> Dict[str, Any]:
         "jsonl_path": jsonl_path,
         "summary_path": summary_path,
         "manifest_path": manifest_path,
+        "details_path": details_path,
     }
 
 

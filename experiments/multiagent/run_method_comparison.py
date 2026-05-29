@@ -45,8 +45,11 @@ def run_comparison(mode: str) -> Dict[str, Any]:
             # Count trace available
             trace_avail = any(ev.trace_available for ev in res.revision_events)
             num_subagents = len(ep.subagent_roles)
+            num_submissions = len(ep.submissions)
+            role_diversity = len(set(ep.subagent_roles))
             conflict_density = ep.stress_factors.get("conflict_density", 0.0)
             delay_depth = ep.stress_factors.get("delay_depth", 0)
+            recovery_present = ep.failure_type == "temporary_blocker_recovery"
 
             # Export one row per metric for plot-readiness
             for m_name, m_val in ep_metrics.items():
@@ -55,16 +58,25 @@ def run_comparison(mode: str) -> Dict[str, Any]:
                     "episode_id": ep.episode_id,
                     "domain": ep.domain,
                     "failure_type": ep.failure_type,
+                    "protocol_mode": "oracle_edge_replay",
+                    "scientific_status": "mechanism_validation_only",
+                    "split": ep.split,
                     "method_name": method.method_name,
+                    "backbone_model": None,
+                    "proposal_source": "hand_authored_development",
+                    "candidate_source": "hand_authored_development",
                     "number_of_subagents": num_subagents,
+                    "number_of_submissions": num_submissions,
+                    "role_diversity": role_diversity,
                     "conflict_density": conflict_density,
                     "delay_depth": delay_depth,
+                    "recovery_present": recovery_present,
                     "metric_name": m_name,
                     "metric_value": m_val,
                     "trace_available": trace_avail,
                     "calls": 0,
-                    "tokens": 0,
-                    "latency_ms": 0.0,
+                    "tokens": None,
+                    "latency_ms": None,
                 })
 
     # Compute aggregate metrics
@@ -101,12 +113,17 @@ def run_comparison(mode: str) -> Dict[str, Any]:
     with open(manifest_path, "w", encoding="utf-8") as f:
         json.dump(manifest.to_dict(), f, indent=2)
 
+    details_path = "outputs/multiagent_run_details.json"
+    with open(details_path, "w", encoding="utf-8") as f:
+        json.dump([res.to_dict() for _, res in run_results], f, indent=2)
+
     return {
         "results_count": len(results_rows),
         "aggregated": aggregated,
         "jsonl_path": jsonl_path,
         "summary_path": summary_path,
         "manifest_path": manifest_path,
+        "details_path": details_path,
     }
 
 
