@@ -7,7 +7,6 @@ from retracemem.evaluation.diagnostics import (
     calculate_unsupported_revision_rate,
     calculate_protected_belief_preservation,
 )
-from retracemem.evaluation.report_tables import generate_ablation_table
 
 __all__ = [
     "CostTracker",
@@ -17,6 +16,5 @@ __all__ = [
     "write_jsonl",
     "calculate_unsupported_revision_rate",
     "calculate_protected_belief_preservation",
-    "generate_ablation_table",
 ]
 

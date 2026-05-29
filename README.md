@@ -13,58 +13,51 @@ immutable EvidenceNode ledger
 + deterministic Defeat-Path Authorization Algorithm
 ```
 
-ReTrace is not generic RAG, a Mem0/Graphiti clone, RL memory-action learning, latent memory training, or an unconstrained LLM memory judge.
+ReTrace is designed as a **pluggable authorization kernel** that can be integrated with any external memory database or agent runtime. It does not perform memory storage, retrieval, or agent orchestration itself; instead, it consumes candidate views and deterministically adjudicates belief eligibility.
 
 ## Implemented Core
 
 - Deterministic DPA over admitted typed edges.
 - Stage A `ReTrace-LLM`: local typed-edge proposal plus RevisionGate plus DPA.
 - Stage B `DirectJudge-LLM`: direct shared-view adjudication baseline.
-- Per-belief Stage A controlled reference path.
-- Batched Stage A scalable development path.
-- Bounded batched backend ingestion.
-- Official frozen STALE adapter and offline non-leaking Stage A/B wiring demo.
-- Memora oracle-conditioned authorization diagnostic, retained as a rejected
-  internal pilot artifact.
-
-## Current Status
-
-Dynamic branch, HEAD, smoke, and validation status live only in
-`docs/implementation_status.md`.
-
-## Canonical Docs
-
-- `AGENTS.md`: stable coding-agent instructions.
-- `docs/method_spec_dpa.md`: method semantics.
-- `docs/stage_ab_protocol.md`: Stage A/B protocol.
-- `docs/implementation_status.md`: current dynamic status and entrypoints.
-- `docs/upstream_integration.md`: clean-room upstream boundaries.
+- Sole public entrypoint `authorize(...)` in the root namespace.
 
 ## Offline Validation
 
 ```bash
-env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src tests scripts
+env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src tests experiments
 .venv/bin/python -m pytest
 ```
 
+## Integration Example
 
-## Current Offline STALE Wiring Demo
+External memory producers can easily request authorization from ReTrace using the public kernel function:
 
-```bash
-.venv/bin/python scripts/run_stale_official_frozen_eval.py --limit-t1 2 --limit-t2 2
+```python
+from retracemem import (
+    authorize,
+    EvidenceProposalBatch,
+)
+from retracemem.methods.contracts import SharedCandidateView
+
+# 1. Construct the shared view
+view = SharedCandidateView(...)
+
+# 2. Package proposed typed edges
+proposals = (
+    EvidenceProposalBatch(
+        edges=tuple(predicted_edges),
+        model_call_trace_id="call_trace_uuid",
+    ),
+)
+
+# 3. Request authorization
+result = authorize(view, proposals)
+
+print(result.authorized_belief_ids)
+print(result.excluded_belief_ids)
+print(result.trace)
 ```
-
-This consumes the public official frozen STALE dataset
-`STALEproj/STALE::T1_T2_400_FULL.json` from the gitignored local path
-`data_external/stale_official_frozen/`. It validates non-leaking method wiring
-and official answer export schema only. It is not an official STALE model
-result and does not run the official judge.
-
-## Memora Negative Pilot
-
-The Memora oracle-conditioned diagnostic is retained only as an internal
-rejected-pilot artifact demonstrating adapter/objective mismatch. It is not
-official end-to-end Memora evaluation, not FAMA, and not a paper result.
 
 ## Non-Claims
 
