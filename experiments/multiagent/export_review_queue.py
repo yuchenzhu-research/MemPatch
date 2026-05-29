@@ -50,6 +50,8 @@ def export_review_queue() -> Dict[str, Any]:
             "reviewer_notes": "",
             "approve_for_prompt_smoke": False,
             "approve_for_training": False,
+            "semantic_checklist": ep.metadata.get("semantic_checklist", {}),
+            "semantic_validation_status": ep.metadata.get("semantic_validation_status", {}),
         }
         rows.append(row)
         
@@ -60,15 +62,17 @@ def export_review_queue() -> Dict[str, Any]:
     fields = [
         "episode_id", "domain", "failure_type", "subagent_roles", "number_of_submissions",
         "downstream_task", "method-visible input summary", "proposed typed target summary",
-        "review_status", "reviewer_notes", "approve_for_prompt_smoke", "approve_for_training"
+        "review_status", "reviewer_notes", "approve_for_prompt_smoke", "approve_for_training",
+        "semantic_checklist", "semantic_validation_status"
     ]
     with open(csv_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=fields)
         writer.writeheader()
         for r in rows:
-            # Format list for CSV
             r_copy = r.copy()
             r_copy["subagent_roles"] = str(r_copy["subagent_roles"])
+            r_copy["semantic_checklist"] = str(r_copy["semantic_checklist"])
+            r_copy["semantic_validation_status"] = str(r_copy["semantic_validation_status"])
             writer.writerow(r_copy)
             
     # 2. Export JSONL

@@ -47,13 +47,15 @@ from retracemem.multiagent.commit import commit_subagent_submission
 
 ## Implemented State and Milestones
 
-Implemented:
-    Stage C prompt-visible contract, response validation, dev-review queue
-    construction, and live-smoke selection/configuration infrastructure.
+Implemented after this packet:
+    semantically reviewed-candidate generation workflow,
+    seven-case human approval pack export,
+    strict evidence-grounding Stage C parser,
+    and live-smoke preflight boundary.
 
 Not yet established:
-    human-reviewed expanded data, live Stage C performance, trained SFT policy,
-    frozen primary test results, official STALE/CUPMem scores.
+    approved smoke examples, live prompt results, trained Stage C policy,
+    frozen primary-test results, official external-validation scores.
 
 ## Future Validation Plans
 
