@@ -4,7 +4,10 @@ reference/
 # Runtime and generated outputs.
 outputs/
 artifacts/
+# Do not ignore jsonl files inside data/ and tests/
 *.jsonl
+!data/**/*.jsonl
+!tests/**/*.jsonl
 data_external/
 .pycache_compile/
 __pycache__/
