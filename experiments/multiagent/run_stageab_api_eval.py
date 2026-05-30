@@ -53,7 +53,7 @@ from experiments.multiagent.contracts import (
     FixedCandidateInputEpisode,
 )
 from experiments.multiagent.stagec_policy import ClosedAPIZeroShotProposer, ClosedAPIZeroShotConstrainedProposer
-from experiments.multiagent.run_stagec_adapter_eval import rename_submission
+from retracemem.multiagent.utils import rename_submission
 @dataclass(frozen=True)
 class EvalRunConfig:
     live: bool = False
@@ -69,6 +69,7 @@ class EvalRunConfig:
     constrained: bool = False
     diagnostic: bool = False
     method: str | None = None
+    allow_fallback_to_zeroshot: bool = False
 
 
 _STATUS_MAP_A_TO_COMPARABLE = {
@@ -1072,6 +1073,13 @@ def run_stageab_eval(config: EvalRunConfig) -> tuple[dict[str, Any], dict[str, A
     constrained = config.constrained
     diagnostic = config.diagnostic
 
+    method = config.method
+    if method == "StageC-ICL":
+        allow_fallback = config.allow_fallback_to_zeroshot
+        if not allow_fallback:
+            raise ValueError("StageC-ICL requires approved exemplars, but none were loaded (default fail-closed).")
+        method = "zero_shot_fallback"
+
     if output_dir.startswith("artifacts/"):
         print("\n⚠ WARNING: output_dir starts with 'artifacts/'. Please consider using 'outputs/runs/' instead.\n")
 
@@ -1144,8 +1152,7 @@ def run_stageab_eval(config: EvalRunConfig) -> tuple[dict[str, Any], dict[str, A
     mid_a = model if live else None
     cli_a = client if live else None
 
-    method = config.method
-    if method == "StageC-ICL":
+    if method == "zero_shot_fallback":
         from experiments.multiagent.stagec_policy import ClosedAPIICLProposer
         proposer_a = ClosedAPIICLProposer(
             provider_kind=prov_a,

@@ -26,6 +26,7 @@ from experiments.multiagent.export_stagec_silver_baseline_mlx import make_exampl
 from experiments.multiagent.stagec_policy import PromptTypedRevisionPolicy
 from retracemem.authorization import authorize, SharedCandidateView
 from retracemem.schemas import BeliefNode, ConditionNode, DependencyEdge, EvidenceNode
+from retracemem.multiagent.utils import rename_submission
 
 VALID_ACTION_TYPES = {
     "SUPERSEDES",
@@ -76,113 +77,7 @@ def get_test_source() -> List[Any]:
     return test_source
 
 
-def rename_string(s: str | None, old_ns: str, new_ns: str) -> str | None:
-    if s is None:
-        return None
-    return s.replace(old_ns, new_ns)
 
-
-def rename_submission(sub: FixedCandidateSubmission, old_ns: str, new_ns: str) -> FixedCandidateSubmission:
-    """Helper to rewrite a submission to use the augmented namespace."""
-    new_evidence_context = []
-    for ev in sub.evidence_context:
-        new_evidence_context.append(
-            EvidenceNode(
-                evidence_id=rename_string(ev.evidence_id, old_ns, new_ns),
-                session_id=rename_string(ev.session_id, old_ns, new_ns),
-                timestamp=ev.timestamp,
-                text=rename_string(ev.text, old_ns, new_ns),
-                source_dataset=ev.source_dataset,
-                source_pointer=ev.source_pointer,
-                is_raw_source=ev.is_raw_source,
-                metadata=ev.metadata,
-            )
-        )
-
-    new_candidate_beliefs = []
-    for b in sub.candidate_beliefs:
-        new_candidate_beliefs.append(
-            BeliefNode(
-                belief_id=rename_string(b.belief_id, old_ns, new_ns),
-                proposition=rename_string(b.proposition, old_ns, new_ns),
-                source_evidence_ids=tuple(rename_string(eid, old_ns, new_ns) for eid in b.source_evidence_ids),
-                source_span=b.source_span,
-                extractor_version=b.extractor_version,
-                confidence=b.confidence,
-                metadata=b.metadata,
-            )
-        )
-
-    new_candidate_replacement_beliefs = []
-    for b in sub.candidate_replacement_beliefs:
-        new_candidate_replacement_beliefs.append(
-            BeliefNode(
-                belief_id=rename_string(b.belief_id, old_ns, new_ns),
-                proposition=rename_string(b.proposition, old_ns, new_ns),
-                source_evidence_ids=tuple(rename_string(eid, old_ns, new_ns) for eid in b.source_evidence_ids),
-                source_span=b.source_span,
-                extractor_version=b.extractor_version,
-                confidence=b.confidence,
-                metadata=b.metadata,
-            )
-        )
-
-    new_candidate_conditions = []
-    for bid, conds in sub.candidate_conditions_by_belief:
-        new_conds = []
-        for c in conds:
-            new_conds.append(
-                ConditionNode(
-                    condition_id=rename_string(c.condition_id, old_ns, new_ns),
-                    scope_id=rename_string(c.scope_id, old_ns, new_ns),
-                    text=rename_string(c.text, old_ns, new_ns),
-                    metadata=c.metadata,
-                )
-            )
-        new_candidate_conditions.append(
-            (rename_string(bid, old_ns, new_ns), tuple(new_conds))
-        )
-
-    new_dependency_edges = []
-    for bid, deps in sub.dependency_edges_by_belief:
-        new_deps = []
-        for d in deps:
-            new_deps.append(
-                DependencyEdge(
-                    edge_id=rename_string(d.edge_id, old_ns, new_ns),
-                    edge_type=d.edge_type,
-                    belief_id=rename_string(d.belief_id, old_ns, new_ns),
-                    condition_id=rename_string(d.condition_id, old_ns, new_ns),
-                    inducer=d.inducer,
-                    supporting_evidence_ids=tuple(rename_string(eid, old_ns, new_ns) for eid in d.supporting_evidence_ids),
-                    model_call_trace_id=d.model_call_trace_id,
-                    confidence=d.confidence,
-                    rationale=rename_string(d.rationale, old_ns, new_ns),
-                    metadata=d.metadata,
-                )
-            )
-        new_dependency_edges.append(
-            (rename_string(bid, old_ns, new_ns), tuple(new_deps))
-        )
-
-    return FixedCandidateSubmission(
-        submission_id=rename_string(sub.submission_id, old_ns, new_ns),
-        producer_id=sub.producer_id,
-        producer_role=sub.producer_role,
-        task_id=rename_string(sub.task_id, old_ns, new_ns),
-        parent_snapshot_id=rename_string(sub.parent_snapshot_id, old_ns, new_ns),
-        observed_at=sub.observed_at,
-        instance_id=rename_string(sub.instance_id, old_ns, new_ns),
-        query_id=rename_string(sub.query_id, old_ns, new_ns),
-        query=rename_string(sub.query, old_ns, new_ns),
-        evidence_context=tuple(new_evidence_context),
-        new_evidence_id=rename_string(sub.new_evidence_id, old_ns, new_ns),
-        candidate_beliefs=tuple(new_candidate_beliefs),
-        candidate_replacement_beliefs=tuple(new_candidate_replacement_beliefs),
-        candidate_conditions_by_belief=tuple(new_candidate_conditions),
-        dependency_edges_by_belief=tuple(new_dependency_edges),
-        metadata=sub.metadata,
-    )
 
 
 def extract_first_json_array(text: str) -> List[Any]:
