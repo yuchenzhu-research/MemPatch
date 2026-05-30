@@ -51,7 +51,7 @@ env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src t
 .venv/bin/python -m pytest
 ```
 
-### 1. Stage A/B dev70 Evaluation (Dry-run & Live)
+### Stage A/B dev70 Evaluation (Dry-run & Live)
 Run evaluation on the dev70 expansion dataset:
 ```bash
 # Safe Dry-run/Mock Mode (runs local gold simulation)
@@ -61,7 +61,13 @@ Run evaluation on the dev70 expansion dataset:
 .venv/bin/python experiments/multiagent/run_stageab_api_eval.py --live --provider siliconflow --model deepseek-ai/DeepSeek-V3
 ```
 
-### 2. Model Matrix Evaluator (Dry-run & Live)
+---
+
+## Development Utilities
+
+The following tools and evaluations are auxiliary utilities for model comparisons, adapter scoring, and verification experiments. They are not the primary experimental boundaries.
+
+### 1. Model Matrix Evaluator (Dry-run & Live)
 Compare multiple models and methods (DirectJudge, StageA-Freeform, StageA-Constrained, StageC-ICL) in a single run:
 ```bash
 # Dry-run Mock Run
@@ -71,14 +77,14 @@ Compare multiple models and methods (DirectJudge, StageA-Freeform, StageA-Constr
 .venv/bin/python experiments/multiagent/run_model_matrix_api_eval.py
 ```
 
-### 3. Stage C Adapter Evaluator
+### 2. Stage C Adapter Evaluator
 Evaluate base models vs LoRA adapters across structural subsets:
 ```bash
 # Print CLI options and subsets help
 .venv/bin/python experiments/multiagent/run_stagec_adapter_eval.py --help
 ```
 
-### 4. STALE-style Synthetic Validation
+### 3. STALE-style Synthetic Validation
 Run synthetic temporal sequence validation comparing Append-only profile, Oracle, and ReTrace methods:
 ```bash
 .venv/bin/python experiments/stale_style_retrace_validation.py

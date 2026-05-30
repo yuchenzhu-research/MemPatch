@@ -188,7 +188,7 @@ class PromptTypedRevisionPolicy:
         edges: List[EvidenceEdge] = []
         parsed_targets: List[TypedRevisionTarget] = []
         
-        from retracemem.multiagent.utils import extract_first_json_array, extract_json_object
+        from retracemem.multiagent.parser import extract_json_array, extract_json_object
 
         valid_evidence_ids = {ev.evidence_id for ev in submission.evidence_context} | {submission.new_evidence_id}
         valid_candidate_belief_ids = {b.belief_id for b in submission.candidate_beliefs}
@@ -217,7 +217,7 @@ class PromptTypedRevisionPolicy:
                 decision_audit = obj["decision_audit"]
                 parsed = obj["actions"]
             else:
-                parsed = extract_first_json_array(response_text)
+                parsed = extract_json_array(response_text)
 
             if not isinstance(parsed, list):
                 raise ValueError("LLM response must be a JSON array of objects.")
@@ -662,7 +662,7 @@ class ClosedAPIZeroShotConstrainedProposer(TypedRevisionProposer):
         submission: FixedCandidateSubmission,
         candidates: list[dict[str, Any]],
     ) -> ProposalPolicyOutput:
-        from retracemem.multiagent.utils import extract_json_object
+        from retracemem.multiagent.parser import extract_json_object
         from retracemem.schemas import EvidenceEdge, EvidenceEdgeType
         from retracemem.authorization import EvidenceProposalBatch
 
@@ -825,6 +825,9 @@ class ClosedAPIICLProposer(TypedRevisionProposer):
         selected_exs = self.retrieve_exemplars(submission, exemplars)
         if not selected_exs and not self.allow_fallback_to_zeroshot:
             raise ValueError(f"No exemplars retrieved for ICL and allow_fallback_to_zeroshot is False.")
+        
+        policy_variant_to_use = "zero_shot_fallback" if not selected_exs else self.policy_variant
+
         messages = self._policy.build_messages(submission)
         system_text = messages[0]["content"]
         user_text = messages[1]["content"]
@@ -896,7 +899,7 @@ class ClosedAPIICLProposer(TypedRevisionProposer):
         new_metadata = dict(out.metadata)
         new_metadata["prompt"] = full_prompt
         new_metadata["raw_response"] = response_text
-        return replace(out, metadata=new_metadata)
+        return replace(out, metadata=new_metadata, policy_variant=policy_variant_to_use)
 
 
 class OpenModelPromptProposer(TypedRevisionProposer):
