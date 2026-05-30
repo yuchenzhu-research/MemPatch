@@ -22,6 +22,7 @@ from experiments.multiagent.run_stageab_api_eval import (
     compute_stage_a_action_metrics,
     check_grounding_error_stage_a,
     check_grounding_error_stage_b,
+    canonicalize_belief_id_with_type,
 )
 
 
@@ -97,6 +98,40 @@ def test_render_direct_judge_prompt(mock_episode_and_gold):
     assert "b_1" in rendered
 
 
+def test_canonicalize_belief_id_with_type():
+    valid_ids = {"b_1_active", "b_2_inactive", "b_3"}
+    
+    # 1. Exact Match
+    cid, applied, mtype = canonicalize_belief_id_with_type("b_3", valid_ids)
+    assert cid == "b_3"
+    assert applied is False
+    assert mtype == "exact"
+    
+    # 2. Prefix Match (v_id starts with returned_id)
+    cid, applied, mtype = canonicalize_belief_id_with_type("b_1", valid_ids)
+    assert cid == "b_1_active"
+    assert applied is True
+    assert mtype == "prefix"
+
+    # 3. Suffix Match (returned_id ends with v_id)
+    cid, applied, mtype = canonicalize_belief_id_with_type("prefix_b_3", valid_ids)
+    assert cid == "b_3"
+    assert applied is True
+    assert mtype == "suffix"
+    
+    # 4. Fuzzy Match
+    cid, applied, mtype = canonicalize_belief_id_with_type("b_2_inac-tive", valid_ids)
+    assert cid == "b_2_inactive"
+    assert applied is True
+    assert mtype == "fuzzy"
+    
+    # 5. Failed Canonicalization
+    cid, applied, mtype = canonicalize_belief_id_with_type("b_unknown", valid_ids)
+    assert cid == "b_unknown"
+    assert applied is False
+    assert mtype == "failed"
+
+
 def test_parse_direct_judge_response():
     valid_belief_ids = {"b_1", "b_2"}
     response = """
@@ -109,9 +144,14 @@ def test_parse_direct_judge_response():
     """
     verdicts = parse_direct_judge_response(response, valid_belief_ids)
     assert len(verdicts) == 2
-    assert verdicts[0]["belief_id"] == "b_1"
+    assert verdicts[0]["canonical_belief_id"] == "b_1"
+    assert verdicts[0]["raw_belief_id"] == "b_1"
+    assert verdicts[0]["canonicalization_applied"] is False
+    assert verdicts[0]["canonicalization_type"] == "exact"
     assert verdicts[0]["status"] == "USABLE"
-    assert verdicts[1]["belief_id"] == "b_2"
+    
+    assert verdicts[1]["canonical_belief_id"] == "b_2"
+    assert verdicts[1]["raw_belief_id"] == "b_2"
     assert verdicts[1]["status"] == "NOT_USABLE"
 
 
@@ -122,7 +162,7 @@ def test_parse_direct_judge_response_errors():
         parse_direct_judge_response(response_missing, valid_belief_ids)
 
     response_invalid_id = '{"verdicts": [{"belief_id": "b_unknown", "status": "USABLE"}]}'
-    with pytest.raises(ValueError, match="references unknown belief ID"):
+    with pytest.raises(ValueError, match="failed canonicalization"):
         parse_direct_judge_response(response_invalid_id, valid_belief_ids)
 
 
@@ -149,8 +189,8 @@ def test_check_grounding_error_stage_a(mock_episode_and_gold):
 
 def test_check_grounding_error_stage_b():
     valid_belief_ids = {"b_1"}
-    assert check_grounding_error_stage_b({"belief_id": "b_1"}, valid_belief_ids) is False
-    assert check_grounding_error_stage_b({"belief_id": "b_2"}, valid_belief_ids) is True
+    assert check_grounding_error_stage_b({"raw_belief_id": "b_1"}, valid_belief_ids) is False
+    assert check_grounding_error_stage_b({"raw_belief_id": "b_2"}, valid_belief_ids) is True
 
 
 def test_compute_stage_a_action_metrics(mock_episode_and_gold):
@@ -171,3 +211,49 @@ def test_compute_stage_a_action_metrics(mock_episode_and_gold):
     assert metrics["exact_action_match"] == 1.0
     assert metrics["action_type_match"] == 1.0
     assert metrics["target_grounding"] == 1.0
+
+
+def test_strict_vs_canonicalized_metric_divergence():
+    # Test that strict vs canonicalized accuracy metrics can diverge under fuzzy matching
+    # Gold statuses: b_1 is NOT_USABLE
+    gold_comp = "NOT_USABLE"
+    
+    # Pred statuses (Stage B)
+    # Canonicalized has b_1 = NOT_USABLE (via fuzzy match) -> Correct
+    # Strict has b_1 = UNCERTAIN (no exact match) -> Incorrect
+    strict_pred = {"b_1": "UNCERTAIN"}
+    canonical_pred = {"b_1": "NOT_USABLE"}
+    
+    correct_strict = 1 if strict_pred.get("b_1") == gold_comp else 0
+    correct_canonical = 1 if canonical_pred.get("b_1") == gold_comp else 0
+    
+    assert correct_strict == 0
+    assert correct_canonical == 1
+    assert correct_strict != correct_canonical
+
+
+def test_prompt_non_leakage(mock_episode_and_gold):
+    ep, gold = mock_episode_and_gold
+    sub = ep.submissions[0]
+    
+    # Test Stage B prompt rendering
+    from experiments.multiagent.run_stageab_api_eval import load_direct_judge_template, render_direct_judge_prompt
+    template = load_direct_judge_template()
+    prompt_b = render_direct_judge_prompt(template, sub)
+    
+    # Gold status of b_1 is SUPERSEDED, which maps to NOT_USABLE
+    # Prompt must NOT contain "SUPERSEDED". "NOT_USABLE" is a class name in the template,
+    # but the prompt must NOT contain "b_1: NOT_USABLE" or similar label assignments.
+    assert "SUPERSEDED" not in prompt_b
+    assert "b_1: NOT_USABLE" not in prompt_b
+    assert "b_1: \"NOT_USABLE\"" not in prompt_b
+
+    # Test Stage A prompt rendering
+    from experiments.multiagent.stagec_policy import PromptTypedRevisionPolicy
+    policy = PromptTypedRevisionPolicy()
+    messages = policy.build_messages(sub)
+    user_prompt_a = messages[1]["content"]
+    
+    # Prompts must not leak the gold action targets
+    assert "Identify the correct revision actions" in user_prompt_a
+    assert "gold_snapshot" not in user_prompt_a
