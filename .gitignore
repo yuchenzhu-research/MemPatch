@@ -25,3 +25,4 @@ adapters/
 checkpoints/
 *.safetensors
 *.npz
+models/
