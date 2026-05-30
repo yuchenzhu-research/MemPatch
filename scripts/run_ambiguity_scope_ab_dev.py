@@ -48,7 +48,7 @@ DEFAULT_DATASET = os.path.join(
     os.pardir,
     "data",
     "internal_dev",
-    "ambiguity_scope_controlled_v0.json",
+    "ambiguity_scope_controlled.json",
 )
 DEFAULT_OUTPUT_DIR = os.path.join(
     os.path.dirname(__file__), os.pardir, "outputs", "ambiguity_scope_dev"

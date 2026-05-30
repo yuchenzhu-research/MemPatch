@@ -99,7 +99,7 @@ def test_render_direct_judge_prompt(mock_episode_and_gold):
 
 
 def test_canonicalize_belief_id_with_type():
-    valid_ids = {"b_1_active", "b_2_inactive", "b_3"}
+    valid_ids = {"b_1_some_other_thing", "b_2_inactive", "b_3"}
     
     # 1. Exact Match
     cid, applied, mtype = canonicalize_belief_id_with_type("b_3", valid_ids)
@@ -109,7 +109,7 @@ def test_canonicalize_belief_id_with_type():
     
     # 2. Prefix Match (v_id starts with returned_id)
     cid, applied, mtype = canonicalize_belief_id_with_type("b_1", valid_ids)
-    assert cid == "b_1_active"
+    assert cid == "b_1_some_other_thing"
     assert applied is True
     assert mtype == "prefix"
 
@@ -257,3 +257,81 @@ def test_prompt_non_leakage(mock_episode_and_gold):
     # Prompts must not leak the gold action targets
     assert "Identify the correct revision actions" in user_prompt_a
     assert "gold_snapshot" not in user_prompt_a
+
+
+def test_canonicalize_ambiguity_rejection():
+    # Multiple candidates matching prefix, suffix, or fuzzy
+    valid_ids = {"b_1_active", "b_1_archive", "b_2_inactive"}
+    
+    # 1. Ambiguous prefix
+    cid, applied, mtype = canonicalize_belief_id_with_type("b_1", valid_ids)
+    assert cid == "b_1"
+    assert applied is False
+    assert mtype == "failed"
+    
+    # 2. Ambiguous suffix
+    valid_ids_suffix = {"prefix_b_3", "other_b_3"}
+    cid, applied, mtype = canonicalize_belief_id_with_type("b_3", valid_ids_suffix)
+    assert cid == "b_3"
+    assert applied is False
+    assert mtype == "failed"
+    
+    # 3. Ambiguous fuzzy
+    valid_ids_fuzzy = {"b_2_inactive", "b_2_inactive_2"}
+    cid, applied, mtype = canonicalize_belief_id_with_type("b_2_inac-tive", valid_ids_fuzzy)
+    assert cid == "b_2_inac-tive"
+    assert applied is False
+    assert mtype == "failed"
+
+
+def test_compute_stage_a_action_metrics_empty_and_mismatch(mock_episode_and_gold):
+    ep, gold = mock_episode_and_gold
+    sub = ep.submissions[0]
+    
+    # 1. pred has actions, gold has NO_REVISION
+    pred_actions = [
+        {
+            "action_type": "SUPERSEDES",
+            "target_belief_id": "b_1",
+            "replacement_belief_id": "b_2",
+            "evidence_ids": ["ev_1"],
+        }
+    ]
+    empty_gold_targets = ()
+    metrics = compute_stage_a_action_metrics(pred_actions, empty_gold_targets, sub)
+    assert metrics["exact_action_match"] == 0.0
+    assert metrics["action_type_match"] == 0.0
+    
+    # 2. Both empty
+    metrics_empty = compute_stage_a_action_metrics([], (), sub)
+    assert metrics_empty["exact_action_match"] == 1.0
+    assert metrics_empty["action_type_match"] == 1.0
+    assert metrics_empty["evidence_grounding"] == 1.0
+
+
+def test_closed_api_proposer_fail_closed(mock_episode_and_gold):
+    from experiments.multiagent.stagec_policy import ClosedAPIZeroShotProposer
+    ep, _ = mock_episode_and_gold
+    sub = ep.submissions[0]
+    
+    # 1. Live mode, missing client -> Must raise ValueError
+    proposer = ClosedAPIZeroShotProposer(
+        provider_kind="siliconflow",
+        model_id="deepseek-ai/DeepSeek-V3",
+        client=None,
+    )
+    with pytest.raises(ValueError, match="Live mode requires client and model_id"):
+        proposer.propose(sub)
+        
+    # 2. Mock mode -> Should produce deterministic NO_REVISION action and metadata contains prompt & response
+    mock_proposer = ClosedAPIZeroShotProposer(
+        provider_kind="mock",
+        model_id=None,
+        client=None,
+    )
+    out = mock_proposer.propose(sub)
+    assert out.parsing_valid is True
+    assert len(out.parsed_actions) == 1
+    assert out.parsed_actions[0].action_type == "NO_REVISION"
+    assert "raw_response" in out.metadata
+    assert "prompt" in out.metadata

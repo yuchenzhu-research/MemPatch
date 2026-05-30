@@ -25,9 +25,14 @@ Paper 1 is centered on multi-agent/subagent shared-memory revision authorization
 
 Multiple subagents may submit evidence-bearing memory updates to a shared long-term memory. ReTrace controls which revisions are allowed to affect the shared usable memory basis.
 
-The existing `authorize(...)` kernel is the canonical algorithm core.
+Stage naming and configuration hierarchy:
+- Stage A = `ReTrace-API-ZeroShot` / `ReTrace-Prompt` (API model proposes typed revision actions).
+- Stage B = `DirectJudge-API` (API model directly predicts final usability status without decomposition).
+- Stage C = `ReTrace-AdaptiveProposer` (explicit typed revision proposal learning policy, which includes API-ZeroShot, API-ICL, optional Hosted-FT, and Open LoRA-SFT).
 
-The next implementation layer is a thin multiagent submission/commit layer around `authorize(...)`, preserving producer provenance and deterministic traces.
+Public API Boundaries:
+- `authorize(...)` is the public deterministic authorization kernel. Neither DPA nor RevisionGate should be invoked directly by external callers. All updates/admissions and deterministic routing happen entirely inside `authorize`.
+- `commit_subagent_submission(...)` and `commit_submission_sequence(...)` are multi-agent integration wrappers around `authorize(...)`.
 
 STALE/CUPMem is an external validation/baseline pathway, not the definition of the paper.
 

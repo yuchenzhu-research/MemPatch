@@ -9,11 +9,9 @@ from retracemem.tms.authorization import DefeatPathAuthorizationAlgorithm
 
 
 class RollbackDiagnostics:
-    """Research diagnostics over the typed-graph DPA runtime (Wave 1A).
+    """Research diagnostics over the typed-graph DPA runtime.
 
-    The Wave-0 prototype consumed flat ``RelationPrediction`` lists and
-    branched on a heuristic notion of "authorized vs not". Wave 1A
-    replaces that with diagnostics computed from
+    Diagnostics are computed from
     ``AuthorizationTrace.status`` produced by
     ``DefeatPathAuthorizationAlgorithm``.
 

@@ -10,7 +10,7 @@ class MissingEvidenceError(KeyError):
     """Raised when an evidence edge references an ``evidence_id`` that is not
     present in the ``EpisodeLedger``.
 
-    Per the Wave 1A spec, the DPA runtime must not fabricate a mock ledger
+    The DPA runtime must not fabricate a mock ledger
     or invent timestamps; a missing temporal anchor is a hard error, not a
     silent fallback.
     """

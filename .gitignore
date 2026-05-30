@@ -3,6 +3,8 @@ reference/
 
 # Runtime and generated outputs.
 outputs/
+artifacts/
+*.jsonl
 data_external/
 .pycache_compile/
 __pycache__/

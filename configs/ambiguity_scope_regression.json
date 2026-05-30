@@ -1,7 +1,7 @@
 {
-  "split_id": "ambiguity_scope_regression_v1",
+  "split_id": "ambiguity_scope_regression",
   "purpose": "development_regression_for_effect_triggered_semantics",
-  "source_dataset": "data/internal_dev/ambiguity_scope_controlled_v0.json",
+  "source_dataset": "data/internal_dev/ambiguity_scope_controlled.json",
   "prompt_version": "evidence_edge_prediction_v1",
   "case_ids": [
     "as_supersession_03",

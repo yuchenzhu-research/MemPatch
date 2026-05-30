@@ -40,7 +40,7 @@ _EVIDENCE_TARGET_KIND: dict[EvidenceEdgeType, str] = {
 
 
 class RevisionGate:
-    """Structural admission gate for typed graph edges (Wave 1A).
+    """Structural admission gate for typed graph edges.
 
     The gate validates *structural well-formedness* of a candidate
     ``DependencyEdge`` or ``EvidenceEdge`` against the typed-graph schema
@@ -48,7 +48,7 @@ class RevisionGate:
     does **not** judge defeat semantics; that is the responsibility of
     ``DefeatPathAuthorizationAlgorithm``.
 
-    Important distinction (refactor plan amendment A2):
+    Important distinction:
 
       A well-formed ``BLOCKS(e, c)`` edge may exist in the graph but it
       does not block arbitrary beliefs. It defeats belief ``b`` only
@@ -56,10 +56,10 @@ class RevisionGate:
       admits the BLOCKS edge as structurally valid; DPA enforces the
       anchoring requirement.
 
-    Per amendment A1, ``SUPERSEDES`` edges must carry a
+      ``SUPERSEDES`` edges must carry a
     ``replacement_belief_id`` that exists in the store.
 
-    Per amendment A2, ``REQUIRES`` is the only allowed
+      ``REQUIRES`` is the only allowed
     ``DependencyEdge.edge_type``.
     """
 
@@ -85,7 +85,7 @@ class RevisionGate:
         if not store.has_condition(edge.condition_id):
             return GateDecision(False, "unknown_condition")
         if not edge.inducer:
-            # Amendment A8: provenance is first-class. An anonymous
+            # Provenance is first-class. An anonymous
             # dependency edge cannot enter the graph.
             return GateDecision(False, "missing_inducer_provenance")
         return GateDecision(True, "ok")
@@ -104,7 +104,7 @@ class RevisionGate:
         if not edge.evidence_id:
             return GateDecision(False, "missing_evidence_id")
         if not edge.verifier:
-            # Amendment A8: provenance is first-class.
+            # Provenance is first-class.
             return GateDecision(False, "missing_verifier_provenance")
 
         expected_kind = _EVIDENCE_TARGET_KIND.get(edge.edge_type)
@@ -120,7 +120,7 @@ class RevisionGate:
             if not store.has_belief(edge.target_id):
                 return GateDecision(False, "unknown_belief_target")
 
-        # Amendment A1: SUPERSEDES must carry a replacement that exists.
+        # SUPERSEDES must carry a replacement that exists.
         if edge.edge_type == EvidenceEdgeType.SUPERSEDES:
             if edge.replacement_belief_id is None:
                 return GateDecision(False, "supersedes_missing_replacement_belief_id")

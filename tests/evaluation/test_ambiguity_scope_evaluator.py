@@ -27,7 +27,7 @@ _DATASET_PATH = os.path.join(
     os.pardir,
     "data",
     "internal_dev",
-    "ambiguity_scope_controlled_v0.json",
+    "ambiguity_scope_controlled.json",
 )
 _HARD_DATASET_PATH = os.path.join(
     os.path.dirname(__file__),
@@ -49,7 +49,7 @@ _REGRESSION_CONFIG_PATH = os.path.join(
     os.pardir,
     os.pardir,
     "configs",
-    "ambiguity_scope_regression_v1.json",
+    "ambiguity_scope_regression.json",
 )
 
 
