@@ -65,6 +65,7 @@ def main() -> None:
 
             # Determine proposer constraints
             constrained = (method == "StageA-Constrained")
+            allow_fallback = (method == "StageC-ICL")
 
             # Prepare sub-config for run_stageab_eval
             # If dry_run is True, we run in mock replay mode (live=False, mock=True)
@@ -83,6 +84,7 @@ def main() -> None:
                 constrained=constrained,
                 diagnostic=False,
                 method=method,
+                allow_fallback_to_zeroshot=allow_fallback,
             )
 
             # Invoke authoritative eval engine
