@@ -22,7 +22,7 @@ class DefeatPathAuthorizationAlgorithm:
     ``EpisodeLedger``. It never invokes verifiers and never inspects flat
     ``RelationPrediction`` objects.
 
-    **Precedence** (refactor plan section 4 + amendment A1 / A2 / A3 / A5):
+    **Precedence**:
 
         SUPERSEDES  >  PREREQUISITE_BLOCK  >  UNRESOLVED_UNCERTAIN  >  AUTHORIZED
 
@@ -337,10 +337,7 @@ class DefeatPathAuthorizationAlgorithm:
 
 
 # Legacy import alias. ``retracemem.tms.__init__`` re-exports the name
-# ``AuthorizationEngine`` so downstream packages (verifier, retrieval,
-# generation, backends) that have not yet been migrated to Wave 1A keep
-# importing the package without ImportError at module load time. The
-# alias only preserves the *name*; the underlying behavior is the new
-# typed-graph DPA, and the legacy ``decide(Belief, ...)`` method does
-# not exist on this class.
+# ``AuthorizationEngine`` so downstream packages keep importing the package
+# without ImportError at module load time. The alias only preserves the *name*;
+# the underlying behavior is the new typed-graph DPA.
 AuthorizationEngine = DefeatPathAuthorizationAlgorithm

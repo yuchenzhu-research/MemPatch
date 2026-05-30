@@ -93,14 +93,7 @@ class PromptTypedRevisionPolicy:
         edges: List[EvidenceEdge] = []
         parsed_targets: List[TypedRevisionTarget] = []
         
-        cleaned_text = response_text.strip()
-        if cleaned_text.startswith("```"):
-            lines = cleaned_text.splitlines()
-            if lines[0].startswith("```"):
-                lines = lines[1:]
-            if lines and lines[-1].strip() == "```":
-                lines = lines[:-1]
-            cleaned_text = "\n".join(lines).strip()
+        from retracemem.multiagent.utils import extract_first_json_array
 
         valid_evidence_ids = {ev.evidence_id for ev in submission.evidence_context} | {submission.new_evidence_id}
         valid_candidate_belief_ids = {b.belief_id for b in submission.candidate_beliefs}
@@ -114,7 +107,7 @@ class PromptTypedRevisionPolicy:
         has_duplicates = False
 
         try:
-            parsed = json.loads(cleaned_text)
+            parsed = extract_first_json_array(response_text)
             if not isinstance(parsed, list):
                 raise ValueError("LLM response must be a JSON array of objects.")
             
@@ -287,9 +280,15 @@ class ClosedAPIZeroShotProposer(TypedRevisionProposer):
         messages = self._policy.build_messages(submission)
         system_text = messages[0]["content"]
         user_text = messages[1]["content"]
+        full_prompt = f"System:\n{system_text}\n\nUser:\n{user_text}"
 
-        if self.client is not None and self.model_id is not None and self.provider_kind is not None:
-            full_prompt = f"System:\n{system_text}\n\nUser:\n{user_text}"
+        is_live = self.provider_kind is not None and self.provider_kind != "mock"
+        if is_live:
+            if self.client is None or self.model_id is None:
+                raise ValueError(
+                    f"Live mode requires client and model_id to be specified. "
+                    f"Got client={self.client}, model_id={self.model_id}"
+                )
             trace = self.client.generate(
                 prompt=full_prompt,
                 model_id=self.model_id,
@@ -297,13 +296,25 @@ class ClosedAPIZeroShotProposer(TypedRevisionProposer):
             )
             response_text = trace.response or "[]"
         else:
-            response_text = "[]"
+            response_text = json.dumps([{
+                "action_type": "NO_REVISION",
+                "target_belief_id": None,
+                "target_condition_id": None,
+                "replacement_belief_id": None,
+                "rationale": "Mock default action",
+                "evidence_ids": [submission.new_evidence_id]
+            }])
 
-        return self._policy.parse_response(
+        out = self._policy.parse_response(
             response_text,
             example_id=f"ex_{submission.submission_id}",
             submission=submission,
         )
+        from dataclasses import replace
+        new_metadata = dict(out.metadata)
+        new_metadata["prompt"] = full_prompt
+        new_metadata["raw_response"] = response_text
+        return replace(out, metadata=new_metadata)
 
 
 class ClosedAPIICLProposer(TypedRevisionProposer):
@@ -384,8 +395,14 @@ class ClosedAPIICLProposer(TypedRevisionProposer):
         if icl_context:
             system_text += f"\n\nHere are some examples of expected revision decisions:\n\n{icl_context}"
 
-        if self.client is not None and self.model_id is not None and self.provider_kind is not None:
-            full_prompt = f"System:\n{system_text}\n\nUser:\n{user_text}"
+        full_prompt = f"System:\n{system_text}\n\nUser:\n{user_text}"
+        is_live = self.provider_kind is not None and self.provider_kind != "mock"
+        if is_live:
+            if self.client is None or self.model_id is None:
+                raise ValueError(
+                    f"Live mode requires client and model_id to be specified. "
+                    f"Got client={self.client}, model_id={self.model_id}"
+                )
             trace = self.client.generate(
                 prompt=full_prompt,
                 model_id=self.model_id,
@@ -393,13 +410,25 @@ class ClosedAPIICLProposer(TypedRevisionProposer):
             )
             response_text = trace.response or "[]"
         else:
-            response_text = "[]"
+            response_text = json.dumps([{
+                "action_type": "NO_REVISION",
+                "target_belief_id": None,
+                "target_condition_id": None,
+                "replacement_belief_id": None,
+                "rationale": "Mock default action",
+                "evidence_ids": [submission.new_evidence_id]
+            }])
 
-        return self._policy.parse_response(
+        out = self._policy.parse_response(
             response_text,
             example_id=f"ex_{submission.submission_id}",
             submission=submission,
         )
+        from dataclasses import replace
+        new_metadata = dict(out.metadata)
+        new_metadata["prompt"] = full_prompt
+        new_metadata["raw_response"] = response_text
+        return replace(out, metadata=new_metadata)
 
 
 class OpenModelPromptProposer(TypedRevisionProposer):

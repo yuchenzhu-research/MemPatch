@@ -9,9 +9,9 @@ from retracemem.schemas import (
 
 
 class BeliefStore:
-    """Typed graph store for the Defeat-Path Authorization runtime (Wave 1A).
+    """Typed graph store for the Defeat-Path Authorization runtime.
 
-    Holds four indexed collections per the refactor plan amendment A6:
+    Holds four indexed collections:
 
     - ``beliefs``           : ``BeliefNode`` keyed by ``belief_id``.
     - ``conditions``        : ``ConditionNode`` keyed by ``condition_id``.
@@ -79,9 +79,9 @@ class BeliefStore:
         if not condition.condition_id:
             raise ValueError("condition_id is required")
         if not condition.scope_id:
-            # Amendment A7: identity is namespaced by scope_id; an empty
+            # Identity is namespaced by scope_id; an empty
             # scope_id would silently merge across users.
-            raise ValueError("ConditionNode requires a non-empty scope_id (amendment A7)")
+            raise ValueError("ConditionNode requires a non-empty scope_id")
         if not condition.text:
             raise ValueError("ConditionNode requires non-empty text")
         if condition.condition_id in self._conditions:
@@ -110,7 +110,7 @@ class BeliefStore:
             raise ValueError(f"dependency edge already exists: {edge.edge_id}")
         if edge.edge_type != "REQUIRES":
             # The gate is the sole authority on edge-type policy, but the
-            # store enforces the schema-level invariant from amendment A2.
+            # store enforces the schema-level invariant.
             raise ValueError(
                 f"DependencyEdge.edge_type must be 'REQUIRES' (got {edge.edge_type!r})"
             )
@@ -173,7 +173,7 @@ class BeliefStore:
         return list(self._evidence_edges.values())
 
     # ------------------------------------------------------------------
-    # Indexed accessors required by Wave 1A spec
+    # Indexed accessors
     # ------------------------------------------------------------------
 
     def dependencies_of(self, belief_id: str) -> list[DependencyEdge]:

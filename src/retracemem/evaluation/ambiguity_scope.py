@@ -30,7 +30,7 @@ from retracemem.schemas import (
     EvidenceNode,
 )
 
-SCHEMA_VERSION = "ambiguity_scope_controlled_v0"
+SCHEMA_VERSION = "ambiguity_scope_controlled"
 HARD_SCHEMA_VERSION = "ambiguity_scope_hard_v1"
 
 REQUIRED_CATEGORIES: tuple[str, ...] = (
