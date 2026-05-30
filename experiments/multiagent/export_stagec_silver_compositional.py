@@ -28,10 +28,37 @@ from experiments.multiagent.contracts import (
     GoldSnapshotExpectation,
 )
 from experiments.multiagent.dev_expansion import generate_expanded_episodes
-from experiments.multiagent.export_stagec_sft import (
-    SYSTEM_PROMPT,
+from retracemem.multiagent.utils import (
     format_assistant_response,
     format_user_prompt,
+)
+
+SYSTEM_PROMPT = (
+    "You are the ReTrace Stage C revision policy. Your task is to propose explicit "
+    "typed revision proposals for multi-agent shared-memory updates. "
+    "Propose revision actions only from this canonical vocabulary:\n"
+    "- SUPERSEDES (requires replacement_belief_id)\n"
+    "- BLOCKS\n"
+    "- RELEASES\n"
+    "- UNCERTAIN\n"
+    "- REAFFIRMS\n"
+    "- NO_REVISION\n\n"
+    "Constraints:\n"
+    "- BLOCKS and RELEASES must target only listed condition IDs (target_condition_id).\n"
+    "- SUPERSEDES, UNCERTAIN, and REAFFIRMS must target only listed belief IDs (target_belief_id).\n"
+    "- NO_REVISION must specify target_belief_id, target_condition_id, and replacement_belief_id as null, and include the new_evidence_id in evidence_ids.\n\n"
+    "Return your response as a strict JSON array of objects with the following fields:\n"
+    "- action_type (string)\n"
+    "- target_belief_id (string or null)\n"
+    "- target_condition_id (string or null)\n"
+    "- replacement_belief_id (string or null)\n"
+    "- rationale (string)\n"
+    "- evidence_ids (array of strings)\n\n"
+    "Example format for NO_REVISION:\n"
+    '[\n  {\n    "action_type": "NO_REVISION",\n    "target_belief_id": null,\n'
+    '    "target_condition_id": null,\n    "replacement_belief_id": null,\n'
+    '    "rationale": "No evidence-grounded revision is warranted.",\n'
+    '    "evidence_ids": ["ev_new"]\n  }\n]'
 )
 from retracemem.schemas import (
     EvidenceNode,
@@ -193,7 +220,7 @@ def generate_new_silver_v1_episodes() -> List[Tuple[FixedCandidateInputEpisode, 
     episodes: List[Tuple[FixedCandidateInputEpisode, FixedCandidateGoldRecord]] = []
     domains = ["software_engineering", "research_workflow"]
     
-    # 7 Failure/推理模式
+    # 7 Failure/Reasoning patterns
     patterns = [
         "reaffirms_only",
         "grounding_hard",

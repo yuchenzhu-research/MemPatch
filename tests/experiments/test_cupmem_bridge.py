@@ -6,7 +6,7 @@ from retracemem.multiagent.commit import commit_subagent_submission
 from experiments.cupmem_bridge import map_delta_to_submission, map_invalidation_to_submission
 from experiments.stale_cupmem_comparison import run_arm_a_original, run_arm_b_retrace, execute_offline_fixture_comparison
 from experiments.multiagent.fixtures import get_diagnostic_fixtures
-from experiments.multiagent.run_offline_diagnostic import check_trace_completeness
+from experiments.multiagent.legacy.run_offline_diagnostic import check_trace_completeness
 
 
 def test_e1_trace_completeness_validator():

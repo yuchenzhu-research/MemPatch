@@ -6,7 +6,7 @@ import pytest
 from experiments.multiagent.episodes_dev import get_dev_episodes
 from experiments.multiagent.methods import NaiveLastWriteWinsMethod, ReTraceMethod
 from experiments.multiagent.metrics import compute_episode_metrics, aggregate_metrics
-from experiments.multiagent.run_method_comparison import run_comparison
+from experiments.multiagent.legacy.run_method_comparison import run_comparison
 
 
 def test_episodes_schema_and_serialization():

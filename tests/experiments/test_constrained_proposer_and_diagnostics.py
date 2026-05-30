@@ -232,7 +232,7 @@ def test_action_confusion_diagnostics_on_tiny_fixture(tmp_path, tiny_submission)
         downstream_tasks=(),
     )
     
-    import experiments.multiagent.analyze_stagea_failures as analyze_mod
+    import experiments.multiagent.legacy.analyze_stagea_failures as analyze_mod
     
     # Monkeypatch generate_expanded_episodes in the module
     analyze_mod.generate_expanded_episodes = lambda: ((episode, gold),)
