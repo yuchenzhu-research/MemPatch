@@ -4,7 +4,7 @@
     "NOT an official benchmark. NOT a final evaluation. NOT human-validated until review_status changes per case.",
     "Replay/mock execution is for runner correctness; any live execution is exploratory development-only."
   ],
-  "_schema_version": "ambiguity_scope_controlled_v0",
+  "_schema_version": "ambiguity_scope_controlled",
   "_required_categories": [
     "clear_supersession",
     "clear_prerequisite_blocking",
@@ -18,7 +18,7 @@
   "cases": [
     {
       "case_id": "as_supersession_01",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "clear_supersession",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -97,7 +97,7 @@
     },
     {
       "case_id": "as_supersession_02",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "clear_supersession",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -176,7 +176,7 @@
     },
     {
       "case_id": "as_supersession_03",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "clear_supersession",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -255,7 +255,7 @@
     },
     {
       "case_id": "as_supersession_04",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "clear_supersession",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -334,7 +334,7 @@
     },
     {
       "case_id": "as_prereq_block_01",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "clear_prerequisite_blocking",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -428,7 +428,7 @@
     },
     {
       "case_id": "as_prereq_block_02",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "clear_prerequisite_blocking",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -522,7 +522,7 @@
     },
     {
       "case_id": "as_prereq_block_03",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "clear_prerequisite_blocking",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -616,7 +616,7 @@
     },
     {
       "case_id": "as_prereq_block_04",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "clear_prerequisite_blocking",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -710,7 +710,7 @@
     },
     {
       "case_id": "as_protected_01",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "protected_unrelated_belief",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -830,7 +830,7 @@
     },
     {
       "case_id": "as_protected_02",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "protected_unrelated_belief",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -935,7 +935,7 @@
     },
     {
       "case_id": "as_protected_03",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "protected_unrelated_belief",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -1055,7 +1055,7 @@
     },
     {
       "case_id": "as_protected_04",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "protected_unrelated_belief",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -1160,7 +1160,7 @@
     },
     {
       "case_id": "as_temp_vs_persistent_01",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "temporary_constraint_vs_persistent_preference",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -1223,7 +1223,7 @@
     },
     {
       "case_id": "as_temp_vs_persistent_02",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "temporary_constraint_vs_persistent_preference",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -1286,7 +1286,7 @@
     },
     {
       "case_id": "as_temp_vs_persistent_03",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "temporary_constraint_vs_persistent_preference",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -1349,7 +1349,7 @@
     },
     {
       "case_id": "as_temp_vs_persistent_04",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "temporary_constraint_vs_persistent_preference",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -1412,7 +1412,7 @@
     },
     {
       "case_id": "as_current_vs_historical_01",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "current_state_vs_historical_fact",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -1475,7 +1475,7 @@
     },
     {
       "case_id": "as_current_vs_historical_02",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "current_state_vs_historical_fact",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -1538,7 +1538,7 @@
     },
     {
       "case_id": "as_current_vs_historical_03",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "current_state_vs_historical_fact",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -1601,7 +1601,7 @@
     },
     {
       "case_id": "as_current_vs_historical_04",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "current_state_vs_historical_fact",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -1664,7 +1664,7 @@
     },
     {
       "case_id": "as_tentative_intention_01",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "tentative_intention_or_future_possibility",
       "source_type": "newly_authored_internal",
       "review_status": "assistant_screened_pending_user_final_review",
@@ -1734,7 +1734,7 @@
     },
     {
       "case_id": "as_tentative_intention_02",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "tentative_intention_or_future_possibility",
       "source_type": "newly_authored_internal",
       "review_status": "assistant_screened_pending_user_final_review",
@@ -1804,7 +1804,7 @@
     },
     {
       "case_id": "as_tentative_intention_03",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "tentative_intention_or_future_possibility",
       "source_type": "newly_authored_internal",
       "review_status": "assistant_screened_pending_user_final_review",
@@ -1874,7 +1874,7 @@
     },
     {
       "case_id": "as_tentative_intention_04",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "tentative_intention_or_future_possibility",
       "source_type": "newly_authored_internal",
       "review_status": "assistant_screened_pending_user_final_review",
@@ -1944,7 +1944,7 @@
     },
     {
       "case_id": "as_insufficient_evidence_01",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "insufficient_evidence_requires_abstention",
       "source_type": "newly_authored_internal",
       "review_status": "assistant_screened_pending_user_final_review",
@@ -2014,7 +2014,7 @@
     },
     {
       "case_id": "as_insufficient_evidence_02",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "insufficient_evidence_requires_abstention",
       "source_type": "newly_authored_internal",
       "review_status": "assistant_screened_pending_user_final_review",
@@ -2084,7 +2084,7 @@
     },
     {
       "case_id": "as_insufficient_evidence_03",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "insufficient_evidence_requires_abstention",
       "source_type": "newly_authored_internal",
       "review_status": "assistant_screened_pending_user_final_review",
@@ -2154,7 +2154,7 @@
     },
     {
       "case_id": "as_insufficient_evidence_04",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "insufficient_evidence_requires_abstention",
       "source_type": "newly_authored_internal",
       "review_status": "assistant_screened_pending_user_final_review",
@@ -2224,7 +2224,7 @@
     },
     {
       "case_id": "as_scope_trap_01",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "multi_belief_scope_expansion_trap",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -2394,7 +2394,7 @@
     },
     {
       "case_id": "as_scope_trap_02",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "multi_belief_scope_expansion_trap",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -2564,7 +2564,7 @@
     },
     {
       "case_id": "as_scope_trap_03",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "multi_belief_scope_expansion_trap",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",
@@ -2709,7 +2709,7 @@
     },
     {
       "case_id": "as_scope_trap_04",
-      "schema_version": "ambiguity_scope_controlled_v0",
+      "schema_version": "ambiguity_scope_controlled",
       "category": "multi_belief_scope_expansion_trap",
       "source_type": "newly_authored_internal",
       "review_status": "model_drafted_pending_human_review",

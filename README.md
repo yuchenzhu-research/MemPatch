@@ -47,23 +47,22 @@ from retracemem.multiagent.commit import commit_subagent_submission
 
 ## Implemented State and Milestones
 
-Implemented after this packet:
-    semantically reviewed-candidate generation workflow,
-    seven-case human approval pack export,
-    strict evidence-grounding Stage C parser,
-    and live-smoke preflight boundary.
-
-The seven-case prompt-smoke pack must pass executable gold-consistency validation
-and receive explicit recorded human decisions before any live invocation.
-No automatic approval constitutes human review.
+Established components:
+    - Semantically reviewed-candidate generation workflow.
+    - Strict evidence-grounding Stage C parser.
+    - Live-smoke preflight boundary.
 
 Not yet established:
-    approved smoke examples, live prompt results, trained Stage C policy,
-    frozen primary-test results, official external-validation scores.
+    - Approved smoke examples, live prompt results, trained Stage C policy, frozen primary-test results, and official external-validation scores.
 
-## Future Validation Plans
+*Note: Any committed artifacts in the repository (such as stale run summaries) are development artifacts and do not represent final paper results.*
 
-Next primary experiment:
-External validation:
-    STALE/CUPMem bridge remains available for later frozen evaluation.
+## Next Steps
+
+The next steps for this repository are:
+1. Complete repository cleanup and governance.
+2. Regenerate the dev70 dataset evaluation with strict/canonicalized schemas.
+3. Perform system analysis and ablation study.
+4. Set up and evaluate `ReTrace-AdaptiveProposer` with API-ICL.
+
 

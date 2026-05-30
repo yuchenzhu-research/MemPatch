@@ -92,7 +92,7 @@ class ManualEvidenceEdgeVerifier:
 
 
 class HeuristicEvidenceEdgeVerifier:
-    """Deterministic offline typed edge verifier for Wave 1B development.
+    """Deterministic offline typed edge verifier for development.
 
     development-only deterministic fixture; not a publishable semantic verifier and not permitted in paper main-result runners.
     """

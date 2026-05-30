@@ -51,7 +51,7 @@ from experiments.multiagent.contracts import (
     FixedCandidateGoldRecord,
     FixedCandidateInputEpisode,
 )
-from experiments.multiagent.stagec_policy import PromptTypedRevisionPolicy
+from experiments.multiagent.stagec_policy import ClosedAPIZeroShotProposer
 from experiments.multiagent.run_stagec_adapter_eval import rename_submission
 
 _STATUS_MAP_A_TO_COMPARABLE = {
@@ -193,42 +193,7 @@ def render_direct_judge_prompt(template: str, sub: FixedCandidateSubmission) -> 
     return prompt
 
 
-def canonicalize_belief_id_with_type(
-    returned_id: str,
-    valid_belief_ids: set[str],
-) -> tuple[str, bool, str]:
-    """Canonicalize a returned belief ID against valid belief IDs.
-    
-    Returns:
-        (canonical_id, applied, match_type)
-        where match_type is one of: "exact", "prefix", "suffix", "fuzzy", "failed"
-    """
-    import difflib
-    if returned_id in valid_belief_ids:
-        return returned_id, False, "exact"
-        
-    # Attempt Prefix Match
-    prefix_matches = [
-        v_id for v_id in valid_belief_ids
-        if returned_id.startswith(v_id) or v_id.startswith(returned_id)
-    ]
-    if len(prefix_matches) == 1:
-        return prefix_matches[0], True, "prefix"
-        
-    # Attempt Suffix Match
-    suffix_matches = [
-        v_id for v_id in valid_belief_ids
-        if returned_id.endswith(v_id) or v_id.endswith(returned_id)
-    ]
-    if len(suffix_matches) == 1:
-        return suffix_matches[0], True, "suffix"
-        
-    # Attempt Fuzzy Match (using difflib)
-    fuzzy_matches = difflib.get_close_matches(returned_id, list(valid_belief_ids), n=1, cutoff=0.5)
-    if fuzzy_matches:
-        return fuzzy_matches[0], True, "fuzzy"
-        
-    return returned_id, False, "failed"
+from retracemem.multiagent.utils import canonicalize_belief_id_with_type
 
 
 def parse_direct_judge_response(
@@ -329,15 +294,6 @@ def compute_stage_a_action_metrics(
     sub: FixedCandidateSubmission,
 ) -> dict[str, float]:
     """Compute fine-grained metrics for Stage A proposal action match."""
-    if not gold_actions:
-        return {
-            "valid_json": 1.0,
-            "action_type_match": 1.0,
-            "target_grounding": 1.0,
-            "evidence_grounding": 1.0,
-            "exact_action_match": 1.0,
-        }
-
     valid_json = 1.0  # Assumes parsed if we reached here
     
     # Grounding checks
@@ -346,7 +302,7 @@ def compute_stage_a_action_metrics(
     for act in pred_actions:
         if not check_grounding_error_stage_a(act, sub):
             target_grounding_correct += 1
-    target_grounding = target_grounding_correct / total_pred if total_pred > 0 else 0.0
+    target_grounding = target_grounding_correct / total_pred if total_pred > 0 else 1.0
 
     # Match exact actions
     def canonical_action_tuple(a: dict[str, Any] | TypedRevisionTarget) -> tuple:
@@ -380,6 +336,21 @@ def compute_stage_a_action_metrics(
 
     for pred_act in pred_actions:
         pred_target = pred_act.get("target_belief_id") or pred_act.get("target_condition_id")
+        pred_action_type = pred_act.get("action_type")
+        
+        # Match NO_REVISION
+        if pred_action_type == "NO_REVISION":
+            for gold_act in gold_actions:
+                if gold_act.action_type == "NO_REVISION":
+                    matched_count += 1
+                    action_type_match_correct += 1
+                    pred_evs = set(pred_act.get("evidence_ids") or [])
+                    gold_evs = set(gold_act.evidence_ids)
+                    if pred_evs == gold_evs:
+                         evidence_grounding_correct += 1
+                    break
+            continue
+
         if not pred_target:
             continue
         # Find matching gold action by target
@@ -396,8 +367,12 @@ def compute_stage_a_action_metrics(
                     evidence_grounding_correct += 1
                 break
 
-    action_type_match = action_type_match_correct / matched_count if matched_count > 0 else 0.0
-    evidence_grounding = evidence_grounding_correct / matched_count if matched_count > 0 else 0.0
+    if not pred_actions and not gold_actions:
+        action_type_match = 1.0
+        evidence_grounding = 1.0
+    else:
+        action_type_match = action_type_match_correct / max(len(pred_actions), len(gold_actions))
+        evidence_grounding = evidence_grounding_correct / max(len(pred_actions), len(gold_actions))
 
     return {
         "valid_json": valid_json,
@@ -418,7 +393,7 @@ def main() -> None:
     parser.add_argument("--model", default="deepseek-ai/DeepSeek-V3", help="Model ID")
     parser.add_argument("--api-key", default=None, help="Explicit API key")
     parser.add_argument("--base-url", default=None, help="Explicit base URL")
-    parser.add_argument("--output-dir", default="artifacts/stageab_dev70", help="Output directory")
+    parser.add_argument("--output-dir", default="outputs/runs/stageab_dev70", help="Output directory")
     args = parser.parse_args()
 
     print("=" * 80)
@@ -508,8 +483,19 @@ def main() -> None:
                 stage_b_parsed_rows = []
                 dpa_trace_rows = []
 
-    # Policy setup for Stage A Prompting & Parsing
-    policy = PromptTypedRevisionPolicy()
+    # Policy setup for Stage A Proposing
+    if args.dry_run:
+        proposer_a = ClosedAPIZeroShotProposer(
+            provider_kind="mock",
+            model_id=None,
+            client=None,
+        )
+    else:
+        proposer_a = ClosedAPIZeroShotProposer(
+            provider_kind=args.provider if args.live else "mock",
+            model_id=args.model if args.live else None,
+            client=client,
+        )
     direct_judge_template = load_direct_judge_template()
 
     # Main Execution Loop
@@ -530,77 +516,25 @@ def main() -> None:
         ep_a_parse_errors = []
 
         for sub in episode.submissions:
-            # Build prompts
-            messages = policy.build_messages(sub)
-            system_prompt = messages[0]["content"]
-            user_prompt = messages[1]["content"]
-            full_prompt = f"System:\n{system_prompt}\n\nUser:\n{user_prompt}"
+            proposal_output = proposer_a.propose(sub)
 
-            raw_response = ""
-            parse_err = None
+            raw_response = proposal_output.metadata.get("raw_response", "")
+            full_prompt = proposal_output.metadata.get("prompt", "")
+            parse_err = "\n".join(proposal_output.errors) if proposal_output.errors else None
+
             parsed_actions = []
+            if proposal_output.parsing_valid:
+                for t in proposal_output.parsed_actions:
+                    parsed_actions.append({
+                        "action_type": t.action_type,
+                        "target_belief_id": t.target_belief_id,
+                        "target_condition_id": t.target_condition_id,
+                        "replacement_belief_id": t.replacement_belief_id,
+                        "rationale": t.rationale,
+                        "evidence_ids": list(t.evidence_ids),
+                    })
 
-            if args.dry_run:
-                # Dry run only logs prompt length
-                raw_response = "DRY RUN MOCK RESPONSE"
-                parsed_actions = []
-            elif args.live and client is not None:
-                try:
-                    trace = client.generate(
-                        prompt=full_prompt,
-                        model_id=args.model,
-                        provider=args.provider,
-                        temperature=0.0,
-                        seed=42,
-                    )
-                    if trace.status == "success" and trace.response:
-                        raw_response = trace.response
-                    else:
-                        parse_err = trace.error_message or "Unknown model call failure"
-                except Exception as ex:
-                    parse_err = f"{type(ex).__name__}: {ex}"
-            else:
-                # Mock replay mode (runs offline mockup if available, else NO_REVISION default)
-                # We can generate NO_REVISION default mock response
-                raw_response = json.dumps([{
-                    "action_type": "NO_REVISION",
-                    "target_belief_id": None,
-                    "target_condition_id": None,
-                    "replacement_belief_id": None,
-                    "rationale": "Mock default action",
-                    "evidence_ids": [sub.new_evidence_id]
-                }])
-
-            # Parse action response
-            if not parse_err:
-                try:
-                    policy_out = policy.parse_response(
-                        raw_response,
-                        example_id=f"ex_{ep_id}_{sub.submission_id}",
-                        submission=sub,
-                    )
-                    proposal_batches = policy_out.proposal_batches
-                    # Reconstruct list of dict targets
-                    for batch in proposal_batches:
-                        for edge in batch.edges:
-                            action_type = edge.edge_type.value if hasattr(edge.edge_type, "value") else str(edge.edge_type)
-                            parsed_actions.append({
-                                "action_type": action_type,
-                                "target_belief_id": edge.target_id if edge.target_kind == "belief" else None,
-                                "target_condition_id": edge.target_id if edge.target_kind == "condition" else None,
-                                "replacement_belief_id": edge.replacement_belief_id,
-                                "rationale": edge.rationale,
-                                "evidence_ids": [edge.evidence_id],
-                            })
-                except Exception as ex:
-                    parse_err = str(ex)
-                    proposal_batches = ()
-
-            if parse_err:
-                ep_a_parse_errors.append(parse_err)
-                parsed_actions = []
-                # Default empty proposal batches on parse error to allow DPA execution to proceed
-                proposal_batches = ()
+            proposal_batches = proposal_output.proposal_batches
 
             # Build SubagentMemorySubmission with predicted proposal batches
             subagent_sub = SubagentMemorySubmission(
@@ -848,19 +782,16 @@ def main() -> None:
         strict_pred_b_statuses = res_b.get("strict_final_belief_statuses", {})
         canonical_pred_b_statuses = res_b.get("canonicalized_final_belief_statuses", {})
 
-        # Compute Action Metrics for Stage A only
-        # Aggregate actions predicted across all submissions of this episode
-        all_pred_actions = []
+        # Compute Action Metrics for Stage A only per submission
         for s_parsed in res_a.get("submissions", []):
-            all_pred_actions.extend(s_parsed.get("actions", []))
+            sub_id = s_parsed["submission_id"]
+            orig_sub = next(s for s in ep.submissions if s.submission_id == sub_id)
+            pred_actions_for_sub = s_parsed.get("actions", [])
+            gold_actions_for_sub = tuple(t for t in gold.gold_typed_targets if t.submission_id == sub_id)
             
-        # Get matching last submission
-        last_sub_idx = len(ep.submissions) - 1
-        last_sub = ep.submissions[last_sub_idx]
-        
-        act_metrics = compute_stage_a_action_metrics(all_pred_actions, gold.gold_typed_targets, last_sub)
-        for k, v in act_metrics.items():
-            action_metrics_counters[k].append(v)
+            act_metrics = compute_stage_a_action_metrics(pred_actions_for_sub, gold_actions_for_sub, orig_sub)
+            for k, v in act_metrics.items():
+                action_metrics_counters[k].append(v)
 
         # Grounding errors Stage A
         has_grounding_err_a = False
@@ -875,7 +806,9 @@ def main() -> None:
         # Grounding errors Stage B
         has_grounding_err_b = False
         for s_parsed in res_b.get("submissions", []):
-            valid_belief_ids = {b.belief_id for b in ep.submissions[-1].candidate_beliefs}
+            sub_id = s_parsed["submission_id"]
+            orig_sub = next(s for s in ep.submissions if s.submission_id == sub_id)
+            valid_belief_ids = {b.belief_id for b in orig_sub.candidate_beliefs}
             for verd in s_parsed.get("verdicts", []):
                 if check_grounding_error_stage_b(verd, valid_belief_ids):
                     has_grounding_err_b = True
@@ -1016,11 +949,11 @@ def main() -> None:
             "grounding_error_rate": calc_rate(stage_metrics["stage_a"]["grounding_errors"], len(processed_cases)),
             "valid_output_rate": calc_rate(stage_metrics["stage_a"]["valid_outputs"], stage_metrics["stage_a"]["total_outputs"]),
             # Stage A specific metrics
-            "valid_json": sum(action_metrics_counters["valid_json"]) / len(processed_cases) if processed_cases else 0.0,
-            "action_type_match": sum(action_metrics_counters["action_type_match"]) / len(processed_cases) if processed_cases else 0.0,
-            "target_grounding": sum(action_metrics_counters["target_grounding"]) / len(processed_cases) if processed_cases else 0.0,
-            "evidence_grounding": sum(action_metrics_counters["evidence_grounding"]) / len(processed_cases) if processed_cases else 0.0,
-            "exact_action_match": sum(action_metrics_counters["exact_action_match"]) / len(processed_cases) if processed_cases else 0.0,
+            "valid_json": sum(action_metrics_counters["valid_json"]) / len(action_metrics_counters["valid_json"]) if action_metrics_counters["valid_json"] else 0.0,
+            "action_type_match": sum(action_metrics_counters["action_type_match"]) / len(action_metrics_counters["action_type_match"]) if action_metrics_counters["action_type_match"] else 0.0,
+            "target_grounding": sum(action_metrics_counters["target_grounding"]) / len(action_metrics_counters["target_grounding"]) if action_metrics_counters["target_grounding"] else 0.0,
+            "evidence_grounding": sum(action_metrics_counters["evidence_grounding"]) / len(action_metrics_counters["evidence_grounding"]) if action_metrics_counters["evidence_grounding"] else 0.0,
+            "exact_action_match": sum(action_metrics_counters["exact_action_match"]) / len(action_metrics_counters["exact_action_match"]) if action_metrics_counters["exact_action_match"] else 0.0,
         },
         "stage_b": {
             "final_status_accuracy": calc_rate(stage_metrics["stage_b_canonicalized"]["correct_beliefs"], stage_metrics["stage_b_canonicalized"]["total_beliefs"]),
