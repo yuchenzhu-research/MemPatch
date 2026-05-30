@@ -133,6 +133,7 @@ def commit_submission_sequence(
     global_ledger = EpisodeLedger()
     gate = RevisionGate()
 
+    gate_decisions = []
     for sub in submissions:
         # 1. Commit individual subagent submission
         commit_res = commit_subagent_submission(sub)
@@ -168,6 +169,13 @@ def commit_submission_sequence(
         for batch in sub.proposal_batches:
             for edge in batch.edges:
                 dec = gate.admit_evidence_edge(edge, global_store)
+                gate_decisions.append({
+                    "edge_id": edge.edge_id,
+                    "edge_type": edge.edge_type.value if hasattr(edge.edge_type, "value") else str(edge.edge_type),
+                    "target_id": edge.target_id,
+                    "admitted": dec.admitted,
+                    "reason": dec.reason
+                })
                 if dec.admitted and not global_store.has_evidence_edge(edge.edge_id):
                     global_store.add_evidence_edge(edge)
 
@@ -198,6 +206,7 @@ def commit_submission_sequence(
         "number_of_submissions": len(submissions),
         "cumulative_beliefs": [b.belief_id for b in global_store.all_beliefs()],
         "cumulative_evidence": global_ledger.ids(),
+        "gate_decisions": gate_decisions,
     }
 
     return SharedMemorySnapshotResult(
