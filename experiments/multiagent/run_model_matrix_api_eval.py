@@ -58,14 +58,29 @@ def main() -> None:
     # Matrix results structure: results[model][method] = { ...metrics }
     matrix_results: dict[str, dict[str, Any]] = {}
 
+    effective_methods_seen = set()
+    fallback_policy_allowed = config.get("allow_fallback_to_zeroshot", False) or args.dry_run
+
     for model in models:
         matrix_results[model] = {}
         for method in methods:
-            print(f"\nEvaluating Model: {model} | Method: {method} ...")
+            requested_method = method
+            effective_method = method
+
+            allow_fallback = (requested_method == "StageC-ICL") and fallback_policy_allowed
+            if requested_method == "StageC-ICL" and allow_fallback:
+                effective_method = "zero_shot_fallback"
+
+            effective_methods_seen.add(effective_method)
+
+            if requested_method != effective_method:
+                print(f"\nEvaluating Model: {model} | Method: {requested_method} (effective: {effective_method}) ...")
+                print(f"  Requested={requested_method}, Effective={effective_method} (fallback_used=True)")
+            else:
+                print(f"\nEvaluating Model: {model} | Method: {requested_method} ...")
 
             # Determine proposer constraints
-            constrained = (method == "StageA-Constrained")
-            allow_fallback = (method == "StageC-ICL")
+            constrained = (requested_method == "StageA-Constrained")
 
             # Prepare sub-config for run_stageab_eval
             # If dry_run is True, we run in mock replay mode (live=False, mock=True)
@@ -80,10 +95,10 @@ def main() -> None:
                 model=model,
                 api_key=api_key,
                 base_url=api_url,
-                output_dir=str(output_dir / f"{model.replace('/', '_')}_{method}"),
+                output_dir=str(output_dir / f"{model.replace('/', '_')}_{effective_method}"),
                 constrained=constrained,
                 diagnostic=False,
-                method=method,
+                method=requested_method,
                 allow_fallback_to_zeroshot=allow_fallback,
             )
 
@@ -93,18 +108,21 @@ def main() -> None:
             # Extract metrics based on method kind
             # DirectJudge-API corresponds to Stage B (direct judge) metrics
             # Stage A / Stage C methods correspond to Stage A (decomposition + DPA) metrics
-            metric_source_key = "stage_b" if method == "DirectJudge-API" else "stage_a"
+            metric_source_key = "stage_b" if effective_method == "DirectJudge-API" else "stage_a"
             metrics = global_metrics[metric_source_key]
 
             # In DirectJudge, parser errors are tracked as the inverse of valid output rate
             # In Stage A, parser_error_rate is directly tracked
-            if method == "DirectJudge-API":
+            if effective_method == "DirectJudge-API":
                 parser_err_rate = 1.0 - metrics.get("valid_output_rate", 1.0)
             else:
                 parser_err_rate = metrics.get("parser_error_rate", 0.0)
 
             # Map fields back to Matrix evaluation schema
-            matrix_results[model][method] = {
+            matrix_results[model][effective_method] = {
+                "requested_method": requested_method,
+                "effective_method": effective_method,
+                "fallback_used": (requested_method != effective_method),
                 "dpa_final_status_accuracy": metrics.get("final_status_accuracy", 0.0),
                 "over_update_rate": metrics.get("over_update_rate", 0.0),
                 "under_update_rate": metrics.get("under_update_rate", 0.0),
@@ -113,8 +131,8 @@ def main() -> None:
                 "total_beliefs_evaluated": metrics.get("total_beliefs", 0),
             }
 
-            print(f"  Accuracy: {matrix_results[model][method]['dpa_final_status_accuracy']:.4f}")
-            print(f"  Over Updates (Stale Propagation): {matrix_results[model][method]['over_update_rate']:.4f}")
+            print(f"  Accuracy: {matrix_results[model][effective_method]['dpa_final_status_accuracy']:.4f}")
+            print(f"  Over Updates (Stale Propagation): {matrix_results[model][effective_method]['over_update_rate']:.4f}")
 
     # Write Matrix results
     with open(output_dir / "matrix_results.json", "w", encoding="utf-8") as f:
@@ -128,7 +146,9 @@ def main() -> None:
         "mock_default_used": args.dry_run,
         "provider": provider,
         "models_evaluated": models,
-        "methods_evaluated": methods,
+        "requested_methods": methods,
+        "effective_methods": sorted(list(effective_methods_seen)),
+        "fallback_policy": "allow_fallback_to_zeroshot" if fallback_policy_allowed else "fail_closed",
         "output_directory": str(output_dir),
         "results": matrix_results,
     }
