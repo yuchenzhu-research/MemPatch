@@ -25,33 +25,70 @@ class PromptTypedRevisionPolicy:
         )
 
     def build_system_prompt(self) -> str:
-        actions_str = ""
-        for act in self.allowed_actions:
-            if act == "SUPERSEDES":
-                actions_str += "- SUPERSEDES (requires replacement_belief_id)\n"
-            else:
-                actions_str += f"- {act}\n"
-        
         system_prompt = (
             "You are the ReTrace Stage C revision policy. Your task is to propose explicit "
-            "typed revision proposals for multi-agent shared-memory updates. "
+            "typed revision proposals for multi-agent shared-memory updates.\n\n"
             "Propose revision actions only from this canonical vocabulary:\n"
-            f"{actions_str}\n"
-            "Constraints:\n"
+            "- SUPERSEDES (requires target_belief_id and replacement_belief_id)\n"
+            "- BLOCKS (requires target_condition_id)\n"
+            "- RELEASES (requires target_condition_id)\n"
+            "- UNCERTAIN (requires target_belief_id)\n"
+            "- REAFFIRMS (requires target_belief_id)\n"
+            "- NO_REVISION (requires all target/replacement IDs as null)\n\n"
+            "### Silent Decision Checklist\n"
+            "Before producing JSON, you must silently evaluate the following questions based on the evidence:\n"
+            "1. Does the new evidence update, replace, or contradict a prior belief?\n"
+            "2. Is there a candidate replacement belief directly supported by the new evidence?\n"
+            "3. Does the new evidence invalidate a listed condition?\n"
+            "4. Does it restore a previously blocked condition?\n"
+            "5. Does it create unresolved conflict without a safe replacement?\n"
+            "6. Does it independently confirm an existing belief?\n"
+            "7. Is the new evidence duplicate or irrelevant?\n\n"
+            "### Action Trigger Guidance\n"
+            "- Emit SUPERSEDES if a candidate replacement belief is a newer/updated version of an existing candidate belief and is supported by the new evidence.\n"
+            "- Emit BLOCKS if a listed condition required by a belief is contradicted or invalidated by the new evidence.\n"
+            "- Emit RELEASES if a listed condition is restored or cleared by the new evidence.\n"
+            "- Emit UNCERTAIN if an unresolved conflict or doubt is created for a belief, and no safe replacement belief is available.\n"
+            "- Emit REAFFIRMS if the new evidence independently confirms or supports an existing belief.\n"
+            "- Emit NO_REVISION only if the new evidence is duplicate, irrelevant, or does not warrant any status change.\n\n"
+            "### Constraints\n"
             "- BLOCKS and RELEASES must target only listed condition IDs (target_condition_id).\n"
             "- SUPERSEDES, UNCERTAIN, and REAFFIRMS must target only listed belief IDs (target_belief_id).\n"
-            "- NO_REVISION must specify target_belief_id, target_condition_id, and replacement_belief_id as null, and include the new_evidence_id in evidence_ids.\n\n"
-            "Return your response as a strict JSON array of objects with the following fields:\n"
-            "- action_type (string)\n"
-            "- target_belief_id (string or null)\n"
-            "- target_condition_id (string or null)\n"
-            "- replacement_belief_id (string or null)\n"
-            "- rationale (string)\n"
-            "- evidence_ids (array of strings)\n\n"
-            "Example format for NO_REVISION:\n"
+            "- NO_REVISION must specify target_belief_id, target_condition_id, and replacement_belief_id as null, and include the new_evidence_id in evidence_ids.\n"
+            "- Do not output any thinking process, chain-of-thought, markdown formatting, or final DPA status. Return ONLY a strict JSON array of objects.\n\n"
+            "### Examples\n"
+            "Example 1: SUPERSEDES\n"
+            '[\n  {\n    "action_type": "SUPERSEDES",\n    "target_belief_id": "b_old",\n'
+            '    "target_condition_id": null,\n    "replacement_belief_id": "b_new",\n'
+            '    "rationale": "New evidence replaces the old address.",\n'
+            '    "evidence_ids": ["ev_new"]\n  }\n]\n\n'
+            "Example 2: BLOCKS\n"
+            '[\n  {\n    "action_type": "BLOCKS",\n    "target_belief_id": null,\n'
+            '    "target_condition_id": "c_limit",\n    "replacement_belief_id": null,\n'
+            '    "rationale": "Injury invalidates active physical status.",\n'
+            '    "evidence_ids": ["ev_new"]\n  }\n]\n\n'
+            "Example 3: SUPERSEDES + BLOCKS (compositional)\n"
+            '[\n  {\n    "action_type": "SUPERSEDES",\n    "target_belief_id": "b_1",\n'
+            '    "target_condition_id": null,\n    "replacement_belief_id": "b_2",\n'
+            '    "rationale": "New schedule supersedes previous.",\n'
+            '    "evidence_ids": ["ev_new"]\n  },\n  {\n    "action_type": "BLOCKS",\n'
+            '    "target_belief_id": null,\n    "target_condition_id": "c_2",\n'
+            '    "replacement_belief_id": null,\n    "rationale": "Schedule conflict blocks the location condition.",\n'
+            '    "evidence_ids": ["ev_new"]\n  }\n]\n\n'
+            "Example 4: UNCERTAIN\n"
+            '[\n  {\n    "action_type": "UNCERTAIN",\n    "target_belief_id": "b_1",\n'
+            '    "target_condition_id": null,\n    "replacement_belief_id": null,\n'
+            '    "rationale": "Evidence indicates the status might have changed but details are unclear.",\n'
+            '    "evidence_ids": ["ev_new"]\n  }\n]\n\n'
+            "Example 5: REAFFIRMS\n"
+            '[\n  {\n    "action_type": "REAFFIRMS",\n    "target_belief_id": "b_1",\n'
+            '    "target_condition_id": null,\n    "replacement_belief_id": null,\n'
+            '    "rationale": "Evidence confirms the user is still at the same office.",\n'
+            '    "evidence_ids": ["ev_new"]\n  }\n]\n\n'
+            "Example 6: NO_REVISION\n"
             '[\n  {\n    "action_type": "NO_REVISION",\n    "target_belief_id": null,\n'
             '    "target_condition_id": null,\n    "replacement_belief_id": null,\n'
-            '    "rationale": "No evidence-grounded revision is warranted.",\n'
+            '    "rationale": "The evidence is duplicate or does not change any belief.",\n'
             '    "evidence_ids": ["ev_new"]\n  }\n]'
         )
         return system_prompt
@@ -74,6 +111,31 @@ class PromptTypedRevisionPolicy:
             label_source="temporary",
         )
         user_content = format_user_prompt(fake_ex)
+
+        # Build deterministic candidate contrast block
+        ne_node = next((e for e in submission.evidence_context if e.evidence_id == submission.new_evidence_id), None)
+        new_evidence_text = f'"{ne_node.text}" (ID: {ne_node.evidence_id})' if ne_node else f"(ID: {submission.new_evidence_id})"
+
+        beliefs_str = "\n".join(f"  - {b.belief_id}: \"{b.proposition}\"" for b in submission.candidate_beliefs) or "  - (none)"
+        replacements_str = "\n".join(f"  - {b.belief_id}: \"{b.proposition}\"" for b in submission.candidate_replacement_beliefs) or "  - (none)"
+        
+        cond_parts = []
+        for bid, conds in submission.candidate_conditions_by_belief:
+            for c in conds:
+                cond_parts.append(f"  - [{bid}] {c.condition_id}: \"{c.text}\"")
+        conditions_str = "\n".join(cond_parts) or "  - (none)"
+        
+        contrast_block = (
+            "\n\n### Deterministic Candidate Contrast Block\n"
+            f"- New Evidence to Evaluate: {new_evidence_text}\n\n"
+            "- Prior Candidate Beliefs:\n"
+            f"{beliefs_str}\n\n"
+            "- Candidate Replacement Beliefs:\n"
+            f"{replacements_str}\n\n"
+            "- Condition Anchors:\n"
+            f"{conditions_str}"
+        )
+        user_content = user_content + contrast_block
         
         return (
             {"role": "system", "content": self.build_system_prompt()},

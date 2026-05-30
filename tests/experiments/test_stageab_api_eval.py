@@ -259,6 +259,39 @@ def test_prompt_non_leakage(mock_episode_and_gold):
     assert "gold_snapshot" not in user_prompt_a
 
 
+def test_prompt_snapshot(mock_episode_and_gold):
+    ep, gold = mock_episode_and_gold
+    sub = ep.submissions[0]
+    
+    from experiments.multiagent.stagec_policy import PromptTypedRevisionPolicy
+    policy = PromptTypedRevisionPolicy()
+    messages = policy.build_messages(sub)
+    system_prompt = messages[0]["content"]
+    user_prompt = messages[1]["content"]
+    
+    # 1. prompt contains action trigger guidance
+    assert "Action Trigger Guidance" in system_prompt
+    assert "Emit SUPERSEDES" in system_prompt
+    assert "Emit BLOCKS" in system_prompt
+    
+    # 2. prompt does not contain gold_snapshot
+    assert "gold_snapshot" not in system_prompt
+    assert "gold_snapshot" not in user_prompt
+    
+    # 3. prompt does not contain gold action labels from the evaluator sidecar
+    assert "gold_typed_targets" not in user_prompt
+    
+    # 4. prompt includes candidate replacement beliefs when visible
+    assert "Candidate Replacement Beliefs" in user_prompt
+    assert "b_2" in user_prompt
+    assert "Proposition 2" in user_prompt
+    
+    # 5. prompt includes condition anchors when visible
+    assert "Condition Anchors" in user_prompt
+    assert "c_1" in user_prompt
+    assert "Condition 1" in user_prompt
+
+
 def test_canonicalize_ambiguity_rejection():
     # Multiple candidates matching prefix, suffix, or fuzzy
     valid_ids = {"b_1_active", "b_1_archive", "b_2_inactive"}
