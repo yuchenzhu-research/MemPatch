@@ -335,3 +335,99 @@ def test_closed_api_proposer_fail_closed(mock_episode_and_gold):
     assert out.parsed_actions[0].action_type == "NO_REVISION"
     assert "raw_response" in out.metadata
     assert "prompt" in out.metadata
+
+
+def test_runner_error_when_no_mode_specified(monkeypatch):
+    from experiments.multiagent.run_stageab_api_eval import main
+    import sys
+    monkeypatch.setattr(sys, "argv", ["run_stageab_api_eval.py"])
+    with pytest.raises(SystemExit):
+        main()
+
+
+def test_explicit_mock_mode_manifest(tmp_path, monkeypatch):
+    from experiments.multiagent.run_stageab_api_eval import main
+    import sys
+    import json
+    
+    out_dir = tmp_path / "stageab_mock_test"
+    monkeypatch.setattr(sys, "argv", [
+        "run_stageab_api_eval.py",
+        "--mock",
+        "--max-cases", "1",
+        "--output-dir", str(out_dir)
+    ])
+    main()
+    
+    manifest_file = out_dir / "manifest.json"
+    assert manifest_file.exists()
+    with open(manifest_file, "r") as f:
+        manifest = json.load(f)
+        
+    assert manifest["run_mode"] == "mock"
+    assert manifest["is_live_api_result"] is False
+    assert manifest["mock_default_used"] is True
+    assert "prompt_template_hash" in manifest
+    assert manifest["parser_version"] == "PromptTypedRevisionPolicy_v1"
+    assert manifest["response_schema_version"] == "v1_canonical"
+    # Verify mock default artifacts are not labeled as live
+    assert manifest["is_live_api_result"] is not True
+
+
+def test_live_mode_missing_keys_fails_closed(tmp_path, monkeypatch):
+    from experiments.multiagent.run_stageab_api_eval import main
+    import sys
+    
+    monkeypatch.delenv("SILICONFLOW_API_KEY", raising=False)
+    out_dir = tmp_path / "stageab_live_test"
+    
+    monkeypatch.setattr(sys, "argv", [
+        "run_stageab_api_eval.py",
+        "--live",
+        "--provider", "siliconflow",
+        "--model", "deepseek-ai/DeepSeek-V3",
+        "--output-dir", str(out_dir)
+    ])
+    with pytest.raises(ValueError, match="Live mode requires API key"):
+        main()
+        
+    monkeypatch.setenv("SILICONFLOW_API_KEY", "fake_key")
+    monkeypatch.setattr(sys, "argv", [
+        "run_stageab_api_eval.py",
+        "--live",
+        "--provider", "mock",
+        "--model", "deepseek-ai/DeepSeek-V3",
+        "--output-dir", str(out_dir)
+    ])
+    with pytest.raises(ValueError, match="Live mode requires a valid non-mock --provider"):
+        main()
+
+
+def test_no_revision_logging_and_metrics(tmp_path, monkeypatch):
+    from experiments.multiagent.run_stageab_api_eval import main
+    import sys
+    import json
+    
+    out_dir = tmp_path / "stageab_no_rev_test"
+    monkeypatch.setattr(sys, "argv", [
+        "run_stageab_api_eval.py",
+        "--mock",
+        "--max-cases", "1",
+        "--output-dir", str(out_dir)
+    ])
+    main()
+    
+    parsed_file = out_dir / "stage_a_parsed.jsonl"
+    assert parsed_file.exists()
+    with open(parsed_file, "r") as f:
+        row = json.loads(f.readline())
+        sub = row["submissions"][0]
+        assert len(sub["actions"]) == 1
+        assert sub["actions"][0]["action_type"] == "NO_REVISION"
+        assert len(sub["proposal_edges"]) == 0
+        
+    metrics_file = out_dir / "metrics.json"
+    assert metrics_file.exists()
+    with open(metrics_file, "r") as f:
+        metrics = json.load(f)
+        assert "no_revision_match" in metrics["stage_a"]
