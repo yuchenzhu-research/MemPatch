@@ -274,3 +274,45 @@ def test_icl_proposer_retrieval_and_propose(fake_submission):
     assert out.parsing_valid is True
     assert len(out.parsed_actions) == 1
     assert out.parsed_actions[0].action_type == "NO_REVISION"
+
+
+def test_icl_proposer_fail_closed_without_exemplars(fake_submission):
+    from experiments.multiagent.stagec_policy import ClosedAPIICLProposer
+    from retracemem.providers.base import MockLLMProvider
+    
+    mock_client = MockLLMProvider(default_response="[]")
+    proposer = ClosedAPIICLProposer(
+        provider_kind="mock",
+        model_id="mock-model",
+        client=mock_client,
+        allow_fallback_to_zeroshot=False,
+    )
+    
+    with pytest.raises(ValueError, match="No exemplars retrieved for ICL and allow_fallback_to_zeroshot is False"):
+        proposer.propose(fake_submission, exemplars=())
+
+
+def test_icl_proposer_zero_shot_fallback_label_integrity(fake_submission):
+    from experiments.multiagent.stagec_policy import ClosedAPIICLProposer
+    from retracemem.providers.base import MockLLMProvider
+    
+    valid_json = """
+    [
+      {
+        "action_type": "NO_REVISION",
+        "evidence_ids": ["ev_1"]
+      }
+    ]
+    """
+    mock_client = MockLLMProvider(default_response=valid_json)
+    proposer = ClosedAPIICLProposer(
+        provider_kind="mock",
+        model_id="mock-model",
+        client=mock_client,
+        allow_fallback_to_zeroshot=True,
+    )
+    
+    out = proposer.propose(fake_submission, exemplars=())
+    assert out.parsing_valid is True
+    assert out.policy_variant == "zero_shot_fallback"
+

@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import pytest
 from experiments.multiagent.dev_expansion import generate_expanded_episodes
-from experiments.multiagent.validate_candidate_semantics import validate_episode
+from experiments.multiagent.legacy.validate_candidate_semantics import validate_episode
 
 def test_all_70_candidates_pass_validation():
     episodes_with_gold = generate_expanded_episodes()

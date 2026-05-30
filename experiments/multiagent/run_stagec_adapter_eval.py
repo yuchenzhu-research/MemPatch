@@ -21,12 +21,11 @@ from typing import Any, Dict, List, Tuple
 
 from experiments.multiagent.contracts import FixedCandidateSubmission, TypedRevisionTarget
 from experiments.multiagent.dev_expansion import generate_expanded_episodes
-from experiments.multiagent.export_stagec_sft import format_assistant_response
-from experiments.multiagent.export_stagec_silver_baseline_mlx import make_example
+from experiments.multiagent.export_stagec_silver_compositional import make_example
 from experiments.multiagent.stagec_policy import PromptTypedRevisionPolicy
 from retracemem.authorization import authorize, SharedCandidateView
 from retracemem.schemas import BeliefNode, ConditionNode, DependencyEdge, EvidenceNode
-from retracemem.multiagent.utils import rename_submission
+from retracemem.multiagent.utils import rename_submission, format_assistant_response
 
 VALID_ACTION_TYPES = {
     "SUPERSEDES",

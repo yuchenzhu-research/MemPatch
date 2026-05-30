@@ -126,7 +126,7 @@ def test_smoke_runner_preflight_and_live(tmp_path) -> None:
         '{"episode_id": "ep_1", "review_status": "pending_human_review", "failure_type": "direct_supersession"}\n'
     )
     
-    from experiments.multiagent.run_stagec_prompt_smoke import run_preflight, run_live
+    from experiments.multiagent.legacy.run_stagec_prompt_smoke import run_preflight, run_live
     
     run_preflight(str(config_file), str(review_file))
     

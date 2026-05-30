@@ -14,7 +14,7 @@ from experiments.multiagent.metrics import (
     compute_fixed_candidate_metrics,
     aggregate_fixed_candidate_metrics,
 )
-from experiments.multiagent.run_fc_comparison import run_fc_comparison
+from experiments.multiagent.legacy.run_fc_comparison import run_fc_comparison
 
 
 class TestFixedCandidateEpisodesSchema:
@@ -208,7 +208,7 @@ class TestFixedCandidateRunner:
 
 class TestPlotDataValidator:
     def test_validator_accepts_valid_inputs(self):
-        from experiments.multiagent.validate_plot_inputs import validate_plot_inputs
+        from experiments.multiagent.legacy.validate_plot_inputs import validate_plot_inputs
         validate_plot_inputs(
             results_path="outputs/fc_method_results.jsonl",
             details_path="outputs/fc_run_details.json",
@@ -216,7 +216,7 @@ class TestPlotDataValidator:
         )
 
     def test_validator_fails_on_official_with_development_data(self):
-        from experiments.multiagent.validate_plot_inputs import validate_plot_inputs
+        from experiments.multiagent.legacy.validate_plot_inputs import validate_plot_inputs
         with pytest.raises(SystemExit) as excinfo:
             validate_plot_inputs(
                 results_path="outputs/fc_method_results.jsonl",
