@@ -193,6 +193,44 @@ def render_direct_judge_prompt(template: str, sub: FixedCandidateSubmission) -> 
     return prompt
 
 
+def canonicalize_belief_id_with_type(
+    returned_id: str,
+    valid_belief_ids: set[str],
+) -> tuple[str, bool, str]:
+    """Canonicalize a returned belief ID against valid belief IDs.
+    
+    Returns:
+        (canonical_id, applied, match_type)
+        where match_type is one of: "exact", "prefix", "suffix", "fuzzy", "failed"
+    """
+    import difflib
+    if returned_id in valid_belief_ids:
+        return returned_id, False, "exact"
+        
+    # Attempt Prefix Match
+    prefix_matches = [
+        v_id for v_id in valid_belief_ids
+        if returned_id.startswith(v_id) or v_id.startswith(returned_id)
+    ]
+    if len(prefix_matches) == 1:
+        return prefix_matches[0], True, "prefix"
+        
+    # Attempt Suffix Match
+    suffix_matches = [
+        v_id for v_id in valid_belief_ids
+        if returned_id.endswith(v_id) or v_id.endswith(returned_id)
+    ]
+    if len(suffix_matches) == 1:
+        return suffix_matches[0], True, "suffix"
+        
+    # Attempt Fuzzy Match (using difflib)
+    fuzzy_matches = difflib.get_close_matches(returned_id, list(valid_belief_ids), n=1, cutoff=0.5)
+    if fuzzy_matches:
+        return fuzzy_matches[0], True, "fuzzy"
+        
+    return returned_id, False, "failed"
+
+
 def parse_direct_judge_response(
     response: str,
     valid_belief_ids: set[str],
@@ -219,24 +257,22 @@ def parse_direct_judge_response(
         if not bid:
             raise ValueError("Verdict item missing belief_id")
         
-        # Match/canonicalize belief id
-        matched_bid = bid
-        if bid not in valid_belief_ids:
-            matches = [v_id for v_id in valid_belief_ids if bid.startswith(v_id)]
-            if len(matches) == 1:
-                matched_bid = matches[0]
-            else:
-                raise ValueError(f"Verdict references unknown belief ID '{bid}'")
+        canonical_bid, applied, match_type = canonicalize_belief_id_with_type(bid, valid_belief_ids)
+        if match_type == "failed":
+            raise ValueError(f"Verdict references unknown belief ID '{bid}' which failed canonicalization")
         
         status = DirectUsabilityStatus(status_str).value
         verdicts.append({
-            "belief_id": matched_bid,
+            "raw_belief_id": bid,
+            "canonical_belief_id": canonical_bid,
+            "canonicalization_applied": applied,
+            "canonicalization_type": match_type,
             "status": status,
             "rationale": rationale,
             "confidence": confidence,
         })
     
-    missing = valid_belief_ids - {v["belief_id"] for v in verdicts}
+    missing = valid_belief_ids - {v["canonical_belief_id"] for v in verdicts}
     if missing:
         raise ValueError(f"DirectJudge response omitted verdicts for belief(s): {missing}")
         
@@ -282,8 +318,8 @@ def check_grounding_error_stage_a(action: dict[str, Any], sub: FixedCandidateSub
 
 
 def check_grounding_error_stage_b(verdict: dict[str, Any], valid_belief_ids: set[str]) -> bool:
-    """Return True if Stage B verdict contains an invalid belief_id."""
-    bid = verdict.get("belief_id")
+    """Return True if Stage B verdict contains an invalid raw belief_id."""
+    bid = verdict.get("raw_belief_id")
     return bid not in valid_belief_ids
 
 
@@ -562,6 +598,7 @@ def main() -> None:
 
             if parse_err:
                 ep_a_parse_errors.append(parse_err)
+                parsed_actions = []
                 # Default empty proposal batches on parse error to allow DPA execution to proceed
                 proposal_batches = ()
 
@@ -596,6 +633,7 @@ def main() -> None:
             ep_a_parsed_actions.append({
                 "submission_id": sub.submission_id,
                 "actions": parsed_actions,
+                "parse_error": parse_err,
             })
 
         # Run Stage A sequence commit to get final DPA statuses
@@ -624,7 +662,9 @@ def main() -> None:
         ep_b_raw_outputs = []
         ep_b_parsed_verdicts = []
         ep_b_parse_errors = []
-        stage_b_final_statuses = {}
+        
+        strict_stage_b_final_statuses = {}
+        canonical_stage_b_final_statuses = {}
 
         for sub in episode.submissions:
             # Build direct judge prompt
@@ -674,19 +714,15 @@ def main() -> None:
 
             if parse_err_b:
                 ep_b_parse_errors.append(parse_err_b)
-                # Fail cleanly by defaulting candidates to UNCERTAIN status
+                # Fail cleanly by leaving parsed_verdicts as empty list
                 parsed_verdicts = []
-                for b in sub.candidate_beliefs:
-                    parsed_verdicts.append({
-                        "belief_id": b.belief_id,
-                        "status": "UNCERTAIN",
-                        "rationale": f"Fallback due to parse error: {parse_err_b}",
-                        "confidence": 0.0,
-                    })
 
             # Cumulative usability verdict update
             for verdict in parsed_verdicts:
-                stage_b_final_statuses[verdict["belief_id"]] = verdict["status"]
+                canonical_bid = verdict["canonical_belief_id"]
+                canonical_stage_b_final_statuses[canonical_bid] = verdict["status"]
+                if not verdict["canonicalization_applied"]:
+                    strict_stage_b_final_statuses[canonical_bid] = verdict["status"]
 
             ep_b_raw_outputs.append({
                 "submission_id": sub.submission_id,
@@ -697,6 +733,7 @@ def main() -> None:
             ep_b_parsed_verdicts.append({
                 "submission_id": sub.submission_id,
                 "verdicts": parsed_verdicts,
+                "parse_error": parse_err_b,
             })
 
         # Write Stage B logs
@@ -707,7 +744,9 @@ def main() -> None:
         stage_b_parsed_rows.append({
             "episode_id": ep_id,
             "submissions": ep_b_parsed_verdicts,
-            "final_belief_statuses": stage_b_final_statuses,
+            "strict_final_belief_statuses": strict_stage_b_final_statuses,
+            "canonicalized_final_belief_statuses": canonical_stage_b_final_statuses,
+            "final_belief_statuses": canonical_stage_b_final_statuses,
         })
 
     # Save outputs if not dry-run
@@ -753,7 +792,7 @@ def main() -> None:
             "valid_outputs": 0,
             "total_outputs": 0,
         },
-        "stage_b": {
+        "stage_b_strict": {
             "correct_beliefs": 0,
             "total_beliefs": 0,
             "over_updates": 0,
@@ -761,6 +800,17 @@ def main() -> None:
             "under_updates": 0,
             "usable_total": 0,
             "uncertainty_errors": 0,
+        },
+        "stage_b_canonicalized": {
+            "correct_beliefs": 0,
+            "total_beliefs": 0,
+            "over_updates": 0,
+            "not_usable_total": 0,
+            "under_updates": 0,
+            "usable_total": 0,
+            "uncertainty_errors": 0,
+        },
+        "stage_b_common": {
             "grounding_errors": 0,
             "valid_outputs": 0,
             "total_outputs": 0,
@@ -776,6 +826,11 @@ def main() -> None:
         "exact_action_match": [],
     }
 
+    # Stage B Canonicalization counters
+    total_stage_b_verdicts = 0
+    canonicalized_stage_b_verdicts = 0
+    fuzzy_stage_b_verdicts = 0
+
     for ep, gold in processed_cases:
         ep_id = episode.episode_id if ep.episode_id.endswith("__heldout_base") else ep.episode_id
         # Map correctly due to rename potential
@@ -790,7 +845,8 @@ def main() -> None:
         raw_b = stage_b_raw_map.get(ep_id, {})
 
         pred_a_statuses = res_a.get("final_belief_statuses", {})
-        pred_b_statuses = res_b.get("final_belief_statuses", {})
+        strict_pred_b_statuses = res_b.get("strict_final_belief_statuses", {})
+        canonical_pred_b_statuses = res_b.get("canonicalized_final_belief_statuses", {})
 
         # Compute Action Metrics for Stage A only
         # Aggregate actions predicted across all submissions of this episode
@@ -825,6 +881,15 @@ def main() -> None:
                     has_grounding_err_b = True
                     break
 
+        # Collect Stage B canonicalization stats
+        for s_parsed in res_b.get("submissions", []):
+            for verd in s_parsed.get("verdicts", []):
+                total_stage_b_verdicts += 1
+                if verd.get("canonicalization_applied"):
+                    canonicalized_stage_b_verdicts += 1
+                if verd.get("canonicalization_type") == "fuzzy":
+                    fuzzy_stage_b_verdicts += 1
+
         # Output Validity (Parse Errors)
         has_parse_error_a = any(s.get("parse_error") is not None for s in raw_a.get("submissions", []))
         has_parse_error_b = any(s.get("parse_error") is not None for s in raw_b.get("submissions", []))
@@ -832,17 +897,18 @@ def main() -> None:
         stage_metrics["stage_a"]["total_outputs"] += len(ep.submissions)
         stage_metrics["stage_a"]["valid_outputs"] += sum(1 for s in raw_a.get("submissions", []) if s.get("parse_error") is None)
         
-        stage_metrics["stage_b"]["total_outputs"] += len(ep.submissions)
-        stage_metrics["stage_b"]["valid_outputs"] += sum(1 for s in raw_b.get("submissions", []) if s.get("parse_error") is None)
+        stage_metrics["stage_b_common"]["total_outputs"] += len(ep.submissions)
+        stage_metrics["stage_b_common"]["valid_outputs"] += sum(1 for s in raw_b.get("submissions", []) if s.get("parse_error") is None)
 
         if has_grounding_err_a:
             stage_metrics["stage_a"]["grounding_errors"] += 1
         if has_grounding_err_b:
-            stage_metrics["stage_b"]["grounding_errors"] += 1
+            stage_metrics["stage_b_common"]["grounding_errors"] += 1
 
         # Evaluate final statuses
         ep_correct_a = 0
-        ep_correct_b = 0
+        ep_correct_b_strict = 0
+        ep_correct_b_canonical = 0
         total_beliefs_in_ep = len(gold_statuses)
 
         for bid, gold_status in gold_statuses.items():
@@ -852,19 +918,27 @@ def main() -> None:
             actual_a_raw = pred_a_statuses.get(bid, "UNRESOLVED")
             actual_a_comp = _STATUS_MAP_A_TO_COMPARABLE.get(actual_a_raw, "UNCERTAIN")
 
-            # Stage B Mapping (already comparable status)
-            actual_b_comp = pred_b_statuses.get(bid, "UNCERTAIN")
+            # Stage B Mapping (strict & canonicalized)
+            actual_b_strict = strict_pred_b_statuses.get(bid, "UNCERTAIN")
+            actual_b_canonical = canonical_pred_b_statuses.get(bid, "UNCERTAIN")
 
-            # Final status accuracy counters
+            # Final status accuracy counters for Stage A
             stage_metrics["stage_a"]["total_beliefs"] += 1
             if actual_a_comp == gold_comp:
                 stage_metrics["stage_a"]["correct_beliefs"] += 1
                 ep_correct_a += 1
 
-            stage_metrics["stage_b"]["total_beliefs"] += 1
-            if actual_b_comp == gold_comp:
-                stage_metrics["stage_b"]["correct_beliefs"] += 1
-                ep_correct_b += 1
+            # Strict Stage B
+            stage_metrics["stage_b_strict"]["total_beliefs"] += 1
+            if actual_b_strict == gold_comp:
+                stage_metrics["stage_b_strict"]["correct_beliefs"] += 1
+                ep_correct_b_strict += 1
+
+            # Canonicalized Stage B
+            stage_metrics["stage_b_canonicalized"]["total_beliefs"] += 1
+            if actual_b_canonical == gold_comp:
+                stage_metrics["stage_b_canonicalized"]["correct_beliefs"] += 1
+                ep_correct_b_canonical += 1
 
             # Over update (Stale propagation)
             if gold_comp == "NOT_USABLE":
@@ -872,9 +946,13 @@ def main() -> None:
                 if actual_a_comp == "USABLE":
                     stage_metrics["stage_a"]["over_updates"] += 1
 
-                stage_metrics["stage_b"]["not_usable_total"] += 1
-                if actual_b_comp == "USABLE":
-                    stage_metrics["stage_b"]["over_updates"] += 1
+                stage_metrics["stage_b_strict"]["not_usable_total"] += 1
+                if actual_b_strict == "USABLE":
+                    stage_metrics["stage_b_strict"]["over_updates"] += 1
+
+                stage_metrics["stage_b_canonicalized"]["not_usable_total"] += 1
+                if actual_b_canonical == "USABLE":
+                    stage_metrics["stage_b_canonicalized"]["over_updates"] += 1
 
             # Under update
             if gold_comp == "USABLE":
@@ -882,22 +960,29 @@ def main() -> None:
                 if actual_a_comp != "USABLE":
                     stage_metrics["stage_a"]["under_updates"] += 1
 
-                stage_metrics["stage_b"]["usable_total"] += 1
-                if actual_b_comp != "USABLE":
-                    stage_metrics["stage_b"]["under_updates"] += 1
+                stage_metrics["stage_b_strict"]["usable_total"] += 1
+                if actual_b_strict != "USABLE":
+                    stage_metrics["stage_b_strict"]["under_updates"] += 1
+
+                stage_metrics["stage_b_canonicalized"]["usable_total"] += 1
+                if actual_b_canonical != "USABLE":
+                    stage_metrics["stage_b_canonicalized"]["under_updates"] += 1
 
             # Uncertainty error rate
-            # (Gold is uncertain but prediction is not, OR gold is certain but prediction is uncertain)
             if gold_comp == "UNCERTAIN":
                 if actual_a_comp != "UNCERTAIN":
                     stage_metrics["stage_a"]["uncertainty_errors"] += 1
-                if actual_b_comp != "UNCERTAIN":
-                    stage_metrics["stage_b"]["uncertainty_errors"] += 1
+                if actual_b_strict != "UNCERTAIN":
+                    stage_metrics["stage_b_strict"]["uncertainty_errors"] += 1
+                if actual_b_canonical != "UNCERTAIN":
+                    stage_metrics["stage_b_canonicalized"]["uncertainty_errors"] += 1
             else:
                 if actual_a_comp == "UNCERTAIN":
                     stage_metrics["stage_a"]["uncertainty_errors"] += 1
-                if actual_b_comp == "UNCERTAIN":
-                    stage_metrics["stage_b"]["uncertainty_errors"] += 1
+                if actual_b_strict == "UNCERTAIN":
+                    stage_metrics["stage_b_strict"]["uncertainty_errors"] += 1
+                if actual_b_canonical == "UNCERTAIN":
+                    stage_metrics["stage_b_canonicalized"]["uncertainty_errors"] += 1
 
         # Failure breakdown CSV row
         failure_breakdown_rows.append({
@@ -906,9 +991,11 @@ def main() -> None:
             "domain": ep.domain,
             "total_beliefs": total_beliefs_in_ep,
             "correct_beliefs_a": ep_correct_a,
-            "correct_beliefs_b": ep_correct_b,
+            "correct_beliefs_b_strict": ep_correct_b_strict,
+            "correct_beliefs_b_canonicalized": ep_correct_b_canonical,
             "accuracy_a": ep_correct_a / total_beliefs_in_ep if total_beliefs_in_ep > 0 else 1.0,
-            "accuracy_b": ep_correct_b / total_beliefs_in_ep if total_beliefs_in_ep > 0 else 1.0,
+            "accuracy_b_strict": ep_correct_b_strict / total_beliefs_in_ep if total_beliefs_in_ep > 0 else 1.0,
+            "accuracy_b_canonicalized": ep_correct_b_canonical / total_beliefs_in_ep if total_beliefs_in_ep > 0 else 1.0,
             "has_parse_error_a": has_parse_error_a,
             "has_parse_error_b": has_parse_error_b,
             "has_grounding_error_a": has_grounding_err_a,
@@ -936,13 +1023,17 @@ def main() -> None:
             "exact_action_match": sum(action_metrics_counters["exact_action_match"]) / len(processed_cases) if processed_cases else 0.0,
         },
         "stage_b": {
-            "final_status_accuracy": calc_rate(stage_metrics["stage_b"]["correct_beliefs"], stage_metrics["stage_b"]["total_beliefs"]),
-            "over_update_rate": calc_rate(stage_metrics["stage_b"]["over_updates"], stage_metrics["stage_b"]["not_usable_total"]),
-            "stale_propagation_rate": calc_rate(stage_metrics["stage_b"]["over_updates"], stage_metrics["stage_b"]["not_usable_total"]),
-            "under_update_rate": calc_rate(stage_metrics["stage_b"]["under_updates"], stage_metrics["stage_b"]["usable_total"]),
-            "uncertainty_error_rate": calc_rate(stage_metrics["stage_b"]["uncertainty_errors"], stage_metrics["stage_b"]["total_beliefs"]),
-            "grounding_error_rate": calc_rate(stage_metrics["stage_b"]["grounding_errors"], len(processed_cases)),
-            "valid_output_rate": calc_rate(stage_metrics["stage_b"]["valid_outputs"], stage_metrics["stage_b"]["total_outputs"]),
+            "final_status_accuracy": calc_rate(stage_metrics["stage_b_canonicalized"]["correct_beliefs"], stage_metrics["stage_b_canonicalized"]["total_beliefs"]),
+            "strict_final_status_accuracy": calc_rate(stage_metrics["stage_b_strict"]["correct_beliefs"], stage_metrics["stage_b_strict"]["total_beliefs"]),
+            "canonicalized_final_status_accuracy": calc_rate(stage_metrics["stage_b_canonicalized"]["correct_beliefs"], stage_metrics["stage_b_canonicalized"]["total_beliefs"]),
+            "canonicalization_rate": calc_rate(canonicalized_stage_b_verdicts, total_stage_b_verdicts),
+            "fuzzy_canonicalization_rate": calc_rate(fuzzy_stage_b_verdicts, total_stage_b_verdicts),
+            "over_update_rate": calc_rate(stage_metrics["stage_b_canonicalized"]["over_updates"], stage_metrics["stage_b_canonicalized"]["not_usable_total"]),
+            "stale_propagation_rate": calc_rate(stage_metrics["stage_b_canonicalized"]["over_updates"], stage_metrics["stage_b_canonicalized"]["not_usable_total"]),
+            "under_update_rate": calc_rate(stage_metrics["stage_b_canonicalized"]["under_updates"], stage_metrics["stage_b_canonicalized"]["usable_total"]),
+            "uncertainty_error_rate": calc_rate(stage_metrics["stage_b_canonicalized"]["uncertainty_errors"], stage_metrics["stage_b_canonicalized"]["total_beliefs"]),
+            "grounding_error_rate": calc_rate(stage_metrics["stage_b_common"]["grounding_errors"], len(processed_cases)),
+            "valid_output_rate": calc_rate(stage_metrics["stage_b_common"]["valid_outputs"], stage_metrics["stage_b_common"]["total_outputs"]),
         }
     }
 
@@ -973,10 +1064,12 @@ def main() -> None:
 
         # Save manifest.json
         manifest = {
-            "run_identifier": "development_live_api_run / not_final_paper_result",
+            "run_identifier": "development_live_api_run / not_final_paper_result" if args.live else "development_run",
             "executed_at": datetime.datetime.now().isoformat(),
             "provider": args.provider,
             "model": args.model,
+            "run_mode": "live" if args.live else "dry-run" if args.dry_run else "mock",
+            "resume_mode": args.resume,
             "decoding_parameters": {
                 "temperature": 0.0,
                 "seed": 42,
@@ -985,6 +1078,9 @@ def main() -> None:
             "output_directory": args.output_dir,
             "code_commit_sha": "unknown",
         }
+        if args.live:
+            manifest["warning"] = "development_live_api_run / not_final_paper_result"
+
         try:
             res_git = os.popen("git rev-parse HEAD").read().strip()
             if res_git:
