@@ -414,7 +414,11 @@ class ClosedAPIZeroShotProposer(TypedRevisionProposer):
                 model_id=self.model_id,
                 provider=self.provider_kind,
             )
-            response_text = trace.response or "[]"
+            if trace.status == "failure":
+                raise RuntimeError(f"Live API call failed: {trace.error_message}")
+            if not trace.response:
+                raise RuntimeError("Live API call returned empty response.")
+            response_text = trace.response
         else:
             if self._policy.diagnostic_mode:
                 response_text = json.dumps({
@@ -607,7 +611,11 @@ class ClosedAPIZeroShotConstrainedProposer(TypedRevisionProposer):
                 model_id=self.model_id,
                 provider=self.provider_kind,
             )
-            response_text = trace.response or "{}"
+            if trace.status == "failure":
+                raise RuntimeError(f"Live API call failed: {trace.error_message}")
+            if not trace.response:
+                raise RuntimeError("Live API call returned empty response.")
+            response_text = trace.response
         else:
             if self.diagnostic_mode:
                 response_text = json.dumps({
@@ -780,12 +788,14 @@ class ClosedAPIICLProposer(TypedRevisionProposer):
         client: Any = None,
         allowed_actions: tuple[str, ...] | None = None,
         top_k: int = 1,
+        allow_fallback_to_zeroshot: bool = False,
     ) -> None:
         self.provider_kind = provider_kind
         self.model_id = model_id
         self.client = client
         self.allowed_actions = allowed_actions or ("SUPERSEDES", "BLOCKS", "RELEASES", "UNCERTAIN", "REAFFIRMS", "NO_REVISION")
         self.top_k = top_k
+        self.allow_fallback_to_zeroshot = allow_fallback_to_zeroshot
         self._policy = PromptTypedRevisionPolicy(allowed_actions=self.allowed_actions)
 
     def retrieve_exemplars(
@@ -813,6 +823,8 @@ class ClosedAPIICLProposer(TypedRevisionProposer):
         exemplars: tuple[ApprovedRevisionExemplar, ...] = (),
     ) -> ProposalPolicyOutput:
         selected_exs = self.retrieve_exemplars(submission, exemplars)
+        if not selected_exs and not self.allow_fallback_to_zeroshot:
+            raise ValueError(f"No exemplars retrieved for ICL and allow_fallback_to_zeroshot is False.")
         messages = self._policy.build_messages(submission)
         system_text = messages[0]["content"]
         user_text = messages[1]["content"]
@@ -860,7 +872,11 @@ class ClosedAPIICLProposer(TypedRevisionProposer):
                 model_id=self.model_id,
                 provider=self.provider_kind,
             )
-            response_text = trace.response or "[]"
+            if trace.status == "failure":
+                raise RuntimeError(f"Live API call failed: {trace.error_message}")
+            if not trace.response:
+                raise RuntimeError("Live API call returned empty response.")
+            response_text = trace.response
         else:
             response_text = json.dumps([{
                 "action_type": "NO_REVISION",
@@ -901,16 +917,7 @@ class OpenModelPromptProposer(TypedRevisionProposer):
         *,
         exemplars: tuple[ApprovedRevisionExemplar, ...] = (),
     ) -> ProposalPolicyOutput:
-        return ProposalPolicyOutput(
-            example_id=f"ex_{submission.submission_id}",
-            submission_id=submission.submission_id,
-            policy_variant=self.policy_variant,
-            proposal_batches=(),
-            parsing_valid=True,
-            errors=(),
-            parsed_actions=(),
-            metadata={"placeholder": True},
-        )
+        raise NotImplementedError("OpenModelPromptProposer is not implemented yet. Failing closed.")
 
 
 class OpenModelLoRAProposer(TypedRevisionProposer):
@@ -931,13 +938,4 @@ class OpenModelLoRAProposer(TypedRevisionProposer):
         *,
         exemplars: tuple[ApprovedRevisionExemplar, ...] = (),
     ) -> ProposalPolicyOutput:
-        return ProposalPolicyOutput(
-            example_id=f"ex_{submission.submission_id}",
-            submission_id=submission.submission_id,
-            policy_variant=self.policy_variant,
-            proposal_batches=(),
-            parsing_valid=True,
-            errors=(),
-            parsed_actions=(),
-            metadata={"placeholder": True},
-        )
+        raise NotImplementedError("OpenModelLoRAProposer is not implemented yet. Failing closed.")

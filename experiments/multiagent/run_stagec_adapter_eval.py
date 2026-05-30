@@ -426,30 +426,86 @@ def evaluate_predictions(
     return per_case_results, parse_errors, dpa_traces
 
 
-def compute_aggregate_metrics(per_case_results: List[Dict[str, Any]]) -> Dict[str, Any]:
+def get_case_subset(gold_actions: List[Dict[str, Any]]) -> str:
+    """Classify the gold actions into one of the mutually exclusive evaluation subsets."""
+    if not gold_actions:
+        return "no_revision_only"
+    action_types = [a.get("action_type") for a in gold_actions]
+    if len(action_types) == 1:
+        act_type = action_types[0]
+        if act_type == "SUPERSEDES":
+            return "supersedes_only"
+        elif act_type == "BLOCKS":
+            return "blocks_only"
+        elif act_type == "RELEASES":
+            return "releases_only"
+        elif act_type == "UNCERTAIN":
+            return "uncertain_only"
+        elif act_type == "REAFFIRMS":
+            return "reaffirms_only"
+        elif act_type == "NO_REVISION":
+            return "no_revision_only"
+    # Multi-action scenarios
+    if set(action_types) == {"SUPERSEDES", "BLOCKS"}:
+        return "multi_action_supersedes_blocks"
+    return "multi_action_other"
+
+
+def compute_aggregate_metrics(
+    per_case_results: List[Dict[str, Any]],
+    test_source: List[Any],
+) -> Dict[str, Any]:
     n = len(per_case_results)
+    
+    # Map case ID to SFT example to inspect domain/metadata
+    case_to_ex = {}
+    for i, ex in enumerate(test_source):
+        case_to_ex[f"test_{i:02d}"] = ex
+
     summary: Dict[str, Any] = {
-        "adapter": {
-            "valid_json": 0,
-            "action_type_match": 0,
-            "target_grounding": 0,
-            "evidence_grounding": 0,
-            "exact_match": 0,
-            "dpa_accuracy": 0,
-            "total": n,
-        },
-        "base": {
-            "valid_json": 0,
-            "action_type_match": 0,
-            "target_grounding": 0,
-            "evidence_grounding": 0,
-            "exact_match": 0,
-            "dpa_accuracy": 0,
-            "total": n,
-        },
+        "adapter": {k: 0 for k in ["valid_json", "action_type_match", "target_grounding", "evidence_grounding", "exact_match", "dpa_accuracy"]},
+        "base": {k: 0 for k in ["valid_json", "action_type_match", "target_grounding", "evidence_grounding", "exact_match", "dpa_accuracy"]},
+        "total": n,
+        "subsets": {}
     }
 
+    subset_names = [
+        "supersedes_only", "blocks_only", "releases_only", "uncertain_only",
+        "reaffirms_only", "no_revision_only", "multi_action_supersedes_blocks",
+        "multi_action_other", "domain_software", "domain_research", "heldout_base"
+    ]
+    for sub_name in subset_names:
+        summary["subsets"][sub_name] = {
+            "adapter": {k: 0 for k in ["valid_json", "action_type_match", "target_grounding", "evidence_grounding", "exact_match", "dpa_accuracy"]},
+            "base": {k: 0 for k in ["valid_json", "action_type_match", "target_grounding", "evidence_grounding", "exact_match", "dpa_accuracy"]},
+            "total": 0
+        }
+
     for case in per_case_results:
+        case_id = case["case"]
+        ex = case_to_ex[case_id]
+        gold_actions = case["gold_actions"]
+        
+        assigned_subsets = ["heldout_base"]
+        assigned_subsets.append(get_case_subset(gold_actions))
+        
+        dom = getattr(ex, "domain", "unknown").lower()
+        if "soft" in dom or "code" in dom:
+            assigned_subsets.append("domain_software")
+        elif "research" in dom or "paper" in dom:
+            assigned_subsets.append("domain_research")
+            
+        for sub_name in assigned_subsets:
+            for var in ["adapter", "base"]:
+                res = case[var]
+                summary["subsets"][sub_name][var]["valid_json"] += int(res["valid_json"])
+                summary["subsets"][sub_name][var]["action_type_match"] += int(res["action_type_match"])
+                summary["subsets"][sub_name][var]["target_grounding"] += int(res["target_grounding"])
+                summary["subsets"][sub_name][var]["evidence_grounding"] += int(res["evidence_grounding"])
+                summary["subsets"][sub_name][var]["exact_match"] += int(res["exact_match"])
+                summary["subsets"][sub_name][var]["dpa_accuracy"] += int(res["dpa_accuracy"])
+            summary["subsets"][sub_name]["total"] += 1
+
         for var in ["adapter", "base"]:
             res = case[var]
             summary[var]["valid_json"] += int(res["valid_json"])
@@ -529,7 +585,7 @@ def main() -> None:
 
     # Evaluate
     per_case, errors, traces = evaluate_predictions(test_source, adapter_gen_dir, base_gen_dir, policy)
-    metrics_summary = compute_aggregate_metrics(per_case)
+    metrics_summary = compute_aggregate_metrics(per_case, test_source)
 
     # Write files
     output_dir.mkdir(parents=True, exist_ok=True)
