@@ -1,0 +1,19 @@
+provider: siliconflow
+api_url: https://api.siliconflow.cn/v1/chat/completions
+max_cases: 70
+
+models:
+  - deepseek-ai/DeepSeek-V3
+  - Qwen/Qwen2.5-72B-Instruct
+  - Qwen/Qwen2.5-14B-Instruct
+  - Qwen/Qwen2.5-7B-Instruct
+
+methods:
+  - DirectJudge-API
+  - StageA-Freeform
+  - StageA-Constrained
+  - StageC-ICL
+
+exemplars_path: data/boundary_audit/boundary_audit_dev.jsonl
+dataset: dev_expansion
+output_dir: outputs/runs/matrix_eval

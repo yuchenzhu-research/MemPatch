@@ -525,6 +525,9 @@ def main() -> None:
             diagnostic_mode=getattr(args, "diagnostic", False),
         )
     direct_judge_template = load_direct_judge_template()
+    
+    episode_accuracies = []
+    episode_em_count = 0
 
     # Main Execution Loop
     for idx, (episode, gold) in enumerate(processed_cases):
@@ -544,7 +547,64 @@ def main() -> None:
         ep_a_parse_errors = []
 
         for sub in episode.submissions:
-            proposal_output = proposer_a.propose(sub)
+            if args.mock:
+                # Generate dynamic mock targets based on gold labels
+                mock_targets = []
+                for target in gold.gold_typed_targets:
+                    if target.submission_id == sub.submission_id:
+                        mock_targets.append(target)
+                if not mock_targets:
+                    from experiments.multiagent.contracts import TypedRevisionTarget
+                    mock_targets.append(TypedRevisionTarget(
+                        submission_id=sub.submission_id,
+                        action_type="NO_REVISION",
+                        target_belief_id=None,
+                        target_condition_id=None,
+                        replacement_belief_id=None,
+                        rationale="Mock correct target (NO_REVISION)",
+                        evidence_ids=(sub.new_evidence_id,)
+                    ))
+                
+                from retracemem.schemas import EvidenceEdge, EvidenceEdgeType
+                from retracemem.authorization import EvidenceProposalBatch
+                from experiments.multiagent.contracts import ProposalPolicyOutput
+                
+                edges = []
+                for idx_edge, t in enumerate(mock_targets):
+                    if t.action_type == "NO_REVISION":
+                        continue
+                    target_kind = "belief" if t.target_belief_id else "condition"
+                    target_id = t.target_belief_id or t.target_condition_id
+                    edges.append(EvidenceEdge(
+                        edge_id=f"edge_policy_ex_{sub.submission_id}_{idx_edge}",
+                        edge_type=EvidenceEdgeType(t.action_type) if hasattr(EvidenceEdgeType, t.action_type) else t.action_type,
+                        evidence_id=str(t.evidence_ids[0]),
+                        target_kind=target_kind,
+                        target_id=target_id,
+                        verifier="stagec_policy",
+                        replacement_belief_id=t.replacement_belief_id,
+                        rationale=t.rationale,
+                    ))
+                proposal_batches = ()
+                if edges:
+                    proposal_batches = (
+                        EvidenceProposalBatch(
+                            edges=tuple(edges),
+                            metadata={"parser": "PromptTypedRevisionPolicy"},
+                        ),
+                    )
+                proposal_output = ProposalPolicyOutput(
+                    example_id=f"ex_{sub.submission_id}",
+                    submission_id=sub.submission_id,
+                    policy_variant="mock_gold",
+                    proposal_batches=proposal_batches,
+                    parsing_valid=True,
+                    errors=(),
+                    parsed_actions=tuple(mock_targets),
+                    metadata={"prompt": "Mock Prompt", "raw_response": "Mock Response"},
+                )
+            else:
+                proposal_output = proposer_a.propose(sub)
 
             raw_response = proposal_output.metadata.get("raw_response", "")
             full_prompt = proposal_output.metadata.get("prompt", "")
@@ -669,13 +729,24 @@ def main() -> None:
                 except Exception as ex:
                     parse_err_b = f"{type(ex).__name__}: {ex}"
             else:
-                # Mock default usability verdict
+                # Mock default usability verdict based on gold snapshot
                 verdicts_mock = []
                 for b in sub.candidate_beliefs:
+                    status_raw = gold.gold_snapshot.belief_statuses.get(b.belief_id, "AUTHORIZED")
+                    status_mapped = _STATUS_MAP_A_TO_COMPARABLE.get(status_raw, "UNCERTAIN")
                     verdicts_mock.append({
                         "belief_id": b.belief_id,
-                        "status": "USABLE",
-                        "rationale": "Mock default usable status",
+                        "status": status_mapped,
+                        "rationale": "Mock correct status from gold",
+                        "confidence": 1.0
+                    })
+                for b in sub.candidate_replacement_beliefs:
+                    status_raw = gold.gold_snapshot.belief_statuses.get(b.belief_id, "AUTHORIZED")
+                    status_mapped = _STATUS_MAP_A_TO_COMPARABLE.get(status_raw, "UNCERTAIN")
+                    verdicts_mock.append({
+                        "belief_id": b.belief_id,
+                        "status": status_mapped,
+                        "rationale": "Mock correct status from gold",
                         "confidence": 1.0
                     })
                 raw_response_b = json.dumps({"verdicts": verdicts_mock})
@@ -683,7 +754,9 @@ def main() -> None:
             # Parse verdicts
             if not parse_err_b:
                 try:
-                    valid_belief_ids = {b.belief_id for b in sub.candidate_beliefs}
+                    valid_belief_ids = {b.belief_id for b in sub.candidate_beliefs} | {
+                        b.belief_id for b in sub.candidate_replacement_beliefs
+                    }
                     parsed_verdicts = parse_direct_judge_response(raw_response_b, valid_belief_ids)
                 except Exception as ex:
                     parse_err_b = str(ex)
@@ -724,6 +797,20 @@ def main() -> None:
             "canonicalized_final_belief_statuses": canonical_stage_b_final_statuses,
             "final_belief_statuses": canonical_stage_b_final_statuses,
         })
+
+        # Compute DPA Exact Match for Episode
+        gold_statuses = gold.gold_snapshot.belief_statuses
+        ep_correct = 0
+        for bid, gold_status in gold_statuses.items():
+            gold_comp = _STATUS_MAP_A_TO_COMPARABLE.get(gold_status, "UNCERTAIN")
+            actual_a_raw = final_dpa_statuses.get(bid, "UNRESOLVED")
+            actual_a_comp = _STATUS_MAP_A_TO_COMPARABLE.get(actual_a_raw, "UNCERTAIN")
+            if actual_a_comp == gold_comp:
+                ep_correct += 1
+        ep_acc = ep_correct / len(gold_statuses) if gold_statuses else 1.0
+        episode_accuracies.append(ep_acc)
+        if ep_correct == len(gold_statuses):
+            episode_em_count += 1
 
     # Save outputs if not dry-run
     if not args.dry_run:
@@ -812,8 +899,6 @@ def main() -> None:
     fuzzy_stage_b_verdicts = 0
 
     for ep, gold in processed_cases:
-        ep_id = episode.episode_id if ep.episode_id.endswith("__heldout_base") else ep.episode_id
-        # Map correctly due to rename potential
         ep_id = ep.episode_id
 
         gold_statuses = gold.gold_snapshot.belief_statuses
@@ -875,9 +960,11 @@ def main() -> None:
         # Grounding errors Stage B
         has_grounding_err_b = False
         for s_parsed in res_b.get("submissions", []):
-            sub_id = s_parsed["submission_id"]
-            orig_sub = next(s for s in ep.submissions if s.submission_id == sub_id)
-            valid_belief_ids = {b.belief_id for b in orig_sub.candidate_beliefs}
+            sub_id_b = s_parsed["submission_id"]
+            orig_sub = next(s for s in ep.submissions if s.submission_id == sub_id_b)
+            valid_belief_ids = {b.belief_id for b in orig_sub.candidate_beliefs} | {
+                b.belief_id for b in orig_sub.candidate_replacement_beliefs
+            }
             for verd in s_parsed.get("verdicts", []):
                 if check_grounding_error_stage_b(verd, valid_belief_ids):
                     has_grounding_err_b = True
@@ -1011,6 +1098,9 @@ def main() -> None:
     global_metrics = {
         "stage_a": {
             "final_status_accuracy": calc_rate(stage_metrics["stage_a"]["correct_beliefs"], stage_metrics["stage_a"]["total_beliefs"]),
+            "dpa_final_status_accuracy": calc_rate(stage_metrics["stage_a"]["correct_beliefs"], stage_metrics["stage_a"]["total_beliefs"]),
+            "macro_final_status_accuracy": sum(episode_accuracies) / len(episode_accuracies) if episode_accuracies else 0.0,
+            "episode_exact_match_rate": episode_em_count / len(processed_cases) if processed_cases else 0.0,
             "over_update_rate": calc_rate(stage_metrics["stage_a"]["over_updates"], stage_metrics["stage_a"]["not_usable_total"]),
             "stale_propagation_rate": calc_rate(stage_metrics["stage_a"]["over_updates"], stage_metrics["stage_a"]["not_usable_total"]),
             "under_update_rate": calc_rate(stage_metrics["stage_a"]["under_updates"], stage_metrics["stage_a"]["usable_total"]),
