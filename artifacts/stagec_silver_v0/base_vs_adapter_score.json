@@ -1,0 +1,426 @@
+{
+  "n": 8,
+  "adapter_valid_json": "8/8",
+  "adapter_action_type_match": "7/8",
+  "adapter_exact_match": "6/8",
+  "base_valid_json": "1/8",
+  "base_action_type_match": "1/8",
+  "base_exact_match": "1/8",
+  "results": [
+    {
+      "case": "test_00",
+      "gold_actions": [
+        "SUPERSEDES",
+        "BLOCKS"
+      ],
+      "adapter": {
+        "valid_json": true,
+        "action_type_valid": true,
+        "exact_match": false,
+        "action_type_sequence_match": false,
+        "pred_actions": [
+          "SUPERSEDES"
+        ],
+        "pred_count": 1
+      },
+      "base": {
+        "valid_json": false,
+        "action_type_valid": false,
+        "exact_match": false,
+        "action_type_sequence_match": false,
+        "pred_actions": [],
+        "pred_count": 0
+      },
+      "mismatch_details": {
+        "gold": [
+          {
+            "action_type": "BLOCKS",
+            "target_belief_id": null,
+            "target_condition_id": "c_ep_expansion_software_engineering_stale_propagation_v5__heldout_base_1",
+            "replacement_belief_id": null,
+            "evidence_ids": [
+              "ev_ep_expansion_software_engineering_stale_propagation_v5__heldout_base_2"
+            ]
+          },
+          {
+            "action_type": "SUPERSEDES",
+            "target_belief_id": "b_ep_expansion_software_engineering_stale_propagation_v5__heldout_base_1",
+            "target_condition_id": null,
+            "replacement_belief_id": "b_ep_expansion_software_engineering_stale_propagation_v5__heldout_base_2",
+            "evidence_ids": [
+              "ev_ep_expansion_software_engineering_stale_propagation_v5__heldout_base_2"
+            ]
+          }
+        ],
+        "adapter_pred": [
+          {
+            "action_type": "SUPERSEDES",
+            "target_belief_id": "b_ep_expansion_software_engineering_stale_propagation_v5__heldout_base_1",
+            "target_condition_id": null,
+            "replacement_belief_id": "b_ep_expansion_software_engineering_stale_propagation_v5__heldout_base_2",
+            "evidence_ids": [
+              "ev_ep_expansion_software_engineering_stale_propagation_v5__heldout_base_2"
+            ]
+          }
+        ],
+        "base_pred": []
+      }
+    },
+    {
+      "case": "test_01",
+      "gold_actions": [
+        "BLOCKS"
+      ],
+      "adapter": {
+        "valid_json": true,
+        "action_type_valid": true,
+        "exact_match": true,
+        "action_type_sequence_match": true,
+        "pred_actions": [
+          "BLOCKS"
+        ],
+        "pred_count": 1
+      },
+      "base": {
+        "valid_json": true,
+        "action_type_valid": true,
+        "exact_match": true,
+        "action_type_sequence_match": true,
+        "pred_actions": [
+          "BLOCKS"
+        ],
+        "pred_count": 1
+      },
+      "mismatch_details": {
+        "gold": [
+          {
+            "action_type": "BLOCKS",
+            "target_belief_id": null,
+            "target_condition_id": "c_ep_expansion_software_engineering_scope_expansion_v5__heldout_base_staging",
+            "replacement_belief_id": null,
+            "evidence_ids": [
+              "ev_ep_expansion_software_engineering_scope_expansion_v5__heldout_base_2"
+            ]
+          }
+        ],
+        "adapter_pred": [
+          {
+            "action_type": "BLOCKS",
+            "target_belief_id": null,
+            "target_condition_id": "c_ep_expansion_software_engineering_scope_expansion_v5__heldout_base_staging",
+            "replacement_belief_id": null,
+            "evidence_ids": [
+              "ev_ep_expansion_software_engineering_scope_expansion_v5__heldout_base_2"
+            ]
+          }
+        ],
+        "base_pred": [
+          {
+            "action_type": "BLOCKS",
+            "target_belief_id": null,
+            "target_condition_id": "c_ep_expansion_software_engineering_scope_expansion_v5__heldout_base_staging",
+            "replacement_belief_id": null,
+            "evidence_ids": [
+              "ev_ep_expansion_software_engineering_scope_expansion_v5__heldout_base_2"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "case": "test_02",
+      "gold_actions": [
+        "RELEASES"
+      ],
+      "adapter": {
+        "valid_json": true,
+        "action_type_valid": true,
+        "exact_match": true,
+        "action_type_sequence_match": true,
+        "pred_actions": [
+          "RELEASES"
+        ],
+        "pred_count": 1
+      },
+      "base": {
+        "valid_json": false,
+        "action_type_valid": false,
+        "exact_match": false,
+        "action_type_sequence_match": false,
+        "pred_actions": [],
+        "pred_count": 0
+      },
+      "mismatch_details": {
+        "gold": [
+          {
+            "action_type": "RELEASES",
+            "target_belief_id": null,
+            "target_condition_id": "c_ep_expansion_research_workflow_temporary_blocker_recovery_v5__heldout_base_1",
+            "replacement_belief_id": null,
+            "evidence_ids": [
+              "ev_ep_expansion_research_workflow_temporary_blocker_recovery_v5__heldout_base_3"
+            ]
+          }
+        ],
+        "adapter_pred": [
+          {
+            "action_type": "RELEASES",
+            "target_belief_id": null,
+            "target_condition_id": "c_ep_expansion_research_workflow_temporary_blocker_recovery_v5__heldout_base_1",
+            "replacement_belief_id": null,
+            "evidence_ids": [
+              "ev_ep_expansion_research_workflow_temporary_blocker_recovery_v5__heldout_base_3"
+            ]
+          }
+        ],
+        "base_pred": []
+      }
+    },
+    {
+      "case": "test_03",
+      "gold_actions": [
+        "UNCERTAIN"
+      ],
+      "adapter": {
+        "valid_json": true,
+        "action_type_valid": true,
+        "exact_match": true,
+        "action_type_sequence_match": true,
+        "pred_actions": [
+          "UNCERTAIN"
+        ],
+        "pred_count": 1
+      },
+      "base": {
+        "valid_json": false,
+        "action_type_valid": false,
+        "exact_match": false,
+        "action_type_sequence_match": false,
+        "pred_actions": [],
+        "pred_count": 0
+      },
+      "mismatch_details": {
+        "gold": [
+          {
+            "action_type": "UNCERTAIN",
+            "target_belief_id": "b_ep_expansion_research_workflow_ambiguous_update_v5__heldout_base_1",
+            "target_condition_id": null,
+            "replacement_belief_id": null,
+            "evidence_ids": [
+              "ev_ep_expansion_research_workflow_ambiguous_update_v5__heldout_base_2"
+            ]
+          }
+        ],
+        "adapter_pred": [
+          {
+            "action_type": "UNCERTAIN",
+            "target_belief_id": "b_ep_expansion_research_workflow_ambiguous_update_v5__heldout_base_1",
+            "target_condition_id": null,
+            "replacement_belief_id": null,
+            "evidence_ids": [
+              "ev_ep_expansion_research_workflow_ambiguous_update_v5__heldout_base_2"
+            ]
+          }
+        ],
+        "base_pred": []
+      }
+    },
+    {
+      "case": "test_04",
+      "gold_actions": [
+        "BLOCKS"
+      ],
+      "adapter": {
+        "valid_json": true,
+        "action_type_valid": true,
+        "exact_match": true,
+        "action_type_sequence_match": true,
+        "pred_actions": [
+          "BLOCKS"
+        ],
+        "pred_count": 1
+      },
+      "base": {
+        "valid_json": false,
+        "action_type_valid": false,
+        "exact_match": false,
+        "action_type_sequence_match": false,
+        "pred_actions": [],
+        "pred_count": 0
+      },
+      "mismatch_details": {
+        "gold": [
+          {
+            "action_type": "BLOCKS",
+            "target_belief_id": null,
+            "target_condition_id": "c_ep_expansion_software_engineering_temporary_blocker_recovery_v5__heldout_base_1",
+            "replacement_belief_id": null,
+            "evidence_ids": [
+              "ev_ep_expansion_software_engineering_temporary_blocker_recovery_v5__heldout_base_2"
+            ]
+          }
+        ],
+        "adapter_pred": [
+          {
+            "action_type": "BLOCKS",
+            "target_belief_id": null,
+            "target_condition_id": "c_ep_expansion_software_engineering_temporary_blocker_recovery_v5__heldout_base_1",
+            "replacement_belief_id": null,
+            "evidence_ids": [
+              "ev_ep_expansion_software_engineering_temporary_blocker_recovery_v5__heldout_base_2"
+            ]
+          }
+        ],
+        "base_pred": []
+      }
+    },
+    {
+      "case": "test_05",
+      "gold_actions": [
+        "UNCERTAIN"
+      ],
+      "adapter": {
+        "valid_json": true,
+        "action_type_valid": true,
+        "exact_match": false,
+        "action_type_sequence_match": true,
+        "pred_actions": [
+          "UNCERTAIN"
+        ],
+        "pred_count": 1
+      },
+      "base": {
+        "valid_json": false,
+        "action_type_valid": false,
+        "exact_match": false,
+        "action_type_sequence_match": false,
+        "pred_actions": [],
+        "pred_count": 0
+      },
+      "mismatch_details": {
+        "gold": [
+          {
+            "action_type": "UNCERTAIN",
+            "target_belief_id": "b_ep_expansion_research_workflow_cross_agent_conflict_v5__heldout_base_1",
+            "target_condition_id": null,
+            "replacement_belief_id": null,
+            "evidence_ids": [
+              "ev_ep_expansion_research_workflow_cross_agent_conflict_v5__heldout_base_2"
+            ]
+          }
+        ],
+        "adapter_pred": [
+          {
+            "action_type": "UNCERTAIN",
+            "target_belief_id": "b_ep_expansion_research_workflow_cross_agent_conflict_v5__heldout_base_1",
+            "target_condition_id": null,
+            "replacement_belief_id": null,
+            "evidence_ids": [
+              "ev_ep_expansion_research_workflow_cross_agent_conflict_v5__heldout_base_1",
+              "ev_ep_expansion_research_workflow_cross_agent_conflict_v5__heldout_base_2"
+            ]
+          }
+        ],
+        "base_pred": []
+      }
+    },
+    {
+      "case": "test_06",
+      "gold_actions": [
+        "SUPERSEDES"
+      ],
+      "adapter": {
+        "valid_json": true,
+        "action_type_valid": true,
+        "exact_match": true,
+        "action_type_sequence_match": true,
+        "pred_actions": [
+          "SUPERSEDES"
+        ],
+        "pred_count": 1
+      },
+      "base": {
+        "valid_json": false,
+        "action_type_valid": false,
+        "exact_match": false,
+        "action_type_sequence_match": false,
+        "pred_actions": [],
+        "pred_count": 0
+      },
+      "mismatch_details": {
+        "gold": [
+          {
+            "action_type": "SUPERSEDES",
+            "target_belief_id": "b_ep_expansion_software_engineering_direct_supersession_v5__heldout_base_1",
+            "target_condition_id": null,
+            "replacement_belief_id": "b_ep_expansion_software_engineering_direct_supersession_v5__heldout_base_2",
+            "evidence_ids": [
+              "ev_ep_expansion_software_engineering_direct_supersession_v5__heldout_base_2"
+            ]
+          }
+        ],
+        "adapter_pred": [
+          {
+            "action_type": "SUPERSEDES",
+            "target_belief_id": "b_ep_expansion_software_engineering_direct_supersession_v5__heldout_base_1",
+            "target_condition_id": null,
+            "replacement_belief_id": "b_ep_expansion_software_engineering_direct_supersession_v5__heldout_base_2",
+            "evidence_ids": [
+              "ev_ep_expansion_software_engineering_direct_supersession_v5__heldout_base_2"
+            ]
+          }
+        ],
+        "base_pred": []
+      }
+    },
+    {
+      "case": "test_07",
+      "gold_actions": [
+        "UNCERTAIN"
+      ],
+      "adapter": {
+        "valid_json": true,
+        "action_type_valid": true,
+        "exact_match": true,
+        "action_type_sequence_match": true,
+        "pred_actions": [
+          "UNCERTAIN"
+        ],
+        "pred_count": 1
+      },
+      "base": {
+        "valid_json": false,
+        "action_type_valid": false,
+        "exact_match": false,
+        "action_type_sequence_match": false,
+        "pred_actions": [],
+        "pred_count": 0
+      },
+      "mismatch_details": {
+        "gold": [
+          {
+            "action_type": "UNCERTAIN",
+            "target_belief_id": "b_ep_expansion_software_engineering_cross_agent_conflict_v5__heldout_base_1",
+            "target_condition_id": null,
+            "replacement_belief_id": null,
+            "evidence_ids": [
+              "ev_ep_expansion_software_engineering_cross_agent_conflict_v5__heldout_base_2"
+            ]
+          }
+        ],
+        "adapter_pred": [
+          {
+            "action_type": "UNCERTAIN",
+            "target_belief_id": "b_ep_expansion_software_engineering_cross_agent_conflict_v5__heldout_base_1",
+            "target_condition_id": null,
+            "replacement_belief_id": null,
+            "evidence_ids": [
+              "ev_ep_expansion_software_engineering_cross_agent_conflict_v5__heldout_base_2"
+            ]
+          }
+        ],
+        "base_pred": []
+      }
+    }
+  ]
+}
