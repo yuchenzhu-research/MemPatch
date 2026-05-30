@@ -11,7 +11,7 @@ from experiments.multiagent.contracts import (
     ApprovedRevisionExemplar,
     TypedRevisionProposer,
 )
-from experiments.multiagent.export_stagec_sft import format_user_prompt
+from retracemem.multiagent.utils import format_user_prompt
 
 CANONICAL_ACTIONS = {"SUPERSEDES", "BLOCKS", "RELEASES", "UNCERTAIN", "REAFFIRMS", "NO_REVISION"}
 
