@@ -10,8 +10,8 @@ __pycache__/
 
 # Local environments and editor state.
 .venv/
-venv/
 .env
+venv/
 .DS_Store
 
 # Packaging and test metadata.
