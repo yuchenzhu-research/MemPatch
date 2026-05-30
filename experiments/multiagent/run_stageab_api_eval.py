@@ -385,8 +385,11 @@ def compute_stage_a_action_metrics(
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Stage A vs Stage B API Evaluation Runner")
-    parser.add_argument("--live", action="store_true", help="Enable live API calls")
-    parser.add_argument("--dry-run", action="store_true", help="Dry run prompt generation and dataset checking")
+    mode_group = parser.add_mutually_exclusive_group(required=True)
+    mode_group.add_argument("--live", action="store_true", help="Enable live API calls")
+    mode_group.add_argument("--dry-run", action="store_true", help="Dry run prompt generation and dataset checking")
+    mode_group.add_argument("--mock", action="store_true", help="Explicit mock replay mode")
+    
     parser.add_argument("--max-cases", type=int, default=None, help="Limit number of cases to evaluate")
     parser.add_argument("--resume", action="store_true", help="Resume from cached files")
     parser.add_argument("--provider", default="siliconflow", help="API Provider name")
@@ -395,6 +398,9 @@ def main() -> None:
     parser.add_argument("--base-url", default=None, help="Explicit base URL")
     parser.add_argument("--output-dir", default="outputs/runs/stageab_dev70", help="Output directory")
     args = parser.parse_args()
+
+    if args.output_dir.startswith("artifacts/"):
+        print("\n⚠ WARNING: output_dir starts with 'artifacts/'. Generated artifacts in artifacts/ directory should not be committed to GitHub under paper governance policy. Please consider using 'outputs/runs/' instead.\n")
 
     print("=" * 80)
     print("STAGE A VS STAGE B API EVALUATION RUNNER")
@@ -428,9 +434,17 @@ def main() -> None:
     # Initialize live client if live
     client = None
     if args.live:
+        api_key = args.api_key or os.getenv("SILICONFLOW_API_KEY")
+        if not api_key:
+            raise ValueError("Live mode requires API key to be set via --api-key or SILICONFLOW_API_KEY env var.")
+        if not args.provider or args.provider == "mock":
+            raise ValueError("Live mode requires a valid non-mock --provider.")
+        if not args.model:
+            raise ValueError("Live mode requires a valid --model ID.")
+
         cache_file = output_path / "api_cache.jsonl"
         cache = JSONLCache(str(cache_file))
-        http_provider = HTTPLLMProvider(api_key=args.api_key, base_url=args.base_url)
+        http_provider = HTTPLLMProvider(api_key=api_key, base_url=args.base_url)
         client = CachedLLMClient(cache=cache, provider_client=http_provider)
         print(f"✓ Initialized live API client with cache at: {cache_file}")
 
@@ -484,17 +498,23 @@ def main() -> None:
                 dpa_trace_rows = []
 
     # Policy setup for Stage A Proposing
-    if args.dry_run:
+    if args.live:
+        proposer_a = ClosedAPIZeroShotProposer(
+            provider_kind=args.provider,
+            model_id=args.model,
+            client=client,
+        )
+    elif args.mock:
         proposer_a = ClosedAPIZeroShotProposer(
             provider_kind="mock",
             model_id=None,
             client=None,
         )
-    else:
+    else: # dry-run
         proposer_a = ClosedAPIZeroShotProposer(
-            provider_kind=args.provider if args.live else "mock",
-            model_id=args.model if args.live else None,
-            client=client,
+            provider_kind="mock",
+            model_id=None,
+            client=None,
         )
     direct_judge_template = load_direct_judge_template()
 
@@ -535,6 +555,18 @@ def main() -> None:
                     })
 
             proposal_batches = proposal_output.proposal_batches
+            proposal_edges = []
+            for batch in proposal_batches:
+                for edge in batch.edges:
+                    proposal_edges.append({
+                        "edge_id": edge.edge_id,
+                        "edge_type": edge.edge_type.value if hasattr(edge.edge_type, "value") else str(edge.edge_type),
+                        "evidence_id": edge.evidence_id,
+                        "target_kind": edge.target_kind,
+                        "target_id": edge.target_id,
+                        "replacement_belief_id": edge.replacement_belief_id,
+                        "rationale": edge.rationale,
+                    })
 
             # Build SubagentMemorySubmission with predicted proposal batches
             subagent_sub = SubagentMemorySubmission(
@@ -567,6 +599,7 @@ def main() -> None:
             ep_a_parsed_actions.append({
                 "submission_id": sub.submission_id,
                 "actions": parsed_actions,
+                "proposal_edges": proposal_edges,
                 "parse_error": parse_err,
             })
 
@@ -758,6 +791,7 @@ def main() -> None:
         "target_grounding": [],
         "evidence_grounding": [],
         "exact_action_match": [],
+        "no_revision_match": [],
     }
 
     # Stage B Canonicalization counters
@@ -954,6 +988,7 @@ def main() -> None:
             "target_grounding": sum(action_metrics_counters["target_grounding"]) / len(action_metrics_counters["target_grounding"]) if action_metrics_counters["target_grounding"] else 0.0,
             "evidence_grounding": sum(action_metrics_counters["evidence_grounding"]) / len(action_metrics_counters["evidence_grounding"]) if action_metrics_counters["evidence_grounding"] else 0.0,
             "exact_action_match": sum(action_metrics_counters["exact_action_match"]) / len(action_metrics_counters["exact_action_match"]) if action_metrics_counters["exact_action_match"] else 0.0,
+            "no_revision_match": sum(action_metrics_counters["no_revision_match"]) / len(action_metrics_counters["no_revision_match"]) if action_metrics_counters["no_revision_match"] else 0.0,
         },
         "stage_b": {
             "final_status_accuracy": calc_rate(stage_metrics["stage_b_canonicalized"]["correct_beliefs"], stage_metrics["stage_b_canonicalized"]["total_beliefs"]),
@@ -996,20 +1031,34 @@ def main() -> None:
             writer.writerows(failure_breakdown_rows)
 
         # Save manifest.json
+        # Calculate prompt template hash
+        from experiments.multiagent.stagec_policy import PromptTypedRevisionPolicy
+        temp_policy = PromptTypedRevisionPolicy()
+        sys_prompt = temp_policy.build_system_prompt()
+        prompt_template_hash = hashlib.sha256(sys_prompt.encode("utf-8")).hexdigest()
+
         manifest = {
             "run_identifier": "development_live_api_run / not_final_paper_result" if args.live else "development_run",
             "executed_at": datetime.datetime.now().isoformat(),
+            "run_mode": "live" if args.live else "mock" if args.mock else "dry-run",
+            "is_live_api_result": args.live,
+            "mock_default_used": args.mock,
             "provider": args.provider,
             "model": args.model,
-            "run_mode": "live" if args.live else "dry-run" if args.dry_run else "mock",
             "resume_mode": args.resume,
+            "temperature": 0.0,
+            "seed": 42,
             "decoding_parameters": {
                 "temperature": 0.0,
                 "seed": 42,
             },
             "cases_evaluated": len(processed_cases),
             "output_directory": args.output_dir,
+            "git_commit_sha": "unknown",
             "code_commit_sha": "unknown",
+            "prompt_template_hash": prompt_template_hash,
+            "parser_version": "PromptTypedRevisionPolicy_v1",
+            "response_schema_version": "v1_canonical",
         }
         if args.live:
             manifest["warning"] = "development_live_api_run / not_final_paper_result"
@@ -1017,6 +1066,7 @@ def main() -> None:
         try:
             res_git = os.popen("git rev-parse HEAD").read().strip()
             if res_git:
+                manifest["git_commit_sha"] = res_git
                 manifest["code_commit_sha"] = res_git
         except Exception:
             pass
