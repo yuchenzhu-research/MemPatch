@@ -51,7 +51,7 @@ from experiments.multiagent.contracts import (
     FixedCandidateGoldRecord,
     FixedCandidateInputEpisode,
 )
-from experiments.multiagent.stagec_policy import ClosedAPIZeroShotProposer
+from experiments.multiagent.stagec_policy import ClosedAPIZeroShotProposer, ClosedAPIZeroShotConstrainedProposer
 from experiments.multiagent.run_stagec_adapter_eval import rename_submission
 
 _STATUS_MAP_A_TO_COMPARABLE = {
@@ -374,12 +374,17 @@ def compute_stage_a_action_metrics(
         action_type_match = action_type_match_correct / max(len(pred_actions), len(gold_actions))
         evidence_grounding = evidence_grounding_correct / max(len(pred_actions), len(gold_actions))
 
+    gold_is_no_rev = not gold_actions or any(a.action_type == "NO_REVISION" for a in gold_actions)
+    pred_is_no_rev = not pred_actions or any(a.get("action_type") == "NO_REVISION" for a in pred_actions)
+    no_revision_match = 1.0 if gold_is_no_rev == pred_is_no_rev else 0.0
+
     return {
         "valid_json": valid_json,
         "action_type_match": action_type_match,
         "target_grounding": target_grounding,
         "evidence_grounding": evidence_grounding,
         "exact_action_match": exact_action_match,
+        "no_revision_match": no_revision_match,
     }
 
 
@@ -397,6 +402,8 @@ def main() -> None:
     parser.add_argument("--api-key", default=None, help="Explicit API key")
     parser.add_argument("--base-url", default=None, help="Explicit base URL")
     parser.add_argument("--output-dir", default="outputs/runs/stageab_dev70", help="Output directory")
+    parser.add_argument("--constrained", action="store_true", help="Use constrained zero-shot proposer")
+    parser.add_argument("--diagnostic", action="store_true", help="Enable diagnostic mode (decision audit)")
     args = parser.parse_args()
 
     if args.output_dir.startswith("artifacts/"):
@@ -498,23 +505,24 @@ def main() -> None:
                 dpa_trace_rows = []
 
     # Policy setup for Stage A Proposing
-    if args.live:
-        proposer_a = ClosedAPIZeroShotProposer(
-            provider_kind=args.provider,
-            model_id=args.model,
-            client=client,
+    is_live = args.live
+    prov = args.provider if is_live else "mock"
+    mid = args.model if is_live else None
+    cli = client if is_live else None
+
+    if getattr(args, "constrained", False):
+        proposer_a = ClosedAPIZeroShotConstrainedProposer(
+            provider_kind=prov,
+            model_id=mid,
+            client=cli,
+            diagnostic_mode=getattr(args, "diagnostic", False),
         )
-    elif args.mock:
+    else:
         proposer_a = ClosedAPIZeroShotProposer(
-            provider_kind="mock",
-            model_id=None,
-            client=None,
-        )
-    else: # dry-run
-        proposer_a = ClosedAPIZeroShotProposer(
-            provider_kind="mock",
-            model_id=None,
-            client=None,
+            provider_kind=prov,
+            model_id=mid,
+            client=cli,
+            diagnostic_mode=getattr(args, "diagnostic", False),
         )
     direct_judge_template = load_direct_judge_template()
 
@@ -601,6 +609,7 @@ def main() -> None:
                 "actions": parsed_actions,
                 "proposal_edges": proposal_edges,
                 "parse_error": parse_err,
+                "decision_audit": proposal_output.metadata.get("decision_audit"),
             })
 
         # Run Stage A sequence commit to get final DPA statuses
@@ -792,6 +801,9 @@ def main() -> None:
         "evidence_grounding": [],
         "exact_action_match": [],
         "no_revision_match": [],
+        "false_no_revision": [],
+        "multi_action_recall": [],
+        "parser_error": [],
     }
 
     # Stage B Canonicalization counters
@@ -826,6 +838,29 @@ def main() -> None:
             act_metrics = compute_stage_a_action_metrics(pred_actions_for_sub, gold_actions_for_sub, orig_sub)
             for k, v in act_metrics.items():
                 action_metrics_counters[k].append(v)
+
+            # Calculate new metrics
+            gold_is_no_rev = not gold_actions_for_sub or any(a.action_type == "NO_REVISION" for a in gold_actions_for_sub)
+            pred_is_no_rev = not pred_actions_for_sub or any(a.get("action_type") == "NO_REVISION" for a in pred_actions_for_sub)
+            
+            is_false_no_rev = 1.0 if (not gold_is_no_rev and pred_is_no_rev) else 0.0
+            action_metrics_counters["false_no_revision"].append(is_false_no_rev)
+            
+            gold_real_acts = [a for a in gold_actions_for_sub if a.action_type != "NO_REVISION"]
+            if len(gold_real_acts) > 1:
+                recalled = 0
+                for ga in gold_real_acts:
+                    ga_target = ga.target_belief_id or ga.target_condition_id
+                    for pa in pred_actions_for_sub:
+                        pa_target = pa.get("target_belief_id") or pa.get("target_condition_id")
+                        if pa_target == ga_target and pa.get("action_type") == ga.action_type:
+                            recalled += 1
+                            break
+                recall_val = recalled / len(gold_real_acts)
+                action_metrics_counters["multi_action_recall"].append(recall_val)
+                
+            has_pe = 1.0 if s_parsed.get("parse_error") is not None else 0.0
+            action_metrics_counters["parser_error"].append(has_pe)
 
         # Grounding errors Stage A
         has_grounding_err_a = False
@@ -989,6 +1024,9 @@ def main() -> None:
             "evidence_grounding": sum(action_metrics_counters["evidence_grounding"]) / len(action_metrics_counters["evidence_grounding"]) if action_metrics_counters["evidence_grounding"] else 0.0,
             "exact_action_match": sum(action_metrics_counters["exact_action_match"]) / len(action_metrics_counters["exact_action_match"]) if action_metrics_counters["exact_action_match"] else 0.0,
             "no_revision_match": sum(action_metrics_counters["no_revision_match"]) / len(action_metrics_counters["no_revision_match"]) if action_metrics_counters["no_revision_match"] else 0.0,
+            "false_no_revision_rate": sum(action_metrics_counters["false_no_revision"]) / len(action_metrics_counters["false_no_revision"]) if action_metrics_counters["false_no_revision"] else 0.0,
+            "multi_action_recall": sum(action_metrics_counters["multi_action_recall"]) / len(action_metrics_counters["multi_action_recall"]) if action_metrics_counters["multi_action_recall"] else 0.0,
+            "parser_error_rate": sum(action_metrics_counters["parser_error"]) / len(action_metrics_counters["parser_error"]) if action_metrics_counters["parser_error"] else 0.0,
         },
         "stage_b": {
             "final_status_accuracy": calc_rate(stage_metrics["stage_b_canonicalized"]["correct_beliefs"], stage_metrics["stage_b_canonicalized"]["total_beliefs"]),

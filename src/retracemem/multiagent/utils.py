@@ -134,3 +134,89 @@ def canonicalize_belief_id_with_type(
         return returned_id, False, "failed"
         
     return returned_id, False, "failed"
+
+
+def build_candidate_actions(submission: Any) -> list[dict[str, Any]]:
+    """Build all structure-allowable candidate revision actions for a submission.
+    
+    This uses only method-visible information and contains NO gold targets.
+    """
+    candidates = []
+    new_ev_id = submission.new_evidence_id
+    
+    # 1. SUPERSEDES candidates
+    for b_old in submission.candidate_beliefs:
+        for b_new in submission.candidate_replacement_beliefs:
+            candidates.append({
+                "candidate_action_id": f"act_supersedes_{b_old.belief_id}_{b_new.belief_id}",
+                "action_type": "SUPERSEDES",
+                "target_belief_id": b_old.belief_id,
+                "target_condition_id": None,
+                "replacement_belief_id": b_new.belief_id,
+                "evidence_ids": [new_ev_id],
+                "why_candidate": f"Check if new evidence supports replacement of {b_old.belief_id} with {b_new.belief_id}"
+            })
+            
+    # Track seen conditions to avoid duplicating BLOCKS/RELEASES for the same condition
+    seen_conditions = set()
+    for bid, conds in submission.candidate_conditions_by_belief:
+        for c in conds:
+            if c.condition_id in seen_conditions:
+                continue
+            seen_conditions.add(c.condition_id)
+            
+            # 2. BLOCKS candidates
+            candidates.append({
+                "candidate_action_id": f"act_blocks_{c.condition_id}",
+                "action_type": "BLOCKS",
+                "target_belief_id": None,
+                "target_condition_id": c.condition_id,
+                "replacement_belief_id": None,
+                "evidence_ids": [new_ev_id],
+                "why_candidate": f"Check if new evidence invalidates the condition {c.condition_id} required by belief {bid}"
+            })
+            
+            # 3. RELEASES candidates
+            candidates.append({
+                "candidate_action_id": f"act_releases_{c.condition_id}",
+                "action_type": "RELEASES",
+                "target_belief_id": None,
+                "target_condition_id": c.condition_id,
+                "replacement_belief_id": None,
+                "evidence_ids": [new_ev_id],
+                "why_candidate": f"Check if new evidence restores/releases the condition {c.condition_id} required by belief {bid}"
+            })
+            
+    # 4. UNCERTAIN candidates & 5. REAFFIRMS candidates
+    for b in submission.candidate_beliefs:
+        candidates.append({
+            "candidate_action_id": f"act_uncertain_{b.belief_id}",
+            "action_type": "UNCERTAIN",
+            "target_belief_id": b.belief_id,
+            "target_condition_id": None,
+            "replacement_belief_id": None,
+            "evidence_ids": [new_ev_id],
+            "why_candidate": f"Check if new evidence makes the belief {b.belief_id} uncertain without a replacement"
+        })
+        candidates.append({
+            "candidate_action_id": f"act_reaffirms_{b.belief_id}",
+            "action_type": "REAFFIRMS",
+            "target_belief_id": b.belief_id,
+            "target_condition_id": None,
+            "replacement_belief_id": None,
+            "evidence_ids": [new_ev_id],
+            "why_candidate": f"Check if new evidence confirms/supports the existing belief {b.belief_id}"
+        })
+        
+    # 6. NO_REVISION fallback
+    candidates.append({
+        "candidate_action_id": "act_no_revision",
+        "action_type": "NO_REVISION",
+        "target_belief_id": None,
+        "target_condition_id": None,
+        "replacement_belief_id": None,
+        "evidence_ids": [new_ev_id],
+        "why_candidate": "No revision action is warranted by the new evidence"
+    })
+    
+    return candidates
