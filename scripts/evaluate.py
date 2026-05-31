@@ -44,6 +44,12 @@ def _add_stageab_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--model", default="deepseek-ai/DeepSeek-V3", help="Model ID.")
     p.add_argument("--api-key", default=None, help="Explicit API key.")
     p.add_argument("--base-url", default=None, help="Explicit base URL.")
+    p.add_argument(
+        "--provider-config",
+        default=None,
+        help="Path to a single-provider config file (configs/providers/*.yaml). "
+             "Selects the provider mode/base_url/api_key_env; --model stays authoritative.",
+    )
     p.add_argument("--output-dir", default="outputs/runs/stageab_dev70", help="Output directory.")
     p.add_argument(
         "--dataset",
@@ -75,6 +81,7 @@ def _run_stageab(args: argparse.Namespace) -> None:
         model=args.model,
         api_key=args.api_key,
         base_url=args.base_url,
+        provider_config_path=args.provider_config,
         output_dir=args.output_dir,
         dataset=args.dataset,
         constrained=args.constrained,
