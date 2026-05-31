@@ -24,6 +24,7 @@ class EvalRunConfig:
     output_dir: str = "outputs/runs/stageab_dev70"
     constrained: bool = False
     diagnostic: bool = False
+    stage_a_variant: str | None = None
     method: str | None = None
     allow_fallback_to_zeroshot: bool = False
     repair_on_parse_error: bool = False

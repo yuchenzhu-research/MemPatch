@@ -499,6 +499,7 @@ class ClosedAPIZeroShotConstrainedProposer(TypedRevisionProposer):
         diagnostic_mode: bool = False,
         repair_on_parse_error: bool = False,
         max_repair_rounds: int = 0,
+        conflict_aware: bool = False,
     ) -> None:
         self.provider_kind = provider_kind
         self.model_id = model_id
@@ -507,6 +508,23 @@ class ClosedAPIZeroShotConstrainedProposer(TypedRevisionProposer):
         self.diagnostic_mode = diagnostic_mode
         self.repair_on_parse_error = repair_on_parse_error
         self.max_repair_rounds = max_repair_rounds
+        self.conflict_aware = conflict_aware
+        if conflict_aware:
+            self.policy_variant = "zero_shot_constrained_conflict_aware"
+
+    # Stable conflict-handling rule reused by the conflict-aware prompt and by
+    # tests. Added only when conflict_aware is enabled; the default constrained
+    # policy prompt is left byte-for-byte unchanged.
+    CONFLICT_RULE_TEXT = (
+        "Conflict handling rule:\n"
+        "- REAFFIRMS is only for new evidence that directly confirms the target belief "
+        "and does not conflict with any other visible belief or observation.\n"
+        "- If two candidate beliefs make incompatible claims about the same object, scope, "
+        "or time, do NOT independently reaffirm both. Mark the contradicted or unresolved "
+        "belief UNCERTAIN, or use BLOCKS / SUPERSEDES if the candidate structure supports it.\n"
+        "- Do not select REAFFIRMS for two mutually incompatible beliefs in the same local "
+        "conflict unless the new evidence explicitly reconciles them.\n"
+    )
 
     def build_system_prompt(self, candidates: list[dict[str, Any]]) -> str:
         prompt = (
@@ -519,6 +537,8 @@ class ClosedAPIZeroShotConstrainedProposer(TypedRevisionProposer):
             "- You cannot combine 'act_no_revision' with any other action ID.\n"
             "- If you select multiple candidate actions, they must be compatible and not duplicate each other.\n\n"
         )
+        if self.conflict_aware:
+            prompt += self.CONFLICT_RULE_TEXT + "\n"
         if self.diagnostic_mode:
             prompt += (
                 "### Diagnostic Mode Output Format\n"
@@ -613,6 +633,17 @@ class ClosedAPIZeroShotConstrainedProposer(TypedRevisionProposer):
             "Choose only from the following candidates:\n\n"
             f"{candidates_str}"
         )
+
+        if self.conflict_aware:
+            from retracemem.multiagent.utils import detect_competing_beliefs
+            if detect_competing_beliefs(submission):
+                competing = ", ".join(b.belief_id for b in submission.candidate_beliefs)
+                user_content += (
+                    "\n\n### Conflict Notice\n"
+                    f"The candidate beliefs ({competing}) make competing claims and are not "
+                    "backed by reconciling evidence. Do not independently REAFFIRMS more than "
+                    "one of them; prefer UNCERTAIN for the contradicted or unresolved belief."
+                )
         return user_content
 
     def _mock_response(self, submission: FixedCandidateSubmission, candidates: list[dict[str, Any]]) -> str:
@@ -811,6 +842,14 @@ class ClosedAPIZeroShotConstrainedProposer(TypedRevisionProposer):
             )
 
         meta = {"has_duplicates": False}
+        if self.conflict_aware:
+            from retracemem.multiagent.utils import detect_competing_beliefs
+            conflict_triggered = detect_competing_beliefs(submission)
+            meta["prompt_variant"] = "conflict_aware"
+            meta["conflict_warning_triggered"] = conflict_triggered
+            if isinstance(decision_audit, dict):
+                decision_audit.setdefault("prompt_variant", "conflict_aware")
+                decision_audit.setdefault("conflict_warning_triggered", conflict_triggered)
         if decision_audit is not None:
             meta["decision_audit"] = decision_audit
 

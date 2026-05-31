@@ -141,6 +141,7 @@ def run_stageab_eval(config: EvalRunConfig) -> tuple[dict[str, Any], dict[str, A
             diagnostic_mode=diagnostic,
             repair_on_parse_error=config.repair_on_parse_error,
             max_repair_rounds=config.max_repair_rounds,
+            conflict_aware=(config.stage_a_variant == "conflict_aware"),
         )
     else:
         proposer_a = ClosedAPIZeroShotProposer(
@@ -241,6 +242,8 @@ def run_stageab_eval(config: EvalRunConfig) -> tuple[dict[str, Any], dict[str, A
                 "seed": 42,
             },
             "cases_evaluated": len(processed_cases),
+            "constrained": constrained,
+            "stage_a_variant": config.stage_a_variant,
             "output_directory": output_dir,
             "git_commit_sha": "unknown",
             "code_commit_sha": "unknown",
@@ -290,6 +293,7 @@ def main() -> None:
     parser.add_argument("--base-url", default=None, help="Explicit base URL")
     parser.add_argument("--output-dir", default="outputs/runs/stageab_dev70", help="Output directory")
     parser.add_argument("--constrained", action="store_true", help="Use constrained zero-shot proposer")
+    parser.add_argument("--stage-a-variant", default=None, choices=["conflict_aware"], help="Optional constrained Stage A variant (e.g. conflict_aware)")
     parser.add_argument("--diagnostic", action="store_true", help="Enable diagnostic mode (decision audit)")
     parser.add_argument("--repair-on-parse-error", action="store_true", help="Enable multi-round parse error repair")
     parser.add_argument("--max-repair-rounds", type=int, default=0, help="Maximum number of repair rounds")
@@ -308,6 +312,7 @@ def main() -> None:
         output_dir=args.output_dir,
         constrained=args.constrained,
         diagnostic=args.diagnostic,
+        stage_a_variant=args.stage_a_variant,
         method=None,
         repair_on_parse_error=args.repair_on_parse_error,
         max_repair_rounds=args.max_repair_rounds,

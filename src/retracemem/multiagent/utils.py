@@ -123,6 +123,25 @@ def build_candidate_actions(submission: Any) -> list[dict[str, Any]]:
     return CandidateActionBuilder.build_candidates(submission)
 
 
+def detect_competing_beliefs(submission: Any) -> bool:
+    """Method-visible structural signal that a submission presents competing beliefs.
+
+    Returns True when the submission carries two or more candidate beliefs while
+    offering no replacement belief and no condition anchor. In that shape the
+    only structure-allowable revision actions over the competing beliefs are
+    ``UNCERTAIN`` / ``REAFFIRMS`` / ``NO_REVISION`` (there is no SUPERSEDES
+    replacement and no BLOCKS/RELEASES condition), so independently reaffirming
+    every belief is the unsafe trap. This is computed purely from method-visible
+    candidate structure -- it does not read failure-type labels, episode IDs, or
+    any gold field.
+    """
+    beliefs = getattr(submission, "candidate_beliefs", ()) or ()
+    replacements = getattr(submission, "candidate_replacement_beliefs", ()) or ()
+    conditions_by_belief = getattr(submission, "candidate_conditions_by_belief", ()) or ()
+    has_condition = any(conds for _, conds in conditions_by_belief)
+    return len(beliefs) >= 2 and len(replacements) == 0 and not has_condition
+
+
 def rename_string(s: str | None, old_ns: str, new_ns: str) -> str | None:
     if s is None:
         return None
