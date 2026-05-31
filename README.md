@@ -155,11 +155,32 @@ python3 scripts/evaluate.py stage-c \
     --policy-variant lora_sft --checkpoint-id my_ckpt \
     --output-dir outputs/runs/stagec_dev70
 
+# Stage A on the balanced internal validation set (420 cases)
+python3 scripts/evaluate.py stage-a \
+    --mock --dataset paper1_balanced --max-cases 10 \
+    --constrained --stage-a-variant conflict_aware \
+    --output-dir outputs/runs/paper1_balanced_mock10
+
 # Stage C — export the typed-revision SFT dataset (offline)
 python3 scripts/export_stagec_data.py
 ```
 
 Run `python3 scripts/evaluate.py <stage> --help` for the full flag list.
+
+### Evaluation datasets
+
+`stage-a`/`stage-b` accept `--dataset` (default `dev_expansion`). Both are
+internal, deterministically generated sets — neither is an external benchmark:
+
+- **`dev_expansion` (dev70)** — development diagnostic set, 70 cases
+  (7 failure types × 2 domains × 5 variants). `--max-cases 400` still loads only 70.
+- **`paper1_balanced`** — internal balanced synthetic validation set, 420 cases
+  (14 failure types × 2 domains × 15 variants), built programmatically by
+  `retracemem.evaluation.multiagent.data.paper1_balanced`. Used for Paper 1
+  internal validation only; not a Stage C training set and not official
+  STALE / Memora / CUPMem (those are separate external pathways, not claimed here).
+
+See `docs/experiment_protocol.md` for details.
 
 ### Where outputs go
 
