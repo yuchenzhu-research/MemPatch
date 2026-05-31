@@ -2,6 +2,9 @@
 """
 from __future__ import annotations
 
+import csv
+import json
+import os
 from typing import Any, Dict, List
 
 
@@ -162,3 +165,41 @@ def aggregate_metrics(episode_results: list[dict[str, Any]]) -> dict[str, float]
         vals = [r[k] for r in episode_results if r[k] is not None]
         agg[k] = round(sum(vals) / len(vals), 6) if vals else 0.0
     return agg
+
+
+def write_matrix_outputs(
+    out_path: str,
+    aggregated: dict[str, dict[str, float]],
+    prediction_rows: list[dict[str, Any]],
+) -> dict[str, str]:
+    """Persist an experiment-matrix run as three artifacts derived from ``out_path``:
+
+    - ``<out_path>``              : JSON aggregated metrics summary (one block per method).
+    - ``<base>.csv``             : CSV aggregated metrics summary (method x metric).
+    - ``<base>.predictions.jsonl``: per-(method, example) prediction records.
+
+    Returns the resolved paths so callers can log them.
+    """
+    out_dir = os.path.dirname(out_path)
+    if out_dir:
+        os.makedirs(out_dir, exist_ok=True)
+
+    with open(out_path, "w", encoding="utf-8") as f:
+        json.dump(aggregated, f, indent=2)
+
+    base, _ = os.path.splitext(out_path)
+
+    metric_keys = sorted({k for block in aggregated.values() for k in block})
+    csv_path = base + ".csv"
+    with open(csv_path, "w", newline="", encoding="utf-8") as f:
+        writer = csv.writer(f)
+        writer.writerow(["method"] + metric_keys)
+        for method, block in aggregated.items():
+            writer.writerow([method] + [block.get(k, "") for k in metric_keys])
+
+    pred_path = base + ".predictions.jsonl"
+    with open(pred_path, "w", encoding="utf-8") as f:
+        for row in prediction_rows:
+            f.write(json.dumps(row) + "\n")
+
+    return {"json": out_path, "csv": csv_path, "predictions": pred_path}

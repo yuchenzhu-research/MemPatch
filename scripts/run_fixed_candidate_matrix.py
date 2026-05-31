@@ -11,7 +11,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 
 from retracemem.evaluation.raw_dialogue.generator import SyntheticDialogueGenerator
-from retracemem.evaluation.metrics import evaluate_predictions, aggregate_metrics
+from retracemem.evaluation.metrics import evaluate_predictions, aggregate_metrics, write_matrix_outputs
 from retracemem.schemas import EvidenceNode, BeliefNode, ConditionNode, DependencyEdge
 from retracemem.methods.contracts import SharedCandidateView
 from retracemem.authorization import authorize, EvidenceProposalBatch
@@ -165,6 +165,17 @@ def main() -> None:
 
     methods = ["oracle_proposer", "stage_a_replay_or_mock", "stage_c_learned_replay", "structured_directjudge_mock"]
     results_by_method = {m: [] for m in methods}
+    prediction_rows: list[dict[str, Any]] = []
+
+    def _record(method: str, data: dict, actions: list, statuses: dict, metrics: dict) -> None:
+        prediction_rows.append({
+            "method": method,
+            "example_id": data["example_id"],
+            "case_family": data.get("metadata", {}).get("case_family") or data.get("case_family"),
+            "predicted_actions": actions,
+            "predicted_final_statuses": statuses,
+            "metrics": metrics,
+        })
 
     for data in episodes:
         sub = _build_submission_from_graph(data)
@@ -192,6 +203,7 @@ def main() -> None:
             valid_evidence_ids=valid_evidences,
         )
         results_by_method["oracle_proposer"].append(res_oracle)
+        _record("oracle_proposer", data, gold_actions, pred_statuses, res_oracle)
 
         # 2. Stage A Replay (Replays gold actions with a tiny chance of omitting one action to simulate LLM variance)
         stage_a_actions = list(gold_actions)
@@ -213,6 +225,7 @@ def main() -> None:
             valid_evidence_ids=valid_evidences,
         )
         results_by_method["stage_a_replay_or_mock"].append(res_a)
+        _record("stage_a_replay_or_mock", data, stage_a_actions, pred_statuses_a, res_a)
 
         # 3. Stage C Learned Replay (Runs through the LearnedReplayProposer class)
         predecoded = {sub.submission_id: gold_actions}
@@ -237,6 +250,7 @@ def main() -> None:
             valid_evidence_ids=valid_evidences,
         )
         results_by_method["stage_c_learned_replay"].append(res_c)
+        _record("stage_c_learned_replay", data, replay_actions, pred_statuses_c, res_c)
 
         # 4. Structured DirectJudge Mock (DirectJudge baseline, directly predicts final statuses, bypasses Core DPA)
         # DirectJudge directly outputs statuses with slight noise (90% accuracy)
@@ -260,21 +274,19 @@ def main() -> None:
             gold_actions=[],
         )
         results_by_method["structured_directjudge_mock"].append(res_dj)
+        _record("structured_directjudge_mock", data, [], dj_statuses, res_dj)
 
     # Compute aggregate metrics
     aggregated = {}
     for m in methods:
         aggregated[m] = aggregate_metrics(results_by_method[m])
 
-    # Ensure output dir exists
-    out_dir = os.path.dirname(args.out)
-    if out_dir:
-        os.makedirs(out_dir, exist_ok=True)
+    paths = write_matrix_outputs(args.out, aggregated, prediction_rows)
 
-    with open(args.out, "w", encoding="utf-8") as f:
-        json.dump(aggregated, f, indent=2)
-
-    print(f"Protocol A Runner complete. Stored smoke results at {args.out}.")
+    print(
+        "Protocol A Runner complete. "
+        f"metrics(json)={paths['json']} metrics(csv)={paths['csv']} predictions={paths['predictions']}"
+    )
 
 
 if __name__ == "__main__":
