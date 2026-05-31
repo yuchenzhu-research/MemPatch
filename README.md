@@ -167,6 +167,30 @@ python3 scripts/export_stagec_data.py
 
 Run `python3 scripts/evaluate.py <stage> --help` for the full flag list.
 
+### Provider abstraction (OpenAI-compatible, Anthropic, Ollama)
+
+The evaluation runner is **provider-agnostic**: it never hard-codes one vendor's
+request shape. A provider is selected either by registry name (`--provider`) or
+by a single-provider config file (`--provider-config`); `--model` stays
+authoritative. API keys are resolved from the provider's `api_key_env`
+environment variable and are **never** committed.
+
+```bash
+# By registry name (backward compatible)
+python3 scripts/evaluate.py stage-a --live --provider siliconflow \
+    --model deepseek-ai/DeepSeek-V3 --constrained
+
+# By config file (mode/base_url/api_key_env come from the file)
+python3 scripts/evaluate.py stage-a --live \
+    --provider-config configs/providers/siliconflow.yaml \
+    --model deepseek-ai/DeepSeek-V3 --constrained
+```
+
+Supported modes: `openai-chat` / `custom-openai-compatible` (SiliconFlow,
+DeepSeek, vLLM, SGLang, LM Studio, …), `anthropic-messages` (`/v1/messages`),
+and `ollama-chat` (`/api/chat`). See `configs/providers/` for examples and
+[`docs/api_providers.md`](docs/api_providers.md) for the full reference.
+
 ### Evaluation datasets
 
 `stage-a`/`stage-b` accept `--dataset` (default `dev_expansion`). Both are
