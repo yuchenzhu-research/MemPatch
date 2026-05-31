@@ -20,8 +20,11 @@ from retracemem.proposers.typed_revision_policy import (
     ClosedAPIZeroShotConstrainedProposer,
     ConflictAwareConstrainedProposer,
 )
+from collections import Counter
+
 from retracemem.evaluation.multiagent.config import EvalRunConfig, make_live_client
 from retracemem.evaluation.multiagent.cases import load_eval_cases
+from retracemem.evaluation.multiagent.data.paper1_balanced import GENERATOR_VERSION as PAPER1_GENERATOR_VERSION
 from retracemem.evaluation.multiagent.pipeline import run_retrace_variant_on_episode
 from retracemem.evaluation.multiagent.directjudge import run_directjudge_on_episode
 from retracemem.evaluation.multiagent.metrics import compute_eval_metrics
@@ -45,6 +48,7 @@ def run_stageab_eval(config: EvalRunConfig) -> tuple[dict[str, Any], dict[str, A
     constrained = config.constrained
     stage_a_variant = config.stage_a_variant
     diagnostic = config.diagnostic
+    dataset = config.dataset
 
     method = config.method
     if method == "StageC-ICL":
@@ -69,7 +73,7 @@ def run_stageab_eval(config: EvalRunConfig) -> tuple[dict[str, Any], dict[str, A
     print()
 
     # Load Cases
-    processed_cases = load_eval_cases(max_cases)
+    processed_cases = load_eval_cases(max_cases, dataset=dataset)
 
     output_path = Path(output_dir)
     if not dry_run:
@@ -252,6 +256,11 @@ def run_stageab_eval(config: EvalRunConfig) -> tuple[dict[str, Any], dict[str, A
                 "seed": 42,
             },
             "cases_evaluated": len(processed_cases),
+            "dataset_name": dataset,
+            "dataset_size": len(processed_cases),
+            "failure_type_counts": dict(Counter(ep.failure_type_public_or_controlled for ep, _ in processed_cases)),
+            "domain_counts": dict(Counter(ep.domain for ep, _ in processed_cases)),
+            "generator_version": PAPER1_GENERATOR_VERSION if dataset == "paper1_balanced" else "dev_expansion_v1",
             "constrained": constrained_path,
             "stage_a_variant": stage_a_variant,
             "output_directory": output_dir,
