@@ -8,13 +8,13 @@ import subprocess
 from typing import Any, Dict, List
 from retracemem.evaluation.multiagent.contracts import ExperimentRunManifest
 from retracemem.evaluation.multiagent.data.episodes_fc_dev import get_fc_dev_episodes
-from experiments.multiagent.methods import (
+from experiments.archive.methods import (
     NaiveLastWriteWinsFixedCandidateMethod,
     AppendOnlyLexicalTopKMethod,
     DirectJudgeReplayMethod,
     ReTraceProposalReplayMethod,
 )
-from experiments.multiagent.metrics import (
+from experiments.archive.metrics import (
     compute_fixed_candidate_metrics,
     aggregate_fixed_candidate_metrics,
 )

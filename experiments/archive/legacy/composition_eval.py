@@ -12,7 +12,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.pardir, os.pardir,
 from retracemem.evaluation.multiagent.data.stagec_dataset import build_stagec_dataset
 from retracemem.proposers.typed_revision_policy import PromptTypedRevisionPolicy
 from retracemem.evaluation.multiagent.data.episodes_fc_dev import get_fc_dev_episodes
-from experiments.multiagent.methods import DirectJudgeReplayMethod
+from experiments.archive.methods import DirectJudgeReplayMethod
 from retracemem.multiagent.contracts import SubagentMemorySubmission
 from retracemem.multiagent.commit import commit_submission_sequence
 

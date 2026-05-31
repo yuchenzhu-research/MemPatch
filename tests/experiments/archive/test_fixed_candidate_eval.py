@@ -4,17 +4,17 @@ import json
 import os
 import pytest
 from retracemem.evaluation.multiagent.data.episodes_fc_dev import get_fc_dev_episodes
-from experiments.multiagent.methods import (
+from experiments.archive.methods import (
     NaiveLastWriteWinsFixedCandidateMethod,
     AppendOnlyLexicalTopKMethod,
     DirectJudgeReplayMethod,
     ReTraceProposalReplayMethod,
 )
-from experiments.multiagent.metrics import (
+from experiments.archive.metrics import (
     compute_fixed_candidate_metrics,
     aggregate_fixed_candidate_metrics,
 )
-from experiments.multiagent.legacy.run_fc_comparison import run_fc_comparison
+from experiments.archive.legacy.run_fc_comparison import run_fc_comparison
 
 
 class TestFixedCandidateEpisodesSchema:
@@ -208,7 +208,7 @@ class TestFixedCandidateRunner:
 
 class TestPlotDataValidator:
     def test_validator_accepts_valid_inputs(self):
-        from experiments.multiagent.legacy.validate_plot_inputs import validate_plot_inputs
+        from experiments.archive.legacy.validate_plot_inputs import validate_plot_inputs
         validate_plot_inputs(
             results_path="outputs/fc_method_results.jsonl",
             details_path="outputs/fc_run_details.json",
@@ -216,7 +216,7 @@ class TestPlotDataValidator:
         )
 
     def test_validator_fails_on_official_with_development_data(self):
-        from experiments.multiagent.legacy.validate_plot_inputs import validate_plot_inputs
+        from experiments.archive.legacy.validate_plot_inputs import validate_plot_inputs
         with pytest.raises(SystemExit) as excinfo:
             validate_plot_inputs(
                 results_path="outputs/fc_method_results.jsonl",
