@@ -7,7 +7,7 @@ from retracemem.schemas import (
     ConditionNode,
     DependencyEdge,
 )
-from experiments.multiagent.contracts import (
+from retracemem.evaluation.multiagent.contracts import (
     FixedCandidateSubmission,
     FixedCandidateInputEpisode,
     FixedCandidateGoldRecord,

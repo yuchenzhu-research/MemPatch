@@ -6,8 +6,8 @@ import json
 import os
 import subprocess
 from typing import Any, Dict, List
-from experiments.multiagent.contracts import ExperimentRunManifest
-from experiments.multiagent.episodes_fc_dev import get_fc_dev_episodes
+from retracemem.evaluation.multiagent.contracts import ExperimentRunManifest
+from retracemem.evaluation.multiagent.data.episodes_fc_dev import get_fc_dev_episodes
 from experiments.multiagent.methods import (
     NaiveLastWriteWinsFixedCandidateMethod,
     AppendOnlyLexicalTopKMethod,

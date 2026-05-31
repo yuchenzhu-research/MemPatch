@@ -24,8 +24,8 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(REPO_ROOT))
 
-from experiments.multiagent.dev_expansion import generate_expanded_episodes
-from experiments.multiagent.contracts import FixedCandidateSubmission, TypedRevisionTarget
+from retracemem.evaluation.multiagent.data.dev_expansion import generate_expanded_episodes
+from retracemem.evaluation.multiagent.contracts import FixedCandidateSubmission, TypedRevisionTarget
 
 _STATUS_MAP_A_TO_COMPARABLE = {
     "AUTHORIZED": "USABLE",
@@ -267,7 +267,7 @@ def main():
                             })
 
             # Calculate submission-level action metrics (matching run_stageab_api_eval.py logic)
-            from experiments.multiagent.run_stageab_api_eval import compute_stage_a_action_metrics
+            from retracemem.evaluation.multiagent.metrics import compute_stage_a_action_metrics
             act_metrics = compute_stage_a_action_metrics(pred_actions, gold_actions, orig_sub)
             episode_action_matches.append(act_metrics.get("action_type_match", 0.0))
             episode_exact_matches.append(act_metrics.get("exact_action_match", 0.0))

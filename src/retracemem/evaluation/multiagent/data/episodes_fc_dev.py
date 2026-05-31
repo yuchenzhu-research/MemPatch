@@ -6,7 +6,7 @@ from retracemem.schemas import (
     EvidenceEdge,
     EvidenceEdgeType,
 )
-from experiments.multiagent.contracts import (
+from retracemem.evaluation.multiagent.contracts import (
     FixedCandidateSubmission,
     FixedCandidateInputEpisode,
     FixedCandidateGoldRecord,

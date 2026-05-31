@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from typing import List, Tuple, Dict, Any
-from experiments.multiagent.episodes_fc_dev import get_fc_dev_episodes
-from experiments.multiagent.contracts import (
+from retracemem.evaluation.multiagent.data.episodes_fc_dev import get_fc_dev_episodes
+from retracemem.evaluation.multiagent.contracts import (
     FixedCandidateSubmission,
     FixedCandidateInputEpisode,
     FixedCandidateGoldRecord,

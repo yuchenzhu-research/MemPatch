@@ -19,10 +19,10 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from experiments.multiagent.contracts import FixedCandidateSubmission, TypedRevisionTarget
-from experiments.multiagent.dev_expansion import generate_expanded_episodes
-from experiments.multiagent.export_stagec_silver_compositional import make_example
-from experiments.multiagent.stagec_policy import PromptTypedRevisionPolicy
+from retracemem.evaluation.multiagent.contracts import FixedCandidateSubmission, TypedRevisionTarget
+from retracemem.evaluation.multiagent.data.dev_expansion import generate_expanded_episodes
+from retracemem.evaluation.multiagent.data.silver_compositional import make_example
+from retracemem.proposers.typed_revision_policy import PromptTypedRevisionPolicy
 from retracemem.authorization import authorize, SharedCandidateView
 from retracemem.schemas import BeliefNode, ConditionNode, DependencyEdge, EvidenceNode
 from retracemem.multiagent.utils import rename_submission, format_assistant_response
