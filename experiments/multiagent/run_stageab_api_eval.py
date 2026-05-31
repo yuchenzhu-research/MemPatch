@@ -39,7 +39,7 @@ from retracemem.schemas import (
 )
 from retracemem.authorization import EvidenceProposalBatch
 from retracemem.cache.jsonl_cache import JSONLCache
-from retracemem.providers.http_provider import HTTPLLMProvider
+from retracemem.providers import HTTPLLMProvider, get_provider
 from retracemem.providers.cached_client import CachedLLMClient
 from retracemem.multiagent.commit import commit_submission_sequence
 from retracemem.multiagent.contracts import SubagentMemorySubmission
@@ -70,6 +70,8 @@ class EvalRunConfig:
     diagnostic: bool = False
     method: str | None = None
     allow_fallback_to_zeroshot: bool = False
+    repair_on_parse_error: bool = False
+    max_repair_rounds: int = 0
 
 
 _STATUS_MAP_A_TO_COMPARABLE = {
@@ -445,8 +447,8 @@ def make_live_client(
     output_path.mkdir(parents=True, exist_ok=True)
     cache_file = output_path / "api_cache.jsonl"
     cache = JSONLCache(str(cache_file))
-    http_provider = HTTPLLMProvider(api_key=actual_api_key, base_url=base_url)
-    client = CachedLLMClient(cache=cache, provider_client=http_provider)
+    provider_client = get_provider(provider_name=provider, api_key=actual_api_key, base_url=base_url)
+    client = CachedLLMClient(cache=cache, provider_client=provider_client)
     print(f"✓ Initialized live API client with cache at: {cache_file}")
     return client
 
@@ -586,6 +588,10 @@ def run_retrace_variant_on_episode(
             "proposal_edges": proposal_edges,
             "parse_error": parse_err,
             "decision_audit": proposal_output.metadata.get("decision_audit"),
+            "first_pass_valid_json": proposal_output.metadata.get("first_pass_valid_json"),
+            "first_pass_parser_error": proposal_output.metadata.get("first_pass_parser_error"),
+            "repair_triggered": proposal_output.metadata.get("repair_triggered"),
+            "repair_success": proposal_output.metadata.get("repair_success"),
         })
 
     # Run Stage A sequence commit to get final DPA statuses
@@ -770,6 +776,10 @@ def compute_eval_metrics(
         "false_no_revision": [],
         "multi_action_recall": [],
         "parser_error": [],
+        "first_pass_valid_json": [],
+        "first_pass_parser_error": [],
+        "repair_triggered": [],
+        "repair_success": [],
     }
 
     # Stage B Canonicalization counters
@@ -825,6 +835,19 @@ def compute_eval_metrics(
                 
             has_pe = 1.0 if s_parsed.get("parse_error") is not None else 0.0
             action_metrics_counters["parser_error"].append(has_pe)
+
+            first_pass_valid = s_parsed.get("first_pass_valid_json")
+            if first_pass_valid is not None:
+                action_metrics_counters["first_pass_valid_json"].append(1.0 if first_pass_valid else 0.0)
+                action_metrics_counters["first_pass_parser_error"].append(1.0 if not first_pass_valid else 0.0)
+            
+            repair_triggered = s_parsed.get("repair_triggered")
+            if repair_triggered is not None:
+                action_metrics_counters["repair_triggered"].append(1.0 if repair_triggered else 0.0)
+                
+            repair_success = s_parsed.get("repair_success")
+            if repair_success is not None:
+                action_metrics_counters["repair_success"].append(1.0 if repair_success else 0.0)
 
         # Grounding errors Stage A
         has_grounding_err_a = False
@@ -1002,6 +1025,10 @@ def compute_eval_metrics(
             "false_no_revision_rate": sum(action_metrics_counters["false_no_revision"]) / len(action_metrics_counters["false_no_revision"]) if action_metrics_counters["false_no_revision"] else 0.0,
             "multi_action_recall": sum(action_metrics_counters["multi_action_recall"]) / len(action_metrics_counters["multi_action_recall"]) if action_metrics_counters["multi_action_recall"] else 0.0,
             "parser_error_rate": sum(action_metrics_counters["parser_error"]) / len(action_metrics_counters["parser_error"]) if action_metrics_counters["parser_error"] else 0.0,
+            "first_pass_valid_json_rate": sum(action_metrics_counters["first_pass_valid_json"]) / len(action_metrics_counters["first_pass_valid_json"]) if action_metrics_counters["first_pass_valid_json"] else 1.0,
+            "first_pass_parser_error_rate": sum(action_metrics_counters["first_pass_parser_error"]) / len(action_metrics_counters["first_pass_parser_error"]) if action_metrics_counters["first_pass_parser_error"] else 0.0,
+            "repair_attempt_rate": sum(action_metrics_counters["repair_triggered"]) / len(action_metrics_counters["repair_triggered"]) if action_metrics_counters["repair_triggered"] else 0.0,
+            "repair_success_rate": sum(action_metrics_counters["repair_success"]) / len(action_metrics_counters["repair_success"]) if action_metrics_counters["repair_success"] else 0.0,
         },
         "stage_b": {
             "final_status_accuracy": calc_rate(stage_metrics["stage_b_canonicalized"]["correct_beliefs"], stage_metrics["stage_b_canonicalized"]["total_beliefs"]),
@@ -1159,6 +1186,8 @@ def run_stageab_eval(config: EvalRunConfig) -> tuple[dict[str, Any], dict[str, A
             model_id=mid_a,
             client=cli_a,
             allow_fallback_to_zeroshot=True,
+            repair_on_parse_error=config.repair_on_parse_error,
+            max_repair_rounds=config.max_repair_rounds,
         )
     elif method == "StageA-Constrained" or constrained:
         proposer_a = ClosedAPIZeroShotConstrainedProposer(
@@ -1166,6 +1195,8 @@ def run_stageab_eval(config: EvalRunConfig) -> tuple[dict[str, Any], dict[str, A
             model_id=mid_a,
             client=cli_a,
             diagnostic_mode=diagnostic,
+            repair_on_parse_error=config.repair_on_parse_error,
+            max_repair_rounds=config.max_repair_rounds,
         )
     else:
         proposer_a = ClosedAPIZeroShotProposer(
@@ -1173,6 +1204,8 @@ def run_stageab_eval(config: EvalRunConfig) -> tuple[dict[str, Any], dict[str, A
             model_id=mid_a,
             client=cli_a,
             diagnostic_mode=diagnostic,
+            repair_on_parse_error=config.repair_on_parse_error,
+            max_repair_rounds=config.max_repair_rounds,
         )
 
     # Main Orchestration Loop
@@ -1314,6 +1347,8 @@ def main() -> None:
     parser.add_argument("--output-dir", default="outputs/runs/stageab_dev70", help="Output directory")
     parser.add_argument("--constrained", action="store_true", help="Use constrained zero-shot proposer")
     parser.add_argument("--diagnostic", action="store_true", help="Enable diagnostic mode (decision audit)")
+    parser.add_argument("--repair-on-parse-error", action="store_true", help="Enable multi-round parse error repair")
+    parser.add_argument("--max-repair-rounds", type=int, default=0, help="Maximum number of repair rounds")
     args = parser.parse_args()
 
     config = EvalRunConfig(
@@ -1330,6 +1365,8 @@ def main() -> None:
         constrained=args.constrained,
         diagnostic=args.diagnostic,
         method=None,
+        repair_on_parse_error=args.repair_on_parse_error,
+        max_repair_rounds=args.max_repair_rounds,
     )
     run_stageab_eval(config)
 

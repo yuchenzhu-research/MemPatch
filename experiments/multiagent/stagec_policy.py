@@ -379,16 +379,80 @@ class ClosedAPIZeroShotProposer(TypedRevisionProposer):
         client: Any = None,
         allowed_actions: tuple[str, ...] | None = None,
         diagnostic_mode: bool = False,
+        repair_on_parse_error: bool = False,
+        max_repair_rounds: int = 0,
     ) -> None:
         self.provider_kind = provider_kind
         self.model_id = model_id
         self.client = client
         self.allowed_actions = allowed_actions or ("SUPERSEDES", "BLOCKS", "RELEASES", "UNCERTAIN", "REAFFIRMS", "NO_REVISION")
         self.diagnostic_mode = diagnostic_mode
+        self.repair_on_parse_error = repair_on_parse_error
+        self.max_repair_rounds = max_repair_rounds
         self._policy = PromptTypedRevisionPolicy(
             allowed_actions=self.allowed_actions,
             diagnostic_mode=self.diagnostic_mode,
         )
+
+    def _mock_response(self, submission: FixedCandidateSubmission) -> str:
+        if self._policy.diagnostic_mode:
+            return json.dumps({
+                "decision_audit": {
+                    "new_evidence_role": "Mock new evidence role",
+                    "prior_replacement_relation": "Mock relation",
+                    "condition_effect": "Mock condition effect",
+                    "conflict_state": "Mock conflict state",
+                    "selected_action_types": ["NO_REVISION"],
+                    "rejected_action_types": {}
+                },
+                "actions": [{
+                    "action_type": "NO_REVISION",
+                    "target_belief_id": None,
+                    "target_condition_id": None,
+                    "replacement_belief_id": None,
+                    "rationale": "Mock default action",
+                    "evidence_ids": [submission.new_evidence_id]
+                }]
+            })
+        else:
+            return json.dumps([{
+                "action_type": "NO_REVISION",
+                "target_belief_id": None,
+                "target_condition_id": None,
+                "replacement_belief_id": None,
+                "rationale": "Mock default action",
+                "evidence_ids": [submission.new_evidence_id]
+            }])
+
+    def _mock_repair_response(self, submission: FixedCandidateSubmission, round_idx: int) -> str:
+        if self._policy.diagnostic_mode:
+            return json.dumps({
+                "decision_audit": {
+                    "new_evidence_role": "Mock repaired evidence role",
+                    "prior_replacement_relation": "Mock repaired relation",
+                    "condition_effect": "Mock repaired condition effect",
+                    "conflict_state": "Mock repaired conflict state",
+                    "selected_action_types": ["NO_REVISION"],
+                    "rejected_action_types": {}
+                },
+                "actions": [{
+                    "action_type": "NO_REVISION",
+                    "target_belief_id": None,
+                    "target_condition_id": None,
+                    "replacement_belief_id": None,
+                    "rationale": "Mock default action after repair",
+                    "evidence_ids": [submission.new_evidence_id]
+                }]
+            })
+        else:
+            return json.dumps([{
+                "action_type": "NO_REVISION",
+                "target_belief_id": None,
+                "target_condition_id": None,
+                "replacement_belief_id": None,
+                "rationale": "Mock default action after repair",
+                "evidence_ids": [submission.new_evidence_id]
+            }])
 
     def propose(
         self,
@@ -396,69 +460,30 @@ class ClosedAPIZeroShotProposer(TypedRevisionProposer):
         *,
         exemplars: tuple[ApprovedRevisionExemplar, ...] = (),
     ) -> ProposalPolicyOutput:
-        # Zero-shot ignores exemplars
-        messages = self._policy.build_messages(submission)
-        system_text = messages[0]["content"]
-        user_text = messages[1]["content"]
-        full_prompt = f"System:\n{system_text}\n\nUser:\n{user_text}"
+        def build_prompt():
+            messages = self._policy.build_messages(submission)
+            return f"System:\n{messages[0]['content']}\n\nUser:\n{messages[1]['content']}"
 
-        is_live = self.provider_kind is not None and self.provider_kind != "mock"
-        if is_live:
-            if self.client is None or self.model_id is None:
-                raise ValueError(
-                    f"Live mode requires client and model_id to be specified. "
-                    f"Got client={self.client}, model_id={self.model_id}"
-                )
-            trace = self.client.generate(
-                prompt=full_prompt,
-                model_id=self.model_id,
-                provider=self.provider_kind,
+        def parse(text):
+            return self._policy.parse_response(
+                text,
+                example_id=f"ex_{submission.submission_id}",
+                submission=submission,
             )
-            if trace.status == "failure":
-                raise RuntimeError(f"Live API call failed: {trace.error_message}")
-            if not trace.response:
-                raise RuntimeError("Live API call returned empty response.")
-            response_text = trace.response
-        else:
-            if self._policy.diagnostic_mode:
-                response_text = json.dumps({
-                    "decision_audit": {
-                        "new_evidence_role": "Mock new evidence role",
-                        "prior_replacement_relation": "Mock relation",
-                        "condition_effect": "Mock condition effect",
-                        "conflict_state": "Mock conflict state",
-                        "selected_action_types": ["NO_REVISION"],
-                        "rejected_action_types": {}
-                    },
-                    "actions": [{
-                        "action_type": "NO_REVISION",
-                        "target_belief_id": None,
-                        "target_condition_id": None,
-                        "replacement_belief_id": None,
-                        "rationale": "Mock default action",
-                        "evidence_ids": [submission.new_evidence_id]
-                    }]
-                })
-            else:
-                response_text = json.dumps([{
-                    "action_type": "NO_REVISION",
-                    "target_belief_id": None,
-                    "target_condition_id": None,
-                    "replacement_belief_id": None,
-                    "rationale": "Mock default action",
-                    "evidence_ids": [submission.new_evidence_id]
-                }])
 
-        out = self._policy.parse_response(
-            response_text,
-            example_id=f"ex_{submission.submission_id}",
+        return call_and_repair_loop(
+            proposer=self,
             submission=submission,
+            build_prompt_fn=build_prompt,
+            parse_fn=parse,
+            client=self.client,
+            model_id=self.model_id,
+            provider_kind=self.provider_kind,
+            repair_on_parse_error=self.repair_on_parse_error,
+            max_repair_rounds=self.max_repair_rounds,
+            mock_response_fn=lambda: self._mock_response(submission),
+            mock_repair_fn=lambda r_idx: self._mock_repair_response(submission, r_idx),
         )
-        from dataclasses import replace
-        new_metadata = dict(out.metadata)
-        new_metadata["prompt"] = full_prompt
-        new_metadata["raw_response"] = response_text
-        return replace(out, metadata=new_metadata)
 
 
 class ClosedAPIZeroShotConstrainedProposer(TypedRevisionProposer):
@@ -472,12 +497,16 @@ class ClosedAPIZeroShotConstrainedProposer(TypedRevisionProposer):
         client: Any = None,
         allowed_actions: tuple[str, ...] | None = None,
         diagnostic_mode: bool = False,
+        repair_on_parse_error: bool = False,
+        max_repair_rounds: int = 0,
     ) -> None:
         self.provider_kind = provider_kind
         self.model_id = model_id
         self.client = client
         self.allowed_actions = allowed_actions or ("SUPERSEDES", "BLOCKS", "RELEASES", "UNCERTAIN", "REAFFIRMS", "NO_REVISION")
         self.diagnostic_mode = diagnostic_mode
+        self.repair_on_parse_error = repair_on_parse_error
+        self.max_repair_rounds = max_repair_rounds
 
     def build_system_prompt(self, candidates: list[dict[str, Any]]) -> str:
         prompt = (
@@ -586,6 +615,58 @@ class ClosedAPIZeroShotConstrainedProposer(TypedRevisionProposer):
         )
         return user_content
 
+    def _mock_response(self, submission: FixedCandidateSubmission, candidates: list[dict[str, Any]]) -> str:
+        if self.diagnostic_mode:
+            return json.dumps({
+                "decision_audit": {
+                    "new_evidence_role": "Mock new evidence role",
+                    "prior_replacement_relation": "Mock relation",
+                    "condition_effect": "Mock condition effect",
+                    "conflict_state": "Mock conflict state",
+                    "selected_action_types": ["NO_REVISION"],
+                    "rejected_action_types": {}
+                },
+                "selected_candidate_action_ids": ["act_no_revision"],
+                "rejection_reasons": {
+                    c["candidate_action_id"]: "Mock reject"
+                    for c in candidates if c["candidate_action_id"] != "act_no_revision"
+                }
+            })
+        else:
+            return json.dumps({
+                "selected_candidate_action_ids": ["act_no_revision"],
+                "rejection_reasons": {
+                    c["candidate_action_id"]: "Mock reject"
+                    for c in candidates if c["candidate_action_id"] != "act_no_revision"
+                }
+            })
+
+    def _mock_repair_response(self, submission: FixedCandidateSubmission, candidates: list[dict[str, Any]], round_idx: int) -> str:
+        if self.diagnostic_mode:
+            return json.dumps({
+                "decision_audit": {
+                    "new_evidence_role": "Mock repaired evidence role",
+                    "prior_replacement_relation": "Mock repaired relation",
+                    "condition_effect": "Mock repaired condition effect",
+                    "conflict_state": "Mock repaired conflict state",
+                    "selected_action_types": ["NO_REVISION"],
+                    "rejected_action_types": {}
+                },
+                "selected_candidate_action_ids": ["act_no_revision"],
+                "rejection_reasons": {
+                    c["candidate_action_id"]: "Mock reject after repair"
+                    for c in candidates if c["candidate_action_id"] != "act_no_revision"
+                }
+            })
+        else:
+            return json.dumps({
+                "selected_candidate_action_ids": ["act_no_revision"],
+                "rejection_reasons": {
+                    c["candidate_action_id"]: "Mock reject after repair"
+                    for c in candidates if c["candidate_action_id"] != "act_no_revision"
+                }
+            })
+
     def propose(
         self,
         submission: FixedCandidateSubmission,
@@ -595,64 +676,32 @@ class ClosedAPIZeroShotConstrainedProposer(TypedRevisionProposer):
         from retracemem.multiagent.utils import build_candidate_actions
         candidates = build_candidate_actions(submission)
 
-        system_prompt = self.build_system_prompt(candidates)
-        user_prompt = self.build_user_prompt(submission, candidates)
-        full_prompt = f"System:\n{system_prompt}\n\nUser:\n{user_prompt}"
+        def build_prompt():
+            system_prompt = self.build_system_prompt(candidates)
+            user_prompt = self.build_user_prompt(submission, candidates)
+            return f"System:\n{system_prompt}\n\nUser:\n{user_prompt}"
 
-        is_live = self.provider_kind is not None and self.provider_kind != "mock"
-        if is_live:
-            if self.client is None or self.model_id is None:
-                raise ValueError(
-                    f"Live mode requires client and model_id to be specified. "
-                    f"Got client={self.client}, model_id={self.model_id}"
-                )
-            trace = self.client.generate(
-                prompt=full_prompt,
-                model_id=self.model_id,
-                provider=self.provider_kind,
+        def parse(text):
+            return self.parse_response(
+                text,
+                example_id=f"ex_{submission.submission_id}",
+                submission=submission,
+                candidates=candidates,
             )
-            if trace.status == "failure":
-                raise RuntimeError(f"Live API call failed: {trace.error_message}")
-            if not trace.response:
-                raise RuntimeError("Live API call returned empty response.")
-            response_text = trace.response
-        else:
-            if self.diagnostic_mode:
-                response_text = json.dumps({
-                    "decision_audit": {
-                        "new_evidence_role": "Mock new evidence role",
-                        "prior_replacement_relation": "Mock relation",
-                        "condition_effect": "Mock condition effect",
-                        "conflict_state": "Mock conflict state",
-                        "selected_action_types": ["NO_REVISION"],
-                        "rejected_action_types": {}
-                    },
-                    "selected_candidate_action_ids": ["act_no_revision"],
-                    "rejection_reasons": {
-                        c["candidate_action_id"]: "Mock reject"
-                        for c in candidates if c["candidate_action_id"] != "act_no_revision"
-                    }
-                })
-            else:
-                response_text = json.dumps({
-                    "selected_candidate_action_ids": ["act_no_revision"],
-                    "rejection_reasons": {
-                        c["candidate_action_id"]: "Mock reject"
-                        for c in candidates if c["candidate_action_id"] != "act_no_revision"
-                    }
-                })
 
-        out = self.parse_response(
-            response_text,
-            example_id=f"ex_{submission.submission_id}",
+        return call_and_repair_loop(
+            proposer=self,
             submission=submission,
-            candidates=candidates,
+            build_prompt_fn=build_prompt,
+            parse_fn=parse,
+            client=self.client,
+            model_id=self.model_id,
+            provider_kind=self.provider_kind,
+            repair_on_parse_error=self.repair_on_parse_error,
+            max_repair_rounds=self.max_repair_rounds,
+            mock_response_fn=lambda: self._mock_response(submission, candidates),
+            mock_repair_fn=lambda r_idx: self._mock_repair_response(submission, candidates, r_idx),
         )
-        from dataclasses import replace
-        new_metadata = dict(out.metadata)
-        new_metadata["prompt"] = full_prompt
-        new_metadata["raw_response"] = response_text
-        return replace(out, metadata=new_metadata)
 
     def parse_response(
         self,
@@ -789,6 +838,8 @@ class ClosedAPIICLProposer(TypedRevisionProposer):
         allowed_actions: tuple[str, ...] | None = None,
         top_k: int = 1,
         allow_fallback_to_zeroshot: bool = False,
+        repair_on_parse_error: bool = False,
+        max_repair_rounds: int = 0,
     ) -> None:
         self.provider_kind = provider_kind
         self.model_id = model_id
@@ -796,6 +847,8 @@ class ClosedAPIICLProposer(TypedRevisionProposer):
         self.allowed_actions = allowed_actions or ("SUPERSEDES", "BLOCKS", "RELEASES", "UNCERTAIN", "REAFFIRMS", "NO_REVISION")
         self.top_k = top_k
         self.allow_fallback_to_zeroshot = allow_fallback_to_zeroshot
+        self.repair_on_parse_error = repair_on_parse_error
+        self.max_repair_rounds = max_repair_rounds
         self._policy = PromptTypedRevisionPolicy(allowed_actions=self.allowed_actions)
 
     def retrieve_exemplars(
@@ -803,11 +856,16 @@ class ClosedAPIICLProposer(TypedRevisionProposer):
         submission: FixedCandidateSubmission,
         exemplars: tuple[ApprovedRevisionExemplar, ...],
     ) -> tuple[ApprovedRevisionExemplar, ...]:
-        if not exemplars:
+        # Only retrieve exemplars marked as approved
+        approved_exs = [
+            ex for ex in exemplars 
+            if getattr(ex, "training_or_icl_eligibility", "pending") == "approved"
+        ]
+        if not approved_exs:
             return ()
         query_tokens = set(submission.query.lower().split())
         scored: list[tuple[float, ApprovedRevisionExemplar]] = []
-        for ex in exemplars:
+        for ex in approved_exs:
             ex_tokens = set(ex.method_visible_input.query.lower().split())
             intersection = query_tokens & ex_tokens
             union = query_tokens | ex_tokens
@@ -815,6 +873,26 @@ class ClosedAPIICLProposer(TypedRevisionProposer):
             scored.append((score, ex))
         scored.sort(key=lambda x: x[0], reverse=True)
         return tuple(ex for score, ex in scored[:self.top_k])
+
+    def _mock_response(self, submission: FixedCandidateSubmission) -> str:
+        return json.dumps([{
+            "action_type": "NO_REVISION",
+            "target_belief_id": None,
+            "target_condition_id": None,
+            "replacement_belief_id": None,
+            "rationale": "Mock default action",
+            "evidence_ids": [submission.new_evidence_id]
+        }])
+
+    def _mock_repair_response(self, submission: FixedCandidateSubmission, round_idx: int) -> str:
+        return json.dumps([{
+            "action_type": "NO_REVISION",
+            "target_belief_id": None,
+            "target_condition_id": None,
+            "replacement_belief_id": None,
+            "rationale": "Mock default action after repair",
+            "evidence_ids": [submission.new_evidence_id]
+        }])
 
     def propose(
         self,
@@ -828,78 +906,65 @@ class ClosedAPIICLProposer(TypedRevisionProposer):
         
         policy_variant_to_use = "zero_shot_fallback" if not selected_exs else self.policy_variant
 
-        messages = self._policy.build_messages(submission)
-        system_text = messages[0]["content"]
-        user_text = messages[1]["content"]
+        def build_prompt():
+            messages = self._policy.build_messages(submission)
+            system_text = messages[0]["content"]
+            user_text = messages[1]["content"]
 
-        icl_context = ""
-        for ex in selected_exs:
-            from experiments.multiagent.contracts import StageCTrainingExample
-            fake_ex = StageCTrainingExample(
-                example_id=ex.exemplar_id,
-                episode_id=ex.source_episode_id,
-                submission_id=ex.method_visible_input.submission_id,
-                method_visible_input=ex.method_visible_input,
-                targets=(),
-                split="development_only",
-                domain=ex.domain,
-                failure_type=ex.failure_type,
-                label_source="temporary",
-            )
-            targets_list = []
-            for t in ex.approved_typed_actions:
-                targets_list.append({
-                    "action_type": t.action_type,
-                    "target_belief_id": t.target_belief_id,
-                    "target_condition_id": t.target_condition_id,
-                    "replacement_belief_id": t.replacement_belief_id,
-                    "rationale": t.rationale,
-                    "evidence_ids": list(t.evidence_ids),
-                })
-            targets_json = json.dumps(targets_list, indent=2)
-            icl_context += f"Example input:\n{format_user_prompt(fake_ex)}\n\nExample Output:\n{targets_json}\n\n---\n\n"
-
-        if icl_context:
-            system_text += f"\n\nHere are some examples of expected revision decisions:\n\n{icl_context}"
-
-        full_prompt = f"System:\n{system_text}\n\nUser:\n{user_text}"
-        is_live = self.provider_kind is not None and self.provider_kind != "mock"
-        if is_live:
-            if self.client is None or self.model_id is None:
-                raise ValueError(
-                    f"Live mode requires client and model_id to be specified. "
-                    f"Got client={self.client}, model_id={self.model_id}"
+            icl_context = ""
+            for ex in selected_exs:
+                from experiments.multiagent.contracts import StageCTrainingExample
+                fake_ex = StageCTrainingExample(
+                    example_id=ex.exemplar_id,
+                    episode_id=ex.source_episode_id,
+                    submission_id=ex.method_visible_input.submission_id,
+                    method_visible_input=ex.method_visible_input,
+                    targets=(),
+                    split="development_only",
+                    domain=ex.domain,
+                    failure_type=ex.failure_type,
+                    label_source="temporary",
                 )
-            trace = self.client.generate(
-                prompt=full_prompt,
-                model_id=self.model_id,
-                provider=self.provider_kind,
-            )
-            if trace.status == "failure":
-                raise RuntimeError(f"Live API call failed: {trace.error_message}")
-            if not trace.response:
-                raise RuntimeError("Live API call returned empty response.")
-            response_text = trace.response
-        else:
-            response_text = json.dumps([{
-                "action_type": "NO_REVISION",
-                "target_belief_id": None,
-                "target_condition_id": None,
-                "replacement_belief_id": None,
-                "rationale": "Mock default action",
-                "evidence_ids": [submission.new_evidence_id]
-            }])
+                targets_list = []
+                for t in ex.approved_typed_actions:
+                    targets_list.append({
+                        "action_type": t.action_type,
+                        "target_belief_id": t.target_belief_id,
+                        "target_condition_id": t.target_condition_id,
+                        "replacement_belief_id": t.replacement_belief_id,
+                        "rationale": t.rationale,
+                        "evidence_ids": list(t.evidence_ids),
+                    })
+                targets_json = json.dumps(targets_list, indent=2)
+                icl_context += f"Example input:\n{format_user_prompt(fake_ex)}\n\nExample Output:\n{targets_json}\n\n---\n\n"
 
-        out = self._policy.parse_response(
-            response_text,
-            example_id=f"ex_{submission.submission_id}",
+            if icl_context:
+                system_text += f"\n\nHere are some examples of expected revision decisions:\n\n{icl_context}"
+
+            return f"System:\n{system_text}\n\nUser:\n{user_text}"
+
+        def parse(text):
+            return self._policy.parse_response(
+                text,
+                example_id=f"ex_{submission.submission_id}",
+                submission=submission,
+            )
+
+        res = call_and_repair_loop(
+            proposer=self,
             submission=submission,
+            build_prompt_fn=build_prompt,
+            parse_fn=parse,
+            client=self.client,
+            model_id=self.model_id,
+            provider_kind=self.provider_kind,
+            repair_on_parse_error=self.repair_on_parse_error,
+            max_repair_rounds=self.max_repair_rounds,
+            mock_response_fn=lambda: self._mock_response(submission),
+            mock_repair_fn=lambda r_idx: self._mock_repair_response(submission, r_idx),
         )
         from dataclasses import replace
-        new_metadata = dict(out.metadata)
-        new_metadata["prompt"] = full_prompt
-        new_metadata["raw_response"] = response_text
-        return replace(out, metadata=new_metadata, policy_variant=policy_variant_to_use)
+        return replace(res, policy_variant=policy_variant_to_use)
 
 
 class OpenModelPromptProposer(TypedRevisionProposer):
@@ -942,3 +1007,122 @@ class OpenModelLoRAProposer(TypedRevisionProposer):
         exemplars: tuple[ApprovedRevisionExemplar, ...] = (),
     ) -> ProposalPolicyOutput:
         raise NotImplementedError("OpenModelLoRAProposer is not implemented yet. Failing closed.")
+
+
+def call_and_repair_loop(
+    proposer: Any,
+    submission: FixedCandidateSubmission,
+    build_prompt_fn: callable,
+    parse_fn: callable,
+    client: Any,
+    model_id: str | None,
+    provider_kind: str | None,
+    repair_on_parse_error: bool,
+    max_repair_rounds: int,
+    mock_response_fn: callable,
+    mock_repair_fn: callable,
+) -> ProposalPolicyOutput:
+    full_prompt = build_prompt_fn()
+    is_live = provider_kind is not None and provider_kind != "mock"
+    
+    if is_live:
+        if client is None or model_id is None:
+            raise ValueError(
+                f"Live mode requires client and model_id to be specified. "
+                f"Got client={client}, model_id={model_id}"
+            )
+            
+    # 1. First Round Call
+    raw_response = ""
+    if client is not None:
+        trace = client.generate(
+            prompt=full_prompt,
+            model_id=model_id or "mock-model",
+            provider=provider_kind or "mock",
+        )
+        if trace.status == "failure":
+            raise RuntimeError(f"API call failed: {trace.error_message}")
+        if not trace.response:
+            raise RuntimeError("API call returned empty response.")
+        raw_response = trace.response
+    else:
+        raw_response = mock_response_fn()
+        
+    out = parse_fn(raw_response)
+    
+    first_pass_valid = out.parsing_valid
+    first_pass_error = out.errors[0] if out.errors else None
+    first_pass_actions = out.parsed_actions
+    first_pass_response = raw_response
+    
+    repair_attempts = []
+    
+    # 2. Repair loop
+    if not first_pass_valid and repair_on_parse_error and max_repair_rounds > 0:
+        current_prompt = full_prompt
+        current_response = raw_response
+        current_error = first_pass_error
+        
+        for round_idx in range(1, max_repair_rounds + 1):
+            # Format repair prompt
+            repair_user_msg = (
+                f"\n\nAssistant:\n{current_response}\n\n"
+                f"User:\nYour previous response failed parsing with the following error:\n{current_error}\n"
+                f"Please correct the JSON format and schema/grounding constraints. Output ONLY valid JSON."
+            )
+            repair_prompt = current_prompt + repair_user_msg
+            
+            repair_response = ""
+            if client is not None:
+                trace = client.generate(
+                    prompt=repair_prompt,
+                    model_id=model_id or "mock-model",
+                    provider=provider_kind or "mock",
+                )
+                if trace.status == "failure" or not trace.response:
+                    break
+                repair_response = trace.response
+            else:
+                repair_response = mock_repair_fn(round_idx)
+                
+            repair_out = parse_fn(repair_response)
+            
+            repair_attempts.append({
+                "round_index": round_idx,
+                "repair_prompt": repair_prompt,
+                "repair_response": repair_response,
+                "parse_error": repair_out.errors[0] if repair_out.errors else None,
+                "parsing_valid": repair_out.parsing_valid,
+            })
+            
+            if repair_out.parsing_valid:
+                out = repair_out
+                break
+            else:
+                current_prompt = repair_prompt
+                current_response = repair_response
+                current_error = repair_out.errors[0] if repair_out.errors else "Unknown parsing error"
+                
+    # Append trace metadata
+    from dataclasses import replace
+    new_metadata = dict(out.metadata)
+    new_metadata.update({
+        "prompt": full_prompt,
+        "raw_response": first_pass_response,
+        "first_pass_valid_json": first_pass_valid,
+        "first_pass_parser_error": first_pass_error,
+        "first_pass_actions": [
+            {
+                "action_type": a.action_type,
+                "target_belief_id": a.target_belief_id,
+                "target_condition_id": a.target_condition_id,
+                "replacement_belief_id": a.replacement_belief_id,
+                "rationale": a.rationale,
+                "evidence_ids": list(a.evidence_ids),
+            } for a in first_pass_actions
+        ] if first_pass_valid else [],
+        "repair_attempts": repair_attempts,
+        "repair_triggered": len(repair_attempts) > 0,
+        "repair_success": out.parsing_valid if len(repair_attempts) > 0 else False,
+    })
+    return replace(out, metadata=new_metadata)
