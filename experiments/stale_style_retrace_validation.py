@@ -21,7 +21,7 @@ from pathlib import Path
 from typing import Any
 
 from retracemem.schemas import BeliefNode, EvidenceNode, EvidenceEdge, EvidenceEdgeType, ConditionNode, DependencyEdge
-from experiments.multiagent.contracts import (
+from retracemem.evaluation.multiagent.contracts import (
     FixedCandidateInputEpisode,
     FixedCandidateSubmission,
     FixedCandidateGoldRecord,
@@ -29,7 +29,7 @@ from experiments.multiagent.contracts import (
     TypedRevisionTarget,
 )
 from retracemem.multiagent.contracts import SubagentMemorySubmission
-from experiments.multiagent.stagec_policy import (
+from retracemem.proposers.typed_revision_policy import (
     ClosedAPIZeroShotConstrainedProposer,
     ClosedAPIICLProposer,
 )

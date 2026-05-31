@@ -3,7 +3,7 @@ from __future__ import annotations
 import json
 import os
 import pytest
-from experiments.multiagent.episodes_fc_dev import get_fc_dev_episodes
+from retracemem.evaluation.multiagent.data.episodes_fc_dev import get_fc_dev_episodes
 from experiments.multiagent.methods import (
     NaiveLastWriteWinsFixedCandidateMethod,
     AppendOnlyLexicalTopKMethod,

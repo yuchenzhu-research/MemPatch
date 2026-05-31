@@ -9,9 +9,9 @@ from typing import Any, Dict, List, Tuple
 # Ensure src is importable when running from repo root
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, "src"))
 
-from experiments.multiagent.stagec_dataset import build_stagec_dataset
-from experiments.multiagent.stagec_policy import PromptTypedRevisionPolicy
-from experiments.multiagent.episodes_fc_dev import get_fc_dev_episodes
+from retracemem.evaluation.multiagent.data.stagec_dataset import build_stagec_dataset
+from retracemem.proposers.typed_revision_policy import PromptTypedRevisionPolicy
+from retracemem.evaluation.multiagent.data.episodes_fc_dev import get_fc_dev_episodes
 from experiments.multiagent.methods import DirectJudgeReplayMethod
 from retracemem.multiagent.contracts import SubagentMemorySubmission
 from retracemem.multiagent.commit import commit_submission_sequence

@@ -4,9 +4,9 @@ import hashlib
 import json
 import os
 from typing import Any, Dict, List, Tuple
-from experiments.multiagent.dev_expansion import generate_expanded_episodes
+from retracemem.evaluation.multiagent.data.dev_expansion import generate_expanded_episodes
 from experiments.multiagent.export_stagec_sft import format_user_prompt
-from experiments.multiagent.contracts import StageCTrainingExample
+from retracemem.evaluation.multiagent.contracts import StageCTrainingExample
 from experiments.multiagent.validate_candidate_semantics import validate_episode
 
 def compute_sha256(text: str) -> str:

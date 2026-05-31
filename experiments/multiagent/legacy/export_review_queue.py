@@ -6,7 +6,7 @@ import hashlib
 import json
 import os
 from typing import Any, Dict, List
-from experiments.multiagent.dev_expansion import generate_expanded_episodes
+from retracemem.evaluation.multiagent.data.dev_expansion import generate_expanded_episodes
 
 def compute_sha256(text: str) -> str:
     return hashlib.sha256(text.encode("utf-8")).hexdigest()

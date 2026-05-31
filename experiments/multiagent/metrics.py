@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from collections import defaultdict
 from typing import Any, Dict, List, Tuple
-from experiments.multiagent.contracts import (
+from retracemem.evaluation.multiagent.contracts import (
     MultiAgentMemoryEpisode,
     EpisodeMethodResult,
     FixedCandidateGoldRecord,

@@ -26,13 +26,13 @@ from dataclasses import replace
 from pathlib import Path
 from typing import Callable
 
-from experiments.multiagent.contracts import (
+from retracemem.evaluation.multiagent.contracts import (
     ApprovedRevisionExemplar,
     FixedCandidateSubmission,
     ProposalPolicyOutput,
     TypedRevisionProposer,
 )
-from experiments.multiagent.stagec_policy import PromptTypedRevisionPolicy
+from retracemem.proposers.typed_revision_policy import PromptTypedRevisionPolicy
 
 CANONICAL_ACTIONS: tuple[str, ...] = (
     "SUPERSEDES",

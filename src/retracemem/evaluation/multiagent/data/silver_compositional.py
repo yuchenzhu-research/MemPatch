@@ -18,7 +18,7 @@ REPO_ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(REPO_ROOT / "src"))
 sys.path.insert(0, str(REPO_ROOT))
 
-from experiments.multiagent.contracts import (
+from retracemem.evaluation.multiagent.contracts import (
     FixedCandidateSubmission,
     TypedRevisionTarget,
     FixedCandidateGoldRecord,
@@ -27,7 +27,7 @@ from experiments.multiagent.contracts import (
     DownstreamTask,
     GoldSnapshotExpectation,
 )
-from experiments.multiagent.dev_expansion import generate_expanded_episodes
+from retracemem.evaluation.multiagent.data.dev_expansion import generate_expanded_episodes
 from retracemem.multiagent.utils import (
     format_assistant_response,
     format_user_prompt,

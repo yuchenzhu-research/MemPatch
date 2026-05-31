@@ -5,7 +5,7 @@ from retracemem.schemas import EvidenceEdgeType, EvidenceEdge
 from retracemem.authorization import EvidenceProposalBatch
 from retracemem.multiagent.commit import commit_subagent_submission
 from retracemem.multiagent.contracts import SubagentMemorySubmission
-from experiments.multiagent.contracts import (
+from retracemem.evaluation.multiagent.contracts import (
     MultiAgentMemoryEpisode,
     EpisodeMethodResult,
     RevisionEventResult,
