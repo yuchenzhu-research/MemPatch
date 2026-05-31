@@ -542,14 +542,15 @@ class ClosedAPIZeroShotConstrainedProposer(TypedRevisionProposer):
         else:
             prompt += (
                 "### Output Format\n"
-                "You must return ONLY a strict JSON object (no markdown, no extra explanation) with the following structure:\n"
+                "You must return ONLY a strict JSON object with exactly one required key.\n"
+                "Return exactly this minimal structure and nothing else:\n"
                 "{\n"
-                '  "selected_candidate_action_ids": ["act_id_1", ...],\n'
-                '  "rejection_reasons": {\n'
-                '    "act_id_2": "short reason why this was rejected",\n'
-                "    ...\n"
-                "  }\n"
+                '  "selected_candidate_action_ids": ["act_id_1", ...]\n'
                 "}\n"
+                "Do NOT include rejection_reasons, rationale, full action objects, "
+                "decision_audit, markdown, or any prose. Only the single key "
+                "selected_candidate_action_ids is allowed, and its value must be a "
+                "list of candidate_action_id strings drawn from the candidate list.\n"
             )
         return prompt
 
@@ -635,10 +636,6 @@ class ClosedAPIZeroShotConstrainedProposer(TypedRevisionProposer):
         else:
             return json.dumps({
                 "selected_candidate_action_ids": ["act_no_revision"],
-                "rejection_reasons": {
-                    c["candidate_action_id"]: "Mock reject"
-                    for c in candidates if c["candidate_action_id"] != "act_no_revision"
-                }
             })
 
     def _mock_repair_response(self, submission: FixedCandidateSubmission, candidates: list[dict[str, Any]], round_idx: int) -> str:
@@ -661,10 +658,6 @@ class ClosedAPIZeroShotConstrainedProposer(TypedRevisionProposer):
         else:
             return json.dumps({
                 "selected_candidate_action_ids": ["act_no_revision"],
-                "rejection_reasons": {
-                    c["candidate_action_id"]: "Mock reject after repair"
-                    for c in candidates if c["candidate_action_id"] != "act_no_revision"
-                }
             })
 
     def propose(
@@ -724,7 +717,10 @@ class ClosedAPIZeroShotConstrainedProposer(TypedRevisionProposer):
         decision_audit = None
 
         try:
-            obj = extract_json_object(response_text)
+            obj = extract_json_object(
+                response_text,
+                require_top_level_keys={"selected_candidate_action_ids"},
+            )
             if not isinstance(obj, dict):
                 raise ValueError("Response must be a JSON object.")
 
@@ -810,7 +806,7 @@ class ClosedAPIZeroShotConstrainedProposer(TypedRevisionProposer):
                 ),
             )
 
-        meta = {"has_duplicates": False}
+        meta = {"has_duplicates": False, "prompt_variant": self.policy_variant}
         if decision_audit is not None:
             meta["decision_audit"] = decision_audit
 
@@ -824,6 +820,15 @@ class ClosedAPIZeroShotConstrainedProposer(TypedRevisionProposer):
             parsed_actions=tuple(parsed_targets),
             metadata=meta,
         )
+
+
+CONFLICT_AWARE_FINAL_SCHEMA_REMINDER = (
+    "\n\n### Final output schema reminder\n"
+    "Return only one JSON object with exactly one required key: "
+    "selected_candidate_action_ids. Select only candidate_action_id strings "
+    "from the candidate list. Do not include rejection_reasons, rationale, "
+    "full actions, markdown, or prose."
+)
 
 
 CONFLICT_HANDLING_RULE = (
@@ -928,6 +933,9 @@ class ConflictAwareConstrainedProposer(ClosedAPIZeroShotConstrainedProposer):
             user_prompt = self.build_user_prompt(submission, candidates)
             if triggered:
                 user_prompt += self._conflict_notice(established_belief_ids, new_belief_ids)
+            # Repeat the minimal output schema at the very end so the constrained
+            # contract is the last thing the model reads.
+            user_prompt += CONFLICT_AWARE_FINAL_SCHEMA_REMINDER
             return f"System:\n{system_prompt}\n\nUser:\n{user_prompt}"
 
         def parse(text):
