@@ -18,7 +18,7 @@ from retracemem.evaluation.raw_dialogue.contracts import DialogueExtractionTarge
 def main() -> None:
     parser = argparse.ArgumentParser(description="Generate synthetic raw dialogues.")
     parser.add_argument("--out", type=str, default="outputs/raw_dialogue_synth.jsonl", help="Output JSONL file path.")
-    parser.add_argument("--num-examples", type=int, default=10, help="Number of examples to generate.")
+    parser.add_argument("--num-examples", "-n", "--n", type=int, default=10, dest="num_examples", help="Number of examples to generate.")
     parser.add_argument("--seed", type=int, default=42, help="Random seed for generation.")
     args = parser.parse_args()
 
@@ -34,7 +34,8 @@ def main() -> None:
     with open(args.out, "w", encoding="utf-8") as f:
         for idx in range(args.num_examples):
             ex_id = f"synth_ex_{idx}"
-            data = generator.generate_episode(ex_id)
+            family = generator.case_families[idx % len(generator.case_families)]
+            data = generator.generate_episode(ex_id, case_family=family)
 
             # Convert to target contract
             raw_dialogue_lines = data["raw_dialogue"].strip().split("\n")
