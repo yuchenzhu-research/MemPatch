@@ -253,8 +253,9 @@ def test_icl_proposer_retrieval_and_propose(fake_submission):
         top_k=1,
     )
     
-    exemplar = ApprovedRevisionExemplar(
-        exemplar_id="ex_1",
+    # Approved exemplar is selected
+    exemplar_approved = ApprovedRevisionExemplar(
+        exemplar_id="ex_approved",
         source_episode_id="ep_1",
         domain="software_engineering",
         failure_type="direct_supersession",
@@ -262,15 +263,27 @@ def test_icl_proposer_retrieval_and_propose(fake_submission):
         approved_typed_actions=(),
         reviewer="Test Reviewer",
         review_manifest_hash="dummy_hash",
-        training_or_icl_eligibility="eligible",
+        training_or_icl_eligibility="approved",
+    )
+    # Pending/rejected exemplars are excluded
+    exemplar_pending = ApprovedRevisionExemplar(
+        exemplar_id="ex_pending",
+        source_episode_id="ep_1",
+        domain="software_engineering",
+        failure_type="direct_supersession",
+        method_visible_input=fake_submission,
+        approved_typed_actions=(),
+        reviewer="Test Reviewer",
+        review_manifest_hash="dummy_hash",
+        training_or_icl_eligibility="pending",
     )
     
-    selected = proposer.retrieve_exemplars(fake_submission, (exemplar,))
+    selected = proposer.retrieve_exemplars(fake_submission, (exemplar_approved, exemplar_pending))
     assert len(selected) == 1
-    assert selected[0].exemplar_id == "ex_1"
+    assert selected[0].exemplar_id == "ex_approved"
     
     # Propose should run and return proposal policy output
-    out = proposer.propose(fake_submission, exemplars=(exemplar,))
+    out = proposer.propose(fake_submission, exemplars=(exemplar_approved,))
     assert out.parsing_valid is True
     assert len(out.parsed_actions) == 1
     assert out.parsed_actions[0].action_type == "NO_REVISION"
@@ -315,4 +328,59 @@ def test_icl_proposer_zero_shot_fallback_label_integrity(fake_submission):
     out = proposer.propose(fake_submission, exemplars=())
     assert out.parsing_valid is True
     assert out.policy_variant == "zero_shot_fallback"
+
+
+def test_proposer_multi_round_repair_workflow(fake_submission):
+    from experiments.multiagent.stagec_policy import ClosedAPIZeroShotProposer
+    from retracemem.providers.base import MockLLMProvider
+    
+    # 1. Repair disabled preserves first-pass parser error
+    mock_client_bad = MockLLMProvider(default_response="invalid-json")
+    proposer_no_repair = ClosedAPIZeroShotProposer(
+        provider_kind="mock",
+        model_id="m",
+        client=mock_client_bad,
+        repair_on_parse_error=False,
+        max_repair_rounds=1,
+    )
+    out_no_repair = proposer_no_repair.propose(fake_submission)
+    assert out_no_repair.parsing_valid is False
+    assert out_no_repair.metadata.get("repair_triggered") is False
+    assert "first_pass_parser_error" in out_no_repair.metadata
+
+    # 2. Repair enabled tracks first-pass failure and repair attempt
+    class TwoStageMockProvider(MockLLMProvider):
+        def __init__(self, first_resp: str, second_resp: str):
+            super().__init__(default_response=first_resp)
+            self.second_resp = second_resp
+        def generate(self, *args, **kwargs):
+            res = super().generate(*args, **kwargs)
+            self.default_response = self.second_resp
+            return res
+
+    valid_repaired_json = """
+    [
+      {
+        "action_type": "NO_REVISION",
+        "evidence_ids": ["ev_1"]
+      }
+    ]
+    """
+    mock_client_two_stage = TwoStageMockProvider("invalid-json", valid_repaired_json)
+
+    proposer_repair = ClosedAPIZeroShotProposer(
+        provider_kind="mock",
+        model_id="m",
+        client=mock_client_two_stage,
+        repair_on_parse_error=True,
+        max_repair_rounds=1,
+    )
+    
+    out_repaired = proposer_repair.propose(fake_submission)
+    assert out_repaired.parsing_valid is True
+    assert out_repaired.metadata.get("repair_triggered") is True
+    assert out_repaired.metadata.get("repair_success") is True
+    assert out_repaired.metadata.get("first_pass_valid_json") is False
+    assert "first_pass_parser_error" in out_repaired.metadata
+    assert len(out_repaired.metadata.get("repair_attempts")) == 1
 
