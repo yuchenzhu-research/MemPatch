@@ -15,12 +15,16 @@ from retracemem.evaluation.multiagent.contracts import (
 )
 
 
-_STATUS_MAP_A_TO_COMPARABLE = {
+# Maps a DPA final status to the coarse usability space shared with Stage B
+# (Stage B verdicts are already in this {USABLE, NOT_USABLE, UNCERTAIN} space).
+STATUS_MAP_A_TO_COMPARABLE = {
     "AUTHORIZED": "USABLE",
     "BLOCKED": "NOT_USABLE",
     "SUPERSEDED": "NOT_USABLE",
     "UNRESOLVED": "UNCERTAIN",
 }
+# Backward-compatible private alias.
+_STATUS_MAP_A_TO_COMPARABLE = STATUS_MAP_A_TO_COMPARABLE
 
 
 def check_grounding_error_stage_a(action: dict[str, Any], sub: FixedCandidateSubmission) -> bool:
