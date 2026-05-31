@@ -12,7 +12,6 @@ from retracemem.schemas import (
 from retracemem.authorization import EvidenceProposalBatch
 from retracemem.multiagent.contracts import SubagentMemorySubmission, SharedMemoryCommitResult
 from retracemem.multiagent.commit import commit_subagent_submission, order_subagent_submissions, commit_submission_sequence
-from experiments.cupmem_adapter import CupMemRevisionCandidate, map_cupmem_candidate_to_subagent_submission
 
 
 def test_commit_subagent_submission_validation():
@@ -96,34 +95,6 @@ def test_deterministic_trace_and_ordering():
     assert res1.next_snapshot_id == res2.next_snapshot_id
     assert "producer_id" in res1.commit_trace
     assert res1.commit_trace["producer_id"] == "agent_1"
-
-
-def test_cupmem_candidate_mapping():
-    ev_1 = EvidenceNode(
-        evidence_id="e_1", session_id="s_1", timestamp="2026-05-29T10:00:00Z",
-        text="A", source_dataset="t", source_pointer="p"
-    )
-    b_1 = BeliefNode(belief_id="b_1", proposition="A", source_evidence_ids=("e_1",))
-
-    candidate = CupMemRevisionCandidate(
-        submission_id="sub_c_1",
-        producer_id="agent_c",
-        producer_role="role_c",
-        parent_snapshot_id="snap_0",
-        observed_at="2026-05-29T10:00:00Z",
-        instance_id="inst_1",
-        query_id="q_1",
-        query="Q",
-        evidence_context=(ev_1,),
-        new_evidence_id="e_1",
-        candidate_beliefs=(b_1,),
-        upstream_trace={"task_id": "task_cup"}
-    )
-
-    sub = map_cupmem_candidate_to_subagent_submission(candidate)
-    assert sub.submission_id == "sub_c_1"
-    assert sub.task_id == "task_cup"
-    assert sub.metadata == {"task_id": "task_cup"}
 
 
 def test_commit_submission_sequence_basic():

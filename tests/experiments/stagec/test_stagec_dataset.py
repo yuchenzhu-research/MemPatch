@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import pytest
-from experiments.multiagent.stagec_dataset import build_stagec_dataset, validate_training_example
-from experiments.multiagent.contracts import StageCTrainingExample, TypedRevisionTarget
+from retracemem.evaluation.multiagent.data.stagec_dataset import build_stagec_dataset, validate_training_example
+from retracemem.evaluation.multiagent.contracts import StageCTrainingExample, TypedRevisionTarget
 
 def test_build_stagec_dataset_success():
     examples = build_stagec_dataset()
@@ -31,7 +31,7 @@ def test_build_stagec_dataset_success():
 
 def test_validate_training_example_failure():
     # Construct invalid example to trigger validations
-    from experiments.multiagent.episodes_fc_dev import get_fc_dev_episodes
+    from retracemem.evaluation.multiagent.data.episodes_fc_dev import get_fc_dev_episodes
     ep, gold, _ = get_fc_dev_episodes()[0]
     sub = ep.submissions[0]
     

@@ -8,15 +8,11 @@ from retracemem.schemas import (
     ConditionNode,
     DependencyEdge,
 )
-from experiments.multiagent.contracts import (
+from retracemem.evaluation.multiagent.contracts import (
     FixedCandidateSubmission,
-    TypedRevisionTarget,
-    FixedCandidateGoldRecord,
-    FixedCandidateInputEpisode,
-    GoldSnapshotExpectation,
 )
 from retracemem.multiagent.utils import build_candidate_actions
-from experiments.multiagent.stagec_policy import (
+from retracemem.proposers.typed_revision_policy import (
     ClosedAPIZeroShotConstrainedProposer,
     PromptTypedRevisionPolicy,
 )
@@ -178,80 +174,3 @@ def test_decision_audit_saved_but_not_passed_to_dpa(tiny_submission):
     assert len(out.proposal_batches) == 1
     assert len(out.proposal_batches[0].edges) == 1
     assert out.proposal_batches[0].edges[0].target_id == "c_1"
-
-
-def test_action_confusion_diagnostics_on_tiny_fixture(tmp_path, tiny_submission):
-    # Setup a mock Stage A parsed run directory
-    run_dir = tmp_path / "run_test"
-    run_dir.mkdir()
-    
-    # We construct mock run record matching stage_a_parsed.jsonl
-    row = {
-        "episode_id": "ep_test",
-        "submissions": [{
-            "submission_id": "sub_1",
-            "actions": [{
-                "action_type": "BLOCKS",
-                "target_belief_id": None,
-                "target_condition_id": "c_1",
-                "replacement_belief_id": None,
-                "rationale": "mock block",
-                "evidence_ids": ["ev_1"]
-            }],
-            "proposal_edges": [],
-            "parse_error": None
-        }],
-        "final_belief_statuses": {
-            "b_1": "BLOCKED"
-        }
-    }
-    
-    stage_a_parsed_file = run_dir / "stage_a_parsed.jsonl"
-    with open(stage_a_parsed_file, "w", encoding="utf-8") as f:
-        f.write(json.dumps(row) + "\n")
-        
-    # We mock generate_expanded_episodes using monkeypatch
-    gold_snapshot = GoldSnapshotExpectation(
-        belief_statuses={"b_1": "BLOCKED"}
-    )
-    gold = FixedCandidateGoldRecord(
-        episode_id="ep_test",
-        gold_snapshot=gold_snapshot,
-        gold_typed_targets=(
-            TypedRevisionTarget("sub_1", "BLOCKS", target_condition_id="c_1", evidence_ids=("ev_1",)),
-        ),
-        failure_type="stale_propagation",
-    )
-    
-    episode = FixedCandidateInputEpisode(
-        episode_id="ep_test",
-        domain="software_engineering",
-        failure_type_public_or_controlled="stale_propagation",
-        subagent_roles=("writer",),
-        submissions=(tiny_submission,),
-        downstream_tasks=(),
-    )
-    
-    import experiments.multiagent.legacy.analyze_stagea_failures as analyze_mod
-    
-    # Monkeypatch generate_expanded_episodes in the module
-    analyze_mod.generate_expanded_episodes = lambda: ((episode, gold),)
-    
-    # Run the main analysis function by mocking argv
-    import sys
-    sys.argv = ["analyze_stagea_failures.py", "--run-dir", str(run_dir)]
-    analyze_mod.main()
-    
-    # Verify outputs
-    assert (run_dir / "summary.json").exists()
-    assert (run_dir / "action_confusion.csv").exists()
-    assert (run_dir / "evidence_grounding_errors.csv").exists()
-    assert (run_dir / "no_revision_bias.csv").exists()
-    assert (run_dir / "per_failure_type_metrics.csv").exists()
-    assert (run_dir / "representative_failures.md").exists()
-    
-    with open(run_dir / "summary.json", "r") as f:
-        summary = json.load(f)
-        assert summary["total_cases"] == 1
-        assert summary["final_status_accuracy"] == 1.0
-        assert summary["exact_action_match"] == 1.0

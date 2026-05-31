@@ -1,98 +1,196 @@
 # ReTrace
 
-ReTrace is a provider-agnostic shared-memory revision authorization system for multi-agent / subagent workflows.
+**ReTrace** is a deterministic shared-memory **revision authorization** system for
+multi-agent / subagent workflows (ICLR Paper 1).
 
-The method core is:
+When several subagents write evidence-bearing memory updates into a shared
+long-term memory, ReTrace decides **which revisions are allowed to change the
+shared usable memory basis** — and produces an auditable trace for every
+decision. Immutable evidence is never deleted; only a belief's *eligibility* to
+answer the current query changes, and only through verified, temporally valid
+typed defeat paths computed by a deterministic kernel.
+
 ```text
-immutable EvidenceNode ledger
-+ typed BeliefNode / ConditionNode graph
-+ DependencyEdge(REQUIRES)
-+ EvidenceEdge(BLOCKS / RELEASES / SUPERSEDES / REAFFIRMS / UNCERTAIN)
-+ RevisionGate structural admission
-+ deterministic Defeat-Path Authorization Algorithm
+subagent evidence-bearing submission
+    → typed revision proposer            (Stage A / Stage C; or DirectJudge for Stage B)
+    → parser / validator / RevisionGate  (structural, local, auditable)
+    → deterministic DPA  →  authorize(…) (the single public kernel)
+    → authorized shared-memory snapshot + audit trace
 ```
 
-ReTrace is designed as a **pluggable authorization kernel** that controls which revisions submitted by multiple subagents are authorized to alter the shared usable memory basis.
+> The problem is **multi-agent shared-memory revision authorization**, not
+> retrieval, debate/voting, or generic agent orchestration.
 
 ---
 
-## Academic Stage Definitions
+## Core pipeline
 
-1. **Stage A (`ReTrace-API-ZeroShot` / `ReTrace-Prompt`)**
-   Proposes typed revision action proposals (e.g. `SUPERSEDES`, `BLOCKS`, etc.) using zero-shot prompting over candidate belief contexts, validated by `RevisionGate` and authorized deterministically via Defeat-Path Authorization (DPA).
-2. **Stage B (`DirectJudge-API`)**
-   Baseline pathway that directly predicts final usability verdicts (`USABLE`, `NOT_USABLE`, `UNCERTAIN`) for all candidate beliefs without edge decomposition.
-3. **Stage C (`ReTrace-AdaptiveProposer`)**
-   Explicit typed revision proposal policy learning (e.g., API-ZeroShot, API-ICL, LoRA-SFT).
+ReTrace is built around one public deterministic kernel:
 
-> [!NOTE]
-> Latent-memory representation, long-horizon consolidation, and RL over hidden memory states belong strictly to Paper 2, not ReTrace Paper 1.
+```python
+authorize(view, proposal_batches, *, audit_metadata=None) -> AuthorizationResult
+```
+
+* `authorize(...)` is the **sole** public authorization entrypoint. Neither the
+  Defeat-Path Authorization algorithm (DPA) nor the `RevisionGate` is invoked
+  directly by external callers — all admission and deterministic routing happen
+  inside `authorize`.
+* `commit_subagent_submission(...)` / `commit_submission_sequence(...)` are the
+  multi-agent integration wrappers around `authorize(...)`.
+
+### Typed action vocabulary vs. final status (these are different things)
+
+A proposer emits **typed revision actions** over candidate structure:
+
+| Action | Meaning |
+| --- | --- |
+| `SUPERSEDES` | New evidence replaces a prior belief (requires a grounded `replacement_belief_id`) |
+| `BLOCKS` | New evidence blocks a prerequisite condition |
+| `RELEASES` | New evidence releases a previously blocked condition |
+| `REAFFIRMS` | New evidence reaffirms a belief |
+| `UNCERTAIN` | New evidence introduces unresolved uncertainty |
+| `NO_REVISION` | No revision proposed |
+
+DPA then assigns each belief a **final status** (not an action type):
+
+```text
+A_t(b) = DPA(b, S_t) ∈ {AUTHORIZED, BLOCKED, SUPERSEDED, UNRESOLVED}
+precedence:  SUPERSEDES > PREREQUISITE_BLOCK > UNRESOLVED_UNCERTAIN > AUTHORIZED
+```
+
+Stage B (DirectJudge) predicts a *usability* verdict directly and is **not** a
+typed-action method.
 
 ---
 
-## Pluggable DPA Precedence
+## Stage A / Stage B / Stage C
 
-For any candidate belief $b$:
-$$A_t(b) = \text{DPA}(b, S_t) \in \{\text{AUTHORIZED}, \text{BLOCKED}, \text{SUPERSEDED}, \text{UNRESOLVED}\}$$
-with canonical precedence:
-$$\text{SUPERSEDES} > \text{PREREQUISITE\_BLOCK} > \text{UNRESOLVED\_UNCERTAIN} > \text{AUTHORIZED}$$
+These are **method variants over the same shared pipeline**, not a linear
+runtime chain.
+
+| Stage | Name | What it does |
+| --- | --- | --- |
+| **A** | `ReTrace-API-ZeroShot` / `ReTrace-Prompt` | Zero-shot prompted **typed** proposer → RevisionGate → DPA |
+| **B** | `DirectJudge-API` | Baseline: directly predicts final usability status, no typed actions / gate / DPA |
+| **C** | `ReTrace-AdaptiveProposer` | **Adaptive** typed proposer family (API-ZeroShot, API-ICL, Hosted-FT, Open LoRA-SFT) → the *same* commit / DPA path |
+
+Stage A and Stage C are **proposer families** that plug into the identical
+commit → DPA path; Stage C does not import any Stage A/B runner code — shared
+logic lives in `retracemem.evaluation.multiagent`.
 
 ---
 
-## Execution & Commands Guide
+## Repository layout
 
-### Offline Verification & Compilation
-Before running any scripts, verify the codebase compiles and passes tests:
+```text
+src/retracemem/                     # the library (importable, paper-facing)
+    schemas.py                      # immutable dataclass contracts (nodes/edges)
+    tms/ , authorization …          # deterministic core: authorize(), DPA
+    multiagent/                     # commit wrappers around authorize()
+    proposers/                      # typed_revision_policy (A), replay (C)
+    evaluation/multiagent/          # shared evaluation engine:
+        config, cases, pipeline,    #   - pipeline = typed proposal → commit → DPA
+        directjudge, metrics,       #   - metrics  = pure metric computation
+        artifacts, runner, stagec   #   - runner   = Stage A/B; stagec = Stage C
+        data/                       #   - dev set builders / dataset export
+scripts/                            # thin public python3 entrypoints
+configs/                            # reproducible experiment configs
+docs/                               # architecture, reproducibility, protocol, positioning
+tests/                              # unit / integration / regression tests
+experiments/
+    multiagent/                     # active workflow helpers + local_training/
+    archive/                        # preserved historical / reference code (NOT canonical)
+prompts/                            # versioned prompt templates
+```
+
+---
+
+## Setup
+
 ```bash
-# Compilation check
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"
+```
+
+Live API runs read credentials from a `.env` file in the repo root (e.g.
+`SILICONFLOW_API_KEY=...`). Offline modes need no credentials.
+
+---
+
+## Smoke tests & verification
+
+```bash
+# Compile check
 env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src tests experiments
 
-# Run offline unit/integration tests
-.venv/bin/python -m pytest
-```
+# Full offline test suite
+python3 -m pytest
 
-### Stage A/B dev70 Evaluation (Dry-run & Live)
-Run evaluation on the dev70 expansion dataset:
-```bash
-# Safe Dry-run/Mock Mode (runs local gold simulation)
-.venv/bin/python experiments/multiagent/run_stageab_api_eval.py --mock --dataset dev_expansion
-
-# Live API Evaluation (requires SILICONFLOW_API_KEY)
-.venv/bin/python experiments/multiagent/run_stageab_api_eval.py --live --provider siliconflow --model deepseek-ai/DeepSeek-V3
+# End-to-end offline smoke of each method (writes a structured run dir):
+python3 scripts/evaluate.py stage-a --mock  --max-cases 2 --output-dir outputs/runs/smoke_a
+python3 scripts/evaluate.py stage-b --mock  --max-cases 2 --output-dir outputs/runs/smoke_b
+python3 scripts/evaluate.py stage-c --smoke --max-cases 3 --output-dir outputs/runs/smoke_c
 ```
 
 ---
 
-## Development Utilities
+## Running evaluations
 
-The following tools and evaluations are auxiliary utilities for model comparisons, adapter scoring, and verification experiments. They are not the primary experimental boundaries.
+Stage A and Stage B are evaluated **jointly** on the same fixed-candidate cases
+(fair comparison), so `stage-a` and `stage-b` are aliases into the same A-vs-B
+runner, which always reports both.
 
-### 1. Model Matrix Evaluator (Dry-run & Live)
-Compare multiple models and methods (DirectJudge, StageA-Freeform, StageA-Constrained, StageC-ICL) in a single run:
 ```bash
-# Dry-run Mock Run
-.venv/bin/python experiments/multiagent/run_model_matrix_api_eval.py --dry-run
+# Stage A / Stage B — offline mock
+python3 scripts/evaluate.py stage-a --mock
 
-# Live API Run (SiliconFlow)
-.venv/bin/python experiments/multiagent/run_model_matrix_api_eval.py
+# Stage A / Stage B — live (requires SILICONFLOW_API_KEY in .env)
+python3 scripts/evaluate.py stage-a \
+    --live --provider siliconflow --model deepseek-ai/DeepSeek-V3 --constrained \
+    --output-dir outputs/runs/stageab_dev70
+
+# Stage C — replay decoded adapter/SFT generations through the commit/DPA path
+python3 scripts/evaluate.py stage-c \
+    --generations-dir path/to/decoded_generations \
+    --policy-variant lora_sft --checkpoint-id my_ckpt \
+    --output-dir outputs/runs/stagec_dev70
+
+# Stage C — export the typed-revision SFT dataset (offline)
+python3 scripts/export_stagec_data.py
 ```
 
-### 2. Stage C Adapter Evaluator
-Evaluate base models vs LoRA adapters across structural subsets:
-```bash
-# Print CLI options and subsets help
-.venv/bin/python experiments/multiagent/run_stagec_adapter_eval.py --help
-```
+Run `python3 scripts/evaluate.py <stage> --help` for the full flag list.
 
-### 3. STALE-style Synthetic Validation
-Run synthetic temporal sequence validation comparing Append-only profile, Oracle, and ReTrace methods:
-```bash
-.venv/bin/python experiments/stale_style_retrace_validation.py
-```
+### Where outputs go
+
+All run artifacts are written under `outputs/` (git-ignored): per-case parsed
+records, raw proposer outputs, `dpa_traces.jsonl`, `metrics.json`,
+`failure_breakdown.csv`, and a `manifest.json` capturing run provenance.
 
 ---
 
-## Governance Policy
+## What is **not** part of Paper 1
 
-All generated summaries and run logs reside in `outputs/` or `outputs/runs/` and are strictly excluded from git.
-Checkpoints, adapter weights (`checkpoints/`, `adapters/`), and API caches are excluded to guarantee reproducibility and prevent key leakage.
+Latent / hidden memory state, learned forgetting, RL consolidation,
+delayed-future-utility learning, and biological-memory mechanisms belong to
+**Paper 2** and must not appear in this codebase. STALE/CUPMem is an external
+validation/baseline pathway, not the definition of the method.
+
+## Legacy / archived paths
+
+`experiments/archive/` holds preserved-but-non-canonical research code (E2 action
+ablation, E3 composition, E4 STALE/CUPMem external validation, and older
+comparison/diagnostic runners). It is **not** imported by `src/retracemem/` and is
+**not** a paper-facing command — see `experiments/archive/README.md`. If those
+experiments are needed for final paper numbers, reimplement them through the
+shared evaluation pipeline.
+
+---
+
+## Governance
+
+Generated summaries and run logs live under `outputs/` and are excluded from git.
+Checkpoints, adapter weights, API caches, benchmark downloads, and API keys are
+never committed. Core DPA logic stays API-free and deterministic; benchmark- and
+provider-specific logic lives in proposers / runners / adapters. See `AGENTS.md`
+for the full contributor contract.

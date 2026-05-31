@@ -132,7 +132,7 @@ def rename_string(s: str | None, old_ns: str, new_ns: str) -> str | None:
 def rename_submission(sub: Any, old_ns: str, new_ns: str) -> Any:
     """Helper to rewrite a submission to use the augmented namespace."""
     from retracemem.schemas import EvidenceNode, BeliefNode, ConditionNode, DependencyEdge
-    from experiments.multiagent.contracts import FixedCandidateSubmission
+    from retracemem.evaluation.multiagent.contracts import FixedCandidateSubmission
 
     new_evidence_context = []
     for ev in sub.evidence_context:

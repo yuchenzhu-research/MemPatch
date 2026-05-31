@@ -8,22 +8,24 @@ from retracemem.schemas import (
     ConditionNode,
     DependencyEdge,
 )
-from experiments.multiagent.contracts import (
+from retracemem.evaluation.multiagent.contracts import (
     FixedCandidateSubmission,
     TypedRevisionTarget,
     FixedCandidateGoldRecord,
     FixedCandidateInputEpisode,
     GoldSnapshotExpectation,
 )
-from experiments.multiagent.run_stageab_api_eval import (
-    rename_episode_and_gold,
+from retracemem.evaluation.multiagent.cases import rename_episode_and_gold
+from retracemem.evaluation.multiagent.directjudge import (
     render_direct_judge_prompt,
     parse_direct_judge_response,
+)
+from retracemem.evaluation.multiagent.metrics import (
     compute_stage_a_action_metrics,
     check_grounding_error_stage_a,
     check_grounding_error_stage_b,
-    canonicalize_belief_id_with_type,
 )
+from retracemem.multiagent.utils import canonicalize_belief_id_with_type
 
 
 @pytest.fixture
@@ -237,7 +239,7 @@ def test_prompt_non_leakage(mock_episode_and_gold):
     sub = ep.submissions[0]
     
     # Test Stage B prompt rendering
-    from experiments.multiagent.run_stageab_api_eval import load_direct_judge_template, render_direct_judge_prompt
+    from retracemem.evaluation.multiagent.directjudge import load_direct_judge_template, render_direct_judge_prompt
     template = load_direct_judge_template()
     prompt_b = render_direct_judge_prompt(template, sub)
     
@@ -249,7 +251,7 @@ def test_prompt_non_leakage(mock_episode_and_gold):
     assert "b_1: \"NOT_USABLE\"" not in prompt_b
 
     # Test Stage A prompt rendering
-    from experiments.multiagent.stagec_policy import PromptTypedRevisionPolicy
+    from retracemem.proposers.typed_revision_policy import PromptTypedRevisionPolicy
     policy = PromptTypedRevisionPolicy()
     messages = policy.build_messages(sub)
     user_prompt_a = messages[1]["content"]
@@ -263,7 +265,7 @@ def test_prompt_snapshot(mock_episode_and_gold):
     ep, gold = mock_episode_and_gold
     sub = ep.submissions[0]
     
-    from experiments.multiagent.stagec_policy import PromptTypedRevisionPolicy
+    from retracemem.proposers.typed_revision_policy import PromptTypedRevisionPolicy
     policy = PromptTypedRevisionPolicy()
     messages = policy.build_messages(sub)
     system_prompt = messages[0]["content"]
@@ -343,7 +345,7 @@ def test_compute_stage_a_action_metrics_empty_and_mismatch(mock_episode_and_gold
 
 
 def test_closed_api_proposer_fail_closed(mock_episode_and_gold):
-    from experiments.multiagent.stagec_policy import ClosedAPIZeroShotProposer
+    from retracemem.proposers.typed_revision_policy import ClosedAPIZeroShotProposer
     ep, _ = mock_episode_and_gold
     sub = ep.submissions[0]
     
@@ -371,7 +373,7 @@ def test_closed_api_proposer_fail_closed(mock_episode_and_gold):
 
 
 def test_runner_error_when_no_mode_specified(monkeypatch):
-    from experiments.multiagent.run_stageab_api_eval import main
+    from retracemem.evaluation.multiagent.runner import main
     import sys
     monkeypatch.setattr(sys, "argv", ["run_stageab_api_eval.py"])
     with pytest.raises(SystemExit):
@@ -379,7 +381,7 @@ def test_runner_error_when_no_mode_specified(monkeypatch):
 
 
 def test_explicit_mock_mode_manifest(tmp_path, monkeypatch):
-    from experiments.multiagent.run_stageab_api_eval import main
+    from retracemem.evaluation.multiagent.runner import main
     import sys
     import json
     
@@ -408,7 +410,7 @@ def test_explicit_mock_mode_manifest(tmp_path, monkeypatch):
 
 
 def test_live_mode_missing_keys_fails_closed(tmp_path, monkeypatch):
-    from experiments.multiagent.run_stageab_api_eval import main
+    from retracemem.evaluation.multiagent.runner import main
     import sys
     
     monkeypatch.delenv("SILICONFLOW_API_KEY", raising=False)
@@ -437,7 +439,7 @@ def test_live_mode_missing_keys_fails_closed(tmp_path, monkeypatch):
 
 
 def test_no_revision_logging_and_metrics(tmp_path, monkeypatch):
-    from experiments.multiagent.run_stageab_api_eval import main
+    from retracemem.evaluation.multiagent.runner import main
     import sys
     import json
     

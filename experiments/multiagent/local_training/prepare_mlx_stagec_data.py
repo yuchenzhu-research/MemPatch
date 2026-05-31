@@ -7,8 +7,8 @@ import sys
 # Ensure src is importable when running from repo root
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, os.pardir, "src"))
 
-from experiments.multiagent.stagec_dataset import build_stagec_dataset
-from experiments.multiagent.stagec_policy import PromptTypedRevisionPolicy
+from retracemem.evaluation.multiagent.data.stagec_dataset import build_stagec_dataset
+from retracemem.proposers.typed_revision_policy import PromptTypedRevisionPolicy
 
 
 def main() -> None:
