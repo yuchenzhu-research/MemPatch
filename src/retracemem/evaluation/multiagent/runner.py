@@ -75,17 +75,18 @@ def run_stageab_eval(config: EvalRunConfig) -> tuple[dict[str, Any], dict[str, A
     # Load Cases
     processed_cases = load_eval_cases(max_cases, dataset=dataset)
 
-    output_path = Path(output_dir)
-    if not dry_run:
-        output_path.mkdir(parents=True, exist_ok=True)
-
-    # Initialize live client if live
+    # Initialize live client if live. Do this BEFORE creating the output dir so a
+    # fail-closed missing-key error does not leave an empty run directory behind.
     client = None
     if live:
         client = make_live_client(
             output_dir, provider, model, api_key, base_url,
             provider_config_path=config.provider_config_path,
         )
+
+    output_path = Path(output_dir)
+    if not dry_run:
+        output_path.mkdir(parents=True, exist_ok=True)
 
     # Resume capability: load already processed cases
     stage_a_raw_rows = []
