@@ -1,0 +1,194 @@
+"""Module 3: Parser + RevisionGate + DPA runtime.
+
+This wraps the deterministic kernel (``retracemem.authorize``) with the
+ReTrace-Learn JSON parsing front-end. It is the program-only runtime that turns
+a (possibly model-generated) action payload into final belief statuses plus a
+fully auditable trace. It never learns and never overrides DPA: it parses,
+validates structure, then defers all admission/authorization to ``authorize``.
+"""
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+from typing import Any
+
+from retracemem.authorization import authorize
+from retracemem.methods.contracts import SharedCandidateView
+from retracemem.multiagent.parser import (
+    ParseErrorCode,
+    StructuredParseError,
+    extract_json_array,
+)
+
+from retrace_learn.schemas import RevisionAction, SchemaValidationError
+from retrace_learn.runtime.views import actions_to_proposal_batches
+
+
+@dataclass(frozen=True)
+class ParseResult:
+    valid_json: bool
+    schema_valid: bool
+    actions: tuple[RevisionAction, ...]
+    error_code: str | None = None
+    error_message: str | None = None
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "valid_json": self.valid_json,
+            "schema_valid": self.schema_valid,
+            "n_actions": len(self.actions),
+            "error_code": self.error_code,
+            "error_message": self.error_message,
+        }
+
+
+@dataclass(frozen=True)
+class RuntimeResult:
+    final_belief_statuses: dict[str, str]
+    authorized_belief_ids: tuple[str, ...]
+    excluded_belief_ids: tuple[str, ...]
+    gate_decisions: list[dict[str, Any]]
+    defeat_paths: list[dict[str, Any]]
+    audit_trace: dict[str, Any]
+    parse_result: ParseResult
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "final_belief_statuses": self.final_belief_statuses,
+            "authorized_belief_ids": list(self.authorized_belief_ids),
+            "excluded_belief_ids": list(self.excluded_belief_ids),
+            "gate_decisions": self.gate_decisions,
+            "defeat_paths": self.defeat_paths,
+            "audit_trace": self.audit_trace,
+            "parse_result": self.parse_result.to_dict(),
+        }
+
+
+def parse_actions(raw_text: str) -> ParseResult:
+    """Parse a model completion into validated typed revision actions.
+
+    Fail-closed: JSON decode failure or any schema constraint violation yields a
+    ``ParseResult`` carrying the canonical ``ParseErrorCode`` and an empty action
+    list, so the runtime proposes no revisions.
+    """
+    try:
+        raw_list = extract_json_array(raw_text)
+    except StructuredParseError as exc:
+        return ParseResult(
+            valid_json=False,
+            schema_valid=False,
+            actions=(),
+            error_code=exc.code.value,
+            error_message=str(exc),
+        )
+
+    actions: list[RevisionAction] = []
+    try:
+        for item in raw_list:
+            if not isinstance(item, dict):
+                raise SchemaValidationError("action items must be JSON objects")
+            action = RevisionAction.from_dict(item)
+            action.validate()
+            actions.append(action)
+    except SchemaValidationError as exc:
+        return ParseResult(
+            valid_json=True,
+            schema_valid=False,
+            actions=(),
+            error_code=ParseErrorCode.SCHEMA_CONSTRAINTS_VIOLATED.value,
+            error_message=str(exc),
+        )
+
+    return ParseResult(
+        valid_json=True, schema_valid=True, actions=tuple(actions)
+    )
+
+
+def _extract_runtime_fields(trace: dict[str, Any]) -> tuple[dict[str, str], list, list]:
+    final_statuses = dict(trace.get("fine_grained_statuses", {}))
+    gate_decisions = list(trace.get("edge_proposals", []))
+    defeat_paths = list(trace.get("defeat_paths", []))
+    return final_statuses, gate_decisions, defeat_paths
+
+
+def _augment_replacement_statuses(
+    final_statuses: dict[str, str],
+    actions: list[RevisionAction],
+    gate_decisions: list[dict[str, Any]],
+    replacement_ids: set[str],
+) -> dict[str, str]:
+    """Report replacement beliefs entering the authorized basis.
+
+    The kernel only assigns a DPA status to ``candidate_beliefs``; replacement
+    beliefs live in their own (disjoint) list so the proposer can cite them.
+    When a ``SUPERSEDES`` edge is *admitted by the gate*, its replacement becomes
+    the new usable basis, so we surface it as ``AUTHORIZED`` here. This reads only
+    admitted edges from the audit trace (fully replayable); it never overrides a
+    status the kernel already computed. Running full DPA over replacement beliefs
+    is a documented future extension (see design doc, Risks).
+    """
+    admitted_supersede_targets = {
+        d["target_id"]
+        for d in gate_decisions
+        if d.get("edge_type") == "SUPERSEDES" and d.get("admitted")
+    }
+    augmented = dict(final_statuses)
+    for a in actions:
+        if (
+            a.action_type == "SUPERSEDES"
+            and a.target_belief_id in admitted_supersede_targets
+            and a.replacement_belief_id in replacement_ids
+            and a.replacement_belief_id not in augmented
+        ):
+            augmented[a.replacement_belief_id] = "AUTHORIZED"
+    return augmented
+
+
+def run_actions(
+    view: SharedCandidateView,
+    actions: list[RevisionAction],
+    *,
+    parse_result: ParseResult | None = None,
+    audit_metadata: dict[str, Any] | None = None,
+) -> RuntimeResult:
+    """Run already-parsed actions through RevisionGate + DPA via ``authorize``."""
+    batches = actions_to_proposal_batches(actions)
+    auth = authorize(view, batches, audit_metadata=audit_metadata)
+    final_statuses, gate_decisions, defeat_paths = _extract_runtime_fields(auth.trace)
+    replacement_ids = {b.belief_id for b in view.candidate_replacement_beliefs}
+    final_statuses = _augment_replacement_statuses(
+        final_statuses, actions, gate_decisions, replacement_ids
+    )
+    if parse_result is None:
+        parse_result = ParseResult(
+            valid_json=True, schema_valid=True, actions=tuple(actions)
+        )
+    return RuntimeResult(
+        final_belief_statuses=final_statuses,
+        authorized_belief_ids=auth.authorized_belief_ids,
+        excluded_belief_ids=auth.excluded_belief_ids,
+        gate_decisions=gate_decisions,
+        defeat_paths=defeat_paths,
+        audit_trace=auth.trace,
+        parse_result=parse_result,
+    )
+
+
+def run_from_text(
+    view: SharedCandidateView,
+    raw_text: str,
+    *,
+    audit_metadata: dict[str, Any] | None = None,
+) -> RuntimeResult:
+    """Parse a model completion and run it end-to-end through the kernel.
+
+    On parse/schema failure the runtime still calls ``authorize`` with no
+    proposals (fail-closed), so every candidate belief receives its default DPA
+    status and the failure is recorded in ``parse_result``.
+    """
+    parse_result = parse_actions(raw_text)
+    return run_actions(
+        view,
+        list(parse_result.actions),
+        parse_result=parse_result,
+        audit_metadata=audit_metadata,
+    )
