@@ -6,9 +6,9 @@ import json
 import os
 import subprocess
 from typing import Any, Dict, List, Tuple
-from experiments.multiagent.stagec_dataset import build_stagec_dataset
-from experiments.multiagent.stagec_policy import PromptTypedRevisionPolicy
-from experiments.multiagent.episodes_fc_dev import get_fc_dev_episodes
+from retracemem.evaluation.multiagent.data.stagec_dataset import build_stagec_dataset
+from retracemem.proposers.typed_revision_policy import PromptTypedRevisionPolicy
+from retracemem.evaluation.multiagent.data.episodes_fc_dev import get_fc_dev_episodes
 from experiments.multiagent.metrics import (
     compute_fixed_candidate_metrics,
     aggregate_fixed_candidate_metrics,
@@ -17,7 +17,7 @@ from retracemem.multiagent.contracts import (
     SubagentMemorySubmission,
     SharedMemorySnapshotResult,
 )
-from experiments.multiagent.contracts import (
+from retracemem.evaluation.multiagent.contracts import (
     FixedCandidateSubmission,
     FixedCandidateEpisodeMethodResult,
     MethodDecisionRecord,

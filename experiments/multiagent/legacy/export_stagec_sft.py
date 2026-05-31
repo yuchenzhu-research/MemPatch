@@ -5,8 +5,8 @@ import hashlib
 import json
 import os
 from typing import Any, Dict, List
-from experiments.multiagent.stagec_dataset import build_stagec_dataset
-from experiments.multiagent.contracts import StageCTrainingExample
+from retracemem.evaluation.multiagent.data.stagec_dataset import build_stagec_dataset
+from retracemem.evaluation.multiagent.contracts import StageCTrainingExample
 
 SYSTEM_PROMPT = (
     "You are the ReTrace Stage C revision policy. Your task is to propose explicit "

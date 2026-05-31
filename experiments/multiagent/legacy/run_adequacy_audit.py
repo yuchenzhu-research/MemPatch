@@ -7,7 +7,7 @@ import sys
 # Ensure src is importable when running from repo root
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.pardir, os.pardir, "src"))
 
-from experiments.multiagent.episodes_fc_dev import get_fc_dev_episodes
+from retracemem.evaluation.multiagent.data.episodes_fc_dev import get_fc_dev_episodes
 
 
 def main() -> None:

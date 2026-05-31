@@ -10,21 +10,21 @@ from retracemem.schemas import (
     DependencyEdge,
     EvidenceNode,
 )
-from experiments.multiagent.contracts import (
+from retracemem.evaluation.multiagent.contracts import (
     FixedCandidateGoldRecord,
     FixedCandidateInputEpisode,
     FixedCandidateSubmission,
     GoldSnapshotExpectation,
     TypedRevisionTarget,
 )
-from experiments.multiagent.stagec_adapter_proposer import (
+from retracemem.proposers.replay import (
     DirectoryGenerationSource,
     LocalAdapterReplayProposer,
     MappingGenerationSource,
     build_replay_proposer,
     no_revision_generation,
 )
-from experiments.multiagent.run_stagec_eval import (
+from retracemem.evaluation.multiagent.stagec import (
     StageCEvalConfig,
     build_case_record,
     run_stagec_eval,
@@ -192,7 +192,7 @@ def test_directory_generation_source(tmp_path, supersession_episode_and_gold):
 # Per-case record test
 # ---------------------------------------------------------------------------
 def test_build_case_record_has_required_fields(supersession_episode_and_gold):
-    from experiments.multiagent.run_stageab_api_eval import run_retrace_variant_on_episode
+    from retracemem.evaluation.multiagent.pipeline import run_retrace_variant_on_episode
 
     ep, gold = supersession_episode_and_gold
     sub = ep.submissions[0]

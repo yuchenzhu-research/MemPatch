@@ -4,7 +4,7 @@ import json
 from typing import Any, Dict, List, Tuple
 from retracemem.authorization import EvidenceProposalBatch
 from retracemem.schemas import EvidenceEdge, EvidenceEdgeType
-from experiments.multiagent.contracts import (
+from retracemem.evaluation.multiagent.contracts import (
     FixedCandidateSubmission,
     ProposalPolicyOutput,
     TypedRevisionTarget,
@@ -131,7 +131,7 @@ class PromptTypedRevisionPolicy:
         submission: FixedCandidateSubmission,
     ) -> Tuple[Dict[str, str], ...]:
         """Construct the prompt messages for the policy using method-visible context."""
-        from experiments.multiagent.contracts import StageCTrainingExample
+        from retracemem.evaluation.multiagent.contracts import StageCTrainingExample
         fake_ex = StageCTrainingExample(
             example_id="temp_id",
             episode_id="temp_ep",
@@ -558,7 +558,7 @@ class ClosedAPIZeroShotConstrainedProposer(TypedRevisionProposer):
         submission: FixedCandidateSubmission,
         candidates: list[dict[str, Any]],
     ) -> str:
-        from experiments.multiagent.contracts import StageCTrainingExample
+        from retracemem.evaluation.multiagent.contracts import StageCTrainingExample
         fake_ex = StageCTrainingExample(
             example_id="temp_id",
             episode_id="temp_ep",
@@ -913,7 +913,7 @@ class ClosedAPIICLProposer(TypedRevisionProposer):
 
             icl_context = ""
             for ex in selected_exs:
-                from experiments.multiagent.contracts import StageCTrainingExample
+                from retracemem.evaluation.multiagent.contracts import StageCTrainingExample
                 fake_ex = StageCTrainingExample(
                     example_id=ex.exemplar_id,
                     episode_id=ex.source_episode_id,

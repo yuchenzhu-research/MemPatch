@@ -8,7 +8,7 @@ from retracemem.schemas import (
     ConditionNode,
     DependencyEdge,
 )
-from experiments.multiagent.contracts import (
+from retracemem.evaluation.multiagent.contracts import (
     FixedCandidateSubmission,
     TypedRevisionTarget,
     FixedCandidateGoldRecord,
@@ -16,7 +16,7 @@ from experiments.multiagent.contracts import (
     GoldSnapshotExpectation,
 )
 from retracemem.multiagent.utils import build_candidate_actions
-from experiments.multiagent.stagec_policy import (
+from retracemem.proposers.typed_revision_policy import (
     ClosedAPIZeroShotConstrainedProposer,
     PromptTypedRevisionPolicy,
 )

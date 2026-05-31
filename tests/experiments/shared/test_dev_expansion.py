@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from experiments.multiagent.dev_expansion import generate_expanded_episodes, DOMAINS, FAILURE_TYPES
+from retracemem.evaluation.multiagent.data.dev_expansion import generate_expanded_episodes, DOMAINS, FAILURE_TYPES
 
 def test_dev_expansion_generation() -> None:
     episodes_with_gold = generate_expanded_episodes()

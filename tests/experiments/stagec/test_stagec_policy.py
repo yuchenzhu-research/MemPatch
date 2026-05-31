@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import pytest
-from experiments.multiagent.stagec_policy import PromptTypedRevisionPolicy
-from experiments.multiagent.contracts import FixedCandidateSubmission
+from retracemem.proposers.typed_revision_policy import PromptTypedRevisionPolicy
+from retracemem.evaluation.multiagent.contracts import FixedCandidateSubmission
 
 @pytest.fixture
 def fake_submission() -> FixedCandidateSubmission:
@@ -229,8 +229,8 @@ def test_allowed_actions_filtering(fake_submission):
 
 
 def test_icl_proposer_retrieval_and_propose(fake_submission):
-    from experiments.multiagent.stagec_policy import ClosedAPIICLProposer
-    from experiments.multiagent.contracts import ApprovedRevisionExemplar
+    from retracemem.proposers.typed_revision_policy import ClosedAPIICLProposer
+    from retracemem.evaluation.multiagent.contracts import ApprovedRevisionExemplar
     from retracemem.providers.base import MockLLMProvider
     
     valid_json = """
@@ -290,7 +290,7 @@ def test_icl_proposer_retrieval_and_propose(fake_submission):
 
 
 def test_icl_proposer_fail_closed_without_exemplars(fake_submission):
-    from experiments.multiagent.stagec_policy import ClosedAPIICLProposer
+    from retracemem.proposers.typed_revision_policy import ClosedAPIICLProposer
     from retracemem.providers.base import MockLLMProvider
     
     mock_client = MockLLMProvider(default_response="[]")
@@ -306,7 +306,7 @@ def test_icl_proposer_fail_closed_without_exemplars(fake_submission):
 
 
 def test_icl_proposer_zero_shot_fallback_label_integrity(fake_submission):
-    from experiments.multiagent.stagec_policy import ClosedAPIICLProposer
+    from retracemem.proposers.typed_revision_policy import ClosedAPIICLProposer
     from retracemem.providers.base import MockLLMProvider
     
     valid_json = """
@@ -331,7 +331,7 @@ def test_icl_proposer_zero_shot_fallback_label_integrity(fake_submission):
 
 
 def test_proposer_multi_round_repair_workflow(fake_submission):
-    from experiments.multiagent.stagec_policy import ClosedAPIZeroShotProposer
+    from retracemem.proposers.typed_revision_policy import ClosedAPIZeroShotProposer
     from retracemem.providers.base import MockLLMProvider
     
     # 1. Repair disabled preserves first-pass parser error

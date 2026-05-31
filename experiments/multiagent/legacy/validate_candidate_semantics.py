@@ -10,7 +10,7 @@ from retracemem.schemas import EvidenceEdge, EvidenceEdgeType
 from retracemem.authorization import EvidenceProposalBatch
 from retracemem.multiagent.contracts import SubagentMemorySubmission
 from retracemem.multiagent.commit import commit_submission_sequence
-from experiments.multiagent.dev_expansion import generate_expanded_episodes
+from retracemem.evaluation.multiagent.data.dev_expansion import generate_expanded_episodes
 
 def validate_episode(episode: Any, gold_record: Any) -> Tuple[bool, Dict[str, Any]]:
     # Map gold targets by submission

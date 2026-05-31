@@ -6,7 +6,7 @@ import json
 import os
 import subprocess
 from typing import Any, Dict, List
-from experiments.multiagent.contracts import ExperimentRunManifest
+from retracemem.evaluation.multiagent.contracts import ExperimentRunManifest
 from experiments.multiagent.episodes_dev import get_dev_episodes
 from experiments.multiagent.methods import NaiveLastWriteWinsMethod, ReTraceMethod
 from experiments.multiagent.metrics import compute_episode_metrics, aggregate_metrics

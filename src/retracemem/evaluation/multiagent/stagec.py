@@ -19,9 +19,9 @@ Sources of decoded generations:
   --generations-dir DIR   read ``{submission_id}.txt`` per submission (real run)
   --smoke / --mock        offline NO_REVISION generations (no files, no API)
 
-This module deliberately does NOT modify the active Stage A/B runner; it only
-imports reusable helpers from it (case loading, the per-episode commit/DPA
-flow, action-level metrics, and the aggregate metric computation).
+Stage C plugs into the same shared evaluation engine as Stage A/B; it imports
+reusable modules (case loading, the per-episode commit/DPA pipeline, and metric
+computation) rather than any Stage runner script.
 """
 from __future__ import annotations
 
@@ -31,33 +31,27 @@ import datetime
 import hashlib
 import json
 import os
-import sys
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-# Ensure src and repo root are importable (mirrors the Stage A/B runner).
-REPO_ROOT = Path(__file__).resolve().parents[2]
-sys.path.insert(0, str(REPO_ROOT / "src"))
-sys.path.insert(0, str(REPO_ROOT))
-
-from experiments.multiagent.contracts import (
+from retracemem.evaluation.multiagent.contracts import (
     FixedCandidateGoldRecord,
     FixedCandidateInputEpisode,
 )
-from experiments.multiagent.run_stageab_api_eval import (
+from retracemem.evaluation.multiagent.cases import load_eval_cases
+from retracemem.evaluation.multiagent.pipeline import run_retrace_variant_on_episode
+from retracemem.evaluation.multiagent.metrics import (
     _STATUS_MAP_A_TO_COMPARABLE,
     compute_eval_metrics,
     compute_stage_a_action_metrics,
-    load_eval_cases,
-    run_retrace_variant_on_episode,
 )
-from experiments.multiagent.stagec_adapter_proposer import (
+from retracemem.proposers.replay import (
     CANONICAL_ACTIONS,
     LocalAdapterReplayProposer,
     build_replay_proposer,
 )
-from experiments.multiagent.stagec_policy import PromptTypedRevisionPolicy
+from retracemem.proposers.typed_revision_policy import PromptTypedRevisionPolicy
 
 
 @dataclass(frozen=True)

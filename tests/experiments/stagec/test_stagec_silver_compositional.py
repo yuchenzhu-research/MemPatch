@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import pytest
-from experiments.multiagent.export_stagec_silver_compositional import (
+from retracemem.evaluation.multiagent.data.silver_compositional import (
     generate_new_silver_v1_episodes,
     TRAIN_AUGMENTATIONS,
     apply_replacements,
