@@ -34,7 +34,7 @@ from retracemem.proposers.typed_revision_policy import (
     ClosedAPIICLProposer,
 )
 from retracemem.multiagent.commit import commit_submission_sequence
-from experiments.multiagent.run_stageab_api_eval import _STATUS_MAP_A_TO_COMPARABLE
+from retracemem.evaluation.multiagent.metrics import _STATUS_MAP_A_TO_COMPARABLE
 
 # Helper to map comparable statuses
 COMPARABLE_TO_DPA = {

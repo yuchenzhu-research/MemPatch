@@ -11,7 +11,7 @@ from retracemem.schemas import (
 )
 from retracemem.authorization import EvidenceProposalBatch
 from retracemem.multiagent.contracts import SubagentMemorySubmission
-from experiments.multiagent.fixtures import get_diagnostic_fixtures
+from experiments.archive.fixtures import get_diagnostic_fixtures
 from retracemem.evaluation.multiagent.contracts import (
     MultiAgentMemoryEpisode,
     DownstreamTask,

@@ -11,7 +11,7 @@ from retracemem.schemas import (
 )
 from retracemem.authorization import EvidenceProposalBatch
 from retracemem.multiagent.contracts import SubagentMemorySubmission
-from experiments.stale_adapter import assert_no_evaluation_leakage
+from experiments.archive.stale_adapter import assert_no_evaluation_leakage
 
 
 def map_delta_to_submission(

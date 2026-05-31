@@ -10,7 +10,7 @@ from retracemem.schemas import (
 )
 from retracemem.methods.contracts import SharedCandidateView
 from retracemem.multiagent.contracts import SubagentMemorySubmission
-from experiments.stale_adapter import assert_no_evaluation_leakage
+from experiments.archive.stale_adapter import assert_no_evaluation_leakage
 
 
 @dataclass(frozen=True)

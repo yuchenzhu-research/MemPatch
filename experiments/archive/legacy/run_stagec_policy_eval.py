@@ -9,7 +9,7 @@ from typing import Any, Dict, List, Tuple
 from retracemem.evaluation.multiagent.data.stagec_dataset import build_stagec_dataset
 from retracemem.proposers.typed_revision_policy import PromptTypedRevisionPolicy
 from retracemem.evaluation.multiagent.data.episodes_fc_dev import get_fc_dev_episodes
-from experiments.multiagent.metrics import (
+from experiments.archive.metrics import (
     compute_fixed_candidate_metrics,
     aggregate_fixed_candidate_metrics,
 )

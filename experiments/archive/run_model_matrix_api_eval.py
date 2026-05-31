@@ -15,7 +15,8 @@ import yaml
 from pathlib import Path
 from typing import Any
 
-from experiments.multiagent.run_stageab_api_eval import run_stageab_eval, EvalRunConfig
+from retracemem.evaluation.multiagent.runner import run_stageab_eval
+from retracemem.evaluation.multiagent.config import EvalRunConfig
 
 
 def main() -> None:

@@ -3,7 +3,7 @@ from __future__ import annotations
 import copy
 import pytest
 from retracemem.evaluation.multiagent.data.dev_expansion import generate_expanded_episodes
-from experiments.multiagent.legacy.validate_candidate_semantics import validate_episode
+from experiments.archive.legacy.validate_candidate_semantics import validate_episode
 
 def test_all_70_candidates_pass_validation():
     episodes_with_gold = generate_expanded_episodes()
