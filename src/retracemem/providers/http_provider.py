@@ -38,22 +38,43 @@ class HTTPLLMProvider(BaseLLMProvider):
             return "SILICONFLOW_API_KEY"
         if provider_normalized == "openai":
             return "OPENAI_API_KEY"
+        # Try loading config dynamically
+        try:
+            from retracemem.providers.provider_factory import load_providers_config
+            config = load_providers_config()
+            if provider_normalized in config:
+                env_var = config[provider_normalized].get("api_key_env")
+                if env_var:
+                    return env_var
+        except Exception:
+            pass
         raise ValueError(f"Unsupported HTTP provider: {provider}")
 
     def _resolve_api_key(self, provider: str) -> str | None:
-        env_var = self._provider_env_var(provider)
         if self.api_key:
             return self.api_key
+        if hasattr(self, "_api_key_env") and self._api_key_env:
+            val = os.environ.get(self._api_key_env)
+            if val:
+                return val
+        env_var = self._provider_env_var(provider)
         return os.environ.get(env_var)
 
     def _redact_secret_values(self, text: str, provider: str) -> str:
         redacted = text
-        for value in (self.api_key, os.environ.get(self._provider_env_var(provider))):
+        env_var = None
+        try:
+            env_var = self._provider_env_var(provider)
+        except Exception:
+            pass
+        env_val = os.environ.get(env_var) if env_var else None
+        for value in (self.api_key, env_val):
             if value:
                 redacted = redacted.replace(value, "[REDACTED]")
         return redacted
 
     def _resolve_endpoint_and_headers(self, provider: str) -> tuple[str, dict[str, str]]:
+        self._provider_env_var(provider)
         headers = {"Content-Type": "application/json"}
         api_key = self._resolve_api_key(provider)
 
@@ -64,8 +85,20 @@ class HTTPLLMProvider(BaseLLMProvider):
             endpoint = "https://generativelanguage.googleapis.com/v1beta/openai/chat/completions"
         elif provider.lower() == "siliconflow":
             endpoint = "https://api.siliconflow.cn/v1/chat/completions"
-        else:
+        elif provider.lower() == "openai":
             endpoint = "https://api.openai.com/v1/chat/completions"
+        else:
+            # Check config fallback
+            endpoint = "https://api.openai.com/v1/chat/completions"
+            try:
+                from retracemem.providers.provider_factory import load_providers_config
+                config = load_providers_config()
+                if provider.lower() in config:
+                    url = config[provider.lower()].get("default_base_url")
+                    if url:
+                        endpoint = url
+            except Exception:
+                pass
 
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"

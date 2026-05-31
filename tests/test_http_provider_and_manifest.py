@@ -11,7 +11,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), os.pardir))
 
 import pytest
 from retracemem.evaluation.manifest import RunConfiguration, RunManifest, compute_file_sha256, get_git_commit_sha
-from retracemem.providers.http_provider import HTTPLLMProvider
+from retracemem.providers import HTTPLLMProvider, OpenAICompatibleProvider, get_provider
 from retracemem.schemas import ModelCallTrace
 
 
@@ -332,4 +332,34 @@ def test_capped_provider_wrapper() -> None:
     with pytest.raises(RuntimeError) as excinfo:
         capped_token.generate(prompt="Hello", model_id="m", provider="p")
     assert "Hard token cap" in str(excinfo.value)
+
+
+def test_openai_compatible_provider_and_factory() -> None:
+    # 1. Test get_provider returns correct instances
+    provider_mock = get_provider("mock", default_response="factory mock response")
+    from retracemem.providers.base import MockLLMProvider
+    assert isinstance(provider_mock, MockLLMProvider)
+    assert provider_mock.default_response == "factory mock response"
+
+    provider_openai = get_provider("openai", api_key="test-key-factory")
+    assert isinstance(provider_openai, OpenAICompatibleProvider)
+    assert provider_openai.api_key == "test-key-factory"
+
+    provider_siliconflow = get_provider("siliconflow", api_key="sf-key", base_url="https://sf.api")
+    assert isinstance(provider_siliconflow, OpenAICompatibleProvider)
+    assert provider_siliconflow.api_key == "sf-key"
+    assert provider_siliconflow.base_url == "https://sf.api"
+
+
+def test_provider_factory_validation(monkeypatch) -> None:
+    # Unknown provider fails closed
+    with pytest.raises(ValueError, match="Unsupported provider: 'unknown_brand'"):
+        get_provider("unknown_brand")
+
+    # Unregistered environment key fails closed during generate call
+    monkeypatch.delenv("OPENAI_API_KEY", raising=False)
+    p = get_provider("openai")
+    trace = p.generate(prompt="Hello", model_id="gpt-4o", provider="openai")
+    assert trace.status == "failure"
+    assert "API key missing for provider" in trace.error_message
 
