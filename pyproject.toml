@@ -9,6 +9,7 @@ description = "Evidence-preserving reversible belief revision for dynamic agent 
 requires-python = ">=3.10"
 dependencies = [
     "python-dotenv>=1.0,<2",
+    "PyYAML>=6,<7",
 ]
 
 [project.optional-dependencies]
