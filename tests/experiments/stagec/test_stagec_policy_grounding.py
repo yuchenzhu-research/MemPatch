@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import pytest
-from experiments.multiagent.stagec_policy import PromptTypedRevisionPolicy
-from experiments.multiagent.contracts import FixedCandidateSubmission
+from retracemem.proposers.typed_revision_policy import PromptTypedRevisionPolicy
+from retracemem.evaluation.multiagent.contracts import FixedCandidateSubmission
 
 @pytest.fixture
 def fake_submission() -> FixedCandidateSubmission:
