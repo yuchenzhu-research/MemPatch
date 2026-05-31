@@ -1,0 +1,23 @@
+# ReTrace-Learn LoRA SFT config (small model, graph extractor or revision proposer).
+model:
+  base_model: Qwen/Qwen2.5-3B-Instruct
+  dtype: bfloat16
+  max_seq_len: 4096
+
+lora:
+  r: 16
+  alpha: 32
+  dropout: 0.05
+  target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
+
+train:
+  task: revision          # one of: graph | revision
+  output_dir: outputs/retrace_learn/ckpt_qwen3b_lora
+  per_device_train_batch_size: 4
+  gradient_accumulation_steps: 4
+  learning_rate: 2.0e-4
+  num_train_epochs: 3
+  warmup_ratio: 0.03
+  logging_steps: 5
+  save_steps: 50
+  seed: 17
