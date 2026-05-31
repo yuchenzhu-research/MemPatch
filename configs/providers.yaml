@@ -1,0 +1,13 @@
+providers:
+  siliconflow:
+    provider_type: "openai_compatible"
+    api_key_env: "SILICONFLOW_API_KEY"
+    default_base_url: "https://api.siliconflow.cn/v1/chat/completions"
+  openai:
+    provider_type: "openai_compatible"
+    api_key_env: "OPENAI_API_KEY"
+    default_base_url: "https://api.openai.com/v1/chat/completions"
+  deepseek:
+    provider_type: "openai_compatible"
+    api_key_env: "DEEPSEEK_API_KEY"
+    default_base_url: "https://api.deepseek.com/chat/completions"
