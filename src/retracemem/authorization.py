@@ -41,7 +41,38 @@ def authorize(
     bypass_gate: bool = False,
     audit_metadata: dict[str, Any] | None = None,
 ) -> AuthorizationResult:
-    """Pluggable deterministic authorization kernel."""
+    """Deterministic shared-memory revision authorization kernel (sole public entrypoint).
+
+    This is the single public entrypoint for executing authorization; callers
+    must not invoke :class:`RevisionGate` or the DPA directly. The model's only
+    authority is to *propose* typed actions; admission and final status are
+    decided here, deterministically.
+
+    Mapping to the Paper 1 formalism (concept -> code):
+
+    * ``G_t = (E_t, B_t, C_t, D_t, R_t)`` — the typed graph state assembled below
+      from the method-visible ``view``:
+        - ``E_t`` evidence ledger        -> ``view.evidence_context`` -> ``ledger``
+        - ``B_t`` beliefs                -> ``view.candidate_beliefs`` (+ replacements)
+        - ``C_t`` conditions             -> ``view.candidate_conditions_by_belief``
+        - ``D_t`` REQUIRES anchors       -> ``view.dependency_edges_by_belief``
+        - ``R_t`` admitted revision edges -> edges added to ``store`` after the gate
+    * Typed actions ``A_t`` — the proposed ``EvidenceEdge`` objects carried in
+      ``proposal_batches`` (SUPERSEDES/BLOCKS/RELEASES/REAFFIRMS/UNCERTAIN).
+    * RevisionGate ``Gamma`` — ``gate.admit_*``: structural admission of proposed
+      effects; rejected edges produce no graph mutation (fail-closed). With
+      ``bypass_gate`` set (ablation only) admission is forced True.
+    * Append-only graph update — admitted edges are *added*; nothing is deleted,
+      preserving the immutable-evidence invariant.
+    * DPA status ``sigma_t(b)`` — ``DefeatPathAuthorizationAlgorithm.authorize``
+      computes each belief's status with canonical precedence
+      ``SUPERSEDES > PREREQUISITE_BLOCK > UNRESOLVED_UNCERTAIN > AUTHORIZED`` and
+      deterministic temporal tie-breaking; only ``AUTHORIZED`` beliefs enter
+      ``authorized_belief_ids``.
+
+    The returned ``trace`` records admitted anchors, per-edge gate decisions, and
+    accepted defeat paths so the decision is fully reconstructable for audit.
+    """
     ledger = EpisodeLedger()
     store = BeliefStore()
     gate = RevisionGate()
