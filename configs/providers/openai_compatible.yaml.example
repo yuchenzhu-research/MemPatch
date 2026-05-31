@@ -1,0 +1,15 @@
+# Generic OpenAI-compatible endpoint (OpenAI, DeepSeek, Together, Fireworks, ...).
+# Copy to configs/providers/<name>.yaml and edit, then:
+#   --provider-config configs/providers/<name>.yaml
+name: openai_compatible
+mode: openai-chat
+base_url: https://api.openai.com/v1/chat/completions
+api_key_env: OPENAI_API_KEY          # name of env var holding the key (never the key itself)
+model: gpt-4o-mini
+timeout: 60
+max_retries: 2
+temperature: 0.0
+max_tokens: 1024
+stream: false
+# extra_headers:                     # optional, e.g. for OpenRouter / org routing
+#   HTTP-Referer: https://example.org
