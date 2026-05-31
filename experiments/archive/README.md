@@ -5,16 +5,18 @@ canonical Paper 1 evaluation path. It is kept for historical reference and as a
 starting point for future experiments. It is **not** wired into the active
 package and is **not** a paper-facing entrypoint.
 
-## What lives here
+Experiment numbering below follows the canonical hierarchy in `AGENTS.md`
+(E0 oracle/replay · E1 fixed-candidate · E2 Stage C training · E3 closed-loop
+multi-agent workflow · E4 STALE/CUPMem external validation).
 
-- **E2 — Action ablation** (`legacy/action_ablation_eval.py`): typed-action
-  vocabulary ablations.
-- **E3 — Composition** (`legacy/composition_eval.py`): compositional revision
-  evaluation.
-- **E4/E6 — STALE / CUPMem external validation**
+- **Action ablation** (`legacy/action_ablation_eval.py`): historical typed-action
+  vocabulary ablation study.
+- **Composition** (`legacy/composition_eval.py`): historical compositional
+  revision evaluation (precursor to the E3 closed-loop workflow).
+- **E4 — STALE / CUPMem external validation**
   (`stale_adapter.py`, `stale_cupmem_comparison.py`,
   `stale_style_retrace_validation.py`, `cupmem_adapter.py`, `cupmem_bridge.py`):
-  external stale-memory baseline/compatibility analysis.
+  external stale-memory baseline / compatibility analysis.
 - **Older comparison / diagnostic runners and data models** (`legacy/*`,
   `methods.py`, `metrics.py`, `episodes_dev.py`, `fixtures.py`,
   `run_model_matrix_api_eval.py`, `run_stagec_adapter_eval.py`): superseded by
@@ -27,8 +29,9 @@ package and is **not** a paper-facing entrypoint.
    (`tests/test_active_package_boundary.py`) enforces this.
 2. **Not a primary README command.** The canonical commands are
    `python3 scripts/evaluate.py {stage-a,stage-b,stage-c}`.
-3. **Reference only.** If E2/E3/E4 results are needed for final paper numbers,
-   they should be **reimplemented through the shared evaluation pipeline**
+3. **Reference only.** If any of these studies (action ablation, composition, or
+   E4 STALE/CUPMem external validation) are needed for final paper numbers, they
+   should be **reimplemented through the shared evaluation pipeline**
    (`retracemem.evaluation.multiagent`), not revived from this directory as-is.
 4. Tests that exercise archived code live under `tests/experiments/archive/` and
    are clearly marked as archived/legacy status.
