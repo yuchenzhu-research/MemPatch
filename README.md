@@ -78,6 +78,43 @@ Stage A and Stage C are **proposer families** that plug into the identical
 commit → DPA path; Stage C does not import any Stage A/B runner code — shared
 logic lives in `retracemem.evaluation.multiagent`.
 
+### Current research map
+
+```text
+ReTrace-Core                 Parser + RevisionGate + DPA + Audit trace
+                             (deterministic, API-free, shared by every stage)
+
+Stage B                      DirectJudge baseline (predicts final status, bypasses Core)
+Stage A                      API-zero-shot proposer over a FIXED candidate view → Core
+Stage C-Fixed                learned proposer over the SAME fixed candidate view → Core
+                             (controlled comparison against Stage A)
+Stage C-Raw / ReTrace-Learn-Full   raw dialogue → learned graph extractor →
+                             learned typed revision proposer → Core
+                             (final, main research direction)
+```
+
+- **Fixed-Candidate Protocol** (Stage A, Stage C-Fixed): a pre-built candidate
+  view is given to every method; isolates *proposer* quality. Runner:
+  `scripts/run_fixed_candidate_matrix.py`.
+- **Raw-Dialogue Protocol** (Stage C-Raw): raw dialogue is the only input; the
+  graph extractor and proposer are both exercised end-to-end. Runner:
+  `scripts/run_raw_dialogue_matrix.py`.
+
+A serialized fixed-candidate view rendered as text is **not** raw dialogue — do
+not conflate the two. Both matrix runners run fully offline (oracle / replay /
+mock components, no API keys) and emit a JSON + CSV metrics summary plus a
+per-prediction JSONL. See
+[`docs/results/retrace_learn_full_smoke.md`](docs/results/retrace_learn_full_smoke.md)
+for the smoke loop and
+[`docs/retrace_learn_full_plan.md`](docs/retrace_learn_full_plan.md) for the
+Stage C-Raw design.
+
+> **Paper boundary.** Paper 1 may include raw-dialogue graph extraction, a
+> learned typed-revision proposer, DPA-in-the-loop typed-action reward, and
+> SFT / rejection-sampling / DPO / GRPO over *explicit* typed actions. Paper 2
+> owns latent / hidden-state memory, delayed-future-utility consolidation,
+> learned forgetting, and biological-memory mechanisms.
+
 ---
 
 ## Repository layout
