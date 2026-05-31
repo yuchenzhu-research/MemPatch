@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from retracemem.proposers.typed_revision_policy import (
     ClosedAPIZeroShotProposer,
     ClosedAPIZeroShotConstrainedProposer,
+    ConflictAwareConstrainedProposer,
 )
 from retracemem.evaluation.multiagent.config import EvalRunConfig, make_live_client
 from retracemem.evaluation.multiagent.cases import load_eval_cases
@@ -42,6 +43,7 @@ def run_stageab_eval(config: EvalRunConfig) -> tuple[dict[str, Any], dict[str, A
     base_url = config.base_url
     output_dir = config.output_dir
     constrained = config.constrained
+    stage_a_variant = config.stage_a_variant
     diagnostic = config.diagnostic
 
     method = config.method
@@ -53,6 +55,10 @@ def run_stageab_eval(config: EvalRunConfig) -> tuple[dict[str, Any], dict[str, A
 
     if output_dir.startswith("artifacts/"):
         print("\n⚠ WARNING: output_dir starts with 'artifacts/'. Please consider using 'outputs/runs/' instead.\n")
+
+    constrained_path = method == "StageA-Constrained" or constrained
+    if stage_a_variant == "conflict_aware" and not constrained_path:
+        print("\n⚠ WARNING: --stage-a-variant conflict_aware has no effect without --constrained; using default zero-shot proposer.\n")
 
     print("=" * 80)
     print("STAGE A VS STAGE B API EVALUATION RUNNER (CORE)")
@@ -134,7 +140,12 @@ def run_stageab_eval(config: EvalRunConfig) -> tuple[dict[str, Any], dict[str, A
             max_repair_rounds=config.max_repair_rounds,
         )
     elif method == "StageA-Constrained" or constrained:
-        proposer_a = ClosedAPIZeroShotConstrainedProposer(
+        constrained_cls = (
+            ConflictAwareConstrainedProposer
+            if stage_a_variant == "conflict_aware"
+            else ClosedAPIZeroShotConstrainedProposer
+        )
+        proposer_a = constrained_cls(
             provider_kind=prov_a,
             model_id=mid_a,
             client=cli_a,
@@ -241,6 +252,8 @@ def run_stageab_eval(config: EvalRunConfig) -> tuple[dict[str, Any], dict[str, A
                 "seed": 42,
             },
             "cases_evaluated": len(processed_cases),
+            "constrained": constrained_path,
+            "stage_a_variant": stage_a_variant,
             "output_directory": output_dir,
             "git_commit_sha": "unknown",
             "code_commit_sha": "unknown",
