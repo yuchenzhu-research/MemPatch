@@ -123,6 +123,53 @@ def build_candidate_actions(submission: Any) -> list[dict[str, Any]]:
     return CandidateActionBuilder.build_candidates(submission)
 
 
+def detect_local_conflict(submission: Any) -> tuple[bool, list[str], list[str]]:
+    """Deterministically detect a same-scope belief-level conflict.
+
+    A conflict is flagged only when the submission exhibits the structural
+    signature of two competing beliefs about the same object with no safe
+    structural resolution (no replacement to SUPERSEDES with, no condition to
+    BLOCKS/RELEASES). Concretely, all of the following must hold:
+
+    - There are at least two candidate beliefs.
+    - There are no candidate replacement beliefs (no SUPERSEDES handle).
+    - There are no candidate condition anchors (no BLOCKS/RELEASES handle).
+    - The new evidence grounds at least one candidate belief while at least one
+      other candidate belief is grounded only in prior evidence (i.e. the new
+      submission introduces a belief that competes with a previously
+      established one).
+
+    This uses only method-visible structure (candidate beliefs, their
+    source-evidence grounding, and the submission's new_evidence_id). It never
+    reads gold targets, gold statuses, failure-type labels, or evaluator
+    expectations.
+
+    Returns ``(triggered, established_belief_ids, new_belief_ids)`` where
+    ``established_belief_ids`` are the previously established beliefs that the
+    new evidence does not ground (the contradicted/unresolved candidates) and
+    ``new_belief_ids`` are the beliefs introduced by the new evidence.
+    """
+    candidate_beliefs = list(getattr(submission, "candidate_beliefs", ()) or ())
+    if len(candidate_beliefs) < 2:
+        return False, [], []
+    if getattr(submission, "candidate_replacement_beliefs", ()):
+        return False, [], []
+    for _, conds in getattr(submission, "candidate_conditions_by_belief", ()) or ():
+        if conds:
+            return False, [], []
+
+    new_ev_id = submission.new_evidence_id
+    new_belief_ids = [
+        b.belief_id for b in candidate_beliefs if new_ev_id in (b.source_evidence_ids or ())
+    ]
+    established_belief_ids = [
+        b.belief_id for b in candidate_beliefs if new_ev_id not in (b.source_evidence_ids or ())
+    ]
+    if new_belief_ids and established_belief_ids:
+        return True, established_belief_ids, new_belief_ids
+    return False, [], []
+
+
 def rename_string(s: str | None, old_ns: str, new_ns: str) -> str | None:
     if s is None:
         return None

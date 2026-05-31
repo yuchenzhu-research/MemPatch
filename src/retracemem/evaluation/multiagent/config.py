@@ -23,6 +23,7 @@ class EvalRunConfig:
     base_url: str | None = None
     output_dir: str = "outputs/runs/stageab_dev70"
     constrained: bool = False
+    stage_a_variant: str = "default"
     diagnostic: bool = False
     method: str | None = None
     allow_fallback_to_zeroshot: bool = False

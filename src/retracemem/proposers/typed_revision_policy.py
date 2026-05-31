@@ -826,6 +826,141 @@ class ClosedAPIZeroShotConstrainedProposer(TypedRevisionProposer):
         )
 
 
+CONFLICT_HANDLING_RULE = (
+    "\n### Conflict handling rule\n"
+    "REAFFIRMS is only for new evidence that directly confirms a target belief "
+    "and does not conflict with another visible belief or observation. It is "
+    "distinct from UNCERTAIN/BLOCKS/SUPERSEDES, which express conflict, "
+    "invalidation, or replacement.\n"
+    "If two candidate beliefs make incompatible claims about the same "
+    "object/scope/time, do not independently reaffirm both. Mark the "
+    "contradicted or unresolved belief UNCERTAIN, or use BLOCKS/SUPERSEDES if "
+    "the candidate structure supports it. Do not select REAFFIRMS for two "
+    "mutually incompatible beliefs in the same local conflict unless the new "
+    "evidence explicitly reconciles them.\n"
+)
+
+
+class ConflictAwareConstrainedProposer(ClosedAPIZeroShotConstrainedProposer):
+    """Constrained proposer variant with conflict-aware prompt affordances.
+
+    Identical to :class:`ClosedAPIZeroShotConstrainedProposer` except that it:
+
+    - Always includes a stable conflict-handling rule + REAFFIRMS guardrail in
+      the system prompt.
+    - When a deterministic same-scope belief conflict is detected
+      (:func:`retracemem.multiagent.utils.detect_local_conflict`), surfaces a
+      conflict notice in the user prompt and annotates the competing
+      candidates so the contradicted belief's UNCERTAIN affordance is
+      semantically clear.
+    - Records ``conflict_warning_triggered`` and ``prompt_variant`` in the
+      proposal metadata (decision audit) for debugging.
+
+    It does not add new action types, change the candidate action builder's
+    structural output, touch RevisionGate, or change deterministic DPA.
+    """
+
+    proposer_name = "closed_api_zero_shot_constrained_conflict_aware"
+    policy_variant = "zero_shot_constrained_conflict_aware"
+
+    def build_system_prompt(self, candidates: list[dict[str, Any]]) -> str:
+        return super().build_system_prompt(candidates) + CONFLICT_HANDLING_RULE
+
+    def _annotate_candidates(
+        self,
+        candidates: list[dict[str, Any]],
+        established_belief_ids: list[str],
+        new_belief_ids: list[str],
+    ) -> list[dict[str, Any]]:
+        established = set(established_belief_ids)
+        annotated: list[dict[str, Any]] = []
+        for c in candidates:
+            c = dict(c)
+            bid = c.get("target_belief_id")
+            if c["action_type"] == "UNCERTAIN" and bid in established:
+                c["why_candidate"] = (
+                    f"{c['why_candidate']} [conflict-resolving: belief {bid} is "
+                    "contradicted by the newly introduced competing belief; "
+                    "marking it UNCERTAIN reflects the unresolved conflict]"
+                )
+            elif c["action_type"] == "REAFFIRMS" and bid in established:
+                c["why_candidate"] = (
+                    f"{c['why_candidate']} [caution: do not REAFFIRMS belief "
+                    f"{bid} while it conflicts with a competing belief]"
+                )
+            annotated.append(c)
+        return annotated
+
+    def _conflict_notice(
+        self,
+        established_belief_ids: list[str],
+        new_belief_ids: list[str],
+    ) -> str:
+        return (
+            "\n\n### Conflict Notice\n"
+            "The new evidence introduces a competing belief "
+            f"({', '.join(new_belief_ids)}) that conflicts with the "
+            f"previously established belief(s) ({', '.join(established_belief_ids)}) "
+            "about the same object. There is no replacement or condition anchor "
+            "to resolve this structurally. Do not reaffirm both sides: prefer "
+            "UNCERTAIN for the contradicted/unresolved belief rather than "
+            "REAFFIRMS."
+        )
+
+    def propose(
+        self,
+        submission: FixedCandidateSubmission,
+        *,
+        exemplars: tuple[ApprovedRevisionExemplar, ...] = (),
+    ) -> ProposalPolicyOutput:
+        from dataclasses import replace
+        from retracemem.multiagent.utils import build_candidate_actions, detect_local_conflict
+
+        candidates = build_candidate_actions(submission)
+        triggered, established_belief_ids, new_belief_ids = detect_local_conflict(submission)
+        if triggered:
+            candidates = self._annotate_candidates(
+                candidates, established_belief_ids, new_belief_ids
+            )
+
+        def build_prompt():
+            system_prompt = self.build_system_prompt(candidates)
+            user_prompt = self.build_user_prompt(submission, candidates)
+            if triggered:
+                user_prompt += self._conflict_notice(established_belief_ids, new_belief_ids)
+            return f"System:\n{system_prompt}\n\nUser:\n{user_prompt}"
+
+        def parse(text):
+            return self.parse_response(
+                text,
+                example_id=f"ex_{submission.submission_id}",
+                submission=submission,
+                candidates=candidates,
+            )
+
+        out = call_and_repair_loop(
+            proposer=self,
+            submission=submission,
+            build_prompt_fn=build_prompt,
+            parse_fn=parse,
+            client=self.client,
+            model_id=self.model_id,
+            provider_kind=self.provider_kind,
+            repair_on_parse_error=self.repair_on_parse_error,
+            max_repair_rounds=self.max_repair_rounds,
+            mock_response_fn=lambda: self._mock_response(submission, candidates),
+            mock_repair_fn=lambda r_idx: self._mock_repair_response(submission, candidates, r_idx),
+        )
+
+        new_metadata = dict(out.metadata)
+        new_metadata["prompt_variant"] = self.policy_variant
+        new_metadata["conflict_warning_triggered"] = triggered
+        if triggered:
+            new_metadata["conflict_established_belief_ids"] = list(established_belief_ids)
+            new_metadata["conflict_new_belief_ids"] = list(new_belief_ids)
+        return replace(out, metadata=new_metadata)
+
+
 class ClosedAPIICLProposer(TypedRevisionProposer):
     proposer_name = "closed_api_icl"
     policy_variant = "icl"
