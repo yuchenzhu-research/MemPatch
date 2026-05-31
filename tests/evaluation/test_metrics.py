@@ -1,6 +1,13 @@
+import csv
+import json
+
 import pytest
 
-from retracemem.evaluation.metrics import evaluate_predictions, aggregate_metrics
+from retracemem.evaluation.metrics import (
+    aggregate_metrics,
+    evaluate_predictions,
+    write_matrix_outputs,
+)
 
 
 def test_evaluate_predictions_perfect():
@@ -73,3 +80,33 @@ def test_aggregate_metrics():
     agg = aggregate_metrics([ep1, ep2])
     assert agg["final_status_accuracy"] == 0.75
     assert agg["parser_error_rate"] == 0.5
+
+
+def test_write_matrix_outputs(tmp_path):
+    out_json = tmp_path / "sub" / "metrics.json"
+    aggregated = {
+        "oracle_proposer": {"final_status_accuracy": 1.0, "parser_error_rate": 0.0},
+        "directjudge_mock": {"final_status_accuracy": 0.9, "parser_error_rate": 0.0},
+    }
+    rows = [
+        {"method": "oracle_proposer", "example_id": "ex_0", "final_status_accuracy": 1.0},
+        {"method": "directjudge_mock", "example_id": "ex_0", "final_status_accuracy": 0.9},
+    ]
+
+    paths = write_matrix_outputs(str(out_json), aggregated, rows)
+
+    # JSON metrics summary round-trips
+    with open(paths["json"], "r", encoding="utf-8") as f:
+        assert json.load(f) == aggregated
+
+    # CSV summary has a header + one row per method
+    with open(paths["csv"], "r", encoding="utf-8") as f:
+        reader = list(csv.reader(f))
+    assert reader[0][0] == "method"
+    assert {r[0] for r in reader[1:]} == {"oracle_proposer", "directjudge_mock"}
+
+    # JSONL predictions has one line per prediction row
+    with open(paths["predictions"], "r", encoding="utf-8") as f:
+        pred_lines = [json.loads(line) for line in f if line.strip()]
+    assert len(pred_lines) == 2
+    assert pred_lines[0]["method"] == "oracle_proposer"

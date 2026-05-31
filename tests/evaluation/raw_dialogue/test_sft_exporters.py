@@ -5,14 +5,33 @@ import sys
 
 import pytest
 
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+
 
 def test_sft_exporters_execution(tmp_path):
-    # Setup temporary paths for output files
+    # Self-contained: generate the synthetic dataset into the temp dir first, so
+    # the exporters do not depend on any pre-existing outputs/ artifact.
+    python_bin = sys.executable
+    synth_in = tmp_path / "raw_dialogue_synth.jsonl"
     graph_sft_out = tmp_path / "graph_sft.jsonl"
     revision_sft_out = tmp_path / "revision_sft.jsonl"
 
-    # Use python executable to run the exporter scripts
-    python_bin = sys.executable
+    res_synth = subprocess.run(
+        [
+            python_bin,
+            "scripts/build_raw_dialogue_synth.py",
+            "--out",
+            str(synth_in),
+            "--n",
+            "26",
+            "--seed",
+            "7",
+        ],
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+    )
+    assert res_synth.returncode == 0, f"Synth builder failed: {res_synth.stderr}"
 
     # Run graph extractor exporter
     res_graph = subprocess.run(
@@ -20,12 +39,13 @@ def test_sft_exporters_execution(tmp_path):
             python_bin,
             "scripts/export_graph_extractor_sft.py",
             "--in-file",
-            "outputs/raw_dialogue_synth.jsonl",
+            str(synth_in),
             "--out-file",
             str(graph_sft_out),
         ],
         capture_output=True,
         text=True,
+        cwd=REPO_ROOT,
     )
     assert res_graph.returncode == 0, f"Graph exporter failed: {res_graph.stderr}"
 
@@ -35,12 +55,13 @@ def test_sft_exporters_execution(tmp_path):
             python_bin,
             "scripts/export_revision_proposer_sft.py",
             "--in-file",
-            "outputs/raw_dialogue_synth.jsonl",
+            str(synth_in),
             "--out-file",
             str(revision_sft_out),
         ],
         capture_output=True,
         text=True,
+        cwd=REPO_ROOT,
     )
     assert res_revision.returncode == 0, f"Revision exporter failed: {res_revision.stderr}"
 

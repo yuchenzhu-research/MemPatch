@@ -5,6 +5,15 @@ This report presents the execution results of the first complete `ReTrace-Learn-
 > [!NOTE]
 > **Experimental Status**: The metrics presented in this report are generated using oracle / replay / perturbed-mock policies. These are **smoke results** meant to validate the data pipeline and parser harness, not final scientific evaluation results for the paper.
 
+> [!IMPORTANT]
+> **No model has been trained.** Every "learned" method here is a *replay* of gold
+> actions or a *perturbed mock*; the LoRA SFT / DPO / GRPO entrypoints in
+> `src/retrace_learn/training/` are documented skeletons (they lazily import
+> `transformers`/`peft`/`trl` and are intentionally left to wire up a concrete
+> trainer once a GPU runtime is available). Stage C is therefore **not** complete:
+> the data export, reward, and evaluation harness exist and run, but a trained
+> proposer/extractor does not. Treat the numbers below as harness validation only.
+
 ---
 
 ## 1. Protocol A: Fixed-Candidate Revision Control
@@ -54,8 +63,10 @@ $$\text{Raw Dialogue} \xrightarrow{\text{Graph Extractor}} \text{Candidate View}
 
 ## 3. Reproduction & Execution
 
-To reproduce the smoke runs locally, execute the following commands in order:
+To reproduce the smoke runs locally, execute the following commands in order
+(prefix with `.venv/bin/` if you use the project virtualenv):
 
+```bash
 python scripts/build_raw_dialogue_synth.py --out outputs/smoke/raw_dialogue_synth.jsonl --n 50 --seed 7
 
 python scripts/run_fixed_candidate_matrix.py --input outputs/smoke/raw_dialogue_synth.jsonl --out outputs/smoke/fixed_candidate_metrics.json
@@ -63,6 +74,27 @@ python scripts/run_fixed_candidate_matrix.py --input outputs/smoke/raw_dialogue_
 python scripts/run_raw_dialogue_matrix.py --input outputs/smoke/raw_dialogue_synth.jsonl --out outputs/smoke/raw_dialogue_metrics.json
 
 python -m pytest -q
+```
+
+Each matrix runner writes three artifacts derived from `--out` (all under the
+git-ignored `outputs/`):
+
+- `<out>.json` — aggregated metrics summary (one block per method).
+- `<out>.csv` — the same summary as a `method × metric` table.
+- `<out>.predictions.jsonl` — per-(method, example) prediction records
+  (`predicted_actions`, `predicted_final_statuses`, per-episode `metrics`).
+
+## 3a. Limitations
+
+- All "learned" rows are gold-action replays or perturbed mocks; no neural model
+  is trained or loaded.
+- The synthetic generator covers 13 deterministic case families with a single
+  new-evidence trigger per case; it is not a natural-language benchmark.
+- DirectJudge baselines are mocked at fixed accuracy (0.90 / 0.80) to exercise
+  the metric harness, not to estimate real model performance.
+- Final-status accuracy and grounding are computed against deterministic DPA gold
+  derived from the same generator, so they validate the harness rather than
+  generalization.
 
 ---
 
