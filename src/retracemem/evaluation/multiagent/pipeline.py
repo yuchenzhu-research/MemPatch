@@ -158,6 +158,13 @@ def run_retrace_variant_on_episode(
             "first_pass_parser_error": proposal_output.metadata.get("first_pass_parser_error"),
             "repair_triggered": proposal_output.metadata.get("repair_triggered"),
             "repair_success": proposal_output.metadata.get("repair_success"),
+            # Prompt-variant / conflict-aware visibility (debug only; not used by
+            # metrics). Surfaced from ProposalPolicyOutput.metadata so conflict
+            # diagnostics appear in stage_a_parsed.jsonl.
+            "prompt_variant": proposal_output.metadata.get("prompt_variant"),
+            "conflict_warning_triggered": proposal_output.metadata.get("conflict_warning_triggered"),
+            "conflict_established_belief_ids": proposal_output.metadata.get("conflict_established_belief_ids"),
+            "conflict_new_belief_ids": proposal_output.metadata.get("conflict_new_belief_ids"),
         })
 
     # Run Stage A sequence commit to get final DPA statuses
