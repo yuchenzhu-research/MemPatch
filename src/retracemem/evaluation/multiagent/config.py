@@ -57,11 +57,8 @@ def make_live_client(
     if not model:
         raise ValueError("Live mode requires a valid --model ID.")
 
-    output_path = Path(output_dir)
-    output_path.mkdir(parents=True, exist_ok=True)
-    cache_file = output_path / "api_cache.jsonl"
-    cache = JSONLCache(str(cache_file))
-
+    # Resolve the provider / API key FIRST so a fail-closed missing-key error does
+    # not create an empty run directory or cache file as a side effect.
     try:
         if provider_config_path:
             cfg = load_provider_config_file(provider_config_path).with_overrides(base_url=base_url)
@@ -83,6 +80,11 @@ def make_live_client(
         # Preserve the historical contract ("Live mode requires API key ...") while
         # surfacing the specific env var the resolved provider expects.
         raise ValueError(f"Live mode requires API key: {exc}") from exc
+
+    output_path = Path(output_dir)
+    output_path.mkdir(parents=True, exist_ok=True)
+    cache_file = output_path / "api_cache.jsonl"
+    cache = JSONLCache(str(cache_file))
 
     client = CachedLLMClient(cache=cache, provider_client=provider_client)
     print(f"✓ Initialized live API client [{label}] with cache at: {cache_file}")
