@@ -229,3 +229,8 @@ def test_item10_stage_b_canonicalization_tracked_separately():
     assert v["canonical_belief_id"] == "b_location"
     assert v["canonicalization_applied"] is True
     assert v["canonicalization_type"] == "prefix"
+
+
+def test_runner_imports_json():
+    from retracemem.evaluation.multiagent import runner
+    assert hasattr(runner, "json")
