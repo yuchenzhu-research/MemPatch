@@ -11,7 +11,7 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "src")))
 
-from retracemem.evaluation.metrics import evaluate_predictions, aggregate_metrics
+from retracemem.evaluation.metrics import evaluate_predictions, aggregate_metrics, write_matrix_outputs
 from retracemem.schemas import EvidenceNode, BeliefNode, ConditionNode, DependencyEdge
 from retracemem.methods.contracts import SharedCandidateView
 from retracemem.authorization import authorize, EvidenceProposalBatch
@@ -56,6 +56,17 @@ def main() -> None:
         "raw_directjudge_mock"
     ]
     results_by_method = {m: [] for m in methods}
+    prediction_rows: list[dict[str, Any]] = []
+
+    def _record(method: str, data: dict, actions: list, statuses: dict, metrics: dict) -> None:
+        prediction_rows.append({
+            "method": method,
+            "example_id": data["example_id"],
+            "case_family": data.get("metadata", {}).get("case_family") or data.get("case_family"),
+            "predicted_actions": actions,
+            "predicted_final_statuses": statuses,
+            "metrics": metrics,
+        })
 
     for data in episodes:
         gold_actions = data["metadata"]["gold_actions"]
@@ -86,6 +97,7 @@ def main() -> None:
             valid_evidence_ids=valid_evidences_o,
         )
         results_by_method["oracle_graph_oracle_proposer"].append(res_o)
+        _record("oracle_graph_oracle_proposer", data, gold_actions, pred_statuses_o, res_o)
 
         # ----------------------------------------------------
         # 2. Oracle Graph + Learned Replay Proposer
@@ -110,6 +122,7 @@ def main() -> None:
             valid_evidence_ids=valid_evidences_o,
         )
         results_by_method["oracle_graph_learned_replay_proposer"].append(res_or)
+        _record("oracle_graph_learned_replay_proposer", data, replay_actions, pred_statuses_or, res_or)
 
         # ----------------------------------------------------
         # 3. Mock Extracted Graph + Learned Replay Proposer
@@ -144,6 +157,7 @@ def main() -> None:
             valid_evidence_ids=valid_evidences_p,
         )
         results_by_method["mock_extracted_graph_learned_replay_proposer"].append(res_p)
+        _record("mock_extracted_graph_learned_replay_proposer", data, replay_actions_p, pred_statuses_p, res_p)
 
         # ----------------------------------------------------
         # 4. Raw DirectJudge Mock (Stage B, directly classifies raw dialogue to belief statuses)
@@ -168,21 +182,19 @@ def main() -> None:
             gold_actions=[],
         )
         results_by_method["raw_directjudge_mock"].append(res_raw_dj)
+        _record("raw_directjudge_mock", data, [], raw_dj_statuses, res_raw_dj)
 
     # Compute aggregate metrics
     aggregated = {}
     for m in methods:
         aggregated[m] = aggregate_metrics(results_by_method[m])
 
-    # Ensure output dir exists
-    out_dir = os.path.dirname(args.out)
-    if out_dir:
-        os.makedirs(out_dir, exist_ok=True)
+    paths = write_matrix_outputs(args.out, aggregated, prediction_rows)
 
-    with open(args.out, "w", encoding="utf-8") as f:
-        json.dump(aggregated, f, indent=2)
-
-    print(f"Protocol B Runner complete. Stored smoke results at {args.out}.")
+    print(
+        "Protocol B Runner complete. "
+        f"metrics(json)={paths['json']} metrics(csv)={paths['csv']} predictions={paths['predictions']}"
+    )
 
 
 if __name__ == "__main__":

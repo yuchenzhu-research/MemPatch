@@ -61,6 +61,8 @@ def main() -> None:
                 "subagent_roles": data["subagent_roles"],
                 "gold_graph": data["gold_graph"],
                 "metadata": {
+                    "case_family": data["case_family"],
+                    "seed": args.seed,
                     "new_evidence_id": data["new_evidence_id"],
                     "gold_actions": data["gold_actions"],
                     "gold_final_statuses": data["gold_final_statuses"]
