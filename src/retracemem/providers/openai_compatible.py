@@ -13,5 +13,13 @@ class OpenAICompatibleProvider(HTTPLLMProvider):
         api_key: str | None = None,
         base_url: str | None = None,
         timeout: float = 30.0,
+        max_retries: int = 0,
+        extra_headers: dict[str, str] | None = None,
     ) -> None:
-        super().__init__(api_key=api_key, base_url=base_url, timeout=timeout)
+        super().__init__(
+            api_key=api_key,
+            base_url=base_url,
+            timeout=timeout,
+            max_retries=max_retries,
+            extra_headers=extra_headers,
+        )

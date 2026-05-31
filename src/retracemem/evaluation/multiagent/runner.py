@@ -82,7 +82,10 @@ def run_stageab_eval(config: EvalRunConfig) -> tuple[dict[str, Any], dict[str, A
     # Initialize live client if live
     client = None
     if live:
-        client = make_live_client(output_dir, provider, model, api_key, base_url)
+        client = make_live_client(
+            output_dir, provider, model, api_key, base_url,
+            provider_config_path=config.provider_config_path,
+        )
 
     # Resume capability: load already processed cases
     stage_a_raw_rows = []
@@ -310,6 +313,7 @@ def main() -> None:
     parser.add_argument("--model", default="deepseek-ai/DeepSeek-V3", help="Model ID")
     parser.add_argument("--api-key", default=None, help="Explicit API key")
     parser.add_argument("--base-url", default=None, help="Explicit base URL")
+    parser.add_argument("--provider-config", default=None, help="Path to a single-provider config file (configs/providers/*.yaml).")
     parser.add_argument("--output-dir", default="outputs/runs/stageab_dev70", help="Output directory")
     parser.add_argument("--constrained", action="store_true", help="Use constrained zero-shot proposer")
     parser.add_argument("--diagnostic", action="store_true", help="Enable diagnostic mode (decision audit)")
@@ -327,6 +331,7 @@ def main() -> None:
         model=args.model,
         api_key=args.api_key,
         base_url=args.base_url,
+        provider_config_path=args.provider_config,
         output_dir=args.output_dir,
         constrained=args.constrained,
         diagnostic=args.diagnostic,
