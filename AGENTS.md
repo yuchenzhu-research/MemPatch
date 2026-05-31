@@ -26,9 +26,10 @@ Paper 1 is centered on multi-agent/subagent shared-memory revision authorization
 Multiple subagents may submit evidence-bearing memory updates to a shared long-term memory. ReTrace controls which revisions are allowed to affect the shared usable memory basis.
 
 Stage naming and configuration hierarchy:
-- Stage A = `ReTrace-API-ZeroShot` / `ReTrace-Prompt` (API model proposes typed revision actions).
-- Stage B = `DirectJudge-API` (API model directly predicts final usability status without decomposition).
-- Stage C = `ReTrace-AdaptiveProposer` (explicit typed revision proposal learning policy, which includes API-ZeroShot, API-ICL, optional Hosted-FT, and Open LoRA-SFT).
+- Stage A = `ReTrace-API-ZeroShot` / `ReTrace-Prompt` (API model proposes typed revision actions over a fixed candidate view, then routes through ReTrace-Core. Do NOT embed a dialogue extractor in Stage A).
+- Stage B = `DirectJudge-API` (API baseline model directly predicts final belief usability status, completely bypassing ReTrace-Core).
+- Stage C-Fixed = `ReTrace-AdaptiveProposer-Fixed` (learned proposer replaces prompt proposer, evaluated over fixed candidate views to preserve controlled comparison).
+- Stage C-Raw / ReTrace-Learn-Full = `ReTrace-Learn-Full` (main research direction: consumes raw dialogues/submissions -> extracts graph nodes/dependencies via a learned extractor -> proposes typed actions -> commits through deterministic ReTrace-Core).
 
 Public API Boundaries:
 - `authorize(...)` is the public deterministic authorization kernel. Neither DPA nor RevisionGate should be invoked directly by external callers. All updates/admissions and deterministic routing happen entirely inside `authorize`.
