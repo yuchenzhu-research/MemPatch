@@ -22,6 +22,7 @@ class EvalRunConfig:
     api_key: str | None = None
     base_url: str | None = None
     output_dir: str = "outputs/runs/stageab_dev70"
+    dataset: str = "dev_expansion"
     constrained: bool = False
     stage_a_variant: str = "default"
     diagnostic: bool = False
