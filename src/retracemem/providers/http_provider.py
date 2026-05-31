@@ -24,10 +24,14 @@ class HTTPLLMProvider(BaseLLMProvider):
         api_key: str | None = None,
         base_url: str | None = None,
         timeout: float = 30.0,
+        max_retries: int = 0,
+        extra_headers: dict[str, str] | None = None,
     ) -> None:
         self.api_key = api_key
         self.base_url = base_url
         self.timeout = timeout
+        self.max_retries = max_retries
+        self.extra_headers = dict(extra_headers or {})
 
     @staticmethod
     def _provider_env_var(provider: str) -> str:
@@ -103,6 +107,7 @@ class HTTPLLMProvider(BaseLLMProvider):
         if api_key:
             headers["Authorization"] = f"Bearer {api_key}"
 
+        headers.update(self.extra_headers)
         return endpoint, headers
 
     def generate(
@@ -179,62 +184,68 @@ class HTTPLLMProvider(BaseLLMProvider):
         prompt_tokens = 0
         completion_tokens = 0
         total_tokens = 0
+        attempts = 0
 
-        try:
-            req = urllib.request.Request(
-                endpoint,
-                data=json.dumps(payload).encode("utf-8"),
-                headers=headers,
-                method="POST",
-            )
-            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                resp_data = json.loads(resp.read().decode("utf-8"))
-                
-                # Check for standard chat completions structure
-                choices = resp_data.get("choices")
-                if choices and isinstance(choices, list) and len(choices) > 0:
-                    choice = choices[0]
-                    message = choice.get("message")
-                    if message and isinstance(message, dict):
-                        response_text = message.get("content")
-                    elif isinstance(choice, str):
-                        response_text = choice
-                
-                if response_text is None:
-                    # In case of alternative API structure
-                    response_text = resp_data.get("response") or str(resp_data)
-                
-                # Parse usage metrics
-                usage = resp_data.get("usage")
-                if isinstance(usage, dict):
-                    prompt_tokens = int(usage.get("prompt_tokens") or 0)
-                    completion_tokens = int(usage.get("completion_tokens") or 0)
-                    total_tokens = int(usage.get("total_tokens") or prompt_tokens + completion_tokens)
-                else:
-                    # Fallback token estimate
-                    prompt_tokens = len(prompt.split())
-                    completion_tokens = len(response_text.split()) if response_text else 0
-                    total_tokens = prompt_tokens + completion_tokens
-
-        except urllib.error.HTTPError as e:
-            status = "failure"
-            body = ""
+        # Retry transient transport/HTTP errors up to ``max_retries`` extra times.
+        for attempt in range(max(0, self.max_retries) + 1):
+            attempts = attempt + 1
+            status = "success"
+            error_message = None
             try:
-                body = e.read().decode("utf-8")
-            except Exception:
+                req = urllib.request.Request(
+                    endpoint,
+                    data=json.dumps(payload).encode("utf-8"),
+                    headers=headers,
+                    method="POST",
+                )
+                with urllib.request.urlopen(req, timeout=self.timeout) as resp:
+                    resp_data = json.loads(resp.read().decode("utf-8"))
+
+                    # Check for standard chat completions structure
+                    choices = resp_data.get("choices")
+                    if choices and isinstance(choices, list) and len(choices) > 0:
+                        choice = choices[0]
+                        message = choice.get("message")
+                        if message and isinstance(message, dict):
+                            response_text = message.get("content")
+                        elif isinstance(choice, str):
+                            response_text = choice
+
+                    if response_text is None:
+                        # In case of alternative API structure
+                        response_text = resp_data.get("response") or str(resp_data)
+
+                    # Parse usage metrics
+                    usage = resp_data.get("usage")
+                    if isinstance(usage, dict):
+                        prompt_tokens = int(usage.get("prompt_tokens") or 0)
+                        completion_tokens = int(usage.get("completion_tokens") or 0)
+                        total_tokens = int(usage.get("total_tokens") or prompt_tokens + completion_tokens)
+                    else:
+                        # Fallback token estimate
+                        prompt_tokens = len(prompt.split())
+                        completion_tokens = len(response_text.split()) if response_text else 0
+                        total_tokens = prompt_tokens + completion_tokens
+                break
+            except urllib.error.HTTPError as e:
+                status = "failure"
                 body = ""
-            raw_error = f"{type(e).__name__}: {str(e)}"
-            if body:
-                raw_error = f"{raw_error}; body={body[:1000]}"
-            error_message = self._redact_secret_values(raw_error, provider)
-            prompt_tokens = len(prompt.split())
-            total_tokens = prompt_tokens
-        except Exception as e:
-            status = "failure"
-            error_message = self._redact_secret_values(f"{type(e).__name__}: {str(e)}", provider)
-            # Basic fallback counts on failure
-            prompt_tokens = len(prompt.split())
-            total_tokens = prompt_tokens
+                try:
+                    body = e.read().decode("utf-8")
+                except Exception:
+                    body = ""
+                raw_error = f"{type(e).__name__}: {str(e)}"
+                if body:
+                    raw_error = f"{raw_error}; body={body[:1000]}"
+                error_message = self._redact_secret_values(raw_error, provider)
+                prompt_tokens = len(prompt.split())
+                total_tokens = prompt_tokens
+            except Exception as e:
+                status = "failure"
+                error_message = self._redact_secret_values(f"{type(e).__name__}: {str(e)}", provider)
+                # Basic fallback counts on failure
+                prompt_tokens = len(prompt.split())
+                total_tokens = prompt_tokens
 
         latency_ms = (time.perf_counter() - start_time) * 1000.0
 
@@ -259,7 +270,7 @@ class HTTPLLMProvider(BaseLLMProvider):
             prompt_tokens=prompt_tokens,
             completion_tokens=completion_tokens,
             total_tokens=total_tokens,
-            retries=0,
+            retries=max(0, attempts - 1),
             error_message=error_message,
             eligible_for_replay=eligible_for_replay,
             metadata=metadata or {},

@@ -1,13 +1,39 @@
+# Provider registry resolved by `--provider <name>` (see src/retracemem/providers).
+#
+# `mode` selects the request style:
+#   openai-chat              -> /v1/chat/completions (OpenAI + compatible servers)
+#   custom-openai-compatible -> same shape, for self-hosted endpoints (vLLM, LM Studio)
+#   anthropic-messages       -> /v1/messages (Claude schema)
+#   ollama-chat              -> /api/chat (local, no auth)
+#
+# Secrets are NEVER stored here. Only the *name* of the env var (`api_key_env`)
+# is recorded; the value is resolved from the environment at call time.
+# Single-provider files in configs/providers/*.yaml carry the full field set
+# (timeout, max_retries, temperature, max_tokens, extra_headers, ...) and are
+# loaded via `--provider-config <path>`.
 providers:
   siliconflow:
-    provider_type: "openai_compatible"
+    mode: "openai-chat"
+    provider_type: "openai_compatible"  # legacy alias, kept for back-compat
     api_key_env: "SILICONFLOW_API_KEY"
     default_base_url: "https://api.siliconflow.cn/v1/chat/completions"
   openai:
+    mode: "openai-chat"
     provider_type: "openai_compatible"
     api_key_env: "OPENAI_API_KEY"
     default_base_url: "https://api.openai.com/v1/chat/completions"
   deepseek:
+    mode: "openai-chat"
     provider_type: "openai_compatible"
     api_key_env: "DEEPSEEK_API_KEY"
     default_base_url: "https://api.deepseek.com/chat/completions"
+  anthropic:
+    mode: "anthropic-messages"
+    api_key_env: "ANTHROPIC_API_KEY"
+    default_base_url: "https://api.anthropic.com/v1/messages"
+    extra_headers:
+      anthropic-version: "2023-06-01"
+  ollama:
+    mode: "ollama-chat"
+    api_key_env: null
+    default_base_url: "http://localhost:11434/api/chat"
