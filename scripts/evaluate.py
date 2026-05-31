@@ -46,6 +46,12 @@ def _add_stageab_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--base-url", default=None, help="Explicit base URL.")
     p.add_argument("--output-dir", default="outputs/runs/stageab_dev70", help="Output directory.")
     p.add_argument("--constrained", action="store_true", help="Use constrained zero-shot proposer.")
+    p.add_argument(
+        "--stage-a-variant",
+        choices=("default", "conflict_aware"),
+        default="default",
+        help="Constrained Stage A policy variant ('conflict_aware' adds conflict-handling affordances; requires --constrained).",
+    )
     p.add_argument("--diagnostic", action="store_true", help="Enable diagnostic decision audit.")
     p.add_argument("--repair-on-parse-error", action="store_true", help="Enable parse-error repair rounds.")
     p.add_argument("--max-repair-rounds", type=int, default=0, help="Maximum number of repair rounds.")
@@ -64,6 +70,7 @@ def _run_stageab(args: argparse.Namespace) -> None:
         base_url=args.base_url,
         output_dir=args.output_dir,
         constrained=args.constrained,
+        stage_a_variant=args.stage_a_variant,
         diagnostic=args.diagnostic,
         method=None,
         repair_on_parse_error=args.repair_on_parse_error,
