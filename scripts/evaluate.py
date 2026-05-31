@@ -45,6 +45,13 @@ def _add_stageab_args(p: argparse.ArgumentParser) -> None:
     p.add_argument("--api-key", default=None, help="Explicit API key.")
     p.add_argument("--base-url", default=None, help="Explicit base URL.")
     p.add_argument("--output-dir", default="outputs/runs/stageab_dev70", help="Output directory.")
+    p.add_argument(
+        "--dataset",
+        choices=("dev_expansion", "paper1_balanced"),
+        default="dev_expansion",
+        help="Evaluation dataset: 'dev_expansion' (70-case dev diagnostic, default) or "
+             "'paper1_balanced' (420-case internal balanced synthetic validation set).",
+    )
     p.add_argument("--constrained", action="store_true", help="Use constrained zero-shot proposer.")
     p.add_argument(
         "--stage-a-variant",
@@ -69,6 +76,7 @@ def _run_stageab(args: argparse.Namespace) -> None:
         api_key=args.api_key,
         base_url=args.base_url,
         output_dir=args.output_dir,
+        dataset=args.dataset,
         constrained=args.constrained,
         stage_a_variant=args.stage_a_variant,
         diagnostic=args.diagnostic,

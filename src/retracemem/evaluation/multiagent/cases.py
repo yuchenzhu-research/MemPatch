@@ -7,7 +7,14 @@ from retracemem.evaluation.multiagent.contracts import (
     TypedRevisionTarget,
 )
 from retracemem.evaluation.multiagent.data.dev_expansion import generate_expanded_episodes
+from retracemem.evaluation.multiagent.data.paper1_balanced import (
+    generate_paper1_balanced_episodes,
+)
 from retracemem.multiagent.utils import rename_submission
+
+DATASET_DEV_EXPANSION = "dev_expansion"
+DATASET_PAPER1_BALANCED = "paper1_balanced"
+AVAILABLE_DATASETS = (DATASET_DEV_EXPANSION, DATASET_PAPER1_BALANCED)
 
 
 def rename_string(s: str | None, old_ns: str, new_ns: str) -> str | None:
@@ -95,18 +102,36 @@ def rename_episode_and_gold(
 
 
 
-def load_eval_cases(max_cases: int | None = None) -> list[tuple[FixedCandidateInputEpisode, FixedCandidateGoldRecord]]:
-    """Loads expanded episodes and applies namespace replacements for _v5 cases."""
-    ep_gold_pairs = generate_expanded_episodes()
-    print(f"Successfully loaded {len(ep_gold_pairs)} episodes from dev_expansion.")
+def load_eval_cases(
+    max_cases: int | None = None,
+    dataset: str = DATASET_DEV_EXPANSION,
+) -> list[tuple[FixedCandidateInputEpisode, FixedCandidateGoldRecord]]:
+    """Loads evaluation episodes for the selected dataset.
 
-    processed_cases: list[tuple[FixedCandidateInputEpisode, FixedCandidateGoldRecord]] = []
-    for ep, gold in ep_gold_pairs:
-        if ep.episode_id.endswith("_v5"):
-            ep_renamed, gold_renamed = rename_episode_and_gold(ep, gold)
-            processed_cases.append((ep_renamed, gold_renamed))
-        else:
-            processed_cases.append((ep, gold))
+    ``dev_expansion`` (default) is the 70-case development diagnostic set and
+    keeps the legacy ``_v5`` -> ``__heldout_base`` namespace rename.
+    ``paper1_balanced`` is the internal balanced synthetic validation set
+    (420 cases); it is loaded verbatim from its deterministic generator.
+    """
+    if dataset not in AVAILABLE_DATASETS:
+        raise ValueError(
+            f"Unknown dataset '{dataset}'. Available: {', '.join(AVAILABLE_DATASETS)}."
+        )
+
+    if dataset == DATASET_PAPER1_BALANCED:
+        ep_gold_pairs = generate_paper1_balanced_episodes()
+        print(f"Successfully loaded {len(ep_gold_pairs)} episodes from paper1_balanced.")
+        processed_cases = list(ep_gold_pairs)
+    else:
+        ep_gold_pairs = generate_expanded_episodes()
+        print(f"Successfully loaded {len(ep_gold_pairs)} episodes from dev_expansion.")
+        processed_cases = []
+        for ep, gold in ep_gold_pairs:
+            if ep.episode_id.endswith("_v5"):
+                ep_renamed, gold_renamed = rename_episode_and_gold(ep, gold)
+                processed_cases.append((ep_renamed, gold_renamed))
+            else:
+                processed_cases.append((ep, gold))
 
     if max_cases is not None:
         processed_cases = processed_cases[:max_cases]
