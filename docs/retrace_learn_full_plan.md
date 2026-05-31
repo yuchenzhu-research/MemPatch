@@ -116,3 +116,20 @@ The target output of the **Learned Graph Extractor** must serialize to a strict 
 ```
 
 This schema is strictly validated by `retrace_learn.schemas.validate_memory_graph`.
+
+---
+
+## 5. First Full Experiment Loop
+
+We have implemented the first complete, runnable evaluation pipeline. It provides deterministic components to execute the full evaluation loops of Protocol A (Fixed-Candidate) and Protocol B (Raw-Dialogue) on a synthetic dataset.
+
+### Reproduction Commands
+To run the full pipeline and output metric JSON summaries:
+
+python scripts/build_raw_dialogue_synth.py --out outputs/smoke/raw_dialogue_synth.jsonl --n 50 --seed 7
+
+python scripts/run_fixed_candidate_matrix.py --input outputs/smoke/raw_dialogue_synth.jsonl --out outputs/smoke/fixed_candidate_metrics.json
+
+python scripts/run_raw_dialogue_matrix.py --input outputs/smoke/raw_dialogue_synth.jsonl --out outputs/smoke/raw_dialogue_metrics.json
+
+python -m pytest -q
