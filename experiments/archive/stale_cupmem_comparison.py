@@ -6,7 +6,7 @@ import os
 import sys
 from typing import Any, Dict, List
 from retracemem.multiagent.commit import commit_subagent_submission
-from experiments.cupmem_bridge import map_delta_to_submission, map_invalidation_to_submission
+from experiments.archive.cupmem_bridge import map_delta_to_submission, map_invalidation_to_submission
 
 
 def run_arm_a_original(

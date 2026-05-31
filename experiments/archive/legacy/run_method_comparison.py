@@ -7,9 +7,9 @@ import os
 import subprocess
 from typing import Any, Dict, List
 from retracemem.evaluation.multiagent.contracts import ExperimentRunManifest
-from experiments.multiagent.episodes_dev import get_dev_episodes
-from experiments.multiagent.methods import NaiveLastWriteWinsMethod, ReTraceMethod
-from experiments.multiagent.metrics import compute_episode_metrics, aggregate_metrics
+from experiments.archive.episodes_dev import get_dev_episodes
+from experiments.archive.methods import NaiveLastWriteWinsMethod, ReTraceMethod
+from experiments.archive.metrics import compute_episode_metrics, aggregate_metrics
 
 
 def get_git_commit_sha() -> str:

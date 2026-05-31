@@ -4,7 +4,7 @@ import json
 import os
 from typing import Any
 from retracemem.multiagent.commit import commit_subagent_submission
-from experiments.multiagent.fixtures import get_diagnostic_fixtures
+from experiments.archive.fixtures import get_diagnostic_fixtures
 from retracemem.schemas import AuthorizationStatus
 
 

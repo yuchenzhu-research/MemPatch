@@ -11,7 +11,7 @@ from retracemem.schemas import (
     DependencyEdge,
 )
 from retracemem.methods.contracts import SharedCandidateView
-from experiments.stale_adapter import (
+from experiments.archive.stale_adapter import (
     split_stale_record,
     assert_no_evaluation_leakage,
     iter_chronological_sessions,
@@ -156,7 +156,7 @@ def test_authorize_with_proposals():
 
 
 def test_map_cupmem_candidate_to_subagent_submission():
-    from experiments.cupmem_adapter import CupMemRevisionCandidate, map_cupmem_candidate_to_subagent_submission
+    from experiments.archive.cupmem_adapter import CupMemRevisionCandidate, map_cupmem_candidate_to_subagent_submission
     import pytest
 
     ev_old = EvidenceNode(

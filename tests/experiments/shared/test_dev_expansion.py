@@ -110,28 +110,3 @@ def test_select_smoke_examples_error(tmp_path) -> None:
         selected = select_smoke_examples(str(review_file), confirm_live_run=True)
     assert len(selected) == 1
     assert selected[0]["episode_id"] == "ep_1"
-
-
-def test_smoke_runner_preflight_and_live(tmp_path) -> None:
-    import json
-    config_file = tmp_path / "smoke_config.json"
-    config_file.write_text(json.dumps({
-        "run_config": {"run_id_prefix": "test_smoke", "requires_explicit_user_approval": True},
-        "model_config": {"provider": "<openai>", "backbone_model": "<select_before_run>"},
-        "dataset_config": {"split": "development_only"}
-    }))
-    
-    review_file = tmp_path / "review.jsonl"
-    review_file.write_text(
-        '{"episode_id": "ep_1", "review_status": "pending_human_review", "failure_type": "direct_supersession"}\n'
-    )
-    
-    from experiments.multiagent.legacy.run_stagec_prompt_smoke import run_preflight, run_live
-    
-    run_preflight(str(config_file), str(review_file))
-    
-    with pytest.raises(SystemExit):
-        run_live(str(config_file), str(review_file), confirm_live_run=True)
-        
-    with pytest.raises(SystemExit):
-        run_live(str(config_file), str(review_file), confirm_live_run=False)

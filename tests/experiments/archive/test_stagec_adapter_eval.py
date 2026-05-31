@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from collections import Counter
-from experiments.multiagent.run_stagec_adapter_eval import (
+from experiments.archive.run_stagec_adapter_eval import (
     extract_first_json_array,
     normalize_actions,
     get_target_ids,
