@@ -9,6 +9,7 @@ import argparse
 import csv
 import datetime
 import hashlib
+import json
 import os
 from pathlib import Path
 from typing import Any
