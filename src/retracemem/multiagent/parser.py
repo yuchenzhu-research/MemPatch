@@ -94,11 +94,32 @@ def extract_json_array(text: str) -> list:
             {"json_str_preview": array_str[:200]}
         )
 
-def extract_json_object(text: str) -> dict:
-    """Extract and parse a valid JSON object from the output, fail-closed."""
+def extract_json_object(
+    text: str,
+    *,
+    require_top_level_keys: set[str] | None = None,
+) -> dict:
+    """Extract and parse a valid JSON object from the output, fail-closed.
+
+    When ``require_top_level_keys`` is provided, the parser will only accept an
+    object that contains all of those keys. The first attempt always targets the
+    complete top-level object (first ``{`` to last ``}``). If that object is
+    malformed (e.g. truncated output), the fallback scan is restricted to
+    objects that satisfy ``require_top_level_keys`` so a nested object (such as a
+    ``rejection_reasons`` block) is never returned in place of the intended
+    top-level object. This keeps constrained parsing fail-closed instead of
+    silently accepting arbitrary nested JSON.
+    """
     cleaned = strip_think_tags(text)
     cleaned = strip_code_fences(cleaned)
-    
+
+    def _satisfies(data: object) -> bool:
+        if not isinstance(data, dict):
+            return False
+        if require_top_level_keys is not None:
+            return require_top_level_keys.issubset(data.keys())
+        return True
+
     start_idx = cleaned.find("{")
     if start_idx == -1:
         raise StructuredParseError(
@@ -118,20 +139,32 @@ def extract_json_object(text: str) -> dict:
     obj_str = cleaned[start_idx:end_idx + 1]
     try:
         data = json.loads(obj_str)
+        # A successful top-level parse is the complete object. Return it even if
+        # it lacks required keys so the caller can raise a precise schema error.
         if isinstance(data, dict):
             return data
     except Exception as e:
-        # Retry by scanning
+        # Retry by scanning. With require_top_level_keys set, only accept an
+        # object that carries the required keys so we never fall back to a
+        # nested object when the outer object is malformed/truncated.
         for i in range(len(cleaned)):
             if cleaned[i] == "{":
                 for j in range(len(cleaned), i, -1):
                     if cleaned[j-1] == "}":
                         try:
                             data = json.loads(cleaned[i:j])
-                            if isinstance(data, dict):
+                            if _satisfies(data):
                                 return data
                         except Exception:
                             pass
+        if require_top_level_keys is not None:
+            raise StructuredParseError(
+                ParseErrorCode.JSON_DECODE_FAILED,
+                "Could not parse complete top-level constrained JSON object "
+                f"(required keys {sorted(require_top_level_keys)} not found in a "
+                f"well-formed top-level object): {e}",
+                {"json_str_preview": obj_str[:200]}
+            )
         raise StructuredParseError(
             ParseErrorCode.JSON_DECODE_FAILED,
             f"Could not parse valid JSON object: {e}",
