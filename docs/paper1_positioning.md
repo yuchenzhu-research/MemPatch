@@ -8,26 +8,17 @@ computed by a deterministic Defeat-Path Authorization kernel.
 
 ## What Paper 1 is about
 
-**Multi-agent / subagent shared-memory revision authorization.** Multiple
-subagents submit evidence-bearing memory updates to a shared long-term memory;
-ReTrace controls which revisions are authorized to affect the shared *usable*
-memory basis, and emits an audit trace for each decision.
+**Multi-agent / subagent shared-memory revision authorization.** Multiple subagents submit evidence-bearing memory updates to a shared long-term memory. The primary contribution is a trainable shared-memory framework (**ReTrace-Learn**) that learns to extract memory graphs and propose structured typed actions under the feedback of a deterministic verification backend (**ReTrace-Engine**).
 
-The contribution is the **authorization mechanism** plus a fair method
-comparison (Stage A typed proposer vs. Stage B DirectJudge baseline vs. Stage C
-adaptive typed proposer) over identical candidate contexts, with a deterministic
-kernel guaranteeing reproducible commits.
+The contribution is the **verifiable revision learning system** plus a fair method comparison (Prompt-Proposer vs. DirectJudge baseline vs. ReTrace-Learn) over identical contexts, with a deterministic authorization engine guaranteeing reproducible commits and training signals.
 
 ## In scope
 
-- The deterministic `authorize(...)` kernel, DPA semantics, and precedence.
+- The deterministic `authorize(...)` kernel inside ReTrace-Engine, DPA semantics, and precedence.
 - `RevisionGate` structural / local / auditable admission.
-- The typed action vocabulary (`SUPERSEDES`, `BLOCKS`, `RELEASES`, `REAFFIRMS`,
-  `UNCERTAIN`, `NO_REVISION`) and its distinction from DPA **final statuses**
-  (`AUTHORIZED`, `BLOCKED`, `SUPERSEDED`, `UNRESOLVED`).
-- Evidence provenance / grounding requirements.
-- Stage C as an explicit typed-revision **proposal policy** (including LoRA-SFT),
-  where the final commit stays deterministic and API-free.
+- The minimal, expressive typed action vocabulary (`SUPERSEDES`, `BLOCKS`, `RELEASES`, `REAFFIRMS`, `UNCERTAIN`, `NO_REVISION`) and its distinction from DPA **final statuses** (`AUTHORIZED`, `BLOCKED`, `SUPERSEDED`, `UNRESOLVED`).
+- Evidence provenance / grounding requirements (such as the optional `scope` field).
+- ReTrace-Learn SFT / RSFT / DPO proposal policy optimization, where the final authorization stays deterministic and API-free.
 
 ## Out of scope (belongs to Paper 2)
 

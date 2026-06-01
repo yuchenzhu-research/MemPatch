@@ -135,4 +135,9 @@ class RevisionGate:
             if edge.replacement_belief_id is not None:
                 return GateDecision(False, "replacement_belief_id_only_valid_for_supersedes")
 
+        # Validate scope in metadata if present
+        scope = edge.metadata.get("scope") if edge.metadata else None
+        if scope is not None and not isinstance(scope, str):
+            return GateDecision(False, "invalid_scope_type")
+
         return GateDecision(True, "ok")

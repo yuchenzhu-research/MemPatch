@@ -2,20 +2,16 @@
 
 ## Method variants (the canonical comparison)
 
-Stage A, Stage B, and Stage C are **method variants over the same shared
-pipeline**, evaluated on the **same fixed-candidate cases** for fairness.
+The framework evaluates different proposer methods over the identical candidate contexts for fairness, all routing through the deterministic ReTrace-Engine:
 
-- **Stage A — `ReTrace-API-ZeroShot`**: zero-shot prompted typed proposer →
-  `RevisionGate` → DPA.
-- **Stage B — `DirectJudge-API`**: predicts a final usability verdict directly;
-  no typed actions, gate, or DPA. Baseline only.
-- **Stage C — `ReTrace-AdaptiveProposer`**: adaptive typed-proposer family
-  (API-ZeroShot, API-ICL, Hosted-FT, Open LoRA-SFT) → the *same* commit / DPA
-  path as Stage A.
+- **Prompt-Proposer (Stage A / `ReTrace-Prompt`)**: Zero-shot prompted typed proposer → `RevisionGate` → DPA. Baseline proposer.
+- **DirectJudge (Stage B / `DirectJudge-API`)**: Predicts a final usability verdict directly, completely bypassing the ReTrace-Engine (no typed actions, gate, or DPA). Baseline only.
+- **ReTrace-Learn (Stage C / `ReTrace-AdaptiveProposer`)**: Trainable typed-proposer framework (optimizable via SFT, RSFT, DPO) routing proposals through the identical commit / DPA path of the ReTrace-Engine.
 
-Stage A and Stage B are run **jointly** by the A-vs-B runner so both are scored
-on identical inputs; `scripts/evaluate.py stage-a` and `stage-b` are aliases
-into that joint runner.
+The evaluations map to:
+- **Fixed-Candidate Controlled Revision (Experiment 1)**: Evaluates proposer decision quality given pre-constructed candidate views.
+- **Raw-Dialogue End-to-End Revision (Experiment 2)**: Evaluates the pipeline from raw dialogue (Graph Extractor + Typed Revision Proposer + ReTrace-Engine).
+- **External Validation on STALE / CUPMem (Experiment 3)**: Validates ReTrace-Learn on external benchmarks.
 
 ## Inputs and the leakage boundary
 
@@ -84,25 +80,18 @@ python3 scripts/evaluate.py stage-c --generations-dir path/to/generations --poli
 python3 scripts/export_stagec_data.py
 ```
 
-## Stage C training / promotion gate
+## ReTrace-Learn training / promotion gate
 
-- Only **human-approved reviewed examples** may be used for live smoke or
-  training export. No development candidate is promoted until a human review
-  decision is recorded against an immutable review-pack manifest hash.
-- Stage C **training** code lives in `experiments/multiagent/local_training/`
-  and is out of the evaluation path. The final commit always remains
-  deterministic and API-free.
+- Only **human-approved reviewed examples** may be used for live smoke or training export. No development candidate is promoted until a human review decision is recorded against an immutable review-pack manifest hash.
+- ReTrace-Learn **training** code lives in `src/retrace_learn/training/`. The final commit always remains deterministic and API-free.
 
 ## Paper experiment hierarchy (per `AGENTS.md`)
 
-- **E0** Oracle/Replay kernel validation (mechanism verification).
-- **E1** Fixed-candidate revision evaluation (primary controlled comparison —
-  Stage A vs Stage B vs Stage C on identical candidate contexts).
-- **E2** Stage C training and model-driven proposal evaluation.
-- **E3** Closed-loop multi-agent workflow (shared memory affects downstream).
-- **E4** STALE/CUPMem external validation / compatibility analysis.
+- **Experiment 1: Fixed-Candidate Controlled Revision**
+  Test whether the Typed Revision Proposer can be learned when the candidate memory graph/view is already given. Compares DirectJudge, Prompt-Proposer, SFT, RSFT, DPO, Oracle, and ablations.
+- **Experiment 2: Raw-Dialogue End-to-End Revision Authorization**
+  Test whether the full ReTrace-Learn system can go from raw multi-subagent dialogue to final statuses using Graph Extractor + Typed Revision Proposer + ReTrace-Engine.
+- **Experiment 3: External Validation on STALE / CUPMem**
+  Show that ReTrace-Learn is effective on external stale-memory benchmarks using structural mapping.
 
-Historical implementations of the action-ablation and composition studies, and
-the E4 STALE/CUPMem external validation, are archived under
-`experiments/archive/`; if needed for final paper numbers they should be
-reimplemented through the shared pipeline rather than revived as-is.
+Historical implementations of the action-ablation and composition studies, and the STALE/CUPMem external validation, are archived under `experiments/archive/`; if needed for final paper numbers they should be reimplemented through the shared pipeline.

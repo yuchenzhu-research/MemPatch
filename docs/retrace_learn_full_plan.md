@@ -1,14 +1,14 @@
-# ReTrace-Learn-Full: Raw Dialogue Revision Authorization Protocol
+# ReTrace-Learn: Raw Dialogue Revision Authorization Protocol
 
-This document details the system design, interfaces, and data contracts for **ReTrace-Learn-Full** (Stage C-Raw). It bridges raw dialogue inputs and the deterministic ReTrace-Core revision authorization kernel.
+This document details the system design, interfaces, and data contracts for **ReTrace-Learn**. It bridges raw dialogue inputs and the deterministic **ReTrace-Engine** revision authorization kernel.
 
 ## 1. Protocol Architecture
 
-ReTrace-Learn-Full upgrades the shared-memory revision authorization process by removing the requirement for pre-constructed candidate views. It replaces it with a learned extraction layer:
+ReTrace-Learn upgrades the shared-memory revision authorization process by removing the requirement for pre-constructed candidate views. It replaces it with a learned extraction layer:
 
 ```
 +--------------------------------------------------------------------------+
-|                       Raw Dialogue Protocol (Learn-Full)                 |
+|                       Raw Dialogue Protocol (ReTrace-Learn)              |
 +--------------------------------------------------------------------------+
 | 1. Raw Dialogues / Subagent Submissions (Text)                           |
 |    |                                                                     |
@@ -29,7 +29,8 @@ ReTrace-Learn-Full upgrades the shared-memory revision authorization process by 
 |    +--> Proposed Revision Actions (SUPERSEDES, BLOCKS, etc.)             |
 |    |                                                                     |
 |    v                                                                     |
-| 5. ReTrace-Core Kernel (deterministic runtime)                           |
+| 5. ReTrace-Engine Backend (deterministic runtime)                         |
+|    - Parser                                                              |
 |    - RevisionGate (Structural Admission)                                 |
 |    - Defeat-Path Authorization (DPA)                                     |
 |    |                                                                     |
@@ -41,18 +42,18 @@ ReTrace-Learn-Full upgrades the shared-memory revision authorization process by 
 
 ## 2. Fixed-Candidate Protocol vs. Raw-Dialogue Protocol
 
-### Fixed-Candidate Protocol (Stage A / Stage B / Stage C-Fixed)
-- **Input**: A pre-constructed `FixedCandidateSubmission` that specifies the candidate beliefs, condition anchors, and dependency edges.
+### Fixed-Candidate Protocol
+- **Input**: A pre-constructed candidate view specifying beliefs, condition anchors, and dependency edges.
 - **Task**: The proposer only decides the *revision actions* (e.g., `SUPERSEDES(b1, b2)`). It does not need to parse raw text to construct the belief nodes or conditions.
 - **Purpose**: Serves as a controlled baseline to isolate and compare revision decision-making capabilities.
 
-### Raw-Dialogue Protocol (ReTrace-Learn-Full / Stage C-Raw)
+### Raw-Dialogue Protocol
 - **Input**: A chronological sequence of raw dialogues, agent utterances, or subagent tool submissions.
 - **Task**: 
   1. Extract the memory graph elements (beliefs, conditions, dependency anchors, evidence text) from raw dialogue.
   2. Assemble a temporal candidate view.
   3. Propose typed revision actions.
-  4. Pass everything to the deterministic kernel.
+  4. Pass everything to the deterministic ReTrace-Engine.
 - **Purpose**: Represents the full end-to-end multi-agent shared-memory maintenance pipeline.
 
 ---
@@ -60,9 +61,9 @@ ReTrace-Learn-Full upgrades the shared-memory revision authorization process by 
 ## 3. Strict No-Gold-Leakage Boundary
 
 To guarantee evaluation validity and prevent data leakage:
-1. **Method-Visible Constraint**: During both SFT training and inference, the learned proposer sees *only* the output of the graph extractor and the new evidence. It is completely blind to gold actions or DPA final statuses.
-2. **Evaluator Isolation**: Gold final statuses and conflict categories reside strictly within the evaluation scripts and are used solely to compute rewards or logs.
-3. **No-DirectJudge Fallback**: The learned proposer MUST ONLY emit typed revision actions from the canonical vocabulary. It is strictly prohibited from predicting final DPA statuses (`AUTHORIZED`, `SUPERSEDED`, `BLOCKED`, `UNRESOLVED`) directly, preserving the deterministic nature of `ReTrace-Core`.
+1. **Method-Visible Constraint**: During SFT, RSFT, DPO, and inference, the learned policy sees *only* method-visible inputs (such as the output of the graph extractor and the new evidence). It is completely blind to gold actions or DPA final statuses.
+2. **Evaluator Isolation**: Gold final statuses reside strictly within the evaluation boundary and are used solely to compute rewards or score outputs.
+3. **No-DirectJudge Fallback**: The learned proposer MUST ONLY emit typed revision actions from the canonical vocabulary. It is strictly prohibited from predicting final DPA statuses (`AUTHORIZED`, `SUPERSEDED`, `BLOCKED`, `UNRESOLVED`) directly, preserving the deterministic nature of the `ReTrace-Engine`.
 
 ---
 

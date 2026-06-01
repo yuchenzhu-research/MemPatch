@@ -69,6 +69,32 @@ def test_unknown_action_rejected():
         RevisionAction(action_type="DELETE", target_belief_id="b1", evidence_ids=("e1",)).validate()
 
 
+def test_scope_validation():
+    # scope can be missing/None
+    a = RevisionAction(action_type="REAFFIRMS", target_belief_id="b1", evidence_ids=("e1",))
+    a.validate()
+    assert a.scope is None
+
+    # scope can be a string
+    a_str = RevisionAction(
+        action_type="REAFFIRMS", target_belief_id="b1", evidence_ids=("e1",), scope="partial"
+    )
+    a_str.validate()
+    assert a_str.scope == "partial"
+    assert a_str.to_dict()["scope"] == "partial"
+
+    # scope must be a string if provided
+    with pytest.raises(SchemaValidationError):
+        RevisionAction(
+            action_type="REAFFIRMS", target_belief_id="b1", evidence_ids=("e1",), scope=123  # type: ignore
+        ).validate()
+
+    # round-trip check
+    d = a_str.to_dict()
+    roundtripped = RevisionAction.from_dict(d)
+    assert roundtripped.scope == "partial"
+
+
 def test_synthetic_examples_validate_and_roundtrip():
     for ep in build_synthetic_episodes():
         graph_ex = ep.to_graph_extraction_example()

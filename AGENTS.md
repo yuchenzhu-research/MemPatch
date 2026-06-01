@@ -26,25 +26,24 @@ Paper 1 is centered on multi-agent/subagent shared-memory revision authorization
 Multiple subagents may submit evidence-bearing memory updates to a shared long-term memory. ReTrace controls which revisions are allowed to affect the shared usable memory basis.
 
 Stage naming and configuration hierarchy:
-- Stage A = `ReTrace-API-ZeroShot` / `ReTrace-Prompt` (API model proposes typed revision actions over a fixed candidate view, then routes through ReTrace-Core. Do NOT embed a dialogue extractor in Stage A).
-- Stage B = `DirectJudge-API` (API baseline model directly predicts final belief usability status, completely bypassing ReTrace-Core).
-- Stage C-Fixed = `ReTrace-AdaptiveProposer-Fixed` (learned proposer replaces prompt proposer, evaluated over fixed candidate views to preserve controlled comparison).
-- Stage C-Raw / ReTrace-Learn-Full = `ReTrace-Learn-Full` (main research direction: consumes raw dialogues/submissions -> extracts graph nodes/dependencies via a learned extractor -> proposes typed actions -> commits through deterministic ReTrace-Core).
+- Prompt-Proposer / Stage A = `ReTrace-Prompt` (API baseline model proposes typed revision actions over a fixed candidate view, then routes through ReTrace-Engine).
+- DirectJudge / Stage B = `DirectJudge-API` (API baseline model directly predicts final belief usability status, completely bypassing the ReTrace-Engine).
+- ReTrace-Learn = `ReTrace-Learn` (the main trainable system: consumes raw dialogues/submissions -> extracts graph nodes/dependencies via a learned Graph Extractor -> proposes typed actions via a learned Typed Revision Proposer -> commits through deterministic ReTrace-Engine).
 
 Public API Boundaries:
-- `authorize(...)` is the public deterministic authorization kernel. Neither DPA nor RevisionGate should be invoked directly by external callers. All updates/admissions and deterministic routing happen entirely inside `authorize`.
+- `authorize(...)` is the public deterministic authorization kernel inside ReTrace-Engine. Neither Defeat-Path Authorization (DPA) nor RevisionGate should be invoked directly by external callers. All updates/admissions and deterministic routing happen entirely inside `authorize`.
 - `commit_subagent_submission(...)` and `commit_submission_sequence(...)` are multi-agent integration wrappers around `authorize(...)`.
 
 STALE/CUPMem is an external validation/baseline pathway, not the definition of the paper.
 
 Latent memory, RL consolidation, and delayed-utility learning belong to Paper 2.
 
-## Paper 1 Stage C Training Boundary
+## Paper 1 ReTrace-Learn Training Boundary
 
-Paper 1 includes Stage C: learning an explicit typed revision proposal policy
+Paper 1 includes ReTrace-Learn: learning an explicit typed revision proposal policy
 for multi-agent/subagent shared-memory updates.
 
-The Stage C policy consumes only method-visible inputs:
+The learned policy consumes only method-visible inputs:
 a prior shared-memory context or bounded candidate view, an evidence-bearing
 subagent submission, candidate beliefs/replacements, conditions, and
 pre-existing dependency anchors.
@@ -61,7 +60,7 @@ It proposes explicit revision actions from the canonical vocabulary:
 Final memory commit remains deterministic and API-free:
 
 ```text
-Stage C policy proposal
+ReTrace-Learn proposal
     -> RevisionGate
     -> deterministic DPA / authorize(...)
     -> SharedMemoryCommitResult

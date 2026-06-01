@@ -1,46 +1,32 @@
 # Architecture
 
-ReTrace separates a **deterministic authorization core** from **proposer
-families** and **evaluation glue**. The core never calls an API and is fully
-deterministic; everything model- or benchmark-specific lives outside it.
+ReTrace separates a **trainable proposal system** (**ReTrace-Learn**) from a **deterministic authorization backend** (**ReTrace-Engine**). The engine never calls an LLM API and is fully deterministic; everything model- or benchmark-specific lives outside it.
 
 ## Layers
 
 ```text
-proposer (Stage A prompt / Stage C adaptive)        ── model-facing, replaceable
-        │  typed revision actions over candidate structure
+ReTrace-Learn (Graph Extractor + Typed Revision Proposer) ── learned modules
+        │  proposes typed revision actions (with optional scope)
         ▼
-RevisionGate  ── structural, local, auditable admission of proposed edges
-        ▼
-authorize(view, proposal_batches, …)  ── the single public kernel
-        │  (internally runs deterministic DPA; external callers never call DPA directly)
+ReTrace-Engine Backend (deterministic authorization)
+    ├── Parser + RevisionGate  ── structural, local, auditable admission of proposed edges
+    ├── authorize(view, proposal_batches, …)  ── the single public kernel (runs DPA)
+    └── Defeat-Path Authorization (DPA)  ── computes final statuses
         ▼
 SharedMemoryCommitResult  ── authorized snapshot + audit trace
 ```
 
-### Deterministic core (`src/retracemem/`)
+### Deterministic Backend: ReTrace-Engine (`src/retracemem/`)
 
-- `schemas.py` — immutable dataclass contracts: `EvidenceNode`, `BeliefNode`,
-  `ConditionNode`, `DependencyEdge(REQUIRES)`, and the `EvidenceEdge` types
-  (`BLOCKS`, `RELEASES`, `SUPERSEDES`, `REAFFIRMS`, `UNCERTAIN`).
-- Authorization / TMS — the Defeat-Path Authorization algorithm (DPA) and the
-  `authorize(...)` kernel. DPA assigns each candidate belief a final status in
-  `{AUTHORIZED, BLOCKED, SUPERSEDED, UNRESOLVED}` under the canonical precedence
-  `SUPERSEDES > PREREQUISITE_BLOCK > UNRESOLVED_UNCERTAIN > AUTHORIZED`, with
-  deterministic temporal tie-breaking.
-- `multiagent/` — `commit_subagent_submission(...)` and
-  `commit_submission_sequence(...)`: thin wrappers that order subagent
-  submissions deterministically and route them through `authorize(...)`.
+- `schemas.py` — immutable dataclass contracts: `EvidenceNode`, `BeliefNode`, `ConditionNode`, `DependencyEdge(REQUIRES)`, and the `EvidenceEdge` types (`BLOCKS`, `RELEASES`, `SUPERSEDES`, `REAFFIRMS`, `UNCERTAIN`).
+- Authorization / TMS — the Defeat-Path Authorization algorithm (DPA) and the `authorize(...)` kernel. DPA assigns each candidate belief a final status in `{AUTHORIZED, BLOCKED, SUPERSEDED, UNRESOLVED}` under the canonical precedence `SUPERSEDES > PREREQUISITE_BLOCK > UNRESOLVED_UNCERTAIN > AUTHORIZED`, with deterministic temporal tie-breaking.
+- `multiagent/` — `commit_subagent_submission(...)` and `commit_submission_sequence(...)`: thin wrappers that order subagent submissions deterministically and route them through `authorize(...)`.
 
-### Proposers (`src/retracemem/proposers/`)
+### Proposers & Learned Scaffolding: ReTrace-Learn (`src/retracemem/proposers/` & `src/retrace_learn/`)
 
-- `typed_revision_policy.py` — `PromptTypedRevisionPolicy` and the
-  `ClosedAPIZeroShot*` proposers used by **Stage A** (and reused as the
-  API-ZeroShot member of the Stage C family). Builds prompts from
-  **method-visible** candidate structure only.
-- `replay.py` — the **Stage C** adaptive-proposer replay path: parses decoded
-  adapter/SFT/ICL generations into typed actions, with optional constrained
-  post-validation against the candidate affordances.
+- `typed_revision_policy.py` — `PromptTypedRevisionPolicy` and the `ClosedAPIZeroShot*` proposers used by **Prompt-Proposer (Stage A)**. Builds prompts from method-visible candidate structure only.
+- `replay.py` — the replay path: parses decoded generations into typed actions, with optional constrained post-validation.
+- `src/retrace_learn/` — trainable Graph Extractor and Typed Revision Proposer policies, rollouts, SFT datasets, DPA-in-the-loop reward signal, and RL loops (DPO, GRPO).
 
 ### Shared evaluation engine (`src/retracemem/evaluation/multiagent/`)
 
