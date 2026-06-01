@@ -43,6 +43,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from benchmark.retrace_bench.general_taxonomy import DIFFICULTIES, DOMAINS, FAILURE_MODES
+from scripts.generate_retrace_templateheldout_test import main as generate_templateheldout_main
 
 DOMAIN_NOUN = {
     "software_engineering_agent": ("release blocker", "deployment note", "build owner"),
@@ -600,6 +601,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--test-count", type=int, default=800)
     parser.add_argument("--supervision-root", default="data/retrace_supervision")
     parser.add_argument("--bench-root", default="data/retrace_bench")
+    parser.add_argument("--generate-templateheldout-test", action="store_true")
     args = parser.parse_args(argv)
 
     repo = Path(__file__).resolve().parent.parent
@@ -611,6 +613,17 @@ def main(argv: list[str] | None = None) -> int:
     }
     for cfg in configs:
         _write_split(cfg, out_dirs[cfg.name])
+    if args.generate_templateheldout_test:
+        generate_templateheldout_main(
+            [
+                "--count",
+                str(args.test_count),
+                "--out",
+                str(repo / args.bench_root / "test_800_templateheldout_en" / "scenarios.jsonl"),
+                "--seed",
+                "400000",
+            ]
+        )
     return 0
 
 

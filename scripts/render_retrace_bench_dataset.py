@@ -25,6 +25,10 @@ DOMAIN_NOUN = {
 }
 
 
+def article_for(phrase: str) -> str:
+    return "an" if phrase[:1].lower() in {"a", "e", "i", "o", "u"} else "a"
+
+
 def read_jsonl(path: Path) -> list[dict]:
     rows = []
     with path.open("r", encoding="utf-8") as f:
@@ -166,7 +170,7 @@ def render_one(bp: dict, rng: random.Random) -> dict:
         "primary_failure_mode": bp["primary_failure_mode"],
         "secondary_failure_modes": bp["secondary_failure_modes"],
         "difficulty": bp["difficulty"],
-        "workflow_context": f"{owner.title()} is coordinating a {noun} in {bp['scope']} for synthetic item {bp['case_id']}.",
+        "workflow_context": f"{owner.title()} is coordinating {article_for(noun)} {noun} in {bp['scope']} for synthetic item {bp['case_id']}.",
         "public_input": {"event_trace": events, "initial_memory": initial_memory},
         "tasks": tasks,
         "hidden_gold": {
@@ -219,4 +223,3 @@ def main(argv: list[str] | None = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
-
