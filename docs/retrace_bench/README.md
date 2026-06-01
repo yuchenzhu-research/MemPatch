@@ -1,6 +1,20 @@
 # ReTrace-Bench
 
-**ReTrace-Bench** is an evaluation-only benchmark that evaluates memory reliability in agentic workflows.
+**ReTrace-Bench** is a general, evaluation-only benchmark for **agent memory
+revision reliability** in agentic workflows. It is method-neutral: it does not
+depend on ReTrace-Learn training, and any memory-enabled agent (LLM-only, RAG,
+CRUD store, Mem0-style, or a trained policy) can be scored on it.
+
+## Benchmark paper assets
+
+- **Benchmark-paper framing & gap analysis:** [`benchmark_paper.md`](benchmark_paper.md)
+  — why existing long-context / long-term-dialogue / stale-memory / general-agent
+  benchmarks do not directly measure shared memory revision reliability, and how
+  ReTrace-Bench fills that gap.
+- **Headline baseline results (`sample_80_hard_en`):**
+  [`baseline_results_sample_80_hard_en.md`](baseline_results_sample_80_hard_en.md).
+- **Dataset design / card:** [`dataset_design.md`](dataset_design.md),
+  [`dataset_card_hf.md`](dataset_card_hf.md).
 
 ## Conceptual Framing & Boundary
 
