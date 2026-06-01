@@ -3,6 +3,7 @@ from benchmark.retrace_bench.llm_providers.openai_provider import OpenAIProvider
 from benchmark.retrace_bench.llm_providers.gemini_provider import GeminiProvider
 from benchmark.retrace_bench.llm_providers.anthropic_provider import AnthropicProvider
 from benchmark.retrace_bench.llm_providers.deepseek_provider import DeepSeekProvider
+from benchmark.retrace_bench.llm_providers.siliconflow_provider import SiliconFlowProvider
 
 
 def get_provider(
@@ -17,6 +18,8 @@ def get_provider(
         return AnthropicProvider(api_key=api_key, model=model_name)
     elif "deepseek" in name_lower:
         return DeepSeekProvider(api_key=api_key, model=model_name)
+    elif "siliconflow" in name_lower:
+        return SiliconFlowProvider(api_key=api_key, model=model_name)
     else:
         # Default fallback to OpenAIProvider
         return OpenAIProvider(api_key=api_key, model=model_name)
