@@ -56,7 +56,14 @@ def _parse_evidence_ids(blob: str) -> list[str]:
 class GraphExtractor(Protocol):
     extractor_version: str
 
-    def extract(self, raw_dialogue: str, subagent_roles: list[str]) -> dict[str, Any]:
+    def extract(
+        self,
+        raw_dialogue: str,
+        memory_snapshot: Any | None = None,
+        *,
+        subagent_roles: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         ...
 
 
@@ -65,7 +72,20 @@ class RuleBasedGraphExtractor:
 
     extractor_version = "rule_based_v1"
 
-    def extract(self, raw_dialogue: str, subagent_roles: list[str] | None = None) -> dict[str, Any]:
+    def extract(
+        self,
+        raw_dialogue: str,
+        memory_snapshot: Any | None = None,
+        *,
+        subagent_roles: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        # Backward compatibility for positional subagent_roles as second argument
+        if isinstance(memory_snapshot, list) and all(isinstance(x, str) for x in memory_snapshot):
+            if subagent_roles is None:
+                subagent_roles = memory_snapshot
+                memory_snapshot = None
+
         graph = empty_graph()
         dep_counter = 0
         for line in raw_dialogue.splitlines():
@@ -169,7 +189,20 @@ class LearnedGraphExtractor:
     def __init__(self, generate_fn: GENERATE_FN) -> None:
         self._generate = generate_fn
 
-    def extract(self, raw_dialogue: str, subagent_roles: list[str] | None = None) -> dict[str, Any]:
+    def extract(
+        self,
+        raw_dialogue: str,
+        memory_snapshot: Any | None = None,
+        *,
+        subagent_roles: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        # Backward compatibility for positional subagent_roles as second argument
+        if isinstance(memory_snapshot, list) and all(isinstance(x, str) for x in memory_snapshot):
+            if subagent_roles is None:
+                subagent_roles = memory_snapshot
+                memory_snapshot = None
+
         prompt = build_extraction_prompt(raw_dialogue, subagent_roles or [])
         completion = self._generate(prompt)
         try:
@@ -185,3 +218,43 @@ class LearnedGraphExtractor:
         except SchemaValidationError:
             return empty_graph()
         return base
+
+
+class ClosedAPIGraphExtractor:
+    """Closed-source API based graph extractor (TODO)."""
+
+    extractor_version = "closed_api_v1"
+
+    def __init__(self, client: Any) -> None:
+        self.client = client
+
+    def extract(
+        self,
+        raw_dialogue: str,
+        memory_snapshot: Any | None = None,
+        *,
+        subagent_roles: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        # TODO: Implement closed-source API model graph extraction
+        return empty_graph()
+
+
+class ReplayGraphExtractor:
+    """Replay based graph extractor (TODO)."""
+
+    extractor_version = "replay_v1"
+
+    def __init__(self, pre_extracted_graphs: dict[str, dict[str, Any]]) -> None:
+        self.pre_extracted_graphs = pre_extracted_graphs
+
+    def extract(
+        self,
+        raw_dialogue: str,
+        memory_snapshot: Any | None = None,
+        *,
+        subagent_roles: list[str] | None = None,
+        metadata: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
+        # TODO: Replay matching dialogue graph from self.pre_extracted_graphs
+        return empty_graph()

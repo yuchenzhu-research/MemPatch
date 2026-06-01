@@ -62,6 +62,62 @@ class RuntimeResult:
     parse_result: ParseResult
     engine_errors: tuple[EngineError, ...] = ()
 
+    @property
+    def parser_errors(self) -> tuple[EngineError, ...]:
+        return tuple(e for e in self.engine_errors if e.stage == EngineStage.PARSER)
+
+    @property
+    def gate_errors(self) -> tuple[EngineError, ...]:
+        return tuple(e for e in self.engine_errors if e.stage == EngineStage.REVISION_GATE)
+
+    @property
+    def dpa_errors(self) -> tuple[EngineError, ...]:
+        return tuple(e for e in self.engine_errors if e.stage == EngineStage.DPA)
+
+    @property
+    def warnings(self) -> tuple[EngineError, ...]:
+        return tuple(e for e in self.engine_errors if e.severity == ErrorSeverity.WARNING)
+
+    @property
+    def admitted_actions(self) -> tuple[RevisionAction, ...]:
+        admitted_ids = {
+            d["edge_id"]
+            for d in self.gate_decisions
+            if d.get("admitted")
+        }
+        return tuple(a for a in self.parse_result.actions if a.edge_id in admitted_ids)
+
+    @property
+    def rejected_actions(self) -> tuple[RevisionAction, ...]:
+        if not self.parse_result.schema_valid:
+            return self.parse_result.actions
+        admitted_ids = {
+            d["edge_id"]
+            for d in self.gate_decisions
+            if d.get("admitted")
+        }
+        return tuple(a for a in self.parse_result.actions if a.edge_id not in admitted_ids)
+
+    @property
+    def final_statuses(self) -> dict[str, str]:
+        return self.final_belief_statuses
+
+    @property
+    def failure_categories(self) -> list[str]:
+        return sorted(list(set(e.code for e in self.engine_errors)))
+
+    @property
+    def reward_breakdown(self) -> dict[str, float]:
+        parser_penalty = sum(-10.0 for e in self.parser_errors)
+        gate_penalty = sum(-5.0 for e in self.gate_errors)
+        dpa_penalty = sum(-2.0 for e in self.dpa_errors)
+        return {
+            "parser_penalty": parser_penalty,
+            "gate_penalty": gate_penalty,
+            "dpa_penalty": dpa_penalty,
+            "total_penalty": parser_penalty + gate_penalty + dpa_penalty,
+        }
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "final_belief_statuses": self.final_belief_statuses,
@@ -72,6 +128,15 @@ class RuntimeResult:
             "audit_trace": self.audit_trace,
             "parse_result": self.parse_result.to_dict(),
             "engine_errors": [e.to_dict() for e in self.engine_errors],
+            "parser_errors": [e.to_dict() for e in self.parser_errors],
+            "gate_errors": [e.to_dict() for e in self.gate_errors],
+            "dpa_errors": [e.to_dict() for e in self.dpa_errors],
+            "warnings": [e.to_dict() for e in self.warnings],
+            "admitted_actions": [a.to_dict() for a in self.admitted_actions],
+            "rejected_actions": [a.to_dict() for a in self.rejected_actions],
+            "final_statuses": self.final_statuses,
+            "failure_categories": self.failure_categories,
+            "reward_breakdown": self.reward_breakdown,
         }
 
 

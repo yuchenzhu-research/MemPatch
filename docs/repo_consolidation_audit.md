@@ -64,4 +64,17 @@
 ## 13. Preserved Files (保留并存档)
 - `experiments/archive/` 内的历史研究代码（标记为 historical，不删除）。
 - `data/retrace_bench/v1_smoke/manifest.json` (小元数据文件，已提交)。
-- 所有的核心源码、测试用例和 docs 文档。
+- 所有的核心源码、测试用例 and docs 文档。
+
+---
+
+## 14. Pass 2 Consolidation & Hardening Summary (pass2 整理与加固总结)
+
+在 Pass 2 中，我们对仓库进行了进一步的安全加固与接口规范化审计：
+- **文献指针化管理**：将 `references/agent_memory/` 和 `references/top_benchmarks/` 下的各类学术与工程相关文献转换为了标准 YAML 结构指针形式，移除了所有 PDF 以及大文件依赖。
+- **防止数据污染校验加固**：在 `retrace_learn` 训练链路中新增了递归的数据污染检测器（`check_contamination`），不仅能够检测输入路径，还能够深入递归字典、列表、元组以及集合的所有子项，一旦发现任何包含评测专用的 `data/retrace_bench` 路径，将立即触发拒绝。
+- **数据集精简**：完成了 `data/retrace_bench/sample_20/` (20 场景 / 80 问题) 的小规模 canonical 评测数据集生成，并仅将其提交跟踪，而将大规模的 100/1000/2500 级场景保留在 ignored 本地，以防 bloat。
+- **接口标准化与向下兼容**：
+  - 加固了 `GraphExtractor` 与 `TypedRevisionProposer` 接口规约，支持 `memory_snapshot` 和 `metadata` 等高级特征扩展，同时通过参数类型检查对原有的双参数 positional 调用保持了完全的向下兼容性。
+  - 标准化了 `RuntimeResult` 的错误返回格式，直接暴露出与论文架构完全一致的 parser/gate/dpa 结构化 error 及 warning。
+

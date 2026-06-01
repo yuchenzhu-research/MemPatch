@@ -16,9 +16,24 @@ ReTrace-Learn turns multi-agent/subagent shared-memory revision authorization in
 
 The Graph Extractor processes raw text dialogue logs and updates to yield a structured candidate topology.
 
+- **Interface Definition**:
+  ```python
+  class GraphExtractor(Protocol):
+      extractor_version: str
+      def extract(
+          self,
+          raw_dialogue: str,
+          memory_snapshot: Any | None = None,
+          *,
+          subagent_roles: list[str] | None = None,
+          metadata: dict[str, Any] | None = None,
+      ) -> dict[str, Any]: ...
+  ```
 - **Expected Input**:
   - `raw_dialogue`: String containing chronological multi-subagent conversational updates.
-  - `subagent_roles`: List of active roles for text routing.
+  - `memory_snapshot`: Optional prior memory snapshot context.
+  - `subagent_roles`: Optional list of active roles for text routing.
+  - `metadata`: Optional extra tracking parameters.
 - **Expected Output**:
   - A structured graph dictionary mapping:
     - `evidence_nodes`: list of unique evidence logs.
@@ -35,11 +50,22 @@ The Graph Extractor processes raw text dialogue logs and updates to yield a stru
 
 The Proposer generates revision proposals (proposed changes) over the extracted graph topology.
 
+- **Interface Definition**:
+  ```python
+  class TypedRevisionProposer(Protocol):
+      policy_variant: str
+      def propose(
+          self,
+          view: SharedCandidateView,
+          *,
+          metadata: dict[str, Any] | None = None,
+      ) -> ProposalOutput: ...
+  ```
 - **Expected Input**:
-  - `graph`: Structured candidate graph dictionary from the Extractor.
-  - `memory_snapshot`: Prior memory view.
+  - `view`: `SharedCandidateView` instance carrying the candidate graph topology, pre-existing REQUIRES anchors, and the new evidence log.
+  - `metadata`: Optional extra tracking parameters.
 - **Expected Output**:
-  - A typed revision action dictionary mapping target nodes to actions:
+  - A `ProposalOutput` wrapping the raw LLM completions and a list of revision actions from the canonical vocabulary:
     - `SUPERSEDES`
     - `BLOCKS`
     - `RELEASES`
@@ -60,3 +86,17 @@ The Engine executes deterministic, DPA-filtered updates. It is the single source
   - **RevisionGate**: Evaluates proposals against structural constraints (e.g. scope check, verifier credentials). Admitted edges mutate the TMS; rejected ones are safely dropped.
   - **Defeat-Path Authorization (DPA)**: Resolves the active status ($\sigma_t(b)$) for each belief $b$ using canonical precedence:
     $$\text{SUPERSEDES} > \text{PREREQUISITE\_BLOCK} > \text{UNRESOLVED\_UNCERTAIN} > \text{AUTHORIZED}$$
+
+- **Error Contract & Audit Trace**:
+  The public engine runner (`run_from_text` / `run_actions`) returns a structured `RuntimeResult` containing:
+  - `parser_errors`: Errors encountered during JSON array extracting and basic SFT schemas parsing.
+  - `gate_errors`: Edge admission failures evaluated by RevisionGate constraints.
+  - `dpa_errors`: Contradiction or warning alerts detected by the Defeat-Path Authorization algorithm.
+  - `warnings`: Engine warnings with warning-level severity.
+  - `audit_trace`: Provenance information including defeat paths, edge proposals, and model trace IDs.
+  - `admitted_actions`: Actions admitted by the RevisionGate.
+  - `rejected_actions`: Actions rejected by either Parser or RevisionGate.
+  - `final_statuses`: Mapping from belief IDs to active statuses (`AUTHORIZED`, `SUPERSEDED`, `BLOCKED`, `UNRESOLVED`).
+  - `failure_categories`: Sorted list of distinct error codes.
+  - `reward_breakdown`: Derived penalty distribution mapping `parser_penalty`, `gate_penalty`, `dpa_penalty` and `total_penalty`.
+
