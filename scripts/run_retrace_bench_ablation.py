@@ -10,6 +10,9 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
+
+from scripts.run_retrace_bench_baseline import baseline_group, is_oracle_baseline
 
 
 OFFLINE_BASELINES = (
@@ -20,6 +23,21 @@ OFFLINE_BASELINES = (
     "mem0_style",
     "retrace_oracle_engine",
     "heuristic_memory_state",
+)
+
+PRIMARY_METRICS = (
+    "black_box_decision_accuracy",
+    "answer_key_fact_accuracy",
+    "memory_state_accuracy",
+    "evidence_f1",
+    "failure_diagnosis_accuracy",
+    "stale_reuse_rate",
+)
+
+DIAGNOSTIC_METRICS = (
+    "stale_anchor_hit_rate",
+    "scope_leakage_anchor_hit_rate",
+    "policy_violation_anchor_hit_rate",
 )
 
 
@@ -82,26 +100,35 @@ def main(argv: list[str] | None = None) -> int:
                 cmd.append("--disable-thinking")
         run_cmd(cmd)
         metrics = load_metrics(out.with_suffix(".metrics.json"))
-        rows.append(
-            {
-                "baseline": baseline,
-                "black_box_decision_accuracy": metrics.get("black_box_decision_accuracy", metrics.get("decision_accuracy", 0.0)),
-                "answer_key_fact_accuracy": metrics.get("answer_key_fact_accuracy", 0.0),
-                "decision_accuracy": metrics.get("decision_accuracy", 0.0),
-                "memory_state_accuracy": metrics.get("memory_state_accuracy", 0.0),
-                "evidence_f1": metrics.get("evidence_f1", 0.0),
-                "failure_diagnosis_accuracy": metrics.get("failure_diagnosis_accuracy", 0.0),
-                "stale_reuse_rate": metrics.get("stale_reuse_rate", 0.0),
-            }
-        )
+        row = {
+            "baseline": baseline,
+            "group": baseline_group(baseline),
+            "is_oracle": is_oracle_baseline(baseline),
+        }
+        for key in PRIMARY_METRICS:
+            row[key] = metrics.get(key, 0.0)
+        for key in DIAGNOSTIC_METRICS:
+            row[key] = metrics.get(key, 0.0)
+        row["format_failure_rate"] = metrics.get("format_failure_rate", 0.0)
+        rows.append(row)
+
+    # Comparable methods first, oracle upper bounds last so they cannot be
+    # mistaken for deployable baselines.
+    group_order = {"sanity": 0, "memory_baseline": 1, "api_baseline": 2, "structured_method": 3, "oracle": 9}
+    rows.sort(key=lambda r: (group_order.get(r["group"], 5), r["baseline"]))
 
     summary = {"data": args.data, "max_cases": args.max_cases, "rows": rows}
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
-    print("\nBaseline matrix")
-    print("baseline,black_box_decision,answer_key_fact,memory_state,evidence_f1,diagnosis,stale_reuse")
+    print("\nBaseline matrix (oracle rows are upper bounds, NOT comparable baselines)")
+    print("group,baseline,is_oracle,black_box_decision,answer_key_fact,memory_state,evidence_f1,diagnosis,stale_reuse")
+    last_group = None
     for row in rows:
+        if row["group"] == "oracle" and last_group != "oracle":
+            print("--- ORACLE UPPER BOUNDS (not comparable) ---")
+        last_group = row["group"]
         print(
-            f"{row['baseline']},{row['black_box_decision_accuracy']:.3f},"
+            f"{row['group']},{row['baseline']},{str(row['is_oracle']).lower()},"
+            f"{row['black_box_decision_accuracy']:.3f},"
             f"{row['answer_key_fact_accuracy']:.3f},{row['memory_state_accuracy']:.3f},"
             f"{row['evidence_f1']:.3f},"
             f"{row['failure_diagnosis_accuracy']:.3f},{row['stale_reuse_rate']:.3f}"
