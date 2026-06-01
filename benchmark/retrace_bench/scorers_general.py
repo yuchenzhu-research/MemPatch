@@ -241,6 +241,24 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
     return metrics
 
 
+ALL_DECISIONS = {
+    "use_current_memory",
+    "escalate",
+    "ask_clarification",
+    "refuse_due_to_policy",
+    "mark_unresolved",
+}
+
+
+def canonicalize_decision(val: Any, expected_decision: Any, aliases: Any = None) -> str:
+    if decision_matches(val, expected_decision, aliases):
+        return expected_decision
+    for dec in ALL_DECISIONS:
+        if decision_matches(val, dec, aliases):
+            return dec
+    return _norm(val)
+
+
 def aggregate_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
     totals: Counter[str] = Counter()
     count = 0
@@ -248,7 +266,105 @@ def aggregate_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
         for key, value in row.get("metrics", {}).items():
             totals[key] += float(value)
         count += 1
+
+    metrics_dict = {key: value / count for key, value in sorted(totals.items())} if count else {}
+
+    valid_rows = [r for r in rows if r.get("expected_decision") is not None]
+
+    decision_macro_f1 = 0.0
+    decision_balanced_accuracy = 0.0
+    non_answer_decision_accuracy = 0.0
+    use_current_memory_accuracy = 0.0
+    per_decision_counts = {}
+    per_decision_accuracy = {}
+
+    if valid_rows:
+        exp_list = []
+        pred_list = []
+        for r in valid_rows:
+            exp_dec = r["expected_decision"]
+            aliases = r.get("decision_aliases")
+            pred_raw = r.get("response", {}).get("decision", r.get("response", {}).get("expected_decision"))
+
+            exp_c = canonicalize_decision(exp_dec, exp_dec, aliases)
+            pred_c = canonicalize_decision(pred_raw, exp_dec, aliases)
+            exp_list.append(exp_c)
+            pred_list.append(pred_c)
+
+        expected_classes = sorted(list(set(exp_list)))
+
+        recalls = []
+        f1s = []
+        for c in expected_classes:
+            tp = sum(1 for p, e in zip(pred_list, exp_list) if e == c and p == c)
+            fp = sum(1 for p, e in zip(pred_list, exp_list) if e != c and p == c)
+            fn = sum(1 for p, e in zip(pred_list, exp_list) if e == c and p != c)
+
+            recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+            precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+            f1 = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+
+            recalls.append(recall)
+            f1s.append(f1)
+
+            per_decision_counts[c] = tp + fn
+            per_decision_accuracy[c] = recall
+
+        if expected_classes:
+            decision_balanced_accuracy = sum(recalls) / len(expected_classes)
+            decision_macro_f1 = sum(f1s) / len(expected_classes)
+
+        non_answer_classes = {"escalate", "ask_clarification", "refuse_due_to_policy", "mark_unresolved"}
+        non_answer_indices = [i for i, e in enumerate(exp_list) if e in non_answer_classes]
+        if non_answer_indices:
+            non_answer_correct = sum(1 for i in non_answer_indices if pred_list[i] == exp_list[i])
+            non_answer_decision_accuracy = non_answer_correct / len(non_answer_indices)
+        else:
+            non_answer_decision_accuracy = 0.0
+
+        use_current_indices = [i for i, e in enumerate(exp_list) if e == "use_current_memory"]
+        if use_current_indices:
+            use_current_correct = sum(1 for i in use_current_indices if pred_list[i] == exp_list[i])
+            use_current_memory_accuracy = use_current_correct / len(use_current_indices)
+        else:
+            use_current_memory_accuracy = 0.0
+
+    metrics_dict["decision_macro_f1"] = decision_macro_f1
+    metrics_dict["decision_balanced_accuracy"] = decision_balanced_accuracy
+    metrics_dict["non_answer_decision_accuracy"] = non_answer_decision_accuracy
+    metrics_dict["use_current_memory_accuracy"] = use_current_memory_accuracy
+    metrics_dict["per_decision_counts"] = per_decision_counts
+    metrics_dict["per_decision_accuracy"] = per_decision_accuracy
+
+    observed_modes = sorted(list(set(r.get("primary_failure_mode") for r in rows if r.get("primary_failure_mode") is not None)))
+    per_failure_mode = {}
+    for mode in observed_modes:
+        mode_rows = [r for r in rows if r.get("primary_failure_mode") == mode]
+        per_failure_mode[mode] = {
+            "count": len(mode_rows),
+            "black_box_decision_accuracy": sum(r.get("metrics", {}).get("black_box_decision_accuracy", 0.0) for r in mode_rows) / len(mode_rows),
+            "memory_state_accuracy": sum(r.get("metrics", {}).get("memory_state_accuracy", 0.0) for r in mode_rows) / len(mode_rows),
+            "evidence_f1": sum(r.get("metrics", {}).get("evidence_f1", 0.0) for r in mode_rows) / len(mode_rows),
+            "failure_diagnosis_accuracy": sum(r.get("metrics", {}).get("failure_diagnosis_accuracy", 0.0) for r in mode_rows) / len(mode_rows),
+            "stale_reuse_rate": sum(r.get("metrics", {}).get("stale_reuse_rate", 0.0) for r in mode_rows) / len(mode_rows),
+        }
+
+    observed_domains = sorted(list(set(r.get("domain") for r in rows if r.get("domain") is not None)))
+    per_domain = {}
+    for domain in observed_domains:
+        domain_rows = [r for r in rows if r.get("domain") == domain]
+        per_domain[domain] = {
+            "count": len(domain_rows),
+            "black_box_decision_accuracy": sum(r.get("metrics", {}).get("black_box_decision_accuracy", 0.0) for r in domain_rows) / len(domain_rows),
+            "memory_state_accuracy": sum(r.get("metrics", {}).get("memory_state_accuracy", 0.0) for r in domain_rows) / len(domain_rows),
+            "evidence_f1": sum(r.get("metrics", {}).get("evidence_f1", 0.0) for r in domain_rows) / len(domain_rows),
+            "failure_diagnosis_accuracy": sum(r.get("metrics", {}).get("failure_diagnosis_accuracy", 0.0) for r in domain_rows) / len(domain_rows),
+        }
+
     return {
         "count": count,
-        "metrics": {key: value / count for key, value in sorted(totals.items())} if count else {},
+        "metrics": metrics_dict,
+        "per_failure_mode": per_failure_mode,
+        "per_domain": per_domain,
     }
+

@@ -110,6 +110,9 @@ def main(argv: list[str] | None = None) -> int:
         for key in DIAGNOSTIC_METRICS:
             row[key] = metrics.get(key, 0.0)
         row["format_failure_rate"] = metrics.get("format_failure_rate", 0.0)
+        row["decision_macro_f1"] = metrics.get("decision_macro_f1", 0.0)
+        row["decision_balanced_accuracy"] = metrics.get("decision_balanced_accuracy", 0.0)
+        row["non_answer_decision_accuracy"] = metrics.get("non_answer_decision_accuracy", 0.0)
         rows.append(row)
 
     # Comparable methods first, oracle upper bounds last so they cannot be
@@ -120,7 +123,7 @@ def main(argv: list[str] | None = None) -> int:
     summary = {"data": args.data, "max_cases": args.max_cases, "rows": rows}
     (out_dir / "summary.json").write_text(json.dumps(summary, indent=2), encoding="utf-8")
     print("\nBaseline matrix (oracle rows are upper bounds, NOT comparable baselines)")
-    print("group,baseline,is_oracle,black_box_decision,answer_key_fact,memory_state,evidence_f1,diagnosis,stale_reuse")
+    print("group,baseline,is_oracle,decision_acc,decision_macro_f1,non_answer_acc,key_fact,memory_state,evidence_f1,diagnosis,stale_reuse")
     last_group = None
     for row in rows:
         if row["group"] == "oracle" and last_group != "oracle":
@@ -128,9 +131,9 @@ def main(argv: list[str] | None = None) -> int:
         last_group = row["group"]
         print(
             f"{row['group']},{row['baseline']},{str(row['is_oracle']).lower()},"
-            f"{row['black_box_decision_accuracy']:.3f},"
-            f"{row['answer_key_fact_accuracy']:.3f},{row['memory_state_accuracy']:.3f},"
-            f"{row['evidence_f1']:.3f},"
+            f"{row['black_box_decision_accuracy']:.3f},{row['decision_macro_f1']:.3f},"
+            f"{row['non_answer_decision_accuracy']:.3f},{row['answer_key_fact_accuracy']:.3f},"
+            f"{row['memory_state_accuracy']:.3f},{row['evidence_f1']:.3f},"
             f"{row['failure_diagnosis_accuracy']:.3f},{row['stale_reuse_rate']:.3f}"
         )
     return 0
