@@ -19,6 +19,9 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from dotenv import load_dotenv
+load_dotenv(Path(__file__).resolve().parent.parent / ".env")
+
 from benchmark.retrace_bench.general_taxonomy import FAILURE_MODES, MEMORY_STATUSES, NON_ANSWER_DECISIONS
 from benchmark.retrace_bench.llm_providers import get_provider
 from benchmark.retrace_bench.scorers_general import aggregate_metrics, score_prediction
@@ -556,6 +559,10 @@ def main(argv: list[str] | None = None) -> int:
             "group": baseline_group(args.baseline),
             "is_oracle": is_oracle_baseline(args.baseline),
             "response": response,
+            "domain": scenario.get("domain"),
+            "primary_failure_mode": scenario.get("primary_failure_mode"),
+            "expected_decision": scenario.get("hidden_gold", {}).get("expected_decision"),
+            "decision_aliases": scenario.get("hidden_gold", {}).get("decision_aliases") or scenario.get("hidden_gold", {}).get("rubric", {}).get("decision_aliases") or scenario.get("decision_aliases"),
         }
         pred["metrics"] = score_prediction(scenario, pred)
         predictions.append(pred)
