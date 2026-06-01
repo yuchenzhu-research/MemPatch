@@ -6,11 +6,22 @@ dependency-light environment. The dataset-building halves are pure-stdlib and
 fully runnable/testable via ``--dry-run``.
 """
 from pathlib import Path
+from typing import Any
 
 
-def check_contamination(path: str | Path) -> None:
-    path_str = str(path)
-    if "data/retrace_bench" in path_str or "data/retrace_bench" in path_str.replace("\\", "/"):
-        raise RuntimeError(
-            "ReTrace-Bench is evaluation-only and must not be used for ReTrace-Learn training."
-        )
+def check_contamination(obj: Any) -> None:
+    """Recursively reject any path/string pointing to data/retrace_bench."""
+    if isinstance(obj, (str, Path)):
+        s = str(obj).replace("\\", "/")
+        if "data/retrace_bench" in s:
+            raise RuntimeError(
+                "ReTrace-Bench is evaluation-only and must not be used for ReTrace-Learn training."
+            )
+    elif isinstance(obj, dict):
+        for k, v in obj.items():
+            check_contamination(k)
+            check_contamination(v)
+    elif isinstance(obj, (list, tuple, set)):
+        for item in obj:
+            check_contamination(item)
+

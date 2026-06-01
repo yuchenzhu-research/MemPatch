@@ -20,7 +20,9 @@ def load_config(path: str | Path) -> dict[str, Any]:
     from retrace_learn.training import check_contamination
     check_contamination(path)
     with Path(path).open("r", encoding="utf-8") as fh:
-        return yaml.safe_load(fh)
+        config = yaml.safe_load(fh)
+    check_contamination(config)
+    return config
 
 
 def build_dpo_pairs() -> list[dict[str, Any]]:

@@ -17,7 +17,7 @@ from __future__ import annotations
 
 import json
 from dataclasses import dataclass
-from typing import Any, Callable
+from typing import Any, Callable, Protocol
 
 from retracemem.methods.contracts import SharedCandidateView
 
@@ -25,6 +25,19 @@ from retrace_learn.schemas import RevisionAction
 from retrace_learn.runtime.dpa_runtime import ParseResult, parse_actions
 
 GENERATE_FN = Callable[[str], str]
+
+
+class TypedRevisionProposer(Protocol):
+    policy_variant: str
+
+    def propose(
+        self,
+        view: SharedCandidateView,
+        *,
+        metadata: dict[str, Any] | None = None,
+    ) -> ProposalOutput:
+        ...
+
 
 CANONICAL_ACTION_HELP = (
     "Allowed action_type values and required fields:\n"
@@ -107,7 +120,12 @@ class LearnedTypedRevisionProposer:
     def __init__(self, generate_fn: GENERATE_FN) -> None:
         self._generate = generate_fn
 
-    def propose(self, view: SharedCandidateView) -> ProposalOutput:
+    def propose(
+        self,
+        view: SharedCandidateView,
+        *,
+        metadata: dict[str, Any] | None = None,
+    ) -> ProposalOutput:
         prompt = build_proposer_prompt(view)
         raw_text = self._generate(prompt)
         return ProposalOutput(raw_text=raw_text, parse_result=parse_actions(raw_text))
@@ -121,6 +139,65 @@ class ScriptedProposer:
     def __init__(self, actions: list[RevisionAction]) -> None:
         self._actions = list(actions)
 
-    def propose(self, view: SharedCandidateView) -> ProposalOutput:
+    def propose(
+        self,
+        view: SharedCandidateView,
+        *,
+        metadata: dict[str, Any] | None = None,
+    ) -> ProposalOutput:
         raw_text = actions_to_json(self._actions)
         return ProposalOutput(raw_text=raw_text, parse_result=parse_actions(raw_text))
+
+
+class PromptProposer:
+    """Prompt-based Zero-Shot Proposer stub (TODO)."""
+
+    policy_variant = "prompt_proposer"
+
+    def __init__(self, client: Any) -> None:
+        self.client = client
+
+    def propose(
+        self,
+        view: SharedCandidateView,
+        *,
+        metadata: dict[str, Any] | None = None,
+    ) -> ProposalOutput:
+        # TODO: Implement prompt-driven zero-shot typed revision proposal
+        from retrace_learn.runtime.dpa_runtime import ParseResult
+        return ProposalOutput(raw_text="[]", parse_result=ParseResult(valid_json=True, schema_valid=True, actions=()))
+
+
+class OracleProposer:
+    """Oracle Proposer stub (TODO)."""
+
+    policy_variant = "oracle_proposer"
+
+    def propose(
+        self,
+        view: SharedCandidateView,
+        *,
+        metadata: dict[str, Any] | None = None,
+    ) -> ProposalOutput:
+        # TODO: Replay ground-truth gold revision actions for the given view
+        from retrace_learn.runtime.dpa_runtime import ParseResult
+        return ProposalOutput(raw_text="[]", parse_result=ParseResult(valid_json=True, schema_valid=True, actions=()))
+
+
+class ReplayProposer:
+    """Replay Proposer stub (TODO)."""
+
+    policy_variant = "replay_proposer"
+
+    def __init__(self, pre_generated_proposals: dict[str, str]) -> None:
+        self.pre_generated_proposals = pre_generated_proposals
+
+    def propose(
+        self,
+        view: SharedCandidateView,
+        *,
+        metadata: dict[str, Any] | None = None,
+    ) -> ProposalOutput:
+        # TODO: Replay matching proposal for the given view
+        from retrace_learn.runtime.dpa_runtime import ParseResult
+        return ProposalOutput(raw_text="[]", parse_result=ParseResult(valid_json=True, schema_valid=True, actions=()))
