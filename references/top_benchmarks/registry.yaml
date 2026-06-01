@@ -1,0 +1,43 @@
+- name: SWE-bench
+  repo: https://github.com/princeton-nlp/SWE-bench
+  paper: https://arxiv.org/abs/2310.06770
+  dataset: https://huggingface.co/datasets/princeton-nlp/SWE-bench
+  lessons:
+    - Package-style python library for evaluation.
+    - Sandboxed container executions.
+
+- name: WebArena
+  repo: https://github.com/web-arena-x/webarena
+  paper: https://arxiv.org/abs/2307.13854
+  lessons:
+    - End-to-end task execution in mock web environments.
+
+- name: OSWorld
+  repo: https://github.com/OS-World/OSWorld
+  paper: https://arxiv.org/abs/2404.07972
+  lessons:
+    - OS agent evaluation under full virtual desktop setup.
+
+- name: AgentBench
+  repo: https://github.com/THUDM/AgentBench
+  paper: https://arxiv.org/abs/2308.03688
+  lessons:
+    - Unified multi-environment test suite framework.
+
+- name: BigCodeBench
+  repo: https://github.com/bigcode-project/bigcodebench
+  paper: https://arxiv.org/abs/2406.12345
+  lessons:
+    - Massive library usage and tool evaluation suite.
+
+- name: GAIA
+  repo: https://github.com/huggingface/gaia
+  paper: https://arxiv.org/abs/2311.12983
+  lessons:
+    - Multi-modal agent tasks with deterministic verification.
+
+- name: BFCL
+  repo: https://github.com/ShishirPatil/gorilla
+  paper: https://arxiv.org/abs/2305.15395
+  lessons:
+    - Live leaderboard model for evaluating function calling.
