@@ -1,74 +1,56 @@
 # ReTrace-Bench
 
-**ReTrace-Bench** is an evaluation benchmark package designed specifically to evaluate room-for-revision, conflict resolution, and defeat-path authorization (DPA) mechanisms in shared-memory LLM agents.
+**ReTrace-Bench** is an evaluation-only benchmark that evaluates memory reliability in agentic workflows.
 
-## Methodology & Conceptual Boundary
+## Conceptual Framing & Boundary
 
 ReTrace-Bench is strictly **evaluation-only** and independent of the method paper framework (ReTrace-Learn).
 - **ReTrace-Learn**: The trainable method (SFT/RL/DPO) that trains Graph Extractors and Typed Revision Proposers. Uses internal data under `data/retrace_learn/`.
-- **ReTrace-Bench**: The independent benchmark paper evaluating different agent memory updating strategies. The evaluation data under `data/retrace_bench/` must **never** be used for training or validation tuning of ReTrace-Learn.
+- **ReTrace-Bench**: The independent benchmark paper evaluating different agent memory updating strategies. The evaluation data under `data/retrace_bench/` must **never** be used for training or validation tuning.
+- **DPA Diagnostic Track**: Structured revision / Defeat-Path Authorization remains an optional diagnostic protocol. It is **not** mandatory for all benchmark participants. The main track is the model-agnostic **Black-box Task Protocol**.
 
 ---
 
-## Benchmark Design Target
+## Benchmark Design Target (v2)
 
-The full version target is:
-- **2,500** scenarios
-- **10,000** probe queries (exactly 4 per scenario)
-- **6** domains:
-  - `coding_agent_debugging`
-  - `research_agent_memory`
-  - `personal_preference_memory`
-  - `calendar_workflow`
-  - `tool_use_assistant`
-  - `multi_agent_knowledge_base`
-- **4** probe types:
-  - `state_resolution`
-  - `premise_resistance`
-  - `policy_adaptation`
-  - `audit_localization`
-- **7** revision families:
-  - `supersedes`, `blocks`, `releases`, `uncertain`, `reaffirms`, `no_revision`, `mixed_multi_action`
-
-Currently, a **100-scenario smoke version** is supported.
+The benchmark is structured across:
+- **8 industrial domains**:
+  - `software_engineering_agent`
+  - `enterprise_multi_tool_workflow`
+  - `customer_support_crm`
+  - `calendar_task_workflow`
+  - `research_knowledge_work`
+  - `personal_assistant_preference`
+  - `ecommerce_recommendation`
+  - `data_analysis_bi`
+- **11 memory reliability failure modes**:
+  - `stale_memory_reuse`, `under_update`, `over_update`, `conflict_collapse`, `scope_leakage`, `policy_violation`, `wrong_source_attribution`, `memory_hallucination`, `unnecessary_memory_write`, `failure_to_forget`, `failure_to_release_or_restore`.
+- **4 evaluation protocols**:
+  - `black_box_task`, `memory_state_task`, `structured_revision_task`, `oracle_diagnostic_task`.
 
 ---
 
-## Protocols
+## CLI Usage (v2)
 
-1. **raw-only**: dialogue history + memory snapshot + query -> answer. The main public protocol.
-2. **structured revision**: dialogue + memory snapshot + candidate graph -> proposed actions.
-3. **oracle diagnostic**: evaluates using gold revision links. Used for error attribution.
+### 1. Validate Data
+```bash
+PYTHONPATH=. python scripts/validate_retrace_bench_v2.py --data data/retrace_bench/sample_20_v2
+```
+
+### 2. Run Baselines
+```bash
+PYTHONPATH=. python scripts/run_retrace_bench_v2_baseline.py \
+  --data data/retrace_bench/sample_20_v2 \
+  --baseline latest_only_v2 \
+  --out outputs/retrace_bench_v2/latest_only_sample20.jsonl
+```
 
 ---
 
-## CLI Usage
+## Backward Compatibility (v1)
 
-### 1. Build Smoke Data
-```bash
-python scripts/build_retrace_bench_v1.py \
-  --out data/retrace_bench/v1_smoke \
-  --num-scenarios 100 \
-  --queries-per-scenario 4 \
-  --seed 7
-```
+For users of ReTrace-Bench v1:
+- The legacy schemas (`schemas.py`) and taxonomy (`taxonomy.py`) remain fully functional.
+- The v1 scripts (`validate_retrace_bench.py` and `run_retrace_bench_baseline.py`) are preserved unchanged.
+- v2 is designed additively, and includes a deterministic mapping layer to convert v1 history lists into v2 event traces.
 
-### 2. Validate Data
-```bash
-python scripts/validate_retrace_bench.py --data data/retrace_bench/v1_smoke
-```
-
-### 3. Run Baselines
-```bash
-python scripts/run_retrace_bench_baseline.py \
-  --data data/retrace_bench/v1_smoke \
-  --baseline latest_only \
-  --out outputs/retrace_bench/latest_only_smoke.jsonl
-```
-
-### 4. Aggregate Scores
-```bash
-python scripts/aggregate_retrace_bench_results.py \
-  --predictions outputs/retrace_bench/latest_only_smoke.jsonl \
-  --out outputs/retrace_bench/latest_only_smoke_report.json
-```
