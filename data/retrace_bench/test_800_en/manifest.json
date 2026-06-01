@@ -1,0 +1,68 @@
+{
+  "dataset_name": "test_800_en",
+  "scenario_count": 800,
+  "schema_version": "retrace_bench_general_1",
+  "renderer": "split_template",
+  "split": "test_800_en",
+  "purpose": "Held-out internal ReTrace-Bench evaluation set. No training, no prompt tuning, no policy optimization, no checkpoint selection.",
+  "scenario_id_prefix": "rt-test-",
+  "seed_range": [
+    300000,
+    300799
+  ],
+  "entity_prefixes": {
+    "case": "CTE-",
+    "project": "PRTE-",
+    "person": "PTE-",
+    "workspace": "ws-te"
+  },
+  "has_training_targets": false,
+  "coverage": {
+    "count": 800,
+    "by_domain": {
+      "calendar_task_workflow": 100,
+      "customer_support_crm": 100,
+      "data_analysis_bi": 100,
+      "ecommerce_recommendation": 100,
+      "enterprise_multi_tool_workflow": 100,
+      "personal_assistant_preference": 100,
+      "research_knowledge_work": 100,
+      "software_engineering_agent": 100
+    },
+    "by_failure_mode": {
+      "conflict_collapse": 73,
+      "failure_to_forget": 72,
+      "failure_to_release_or_restore": 72,
+      "memory_hallucination": 73,
+      "over_update": 73,
+      "policy_violation": 73,
+      "scope_leakage": 73,
+      "stale_memory_reuse": 73,
+      "under_update": 73,
+      "unnecessary_memory_write": 72,
+      "wrong_source_attribution": 73
+    },
+    "by_expected_decision": {
+      "ask_clarification": 73,
+      "escalate": 73,
+      "mark_unresolved": 73,
+      "refuse_due_to_policy": 73,
+      "use_current_memory": 508
+    },
+    "by_difficulty": {
+      "L1_single_hop_update": 80,
+      "L2_multi_hop_with_distractor": 240,
+      "L3_conditional_validity": 240,
+      "L4_cross_scope_adversarial_audit": 240
+    },
+    "rates": {
+      "events_ge_7": 1.0,
+      "memories_ge_3": 1.0,
+      "distractors": 0.6,
+      "cross_scope": 0.7,
+      "verified_over_trusted": 0.6813,
+      "false_premise": 0.455,
+      "non_answer": 0.365
+    }
+  }
+}
