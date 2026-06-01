@@ -27,6 +27,44 @@ from retracemem.methods.contracts import SharedCandidateView
 from retracemem.schemas import BeliefNode, EvidenceEdge, EvidenceEdgeType, EvidenceNode
 
 
+def _infer_diagnosis_from_memory_state(memory_state: dict[str, str]) -> str:
+    """Infer a failure diagnosis from the PREDICTED memory state only.
+
+    Intentionally weak but non-cheating: it never reads hidden gold such as
+    ``primary_failure_mode``. Non-oracle baselines use this instead of echoing
+    the gold diagnosis, which previously produced perfect diagnosis accuracy.
+    """
+    statuses = set((memory_state or {}).values())
+    if "should_not_store" in statuses:
+        return "policy_violation"
+    if "unresolved" in statuses:
+        return "conflict_collapse"
+    if "out_of_scope" in statuses:
+        return "scope_leakage"
+    if "outdated" in statuses:
+        return "stale_memory_reuse"
+    if "deleted" in statuses:
+        return "failure_to_forget"
+    if "restored" in statuses:
+        return "failure_to_release_or_restore"
+    return "under_update"
+
+
+def _infer_decision_from_memory_state(memory_state: dict[str, str]) -> str:
+    """Infer a non-answer decision from PREDICTED memory state only.
+
+    Deliberately conservative (no gold). Distractor ``out_of_scope`` labels are
+    common, so we do not escalate on those; only policy/conflict states change
+    the decision away from ``use_current_memory``.
+    """
+    statuses = set((memory_state or {}).values())
+    if "should_not_store" in statuses:
+        return "refuse_due_to_policy"
+    if "unresolved" in statuses:
+        return "mark_unresolved"
+    return "use_current_memory"
+
+
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
     rows = []
     with path.open("r", encoding="utf-8") as f:
@@ -131,7 +169,7 @@ def retrieve_all(scenario: dict[str, Any]) -> dict[str, Any]:
         "decision": "use_current_memory",
         "memory_state": state,
         "evidence_event_ids": evidence,
-        "failure_diagnosis": scenario.get("primary_failure_mode"),
+        "failure_diagnosis": _infer_diagnosis_from_memory_state(state),
     }
 
 
@@ -204,10 +242,10 @@ def crud_memory(scenario: dict[str, Any]) -> dict[str, Any]:
                 state[mid] = "unresolved"
     return {
         "answer": answer_event["text"],
-        "decision": "use_current_memory",
+        "decision": _infer_decision_from_memory_state(state),
         "memory_state": state,
         "evidence_event_ids": evidence or [answer_event["event_id"]],
-        "failure_diagnosis": scenario.get("primary_failure_mode"),
+        "failure_diagnosis": _infer_diagnosis_from_memory_state(state),
     }
 
 
@@ -237,13 +275,13 @@ def mem0_style(scenario: dict[str, Any]) -> dict[str, Any]:
             elif "updated" in text or "verified system record" in text:
                 state[mid] = "current"
     answer_event = answer_event or scenario["public_input"]["event_trace"][-1]
-    decision = "refuse_due_to_policy" if any(v == "should_not_store" for v in state.values()) else "use_current_memory"
+    decision = _infer_decision_from_memory_state(state)
     return {
         "answer": answer_event["text"],
         "decision": decision,
         "memory_state": state,
         "evidence_event_ids": evidence or [answer_event["event_id"]],
-        "failure_diagnosis": scenario.get("primary_failure_mode"),
+        "failure_diagnosis": _infer_diagnosis_from_memory_state(state),
     }
 
 
@@ -356,19 +394,13 @@ def heuristic_memory_state(scenario: dict[str, Any]) -> dict[str, Any]:
     state = {m["memory_id"]: ("out_of_scope" if m.get("is_distractor") else "current") for m in scenario["public_input"]["initial_memory"]}
     for mid in chosen.get("related_memory_ids", []):
         state[mid] = "current"
-    mode = scenario.get("primary_failure_mode")
-    decision = {
-        "policy_violation": "refuse_due_to_policy",
-        "conflict_collapse": "mark_unresolved",
-        "scope_leakage": "escalate",
-        "memory_hallucination": "ask_clarification",
-    }.get(mode, "use_current_memory")
+    decision = _infer_decision_from_memory_state(state)
     return {
         "answer": chosen["text"] if decision == "use_current_memory" else f"{decision}: {chosen['text']}",
         "decision": decision,
         "memory_state": state,
         "evidence_event_ids": [chosen["event_id"]],
-        "failure_diagnosis": mode,
+        "failure_diagnosis": _infer_diagnosis_from_memory_state(state),
     }
 
 
@@ -421,6 +453,29 @@ BASELINES = {
     "retrace_oracle_engine": retrace_oracle_engine,
     "heuristic_memory_state": heuristic_memory_state,
 }
+
+# Experiment grouping. Oracle baselines may read hidden gold and are upper
+# bounds / mechanism sanity checks, NOT deployable comparable baselines.
+ORACLE_BASELINES = {"retrace_oracle_engine"}
+
+BASELINE_GROUPS = {
+    "latest_only": "sanity",
+    "retrieve_all": "sanity",
+    "rag_lexical": "memory_baseline",
+    "crud_memory": "memory_baseline",
+    "mem0_style": "memory_baseline",
+    "heuristic_memory_state": "memory_baseline",
+    "retrace_oracle_engine": "oracle",
+    "llm_json_answerer": "api_baseline",
+}
+
+
+def baseline_group(name: str) -> str:
+    return BASELINE_GROUPS.get(name, "structured_method")
+
+
+def is_oracle_baseline(name: str) -> bool:
+    return name in ORACLE_BASELINES
 
 
 def main(argv: list[str] | None = None) -> int:
@@ -498,6 +553,8 @@ def main(argv: list[str] | None = None) -> int:
         pred = {
             "scenario_id": scenario["scenario_id"],
             "baseline": args.baseline,
+            "group": baseline_group(args.baseline),
+            "is_oracle": is_oracle_baseline(args.baseline),
             "response": response,
         }
         pred["metrics"] = score_prediction(scenario, pred)
@@ -518,7 +575,11 @@ def main(argv: list[str] | None = None) -> int:
     if not args.append:
         write_jsonl(out, predictions)
     metrics_path = out.with_suffix(".metrics.json")
-    metrics_path.write_text(json.dumps(aggregate_metrics(scored), indent=2, sort_keys=True), encoding="utf-8")
+    aggregate = aggregate_metrics(scored)
+    aggregate["baseline"] = args.baseline
+    aggregate["group"] = baseline_group(args.baseline)
+    aggregate["is_oracle"] = is_oracle_baseline(args.baseline)
+    metrics_path.write_text(json.dumps(aggregate, indent=2, sort_keys=True), encoding="utf-8")
     print(f"Wrote {len(predictions)} predictions to {out}")
     print(f"Wrote metrics to {metrics_path}")
     return 0

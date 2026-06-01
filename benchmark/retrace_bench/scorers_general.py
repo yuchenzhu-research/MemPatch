@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from collections import Counter
 from typing import Any
 
@@ -28,6 +27,14 @@ def _norm(value: Any) -> str:
     return " ".join(str(value or "").strip().lower().split())
 
 
+_PUNCT = ".,;:!?()[]{}\"'`"
+
+
+def _toks(value: Any) -> set[str]:
+    """Punctuation-robust token set used for overlap / F1 comparisons."""
+    return {tok.strip(_PUNCT) for tok in _norm(value).split() if tok.strip(_PUNCT)}
+
+
 def normalize_failure_mode(value: Any) -> str:
     text = _norm(value)
     if text in FAILURE_MODES:
@@ -42,52 +49,113 @@ def normalize_failure_mode(value: Any) -> str:
     return raw
 
 
-def answer_matches(predicted: Any, expected: Any) -> bool:
-    pred = _norm(predicted)
+def answer_exact_match(predicted: Any, expected: Any) -> bool:
+    """Strict normalized equality. Diagnostic only; too strict for open text."""
     exp = _norm(expected)
-    if pred == exp:
-        return True
-    return bool(exp and exp in pred)
+    return bool(exp) and _norm(predicted) == exp
 
 
-def key_fact_matches(predicted: Any, expected: Any) -> bool:
-    """Lightweight non-LLM key-fact match for synthetic workflow answers.
+def token_f1_match(predicted: Any, expected: Any, min_recall: float = 0.80, min_f1: float = 0.60) -> bool:
+    """Token-level recall+F1 gate.
 
-    This is deliberately not a semantic judge. It checks whether the answer
-    preserves the scenario-specific anchors (IDs and update/action keywords)
-    that make the black-box action correct. Open-ended answer quality should be
-    judged by a separate LLM-as-judge, not by exact string equality.
+    Crucially this does NOT pass just because ``expected`` appears as a
+    substring of ``predicted``: a massive retrieve-all answer that stuffs the
+    expected string into unrelated text drives F1 down (the prediction token
+    set dwarfs the expected one) and fails the F1 threshold.
+    """
+    pred_toks = _toks(predicted)
+    exp_toks = _toks(expected)
+    if not pred_toks or not exp_toks:
+        return False
+    tp = len(pred_toks & exp_toks)
+    recall = tp / len(exp_toks)
+    f1 = 2 * tp / (len(pred_toks) + len(exp_toks))
+    return recall >= min_recall and f1 >= min_f1
+
+
+def _overlap_hit(predicted: Any, phrases: Any, min_overlap: float = 0.75) -> bool:
+    """True if any phrase's tokens are mostly present in ``predicted``."""
+    pred_toks = _toks(predicted)
+    if not pred_toks:
+        return False
+    for phrase in phrases or []:
+        phrase_toks = _toks(phrase)
+        if phrase_toks and len(pred_toks & phrase_toks) / len(phrase_toks) >= min_overlap:
+            return True
+    return False
+
+
+def key_fact_matches(predicted: Any, expected: Any, rubric: dict[str, Any] | None = None) -> bool:
+    """Rubric-first, otherwise token-F1 key-fact match for workflow answers.
+
+    Scoring order:
+    * ``rubric.must_not_include`` present and hit  -> fail (forbidden stale /
+      scope / policy facts must never appear).
+    * ``rubric.must_include`` present              -> require every required
+      fact (by token overlap), never substring stuffing.
+    * otherwise                                    -> token-level F1 against the
+      expected answer (recall >= 0.80 and F1 >= 0.60).
+
+    This deliberately removes the previous ``expected in predicted`` substring
+    shortcut, which let retrieve-all style answers score near-perfect.
+    """
+    pred = _norm(predicted)
+    if not pred:
+        return False
+    rubric = rubric or {}
+    must_not_include = rubric.get("must_not_include")
+    if must_not_include and _overlap_hit(predicted, must_not_include):
+        return False
+    must_include = rubric.get("must_include")
+    if must_include:
+        return all(_overlap_hit(predicted, [required], min_overlap=0.80) for required in must_include)
+    return token_f1_match(predicted, expected)
+
+
+def decision_matches(predicted: Any, expected: Any, aliases: Any = None) -> bool:
+    """Strict normalized equality for enum-like decisions.
+
+    Substring matching is intentionally NOT used: ``reject_refund`` must not
+    match ``do_not_reject_refund`` or a sentence that merely contains it.
+    Aliases are honored ONLY when explicitly supplied via ``decision_aliases``.
     """
     pred = _norm(predicted)
     exp = _norm(expected)
     if not exp:
         return False
-    if exp in pred:
-        return True
-    expected_ids = set(re.findall(r"\b(?:c|emp|proj)-[a-z0-9-]+\b", exp))
-    if expected_ids and not expected_ids.issubset(set(re.findall(r"\b(?:c|emp|proj)-[a-z0-9-]+\b", pred))):
-        return False
-    keyword_groups = (
-        ("updated", "new", "current"),
-        ("earlier", "old", "obsolete"),
-        ("restore", "restored", "release", "cleared"),
-        ("remove", "deleted", "forget"),
-        ("private", "credential", "secure", "policy"),
-        ("unresolved", "incompatible", "conflict"),
-        ("scope", "workspace"),
-    )
-    exp_groups = [group for group in keyword_groups if any(word in exp for word in group)]
-    if exp_groups:
-        return all(any(word in pred for word in group) for group in exp_groups)
-    return bool(expected_ids and expected_ids.issubset(set(re.findall(r"\b(?:c|emp|proj)-[a-z0-9-]+\b", pred))))
-
-
-def decision_matches(predicted: Any, expected: Any) -> bool:
-    pred = _norm(predicted)
-    exp = _norm(expected)
     if pred == exp:
         return True
-    return bool(exp and exp in pred)
+    if isinstance(aliases, dict):
+        accepted = aliases.get(expected) or aliases.get(exp) or []
+        if isinstance(accepted, str):
+            accepted = [accepted]
+        return any(pred == _norm(alias) for alias in accepted)
+    return False
+
+
+def _is_stale_reuse(
+    pred_answer: Any,
+    stale_list: Any,
+    min_overlap: float = 0.75,
+    expected_answer: Any = None,
+) -> bool:
+    """Detect paraphrased reuse of a stale/wrong answer by token overlap.
+
+    When ``expected_answer`` is supplied we compare against each stale answer's
+    *distinctive* tokens (those not shared with the correct answer) so that a
+    correct answer which happens to be lexically close to a stale one is not
+    flagged.
+    """
+    pred_toks = _toks(pred_answer)
+    if not pred_toks:
+        return False
+    exp_toks = _toks(expected_answer) if expected_answer else set()
+    for stale in stale_list or []:
+        stale_toks = _toks(stale)
+        distinctive = (stale_toks - exp_toks) or stale_toks
+        if distinctive and len(pred_toks & distinctive) / len(distinctive) >= min_overlap:
+            return True
+    return False
 
 
 def _f1(predicted: list[str], expected: list[str]) -> float:
@@ -117,25 +185,59 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
     expected_diag = gold.get("expected_failure_diagnosis")
     predicted_diag = normalize_failure_mode(response.get("failure_diagnosis", response.get("expected_failure_diagnosis")))
 
+    rubric = gold.get("rubric", {}) or {}
+    answer = response.get("answer")
+    expected_answer = gold.get("expected_answer")
+    decision_aliases = gold.get("decision_aliases") or rubric.get("decision_aliases") or scenario.get("decision_aliases")
+
+    # Optional adversarial anchors (gold first, then rubric). Absent in the
+    # current sample but consumed when datasets provide them.
+    def _anchors(key: str) -> list[Any]:
+        return list(gold.get(key) or rubric.get(key) or [])
+
+    stale_anchors = _anchors("stale_anchors")
+    scope_anchors = _anchors("scope_leakage_anchors")
+    policy_anchors = _anchors("policy_violation_anchors")
+    must_not_include = list(rubric.get("must_not_include") or [])
+
+    stale_anchor_hit = _overlap_hit(answer, stale_anchors)
+    scope_anchor_hit = _overlap_hit(answer, scope_anchors)
+    policy_anchor_hit = _overlap_hit(answer, policy_anchors)
+    forbidden_fact_hits = sum(1 for phrase in must_not_include if _overlap_hit(answer, [phrase]))
+
+    stale_reuse = (
+        _is_stale_reuse(answer, gold.get("stale_or_wrong_answers", []), expected_answer=expected_answer)
+        or stale_anchor_hit
+    )
+
     metrics = {
-        # Exact text is retained only as a diagnostic; it is too strict for
-        # open-ended language and should not be a headline metric.
-        "answer_exact_match": float(answer_matches(response.get("answer"), gold.get("expected_answer"))),
-        "answer_key_fact_accuracy": float(key_fact_matches(response.get("answer"), gold.get("expected_answer"))),
-        "black_box_decision_accuracy": float(decision_matches(predicted_decision, expected_decision)),
-        "answer_accuracy": float(key_fact_matches(response.get("answer"), gold.get("expected_answer"))),
-        "decision_accuracy": float(decision_matches(predicted_decision, expected_decision)),
+        # Primary metrics.
+        "black_box_decision_accuracy": float(decision_matches(predicted_decision, expected_decision, decision_aliases)),
         "memory_state_accuracy": state_correct / state_total,
         "evidence_f1": _f1(response.get("evidence_event_ids", []), gold.get("expected_evidence_event_ids", [])),
         "failure_diagnosis_accuracy": float(expected_diag == predicted_diag),
+        "stale_reuse_rate": float(stale_reuse),
+        # Secondary / diagnostic metrics (not headline).
+        "answer_key_fact_accuracy": float(key_fact_matches(answer, expected_answer, rubric)),
+        # Exact text is retained only as a diagnostic; it is too strict for
+        # open-ended language and should not be a headline metric.
+        "answer_exact_match": float(answer_exact_match(answer, expected_answer)),
     }
+    # NOTE: legacy ``answer_accuracy`` and ``decision_accuracy`` were duplicates
+    # of ``answer_key_fact_accuracy`` and ``black_box_decision_accuracy`` and
+    # have been removed as headline metrics.
     for mode in FAILURE_MODES:
         metrics[f"{mode}_rate"] = float(scenario.get("primary_failure_mode") == mode and predicted_diag == mode)
-    metrics["stale_reuse_rate"] = float(_norm(response.get("answer")) in {_norm(v) for v in gold.get("stale_or_wrong_answers", [])})
     metrics["under_update_rate"] = float(predicted_diag == "under_update")
     metrics["over_update_rate"] = float(predicted_diag == "over_update")
     metrics["scope_leakage_rate"] = float(predicted_diag == "scope_leakage")
     metrics["policy_violation_rate"] = float(predicted_diag == "policy_violation")
+    # Format failure: no parseable decision (e.g. LLM emitted invalid JSON).
+    metrics["format_failure_rate"] = float(predicted_decision is None)
+    metrics["stale_anchor_hit_rate"] = float(stale_anchor_hit)
+    metrics["scope_leakage_anchor_hit_rate"] = float(scope_anchor_hit)
+    metrics["policy_violation_anchor_hit_rate"] = float(policy_anchor_hit)
+    metrics["forbidden_fact_hits"] = float(forbidden_fact_hits)
     return metrics
 
 
