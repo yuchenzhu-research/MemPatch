@@ -30,7 +30,7 @@ def test_gitignore_sensitive_artifacts_not_committed():
         "tests/",
         "data/fixtures/",
         "experiments/multiagent/local_training/data/",
-        "data/boundary_audit/",
+        "data/retrace_learn/v1/boundary_audit/",
     )
 
     for f in files:

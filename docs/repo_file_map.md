@@ -47,18 +47,18 @@
 
 ### 数据管道与生成器 (`data/`)
 * `src/retrace_learn/data/build_synthetic_raw_dialogue.py`: 生成合成多 Agent 对话语料并计算 DPA 黄金真值的生成引擎。
-* `src/retrace_learn/data/export_graph_sft.py`: 导出图提取任务的 SFT 数据（Module 1）。
-* `src/retrace_learn/data/export_revision_sft.py`: 导出修正提案预测任务的 SFT 数据（Module 2）。
-* `src/retrace_learn/data/export_rl_rollouts.py`: 生成带 DPA 奖励评分的 RL 轨迹数据（Module 4）。
+* `src/retrace_learn/data/export_graph_sft.py`: 导出图提取任务 of SFT 数据。
+* `src/retrace_learn/data/export_revision_sft.py`: 导出修正提案预测任务 of SFT 数据。
+* `src/retrace_learn/data/export_rl_rollouts.py`: 生成带 DPA 奖励评分 of RL 轨迹数据。
 * `src/retrace_learn/data/jsonl_io.py`: 本地读写 JSONL 数据集的辅助工具。
 
 ### 运行时与奖励引擎 (`runtime/`)
 * `src/retrace_learn/runtime/dpa_runtime.py`: 承载解析 SFT/RL 输出，并打通 RevisionGate -> DPA 的推理生命周期。
-* `src/retrace_learn/runtime/engine_errors.py`: [新引入] 确定性后端各阶段（Parser、Gate、DPA）的结构化错误规约。
+* `src/retrace_learn/runtime/engine_errors.py`: 确定性后端各阶段（Parser、Gate、DPA）的结构化错误规约。
 * `src/retrace_learn/runtime/graph_extractor.py`: 提取器推理外壳，将原始文本转化为规范的图数据。
 * `src/retrace_learn/runtime/learned_proposer.py`: 包装生成策略并向 Engine 提交修改边申请。
 * `src/retrace_learn/runtime/path_ranker.py`: 对合法 defeat 路径进行安全评分并审计排序。
-* `src/retrace_learn/runtime/reward.py`: 著名的 DPA-in-the-Loop 强化学习奖励设计，计算 JSON 约束、可达边 grounding、stale propagation penalty、gate rejection penalty 以及 NO_REVISION 超量处罚。
+* `src/retrace_learn/runtime/reward.py`: DPA-in-the-Loop 强化学习奖励设计。
 
 ### 模型训练脚本 (`training/`)
 * `src/retrace_learn/training/train_lora_sft.py`: 基于 HuggingFace 对 Extractor / Proposer 进行 LoRA 微调。
@@ -67,43 +67,35 @@
 
 ---
 
-## 3. 评估与实验 (`experiments/`)
-* `experiments/multiagent/run_stageab_api_eval.py`: 运行 Stage A (ReTrace-Prompt) 与 Stage B (DirectJudge) 的联合 API 评估兼容入口。
+## 3. ReTrace-Bench 评准套件 (`benchmark/retrace_bench/`)
+独立评测基准套件的代码及各子模块，服务于 Paper 2。
+* `benchmark/retrace_bench/taxonomy.py`: 常量与 Enum。
+* `benchmark/retrace_bench/schemas.py`: 评测数据类结构。
+* `benchmark/retrace_bench/generation/`: 数据生成模块。
+* `benchmark/retrace_bench/protocols/`: 评测协议数据定义。
+* `benchmark/retrace_bench/evaluation/`: 跑分器、评测循环与聚合报告。
+* `benchmark/retrace_bench/baselines/`: 基线算法。
+
+---
+
+## 4. 数据与运行输出配置 (`data/` & `outputs/`)
+- **方法训练数据 (`data/retrace_learn/`)**: 存放 Module 训练及 SFT 内部合成数据集。
+- **独立评测数据 (`data/retrace_bench/`)**: 评估专用的基准测试集，有防污染拦截。
+- **运行预测与结果输出 (`outputs/`)**: 运行中产生的 local logs、报告等，通常已被 ignore。
+
+---
+
+## 5. 评估与实验 (`experiments/`)
+* `experiments/multiagent/run_stageab_api_eval.py`: 运行 Stage A 与 Stage B 联合 API 评估。
 * `experiments/multiagent/select_prompt_smoke_examples.py`: 选取并审计 Stage C API-ICL 的人工作业样本包。
 * `experiments/multiagent/apply_smoke_review_decisions.py`: 冻结人工决策包并向 manifest 写入校验哈希。
-* `experiments/multiagent/local_training/prepare_mlx_stagec_data.py`: 将 Stage C 数据导出为适合 Mac 本地 MLX 训练框架的格式。
+* `experiments/multiagent/local_training/prepare_mlx_stagec_data.py`: 本地 MLX 训练数据准备。
+* `experiments/archive/`: 历史归档遗留代码，不影响 canonical 逻辑。
 
 ---
 
-## 4. 文档 (`docs/`)
-* `docs/architecture.md`: 系统整体分层架构及确定性后端的结构化错误契约设计。
-* `docs/benchmark_risk_and_external_validation.md`: [新引入] 阐明内部合成数据集与外部 STALE/CUPMem 评测库的隔离线，防泄露设计。
-* `docs/retrace_learn_full_plan.md`: ReTrace-Learn 的阶段三微调及强化学习计划。
-
----
-
-## 5. 测试 (`tests/`)
-* `tests/retrace_learn/test_engine_errors.py`: [新引入] 单元与端到端测试，验证 parser error, schema error, gate rejection penalty, 和 NO_REVISION 过度惩罚的完整链路。
-* `tests/retrace_learn/test_reward.py`: 测试 DPA 在环奖励计算的准确性。
-* `tests/gate_unit/`: 独立验证 DPA 状态变迁和 RevisionGate 过滤正确性。
-
----
-
-## 6. 脚本工具 (`scripts/`)
-* `scripts/evaluate.py`: 用于主实验协议的一键评测 CLI 入口。
-* `scripts/build_failure_analysis.py`: 生成 Stage A 对比 Stage B 的详细错题归因报告。
-
----
-
-## 7. 冗余与重叠审计 (Redundancies & Architecture Alignments)
-
-### Scripts 与 ReTrace-Learn Exporters
-* **现象**: `scripts/export_*.py` 很多时候是直接对 `src/retrace_learn/data/export_*.py` 的包装。
-* **设计理由**: 这符合“src 下存放复用库，scripts 下存放单次调用命令行脚本”的规范。`scripts` 文件中通过显式 `sys.path.insert(0, ...)` 注入 src 保证可用性。无需清理，但后续开发应保持 exporter 逻辑纯净于 `src` 内。
-
-### Local MLX 准备与云端 GPU 训练
-* **重叠**: `experiments/multiagent/local_training/` 是为 Mac 设备本地开发 MLX-LM 量身定做的；而 `src/retrace_learn/training/` 是云端 GPU 训练标准架构（LoRA / GRPO）。
-* **设计理由**: 双轨并行。本地开发可通过 MLX 快速跑通 Pipeline 验证，大规模训练则使用 `retrace_learn/training/` 代码库。
-
-### 外部遗留与归档隔离 (E4 Boundary)
-* **注意**: 所有与外部 stale-memory / STALE / CUPMem 评测挂钩的适配器与数据格式转换器，必须严格保留在 `experiments/archive/` (如 `stale_adapter.py` / `cupmem_bridge.py`)，决不能将它们的特有字段污染到 `src/retrace_learn` 的纯净训练模式中。
+## 6. 文档 (`docs/`)
+* `docs/architecture.md`: 系统整体分层架构。
+* `docs/repo_consolidation_audit.md`: 仓库整理审计与清理计划。
+* `docs/retrace_learn_pipeline.md`: ReTrace-Learn 核心管道逻辑文档。
+* `docs/retrace_bench/`: ReTrace-Bench 评测设计及协议说明。

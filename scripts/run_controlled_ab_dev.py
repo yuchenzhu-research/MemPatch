@@ -44,7 +44,7 @@ from retracemem.providers.cached_client import CachedLLMClient
 from retracemem.providers.http_provider import HTTPLLMProvider
 
 _CASES_PATH = os.path.join(
-    os.path.dirname(__file__), os.pardir, "data", "internal_dev", "controlled_ab_cases.json"
+    os.path.dirname(__file__), os.pardir, "data", "retrace_learn", "v1", "internal_dev", "controlled_ab_cases.json"
 )
 _PROMPT_EDGE = os.path.join(
     os.path.dirname(__file__), os.pardir, "prompts", "retrace_llm", "evidence_edge_prediction_v0.txt"

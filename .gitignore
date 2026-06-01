@@ -29,8 +29,10 @@ venv/
 adapters/
 models/
 .external_repos/
+.reference_cache/
 reference_downloads/
 benchmark_downloads/
+*.pdf
 *.parquet
 *.arrow
 *.db

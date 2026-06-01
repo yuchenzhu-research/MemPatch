@@ -14,6 +14,6 @@ methods:
   - StageA-Constrained
   - StageC-ICL
 
-exemplars_path: data/boundary_audit/boundary_audit_dev.jsonl
+exemplars_path: data/retrace_learn/v1/boundary_audit/boundary_audit_dev.jsonl
 dataset: dev_expansion
 output_dir: outputs/runs/matrix_eval

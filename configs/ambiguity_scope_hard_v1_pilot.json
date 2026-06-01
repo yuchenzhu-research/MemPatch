@@ -1,6 +1,6 @@
 {
   "split_id": "ambiguity_scope_hard_v1_pilot",
-  "source_dataset": "data/internal_dev/ambiguity_scope_hard_v1.json",
+  "source_dataset": "data/retrace_learn/v1/internal_dev/ambiguity_scope_hard_v1.json",
   "selected_case_ids": [
     "ash_dense_01",
     "ash_temporal_01",

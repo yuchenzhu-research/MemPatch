@@ -47,6 +47,8 @@ DEFAULT_DATASET = os.path.join(
     os.path.dirname(__file__),
     os.pardir,
     "data",
+    "retrace_learn",
+    "v1",
     "internal_dev",
     "ambiguity_scope_controlled.json",
 )
