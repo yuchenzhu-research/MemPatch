@@ -20,6 +20,11 @@ artifacts/
 !data/retrace_bench/sample_80_hard_en/*.jsonl
 !data/retrace_bench/sample_80_hard_en/*.json
 !data/retrace_bench/sample_80_hard_en/README.md
+# v2 toy smoke sample (4 scenarios) referenced by manifest.json and the v2 smoke test.
+!data/retrace_bench/sample_20_v2/
+!data/retrace_bench/sample_20_v2/*.jsonl
+!data/retrace_bench/sample_20_v2/*.json
+!data/retrace_bench/sample_20_v2/README.md
 data_external/
 .pycache_compile/
 __pycache__/
