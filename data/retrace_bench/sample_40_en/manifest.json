@@ -1,0 +1,6 @@
+{
+  "dataset_name": "sample_40_en",
+  "scenario_count": 40,
+  "schema_version": "retrace_bench_general_1",
+  "renderer": "template"
+}
