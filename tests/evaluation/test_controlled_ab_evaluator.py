@@ -36,6 +36,8 @@ _CASES_PATH = os.path.join(
     os.pardir,
     os.pardir,
     "data",
+    "retrace_learn",
+    "v1",
     "internal_dev",
     "controlled_ab_cases.json",
 )

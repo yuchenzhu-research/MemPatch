@@ -26,6 +26,8 @@ _DATASET_PATH = os.path.join(
     os.pardir,
     os.pardir,
     "data",
+    "retrace_learn",
+    "v1",
     "internal_dev",
     "ambiguity_scope_controlled.json",
 )
@@ -34,6 +36,8 @@ _HARD_DATASET_PATH = os.path.join(
     os.pardir,
     os.pardir,
     "data",
+    "retrace_learn",
+    "v1",
     "internal_dev",
     "ambiguity_scope_hard_v1.json",
 )
