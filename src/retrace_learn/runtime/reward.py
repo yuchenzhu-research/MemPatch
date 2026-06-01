@@ -28,6 +28,7 @@ from retracemem.methods.contracts import SharedCandidateView
 
 from retrace_learn.schemas import RevisionAction
 from retrace_learn.runtime.dpa_runtime import ParseResult, RuntimeResult
+from retrace_learn.runtime.engine_errors import EngineError, EngineStage
 
 # Statuses that mean "the belief was defeated and must not stay usable".
 _DEFEATED_STATUSES = frozenset({"SUPERSEDED", "BLOCKED"})
@@ -47,6 +48,8 @@ class RewardWeights:
     under_update: float = 0.5
     spurious_uncertain: float = 0.3
     stale_propagation: float = 1.0
+    gate_rejection: float = 0.4
+    no_revision_overuse: float = 0.2
 
 
 DEFAULT_WEIGHTS = RewardWeights()
@@ -72,6 +75,8 @@ class LearnRewardBreakdown:
     total_reward: float
     failure_category: str
     diagnostics: dict = field(default_factory=dict)
+    gate_rejection_penalty: float = 0.0
+    no_revision_overuse_penalty: float = 0.0
 
     def to_dict(self) -> dict:
         return asdict(self)
@@ -99,6 +104,8 @@ def classify_failure(b: "LearnRewardBreakdown") -> str:
         return "INVALID_TARGET"
     if b.missing_evidence_penalty > 0:
         return "MISSING_EVIDENCE"
+    if b.gate_rejection_penalty > 0:
+        return "GATE_REJECTION"
     if b.stale_propagation_penalty > 0:
         return "STALE_PROPAGATION"
     if b.over_update_penalty > 0:
@@ -123,6 +130,7 @@ def compute_reward(
     valid_evidence_ids: set[str],
     gold_actions: list[RevisionAction] | None = None,
     weights: RewardWeights = DEFAULT_WEIGHTS,
+    engine_errors: tuple[EngineError, ...] = (),
 ) -> LearnRewardBreakdown:
     """Compute the decomposed reward for one rollout."""
     parser_ok = parse_result.valid_json and parse_result.schema_valid
@@ -200,6 +208,20 @@ def compute_reward(
         spurious = _fraction(spurious_count, n_uncertain, empty=0.0)
     spurious_uncertain_penalty = spurious
 
+    # --- gate rejection penalty (from structured engine errors) ---
+    gate_rejections = sum(1 for e in engine_errors if e.stage == EngineStage.REVISION_GATE)
+    gate_rejection_penalty = _fraction(gate_rejections, max(n_rev, 1), empty=0.0)
+
+    # --- NO_REVISION overuse penalty ---
+    n_no_revision = sum(1 for a in actions if a.action_type == "NO_REVISION")
+    gold_revision_count = sum(1 for ga in (gold_actions or []) if ga.action_type != "NO_REVISION")
+    no_revision_overuse = 0.0
+    if gold_revision_count > 0 and len(actions) > 0:
+        no_revision_ratio = n_no_revision / len(actions)
+        if no_revision_ratio > 0.5:
+            no_revision_overuse = min(1.0, (no_revision_ratio - 0.5) * 2.0)
+    no_revision_overuse_penalty = no_revision_overuse
+
     total = (
         weights.final_status * final_status_reward
         + weights.valid_json * valid_json_reward
@@ -213,6 +235,8 @@ def compute_reward(
         - weights.under_update * under_update_penalty
         - weights.spurious_uncertain * spurious_uncertain_penalty
         - weights.stale_propagation * stale_propagation_penalty
+        - weights.gate_rejection * gate_rejection_penalty
+        - weights.no_revision_overuse * no_revision_overuse_penalty
     )
 
     breakdown = LearnRewardBreakdown(
@@ -237,7 +261,11 @@ def compute_reward(
             "over_count": over,
             "under_count": under,
             "stale_count": stale,
+            "gate_rejections": gate_rejections,
+            "n_no_revision": n_no_revision,
         },
+        gate_rejection_penalty=gate_rejection_penalty,
+        no_revision_overuse_penalty=no_revision_overuse_penalty,
     )
     return LearnRewardBreakdown(
         **{**breakdown.to_dict(), "failure_category": classify_failure(breakdown)}
@@ -269,4 +297,5 @@ def compute_reward_for_view(
         valid_evidence_ids=valid_evidence_ids,
         gold_actions=gold_actions,
         weights=weights,
+        engine_errors=runtime_result.engine_errors,
     )
