@@ -31,8 +31,8 @@ def test_general_gold_perfect_prediction_scores_one():
         }
     }
     metrics = score_prediction(scenario, prediction)
-    assert metrics["answer_accuracy"] == 1.0
+    assert metrics["answer_key_fact_accuracy"] == 1.0
+    assert metrics["answer_exact_match"] == 1.0
     assert metrics["memory_state_accuracy"] == 1.0
     assert metrics["evidence_f1"] == 1.0
     assert json.dumps(scenario)
-
