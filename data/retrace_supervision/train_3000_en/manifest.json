@@ -4,7 +4,7 @@
   "schema_version": "retrace_bench_general_1",
   "renderer": "split_template",
   "split": "train_3000_en",
-  "purpose": "Synthetic supervision pool for future ReTrace-Learn open-model typed proposer training and ReTrace-SkillOpt memory_policy.md optimization. This is **not** a benchmark and must never be scored as held-out evaluation.",
+  "purpose": "Synthetic supervision pool for future ReTrace-Learn open-model typed revision proposer training (Graph Extractor -> Typed Revision Proposer -> Authorization Court). This is **not** a benchmark and must never be scored as held-out evaluation.",
   "scenario_id_prefix": "rt-train-",
   "seed_range": [
     100000,

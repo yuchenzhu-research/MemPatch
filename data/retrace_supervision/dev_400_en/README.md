@@ -16,7 +16,7 @@ This split shares no scenario, case, entity, memory ID, event ID, exact text, hi
 
 - Model input: `workflow_context`, `public_input`, `tasks` only.
 - Evaluation may read `hidden_gold`.
-- `training_targets` (typed revision actions, target memory state, supporting evidence, optional evidence graph) is for future ReTrace-Learn / ReTrace-SkillOpt method training and selection. It is **not** model input at evaluation time.
+- `training_targets` (typed revision actions, target memory state, supporting evidence, optional evidence graph) is for future ReTrace-Learn method training and selection. It is **not** model input at evaluation time.
 
 ## Coverage
 

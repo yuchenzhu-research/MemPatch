@@ -1,6 +1,6 @@
 # train_3000_en
 
-Synthetic supervision pool for future ReTrace-Learn open-model typed proposer training and ReTrace-SkillOpt memory_policy.md optimization. This is **not** a benchmark and must never be scored as held-out evaluation.
+Synthetic supervision pool for future ReTrace-Learn open-model typed revision proposer training (Graph Extractor -> Typed Revision Proposer -> Authorization Court). This is **not** a benchmark and must never be scored as held-out evaluation.
 
 ## Provenance
 
@@ -16,7 +16,7 @@ This split shares no scenario, case, entity, memory ID, event ID, exact text, hi
 
 - Model input: `workflow_context`, `public_input`, `tasks` only.
 - Evaluation may read `hidden_gold`.
-- `training_targets` (typed revision actions, target memory state, supporting evidence, optional evidence graph) is for future ReTrace-Learn / ReTrace-SkillOpt method training and selection. It is **not** model input at evaluation time.
+- `training_targets` (typed revision actions, target memory state, supporting evidence, optional evidence graph) is for future ReTrace-Learn method training and selection. It is **not** model input at evaluation time.
 
 ## Coverage
 

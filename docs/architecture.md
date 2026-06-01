@@ -1,6 +1,14 @@
-# Architecture
+# Architecture (ReTrace-Learn method track)
 
-ReTrace separates a **trainable proposal system** (**ReTrace-Learn**) from a **deterministic authorization backend** (**ReTrace-Engine**). The engine never calls an LLM API and is fully deterministic; everything model- or benchmark-specific lives outside it.
+This document describes the internal architecture of the **ReTrace-Learn** method
+track. (For the umbrella project's two-track structure see
+[`project_governance.md`](project_governance.md).)
+
+Within ReTrace-Learn, a **trainable proposal system** (Graph Extractor + Typed
+Revision Proposer) is separated from the **deterministic Authorization Court**,
+implemented by **ReTrace-Engine**. ReTrace-Engine is a submodule of ReTrace-Learn,
+not a standalone track: it never calls an LLM API and is fully deterministic;
+everything model- or benchmark-specific lives outside it.
 
 ## Layers
 

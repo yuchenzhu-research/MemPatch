@@ -4,7 +4,7 @@
 This emits three *disjoint* splits in the current general benchmark schema:
 
 * ``data/retrace_supervision/train_3000_en/`` - synthetic supervision pool for
-  future ReTrace-Learn typed-proposer training and ReTrace-SkillOpt policy work.
+  future ReTrace-Learn typed-proposer training and policy work.
 * ``data/retrace_supervision/dev_400_en/``    - selection split (prompt / policy
   / checkpoint selection, validation-gated edits).
 * ``data/retrace_bench/test_800_en/``         - held-out internal benchmark
@@ -354,7 +354,7 @@ def build_split_scenario(cfg: SplitConfig, ordinal: int) -> dict:
 
 def _build_training_targets(primary: str, target: str, replacement: str,
                             evidence_event: str, expected_state: dict[str, str]) -> dict:
-    """Supervision target for future ReTrace-Learn / SkillOpt method training.
+    """Supervision target for future ReTrace-Learn method training.
 
     Uses only the canonical typed-revision vocabulary and method-visible
     structure (candidate memory IDs + the grounding evidence event). It does not
@@ -506,7 +506,7 @@ def _readme(cfg: SplitConfig, summary: dict) -> str:
     if cfg.include_training_targets:
         lines += [
             "- `training_targets` (typed revision actions, target memory state, supporting "
-            "evidence, optional evidence graph) is for future ReTrace-Learn / ReTrace-SkillOpt "
+            "evidence, optional evidence graph) is for future ReTrace-Learn "
             "method training and selection. It is **not** model input at evaluation time.",
         ]
     if held_out:
@@ -553,7 +553,8 @@ def split_configs(train_count: int, dev_count: int, test_count: int) -> list[Spl
             include_training_targets=True,
             purpose=(
                 "Synthetic supervision pool for future ReTrace-Learn open-model typed "
-                "proposer training and ReTrace-SkillOpt memory_policy.md optimization. "
+                "revision proposer training (Graph Extractor -> Typed Revision Proposer -> "
+                "Authorization Court). "
                 "This is **not** a benchmark and must never be scored as held-out evaluation."
             ),
         ),

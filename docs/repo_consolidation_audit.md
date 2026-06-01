@@ -1,8 +1,14 @@
 # Repository Consolidation & Cleanup Audit
 
-本项目包含两个相关但各自独立的 Paper 的评估/代码体系：
-- **Paper 1 (ReTrace-Learn)**: 方法论文，包含 Graph Extractor, Typed Revision Proposer 以及 ReTrace-Engine。
-- **Paper 2 (ReTrace-Bench)**: 评测基准论文，包含独立的测试评估架构与基准数据集。
+> Canonical project structure: see [`docs/project_governance.md`](project_governance.md).
+> ReTrace 是 umbrella 项目，按 **两条 active research tracks** 治理（不是三条或四条）：
+> ReTrace-Bench（benchmark track）与 ReTrace-Learn（method track）。
+> **ReTrace-Engine 是 ReTrace-Learn 内部确定性 Authorization Court 的实现名**，
+> 不是独立论文，也不是独立的顶层模块。
+
+本项目包含两条 active research track 的评估/代码体系：
+- **ReTrace-Learn (method track)**: 方法论文，pipeline 为 Graph Extractor -> Typed Revision Proposer -> Authorization Court（由 ReTrace-Engine / `authorize(...)` 实现）。
+- **ReTrace-Bench (benchmark track)**: 评测基准论文，evaluation-only，包含独立的测试评估架构与基准数据集。
 
 ---
 

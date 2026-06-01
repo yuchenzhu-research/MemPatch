@@ -1,10 +1,31 @@
 # ReTrace
 
-**ReTrace-Learn** is a trainable framework that turns multi-agent/subagent shared-memory revision authorization into a verifiable learning problem. Under this architecture, models learn to extract graphs and propose structured memory-revision actions, while a deterministic backend—the **ReTrace-Engine**—provides execution, evaluation, audit traces, and training feedback.
+**ReTrace** is the umbrella project for reliable shared-memory revision in
+multi-agent/agentic workflows. It is governed as **two active research tracks**
+(see [`docs/project_governance.md`](docs/project_governance.md)):
 
-## Central Research Claim
+1. **ReTrace-Bench** — the benchmark track. An evaluation-only benchmark for
+   agent memory revision reliability; it does **not** depend on any training
+   method. Owns benchmark data, schema, scoring, baselines, the held-out test
+   split, and leakage checks (`benchmark/retrace_bench/`, `data/retrace_bench/`,
+   `data/retrace_supervision/`, `docs/retrace_bench/`).
+2. **ReTrace-Learn** — the method track. A trainable framework that turns
+   shared-memory revision authorization into a verifiable learning problem:
+   models learn to extract graphs and propose structured revision actions, and a
+   deterministic **Authorization Court** (implemented by **ReTrace-Engine**,
+   `authorize(...)`) provides execution, evaluation, audit traces, and training
+   feedback (`src/retrace_learn/`, `src/retracemem/`).
 
-> **ReTrace-Learn** turns shared-memory revision authorization into a verifiable learning problem: models learn to propose structured revision actions, while deterministic authorization provides execution, evaluation, audit traces, and training feedback.
+> **ReTrace-Engine** is the implementation name for the deterministic
+> Authorization Court **inside ReTrace-Learn**. It is not a standalone paper or a
+> separate top-level track.
+
+The rest of this README describes the **ReTrace-Learn** method track; for the
+benchmark track see [`docs/retrace_bench/`](docs/retrace_bench/).
+
+## Central Research Claim (ReTrace-Learn)
+
+> **ReTrace-Learn** turns shared-memory revision authorization into a verifiable learning problem: models learn to propose structured revision actions, while the deterministic Authorization Court (ReTrace-Engine) provides execution, evaluation, audit traces, and training feedback.
 
 Rather than relying purely on hand-written rules or black-box LLM status predictions, the contribution consists of:
 ```text
@@ -28,14 +49,14 @@ Raw multi-subagent content / dialogue
     → structured evidence / belief / condition / dependency graph JSON
     → ReTrace-Learn Typed Revision Proposer  (learned)
     → typed revision action JSON
-    → ReTrace-Engine                         (deterministic)
+    → Authorization Court — ReTrace-Engine    (deterministic)
         → Parser
         → RevisionGate
         → Defeat-Path Authorization (DPA)
     → final memory statuses + audit trace
 ```
 
-ReTrace-Engine executes this pipeline via a single public entrypoint:
+The Authorization Court (ReTrace-Engine) executes this pipeline via a single public entrypoint:
 ```python
 authorize(view, proposal_batches, *, audit_metadata=None) -> AuthorizationResult
 ```
