@@ -5,8 +5,8 @@ import os
 import sys
 from pathlib import Path
 
-# Add src to python path
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+# Add root to python path
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from benchmark.retrace_bench.schemas import Scenario, DialogueTurn, MemoryEntry, ProbeQuery
 from benchmark.retrace_bench.taxonomy import Domain, RevisionFamily, FinalStatus, ProbeType, RevisionActionType
