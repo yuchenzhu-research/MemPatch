@@ -155,7 +155,7 @@ def latest_only(scenario: dict[str, Any]) -> dict[str, Any]:
         "decision": "use_current_memory",
         "memory_state": memory_state,
         "evidence_event_ids": [latest["event_id"]],
-        "failure_diagnosis": "stale_memory_reuse",
+        "failure_diagnosis": _infer_diagnosis_from_memory_state(memory_state),
     }
 
 
@@ -207,7 +207,7 @@ def rag_lexical(scenario: dict[str, Any]) -> dict[str, Any]:
         "decision": "use_current_memory",
         "memory_state": state,
         "evidence_event_ids": [e["event_id"] for e in top_events],
-        "failure_diagnosis": "stale_memory_reuse",
+        "failure_diagnosis": _infer_diagnosis_from_memory_state(state),
     }
 
 
