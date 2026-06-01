@@ -1,43 +1,89 @@
 - name: SWE-bench
-  repo: https://github.com/princeton-nlp/SWE-bench
-  paper: https://arxiv.org/abs/2310.06770
-  dataset: https://huggingface.co/datasets/princeton-nlp/SWE-bench
-  lessons:
-    - Package-style python library for evaluation.
-    - Sandboxed container executions.
+  category: Software Engineering Agents
+  status: Related Benchmark
+  paper_url: https://arxiv.org/abs/2310.06770
+  repo_url: https://github.com/princeton-nlp/SWE-bench
+  dataset_url: https://huggingface.co/datasets/princeton-nlp/SWE-bench
+  notes_file: references/top_benchmarks/notes/swe_bench.md
+  what_to_borrow: Python library structure for test suite packaging and evaluation.
+  what_to_avoid: Heavy sandboxing / container dependencies for logic evaluation.
 
 - name: WebArena
-  repo: https://github.com/web-arena-x/webarena
-  paper: https://arxiv.org/abs/2307.13854
-  lessons:
-    - End-to-end task execution in mock web environments.
+  category: Web Agents
+  status: Related Benchmark
+  paper_url: https://arxiv.org/abs/2307.13854
+  repo_url: https://github.com/web-arena-x/webarena
+  dataset_url: ""
+  notes_file: references/top_benchmarks/notes/webarena.md
+  what_to_borrow: Structured mock environments to isolate agent interactions.
+  what_to_avoid: Complex live docker environment setup for pure memory evaluation.
 
 - name: OSWorld
-  repo: https://github.com/OS-World/OSWorld
-  paper: https://arxiv.org/abs/2404.07972
-  lessons:
-    - OS agent evaluation under full virtual desktop setup.
+  category: OS Agents
+  status: Related Benchmark
+  paper_url: https://arxiv.org/abs/2404.07972
+  repo_url: https://github.com/OS-World/OSWorld
+  dataset_url: ""
+  notes_file: references/top_benchmarks/notes/osworld.md
+  what_to_borrow: Detailed schema for specifying system states.
+  what_to_avoid: Heavy virtual desktop requirements.
 
 - name: AgentBench
-  repo: https://github.com/THUDM/AgentBench
-  paper: https://arxiv.org/abs/2308.03688
-  lessons:
-    - Unified multi-environment test suite framework.
+  category: Multi-Domain Benchmark
+  status: Related Benchmark
+  paper_url: https://arxiv.org/abs/2308.03688
+  repo_url: https://github.com/THUDM/AgentBench
+  dataset_url: ""
+  notes_file: references/top_benchmarks/notes/agentbench.md
+  what_to_borrow: Unified multi-task agent harness.
+  what_to_avoid: Highly generic task structures lacking focused belief-revision evaluation.
 
 - name: BigCodeBench
-  repo: https://github.com/bigcode-project/bigcodebench
-  paper: https://arxiv.org/abs/2406.12345
-  lessons:
-    - Massive library usage and tool evaluation suite.
+  category: Coding Agents
+  status: Related Benchmark
+  paper_url: https://arxiv.org/abs/2406.12345
+  repo_url: https://github.com/bigcode-project/bigcodebench
+  dataset_url: ""
+  notes_file: references/top_benchmarks/notes/bigcodebench.md
+  what_to_borrow: Granular tool usage tracking.
+  what_to_avoid: Pure coding execution validation.
 
 - name: GAIA
-  repo: https://github.com/huggingface/gaia
-  paper: https://arxiv.org/abs/2311.12983
-  lessons:
-    - Multi-modal agent tasks with deterministic verification.
+  category: General Assistant multimodal
+  status: Related Benchmark
+  paper_url: https://arxiv.org/abs/2311.12983
+  repo_url: https://github.com/huggingface/gaia
+  dataset_url: ""
+  notes_file: references/top_benchmarks/notes/gaia.md
+  what_to_borrow: Clear deterministic check of final task state output.
+  what_to_avoid: Relies on generic assistant APIs instead of isolated memory checks.
 
 - name: BFCL
-  repo: https://github.com/ShishirPatil/gorilla
-  paper: https://arxiv.org/abs/2305.15395
-  lessons:
-    - Live leaderboard model for evaluating function calling.
+  category: Function Calling
+  status: Related Benchmark
+  paper_url: https://arxiv.org/abs/2305.15395
+  repo_url: https://github.com/ShishirPatil/gorilla
+  dataset_url: ""
+  notes_file: references/top_benchmarks/notes/bfcl.md
+  what_to_borrow: Live model evaluation matrices.
+  what_to_avoid: Specific tool API definitions.
+
+- name: Mind2Web
+  category: Web Agents
+  status: Related Benchmark
+  paper_url: https://arxiv.org/abs/2306.06070
+  repo_url: https://github.com/OSU-NLP-Group/Mind2Web
+  dataset_url: ""
+  notes_file: ""
+  what_to_borrow: Action sequence logging structure.
+  what_to_avoid: Raw DOM-based observation space.
+
+- name: MLE-bench
+  category: Machine Learning Agents
+  status: Related Benchmark
+  paper_url: https://arxiv.org/abs/2410.07095
+  repo_url: https://github.com/openai/mle-bench
+  dataset_url: ""
+  notes_file: ""
+  what_to_borrow: Automated competition platforms for ML engineering agent tasks.
+  what_to_avoid: Long-horizon resource-heavy tasks.

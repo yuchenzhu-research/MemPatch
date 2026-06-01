@@ -35,10 +35,11 @@
 * `src/retracemem/verifier/typed_edge_response_parser.py`: 对 LLM 预测的边响应进行确定性格式化解析。
 
 ### 大模型服务商与传输 (`providers/` & `cache/`)
-* `src/retracemem/providers/base.py`: 定义底层 LLM Transport 接口规范。
+* `src/retracemem/providers/base.py`: 定义底层 LLM Transport 规范 (`BaseLLMProvider`)，为方法运行与训练提供统一的带有结构化 `ModelCallTrace` 缓存和记录的**规范抽象**。
 * `src/retracemem/providers/provider_factory.py`: 大模型客户端工厂，支持多平台集成。
 * `src/retracemem/providers/cached_client.py`: 提供 LLM 请求的本地 JSONL 缓存装饰，防重复调用。
 * `src/retracemem/cache/jsonl_cache.py`: 轻量级本地 JSONL 文件缓存实现。
+* *注：`benchmark/retrace_bench/llm_providers/` 内包含的精简版 Provider 仅供 Benchmark 基线推理使用，以解耦复杂的 Trace 日志开销。*
 
 ---
 

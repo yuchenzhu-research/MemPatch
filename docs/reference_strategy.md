@@ -5,11 +5,11 @@ This document outlines the design reference storage policy for the ReTrace repos
 ## Reference Organization
 
 1. **Domain Memory Benchmarks**:
-   - Stored in [references/agent_memory/](file:///Users/yuchenzhu/Desktop/ReTrace/references/agent_memory/)
+   - Stored in [references/agent_memory/](../references/agent_memory/)
    - Focuses on related academic benchmarks like STALE, Memora, and MemConflict.
 
 2. **Top Benchmark Engineering**:
-   - Stored in [references/top_benchmarks/](file:///Users/yuchenzhu/Desktop/ReTrace/references/top_benchmarks/)
+   - Stored in [references/top_benchmarks/](../references/top_benchmarks/)
    - Reviews mature industrial frameworks like SWE-bench, WebArena, and OSWorld.
 
 ## Guardrails Against Repository Bloat

@@ -8,6 +8,9 @@ artifacts/
 *.jsonl
 !tests/**/*.jsonl
 !data/fixtures/**/*.jsonl
+!data/retrace_bench/sample_20/*.jsonl
+!data/retrace_bench/sample_20/*.json
+!data/retrace_bench/sample_20/README.md
 data_external/
 .pycache_compile/
 __pycache__/
