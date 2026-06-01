@@ -21,6 +21,9 @@ import json
 from collections import Counter
 from pathlib import Path
 
+from scripts.analyze_retrace_template_signatures import event_text_templates, scenario_signature
+from scripts.run_template_lookup_baseline import evaluate as evaluate_template_lookup
+
 
 def load(path: str) -> list[dict]:
     return [json.loads(line) for line in Path(path).read_text(encoding="utf-8").splitlines() if line.strip()]
@@ -99,21 +102,53 @@ def check(train: list[dict], dev: list[dict], test: list[dict]) -> tuple[list[st
     return errors, report
 
 
+def template_report(train: list[dict], dev: list[dict], test: list[dict], train_path: str, test_path: str) -> dict:
+    train_sigs = {scenario_signature(r) for r in train}
+    dev_sigs = {scenario_signature(r) for r in dev}
+    test_sigs = {scenario_signature(r) for r in test}
+    train_event_templates = {template for row in train for template in event_text_templates(row)}
+    test_event_templates = {template for row in test for template in event_text_templates(row)}
+    lookup = evaluate_template_lookup(Path(train_path), Path(test_path))
+    return {
+        "train_test_signature_overlap_count": len(train_sigs & test_sigs),
+        "dev_test_signature_overlap_count": len(dev_sigs & test_sigs),
+        "train_test_signature_overlap_rate": 0.0 if not test_sigs else len(train_sigs & test_sigs) / len(test_sigs),
+        "train_test_event_template_overlap_count": len(train_event_templates & test_event_templates),
+        "template_lookup_coverage_rate": lookup["coverage_rate"],
+        "template_lookup_decision_accuracy": lookup["decision_accuracy"],
+        "template_lookup_failure_mode_accuracy": lookup["failure_mode_accuracy"],
+    }
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--train", required=True)
     parser.add_argument("--dev", required=True)
     parser.add_argument("--test", required=True)
     parser.add_argument("--json", action="store_true", help="Print the full report as JSON.")
+    parser.add_argument("--strict-template-heldout", action="store_true")
     args = parser.parse_args(argv)
 
     train, dev, test = load(args.train), load(args.dev), load(args.test)
     errors, report = check(train, dev, test)
+    tmpl = template_report(train, dev, test, args.train, args.test)
+    report["template_level"] = tmpl
+    if args.strict_template_heldout:
+        if tmpl["train_test_signature_overlap_rate"] > 0.10:
+            errors.append(
+                f"train->test signature overlap {tmpl['train_test_signature_overlap_rate']:.3f} > 0.10"
+            )
+        if tmpl["template_lookup_decision_accuracy"] > 0.55:
+            errors.append(
+                f"template lookup decision accuracy {tmpl['template_lookup_decision_accuracy']:.3f} > 0.55"
+            )
 
     if args.json:
         print(json.dumps({"errors": errors, "report": report}, indent=2))
     else:
         for k, r in report.items():
+            if k == "template_level":
+                continue
             print(f"[{k}] count={r['count']} prefixes={r['scenario_id_prefixes']} seed_range={r['seed_range']}")
             print(f"  domains={len(r['by_domain'])}/8 modes={len(r['by_failure_mode'])}/11 decisions={r['by_expected_decision']}")
         if errors:
@@ -122,6 +157,14 @@ def main(argv: list[str] | None = None) -> int:
                 print(f"  - {e}")
         else:
             print("\nOK: no scenario_id / memory_id / event_id / public-text / expected-answer overlap.")
+        print(
+            "Template diagnostics: "
+            f"train_test_signature_overlap={tmpl['train_test_signature_overlap_count']} "
+            f"({tmpl['train_test_signature_overlap_rate']:.3f}), "
+            f"event_template_overlap={tmpl['train_test_event_template_overlap_count']}, "
+            f"lookup_decision_acc={tmpl['template_lookup_decision_accuracy']:.3f}, "
+            f"lookup_failure_acc={tmpl['template_lookup_failure_mode_accuracy']:.3f}"
+        )
 
     return 1 if errors else 0
 

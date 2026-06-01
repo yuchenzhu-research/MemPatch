@@ -39,6 +39,10 @@ artifacts/
 !data/retrace_bench/test_800_en/*.jsonl
 !data/retrace_bench/test_800_en/*.json
 !data/retrace_bench/test_800_en/README.md
+!data/retrace_bench/test_800_templateheldout_en/
+!data/retrace_bench/test_800_templateheldout_en/*.jsonl
+!data/retrace_bench/test_800_templateheldout_en/*.json
+!data/retrace_bench/test_800_templateheldout_en/README.md
 data_external/
 .pycache_compile/
 __pycache__/
