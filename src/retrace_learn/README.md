@@ -1,28 +1,21 @@
 # ReTrace-Learn
 
-Engineering scaffolding that upgrades ReTrace from prompt-engineered **Stage A**
-(`ReTrace-Prompt`) toward the trainable **Stage C** policy (`ReTrace-AdaptiveProposer`,
-Open LoRA-SFT) described in `AGENTS.md`. It turns *raw multi-subagent dialogue*
-into *typed memory revisions* that are committed by the existing deterministic
-kernel — `retracemem.authorize(...)` — which this package never re-implements or
-overrides.
-
-This document is the engineering design (sections 1–11). It is deliberately
-minimal-but-runnable: every claim below maps to a schema, a function, or a test.
+Engineering scaffolding that upgrades ReTrace from a prompt-engineered baseline proposer to the trainable **ReTrace-Learn** system described in `AGENTS.md`. It turns *raw multi-subagent dialogue* into *typed memory revisions* that are committed by the existing deterministic kernel—the **ReTrace-Engine** (`retracemem.authorize(...)`), which this package never re-implements or overrides.
 
 ---
 
-## 1. ReTrace-Learn overall goal
+## 1. ReTrace-Learn Overall Goal
 
 Train small (2B/4B) models to perform the two *learnable* steps of the pipeline,
 while all authorization stays deterministic and auditable:
 
 ```
 raw dialogue / subagent submissions
-  → [L] graph extractor            (Module 1, learned)
+  → [L] Graph Extractor            (Module 1, learned)
   → belief / evidence / condition / replacement candidates
-  → [L] typed revision proposer    (Module 2, learned)
-  → parser + RevisionGate + DPA    (Module 3, deterministic kernel)
+  → [L] Typed Revision Proposer    (Module 2, learned)
+  → ReTrace-Engine                 (Module 3, deterministic kernel)
+    → Parser + RevisionGate + Defeat-Path Authorization (DPA)
   → DPA-in-the-loop reward         (Module 4, training signal)
   → [L optional] defeat-path ranker (Section E, safe/advisory)
   → auditable final belief statuses
@@ -33,7 +26,7 @@ Hard constraints (enforced in code/tests):
 - Final commit is API-free and deterministic: the only authorization entrypoint is `authorize(...)`.
 - The learned policy sees **only method-visible inputs** (candidate view, new evidence,
   candidate beliefs/replacements, conditions, pre-existing REQUIRES anchors). It never
-  sees gold revision targets or evaluator final statuses (Stage C training boundary).
+  sees gold revision targets or evaluator final statuses.
 
 ## 2. Module map
 

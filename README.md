@@ -1,119 +1,97 @@
 # ReTrace
 
-**ReTrace** is a deterministic shared-memory **revision authorization** system for
-multi-agent / subagent workflows (ICLR Paper 1).
+**ReTrace-Learn** is a trainable framework that turns multi-agent/subagent shared-memory revision authorization into a verifiable learning problem. Under this architecture, models learn to extract graphs and propose structured memory-revision actions, while a deterministic backend—the **ReTrace-Engine**—provides execution, evaluation, audit traces, and training feedback.
 
-When several subagents write evidence-bearing memory updates into a shared
-long-term memory, ReTrace decides **which revisions are allowed to change the
-shared usable memory basis** — and produces an auditable trace for every
-decision. Immutable evidence is never deleted; only a belief's *eligibility* to
-answer the current query changes, and only through verified, temporally valid
-typed defeat paths computed by a deterministic kernel.
+## Central Research Claim
 
+> **ReTrace-Learn** turns shared-memory revision authorization into a verifiable learning problem: models learn to propose structured revision actions, while deterministic authorization provides execution, evaluation, audit traces, and training feedback.
+
+Rather than relying purely on hand-written rules or black-box LLM status predictions, the contribution consists of:
 ```text
-subagent evidence-bearing submission
-    → typed revision proposer            (Stage A / Stage C; or DirectJudge for Stage B)
-    → parser / validator / RevisionGate  (structural, local, auditable)
-    → deterministic DPA  →  authorize(…) (the single public kernel)
-    → authorized shared-memory snapshot + audit trace
+benchmark/task definition
++ learned graph extraction (raw content -> structured graph JSON)
++ learned typed revision proposal (graph JSON + snapshot -> action JSON)
++ deterministic authorization engine (Parser + RevisionGate + Defeat-Path Authorization)
++ DPA-in-the-loop training signal (reward / SFT / DPO feedback)
++ strong baselines and external validation
 ```
-
-> The problem is **multi-agent shared-memory revision authorization**, not
-> retrieval, debate/voting, or generic agent orchestration.
 
 ---
 
-## Core pipeline
+## Core Pipeline
 
-ReTrace is built around one public deterministic kernel:
+The overall architecture routes raw content through learned and deterministic modules:
 
+```text
+Raw multi-subagent content / dialogue
+    → ReTrace-Learn Graph Extractor         (learned)
+    → structured evidence / belief / condition / dependency graph JSON
+    → ReTrace-Learn Typed Revision Proposer  (learned)
+    → typed revision action JSON
+    → ReTrace-Engine                         (deterministic)
+        → Parser
+        → RevisionGate
+        → Defeat-Path Authorization (DPA)
+    → final memory statuses + audit trace
+```
+
+ReTrace-Engine executes this pipeline via a single public entrypoint:
 ```python
 authorize(view, proposal_batches, *, audit_metadata=None) -> AuthorizationResult
 ```
+* Neither **Defeat-Path Authorization (DPA)** nor `RevisionGate` is called directly by external clients; all admission, routing, and defeat-path computations happen inside `authorize`.
+* `commit_subagent_submission(...)` / `commit_submission_sequence(...)` are multi-agent integration wrappers.
 
-* `authorize(...)` is the **sole** public authorization entrypoint. Neither the
-  Defeat-Path Authorization algorithm (DPA) nor the `RevisionGate` is invoked
-  directly by external callers — all admission and deterministic routing happen
-  inside `authorize`.
-* `commit_subagent_submission(...)` / `commit_submission_sequence(...)` are the
-  multi-agent integration wrappers around `authorize(...)`.
+---
 
-### Typed action vocabulary vs. final status (these are different things)
+## Action Vocabulary vs. Final DPA Status
 
-A proposer emits **typed revision actions** over candidate structure:
+A proposer emits **typed revision actions** over candidate structures using a minimal, expressive action set. Each action can optionally carry a `"scope"` field (e.g., `"full"` or `"partial"`):
+
+```json
+{
+  "action_type": "SUPERSEDES",
+  "target_belief_id": "...",
+  "replacement_belief_id": "...",
+  "evidence_ids": ["..."],
+  "scope": "full_or_partial_optional",
+  "rationale": "short optional explanation"
+}
+```
 
 | Action | Meaning |
 | --- | --- |
-| `SUPERSEDES` | New evidence replaces a prior belief (requires a grounded `replacement_belief_id`) |
-| `BLOCKS` | New evidence blocks a prerequisite condition |
-| `RELEASES` | New evidence releases a previously blocked condition |
-| `REAFFIRMS` | New evidence reaffirms a belief |
-| `UNCERTAIN` | New evidence introduces unresolved uncertainty |
+| `SUPERSEDES` | New evidence replaces a prior belief (requires `target_belief_id` + `replacement_belief_id`) |
+| `BLOCKS` | New evidence blocks a prerequisite condition (requires `target_condition_id`) |
+| `RELEASES` | New evidence releases a blocked condition (requires `target_condition_id`) |
+| `REAFFIRMS` | New evidence reaffirms a belief (requires `target_belief_id`) |
+| `UNCERTAIN` | New evidence introduces unresolved uncertainty (requires `target_belief_id`) |
 | `NO_REVISION` | No revision proposed |
 
-DPA then assigns each belief a **final status** (not an action type):
+The **ReTrace-Engine** then resolves the graph and assigns each belief a deterministic **final status**:
 
 ```text
 A_t(b) = DPA(b, S_t) ∈ {AUTHORIZED, BLOCKED, SUPERSEDED, UNRESOLVED}
 precedence:  SUPERSEDES > PREREQUISITE_BLOCK > UNRESOLVED_UNCERTAIN > AUTHORIZED
 ```
 
-Stage B (DirectJudge) predicts a *usability* verdict directly and is **not** a
-typed-action method.
-
 ---
 
-## Stage A / Stage B / Stage C
+## Methods and Baseline Framing
 
-These are **method variants over the same shared pipeline**, not a linear
-runtime chain.
+The project evaluates open-weight trainable models against strong baseline alternatives:
 
-| Stage | Name | What it does |
-| --- | --- | --- |
-| **A** | `ReTrace-API-ZeroShot` / `ReTrace-Prompt` | Zero-shot prompted **typed** proposer → RevisionGate → DPA |
-| **B** | `DirectJudge-API` | Baseline: directly predicts final usability status, no typed actions / gate / DPA |
-| **C** | `ReTrace-AdaptiveProposer` | **Adaptive** typed proposer family (API-ZeroShot, API-ICL, Hosted-FT, Open LoRA-SFT) → the *same* commit / DPA path |
+1. **Strong LLM DirectJudge**: A baseline that directly predicts the final status from raw dialogues/views, bypassing the ReTrace-Engine. It is used to answer: *Why not directly ask a frontier LLM?*
+2. **Prompt-Proposer (Stage A)**: Prompted frontier LLM (e.g., DeepSeek, Gemini) that generates actions over candidate structures. It is used to answer: *Why train a proposer instead of prompting?*
+3. **Open-weight ReTrace-Learn model**: Trainable model optimized via SFT (graph extraction & revision proposing), DPA-filtered Rejection Sampling Fine-Tuning (RSFT), and Direct Preference Optimization (DPO).
 
-Stage A and Stage C are **proposer families** that plug into the identical
-commit → DPA path; Stage C does not import any Stage A/B runner code — shared
-logic lives in `retracemem.evaluation.multiagent`.
+### Research Map
 
-### Current research map
+- **Fixed-Candidate Protocol** (Stage E1): Evaluates proposer quality over identical pre-constructed candidate memory graphs. Runner: `scripts/run_fixed_candidate_matrix.py`.
+- **Raw-Dialogue Protocol** (Stage E2): Evaluates the end-to-end pipeline (Graph Extractor + Proposer + Engine) from raw dialogue. Runner: `scripts/run_raw_dialogue_matrix.py`.
+- **External Validation on STALE / CUPMem** (Stage E3): Validates ReTrace-Learn's performance on external stale-memory benchmarks using mapped schemas.
 
-```text
-ReTrace-Core                 Parser + RevisionGate + DPA + Audit trace
-                             (deterministic, API-free, shared by every stage)
-
-Stage B                      DirectJudge baseline (predicts final status, bypasses Core)
-Stage A                      API-zero-shot proposer over a FIXED candidate view → Core
-Stage C-Fixed                learned proposer over the SAME fixed candidate view → Core
-                             (controlled comparison against Stage A)
-Stage C-Raw / ReTrace-Learn-Full   raw dialogue → learned graph extractor →
-                             learned typed revision proposer → Core
-                             (final, main research direction)
-```
-
-- **Fixed-Candidate Protocol** (Stage A, Stage C-Fixed): a pre-built candidate
-  view is given to every method; isolates *proposer* quality. Runner:
-  `scripts/run_fixed_candidate_matrix.py`.
-- **Raw-Dialogue Protocol** (Stage C-Raw): raw dialogue is the only input; the
-  graph extractor and proposer are both exercised end-to-end. Runner:
-  `scripts/run_raw_dialogue_matrix.py`.
-
-A serialized fixed-candidate view rendered as text is **not** raw dialogue — do
-not conflate the two. Both matrix runners run fully offline (oracle / replay /
-mock components, no API keys) and emit a JSON + CSV metrics summary plus a
-per-prediction JSONL. See
-[`docs/results/retrace_learn_full_smoke.md`](docs/results/retrace_learn_full_smoke.md)
-for the smoke loop and
-[`docs/retrace_learn_full_plan.md`](docs/retrace_learn_full_plan.md) for the
-Stage C-Raw design.
-
-> **Paper boundary.** Paper 1 may include raw-dialogue graph extraction, a
-> learned typed-revision proposer, DPA-in-the-loop typed-action reward, and
-> SFT / rejection-sampling / DPO / GRPO over *explicit* typed actions. Paper 2
-> owns latent / hidden-state memory, delayed-future-utility consolidation,
-> learned forgetting, and biological-memory mechanisms.
+> **Paper boundary.** Paper 1 focuses on explicit typed memory-revision proposal learning and deterministic DPA verification. Latent memory states, delayed-future-utility consolidation, biological memory mechanisms, and RL over hidden states are reserved for Paper 2.
 
 ---
 

@@ -70,6 +70,7 @@ class RevisionAction:
     target_condition_id: str | None = None
     replacement_belief_id: str | None = None
     evidence_ids: tuple[str, ...] = ()
+    scope: str | None = None
     rationale: str = ""
 
     def to_dict(self) -> dict[str, Any]:
@@ -79,6 +80,7 @@ class RevisionAction:
             "target_condition_id": self.target_condition_id,
             "replacement_belief_id": self.replacement_belief_id,
             "evidence_ids": list(self.evidence_ids),
+            "scope": self.scope,
             "rationale": self.rationale,
         }
 
@@ -92,10 +94,14 @@ class RevisionAction:
             target_condition_id=d.get("target_condition_id"),
             replacement_belief_id=d.get("replacement_belief_id"),
             evidence_ids=tuple(d.get("evidence_ids", ()) or ()),
+            scope=d.get("scope"),
             rationale=d.get("rationale", "") or "",
         )
 
     def validate(self) -> None:
+        if self.scope is not None and not isinstance(self.scope, str):
+            raise SchemaValidationError("scope must be a string or null")
+
         if self.action_type not in CANONICAL_ACTIONS:
             raise SchemaValidationError(
                 f"action_type '{self.action_type}' not in canonical vocabulary"
