@@ -25,6 +25,8 @@ from retrace_learn.runtime.reward import compute_reward_for_view
 
 
 def load_config(path: str | Path) -> dict[str, Any]:
+    from retrace_learn.training import check_contamination
+    check_contamination(path)
     with Path(path).open("r", encoding="utf-8") as fh:
         return yaml.safe_load(fh)
 
