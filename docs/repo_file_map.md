@@ -2,10 +2,16 @@
 
 本文件提供了 `yuchenzhu-research/ReTrace` 仓库中所有主要目录和文件的详细映射与说明，方便后续开发、对齐与审计。
 
+> 项目按两条 active research track 治理：**ReTrace-Bench**（benchmark track，见第 3 节）
+> 与 **ReTrace-Learn**（method track，见第 1–2 节）。规范定义见
+> [`docs/project_governance.md`](project_governance.md)。
+
 ---
 
-## 1. 核心 ReTrace-Engine 后端 (`src/retracemem/`)
-核心后端的职责是实现确定性的信念修正授权机制（Deterministic Defeat-Path Authorization, DPA）和 RevisionGate 准入控制。
+## 1. Authorization Court / ReTrace-Engine (`src/retracemem/`)
+本目录是 **ReTrace-Learn method track 内部**的确定性 Authorization Court，其实现名为 **ReTrace-Engine**。
+它实现确定性的信念修正授权机制（Deterministic Defeat-Path Authorization, DPA）和 RevisionGate 准入控制，
+通过唯一公共入口 `authorize(...)` 提交。**它不是独立论文，也不是独立的顶层研究 track。**
 
 ### 根目录与核心模式
 * `src/retracemem/__init__.py`: 暴露公共 API `authorize` 授权内核。
