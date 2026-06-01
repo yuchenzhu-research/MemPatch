@@ -42,6 +42,32 @@ SharedMemoryCommitResult  ── authorized snapshot + audit trace
 | `stagec.py` | Stage C orchestration (`run_stagec_eval`) |
 | `data/` | dev-set builders and the Stage C dataset exporter |
 
+## Structured Error Contracts (`retrace_learn.runtime.engine_errors`)
+
+Every stage of the deterministic backend reports failures and warnings through
+a shared `EngineError` frozen dataclass. This enables:
+
+- **Structured reward shaping**: penalties proportional to error severity
+  (gate rejection penalty, parser error penalty).
+- **Auditable fail-closed behavior**: every rejection carries a machine-readable
+  stage + code so downstream analysis can categorize failures without parsing prose.
+- **Curriculum-driven training**: errors are categorized for analysis
+  (`PARSER_ERROR`, `GATE_REJECTION`, `STALE_PROPAGATION`, etc.).
+
+```text
+EngineError(stage, code, message, severity, fail_closed, action_index, belief_id, ...)
+  ├── stage: PARSER | REVISION_GATE | DPA
+  ├── severity: INFO | WARNING | ERROR
+  └── fail_closed: True → the action was rejected and produced no graph mutation
+```
+
+Canonical error code constants are defined per stage (e.g. `PARSER_INVALID_JSON`,
+`GATE_UNKNOWN_BELIEF`, `DPA_MISSING_EVIDENCE_ATOM`).
+
+`ParseResult.errors` carries parser-stage errors. `RuntimeResult.engine_errors`
+aggregates errors from all three stages. `compute_reward()` consumes engine
+errors to derive `gate_rejection_penalty` and `no_revision_overuse_penalty`.
+
 ## Invariants
 
 - `authorize(...)` is the **only** public authorization entrypoint; DPA and

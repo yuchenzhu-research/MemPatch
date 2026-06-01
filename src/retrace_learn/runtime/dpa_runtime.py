@@ -20,6 +20,14 @@ from retracemem.multiagent.parser import (
 )
 
 from retrace_learn.schemas import RevisionAction, SchemaValidationError
+from retrace_learn.runtime.engine_errors import (
+    EngineError,
+    EngineStage,
+    ErrorSeverity,
+    PARSER_INVALID_JSON,
+    PARSER_ITEM_NOT_OBJECT,
+    PARSER_SCHEMA_VIOLATION,
+)
 from retrace_learn.runtime.views import actions_to_proposal_batches
 
 
@@ -30,6 +38,7 @@ class ParseResult:
     actions: tuple[RevisionAction, ...]
     error_code: str | None = None
     error_message: str | None = None
+    errors: tuple[EngineError, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -38,6 +47,7 @@ class ParseResult:
             "n_actions": len(self.actions),
             "error_code": self.error_code,
             "error_message": self.error_message,
+            "errors": [e.to_dict() for e in self.errors],
         }
 
 
@@ -50,6 +60,7 @@ class RuntimeResult:
     defeat_paths: list[dict[str, Any]]
     audit_trace: dict[str, Any]
     parse_result: ParseResult
+    engine_errors: tuple[EngineError, ...] = ()
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -60,6 +71,7 @@ class RuntimeResult:
             "defeat_paths": self.defeat_paths,
             "audit_trace": self.audit_trace,
             "parse_result": self.parse_result.to_dict(),
+            "engine_errors": [e.to_dict() for e in self.engine_errors],
         }
 
 
@@ -79,23 +91,47 @@ def parse_actions(raw_text: str) -> ParseResult:
             actions=(),
             error_code=exc.code.value,
             error_message=str(exc),
+            errors=(
+                EngineError(
+                    stage=EngineStage.PARSER,
+                    code=PARSER_INVALID_JSON,
+                    message=str(exc),
+                ),
+            ),
         )
 
     actions: list[RevisionAction] = []
+    current_idx = 0
     try:
-        for item in raw_list:
+        for current_idx, item in enumerate(raw_list):
             if not isinstance(item, dict):
                 raise SchemaValidationError("action items must be JSON objects")
             action = RevisionAction.from_dict(item)
             action.validate()
             actions.append(action)
     except SchemaValidationError as exc:
+        msg = str(exc)
+        if "must be JSON objects" in msg:
+            err = EngineError(
+                stage=EngineStage.PARSER,
+                code=PARSER_ITEM_NOT_OBJECT,
+                message=f"item {current_idx} is not a JSON object",
+                action_index=current_idx,
+            )
+        else:
+            err = EngineError(
+                stage=EngineStage.PARSER,
+                code=PARSER_SCHEMA_VIOLATION,
+                message=msg,
+                action_index=current_idx,
+            )
         return ParseResult(
             valid_json=True,
             schema_valid=False,
             actions=(),
             error_code=ParseErrorCode.SCHEMA_CONSTRAINTS_VIOLATED.value,
-            error_message=str(exc),
+            error_message=msg,
+            errors=(err,),
         )
 
     return ParseResult(
@@ -162,6 +198,23 @@ def run_actions(
         parse_result = ParseResult(
             valid_json=True, schema_valid=True, actions=tuple(actions)
         )
+
+    # Aggregate errors: start with parser errors, add gate rejections.
+    all_errors: list[EngineError] = list(parse_result.errors)
+    for idx, gd in enumerate(gate_decisions):
+        if not gd.get("admitted", True):
+            reason = gd.get("rejection_reason", gd.get("reason", "rejected by gate"))
+            all_errors.append(
+                EngineError(
+                    stage=EngineStage.REVISION_GATE,
+                    code=f"GATE_{gd.get('edge_type', 'UNKNOWN')}_REJECTED",
+                    message=str(reason),
+                    severity=ErrorSeverity.ERROR,
+                    action_index=idx,
+                    belief_id=gd.get("target_id"),
+                )
+            )
+
     return RuntimeResult(
         final_belief_statuses=final_statuses,
         authorized_belief_ids=auth.authorized_belief_ids,
@@ -170,6 +223,7 @@ def run_actions(
         defeat_paths=defeat_paths,
         audit_trace=auth.trace,
         parse_result=parse_result,
+        engine_errors=tuple(all_errors),
     )
 
 
