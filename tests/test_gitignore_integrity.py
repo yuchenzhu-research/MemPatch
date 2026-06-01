@@ -33,6 +33,8 @@ def test_gitignore_sensitive_artifacts_not_committed():
         "data/retrace_learn/v1/boundary_audit/",
         "data/retrace_bench/sample_20/",
         "data/retrace_bench/sample_20_v2/",
+        "data/retrace_bench/sample_40_en/",
+        "data/retrace_bench/sample_80_hard_en/",
     )
 
     for f in files:

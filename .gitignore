@@ -11,6 +11,15 @@ artifacts/
 !data/retrace_bench/sample_20/*.jsonl
 !data/retrace_bench/sample_20/*.json
 !data/retrace_bench/sample_20/README.md
+# Committed calibration fixtures (small, hand/template generated, not full datasets).
+!data/retrace_bench/sample_40_en/
+!data/retrace_bench/sample_40_en/*.jsonl
+!data/retrace_bench/sample_40_en/*.json
+!data/retrace_bench/sample_40_en/README.md
+!data/retrace_bench/sample_80_hard_en/
+!data/retrace_bench/sample_80_hard_en/*.jsonl
+!data/retrace_bench/sample_80_hard_en/*.json
+!data/retrace_bench/sample_80_hard_en/README.md
 data_external/
 .pycache_compile/
 __pycache__/
