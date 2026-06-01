@@ -239,3 +239,35 @@ def test_reject_evidence_edge_without_verifier_provenance() -> None:
     decision = RevisionGate().admit_evidence_edge(edge, store)
     assert decision.admitted is False
     assert decision.reason == "missing_verifier_provenance"
+
+
+def test_admit_evidence_edge_with_scope() -> None:
+    store = _store_with(condition_ids=("cond_y",))
+    edge = EvidenceEdge(
+        edge_id="ev_edge_009",
+        edge_type=EvidenceEdgeType.BLOCKS,
+        evidence_id="ev_n_009",
+        target_kind="condition",
+        target_id="cond_y",
+        verifier="verifier_test",
+        metadata={"scope": "partial"},
+    )
+    decision = RevisionGate().admit_evidence_edge(edge, store)
+    assert decision.admitted is True
+    assert decision.reason == "ok"
+
+
+def test_reject_evidence_edge_with_invalid_scope() -> None:
+    store = _store_with(condition_ids=("cond_y",))
+    edge = EvidenceEdge(
+        edge_id="ev_edge_010",
+        edge_type=EvidenceEdgeType.BLOCKS,
+        evidence_id="ev_n_010",
+        target_kind="condition",
+        target_id="cond_y",
+        verifier="verifier_test",
+        metadata={"scope": 123},
+    )
+    decision = RevisionGate().admit_evidence_edge(edge, store)
+    assert decision.admitted is False
+    assert decision.reason == "invalid_scope_type"
