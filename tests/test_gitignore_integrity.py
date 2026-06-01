@@ -31,6 +31,8 @@ def test_gitignore_sensitive_artifacts_not_committed():
         "data/fixtures/",
         "experiments/multiagent/local_training/data/",
         "data/retrace_learn/v1/boundary_audit/",
+        "data/retrace_bench/sample_20/",
+        "data/retrace_bench/sample_20_v2/",
     )
 
     for f in files:
