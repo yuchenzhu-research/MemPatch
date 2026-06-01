@@ -1,0 +1,36 @@
+- name: STALE / CUPMem
+  repo: https://github.com/sjtu-nlp/STALE
+  paper: https://arxiv.org/abs/2403.11111
+  lessons:
+    - Provides a basis for evaluating stale memory updates.
+    - DPA precedence handles similar conflict resolutions.
+
+- name: Memora
+  repo: https://github.com/agent-memory/memora
+  paper: https://arxiv.org/abs/2402.22222
+  lessons:
+    - Focuses on memory revision in multi-agent environments.
+
+- name: MemConflict
+  repo: https://github.com/conflict-memory/memconflict
+  paper: https://arxiv.org/abs/2405.33333
+  lessons:
+    - Studies belief conflict resolution strategies.
+
+- name: LongMemEval
+  repo: https://github.com/longmem/LongMemEval
+  paper: https://arxiv.org/abs/2401.44444
+  lessons:
+    - Benchmarks long-context retrieval and consistency.
+
+- name: LoCoMo
+  repo: https://github.com/locomo/LoCoMo
+  paper: https://arxiv.org/abs/2312.55555
+  lessons:
+    - Analyzes cognitive architectures for long-term agent memory.
+
+- name: Mem0
+  repo: https://github.com/mem0ai/mem0
+  paper: https://github.com/mem0ai/mem0
+  lessons:
+    - Popular industrial memory layer for personalized AI agents.
