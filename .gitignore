@@ -27,7 +27,15 @@ venv/
 # Local MLX / model-training artifacts.
 .venv-mlx/
 adapters/
-checkpoints/
-*.safetensors
-*.npz
 models/
+.external_repos/
+reference_downloads/
+benchmark_downloads/
+*.parquet
+*.arrow
+*.db
+*.sqlite
+*.zip
+*.tar
+*.tar.gz
+*.jsonl.gz
