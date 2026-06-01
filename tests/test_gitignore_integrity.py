@@ -35,6 +35,9 @@ def test_gitignore_sensitive_artifacts_not_committed():
         "data/retrace_bench/sample_20_v2/",
         "data/retrace_bench/sample_40_en/",
         "data/retrace_bench/sample_80_hard_en/",
+        "data/retrace_bench/test_800_en/",
+        "data/retrace_supervision/train_3000_en/",
+        "data/retrace_supervision/dev_400_en/",
     )
 
     for f in files:
