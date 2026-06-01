@@ -70,12 +70,16 @@
 
 ## 3. ReTrace-Bench 评准套件 (`benchmark/retrace_bench/`)
 独立评测基准套件的代码及各子模块，服务于 Paper 2。
-* `benchmark/retrace_bench/taxonomy.py`: 常量与 Enum。
-* `benchmark/retrace_bench/schemas.py`: 评测数据类结构。
+* `benchmark/retrace_bench/taxonomy.py`: v1 常量与 Enum。
+* `benchmark/retrace_bench/schemas.py`: v1 评测数据类结构。
+* `benchmark/retrace_bench/taxonomy_v2.py`: v2 扩展常量与 Enum。
+* `benchmark/retrace_bench/schemas_v2.py`: v2 新评测数据类结构。
+* `benchmark/retrace_bench/validation_v2.py`: v2 数据与校验逻辑。
 * `benchmark/retrace_bench/generation/`: 数据生成模块。
 * `benchmark/retrace_bench/protocols/`: 评测协议数据定义。
 * `benchmark/retrace_bench/evaluation/`: 跑分器、评测循环与聚合报告。
 * `benchmark/retrace_bench/baselines/`: 基线算法。
+
 
 ---
 
