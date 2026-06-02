@@ -22,7 +22,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 from dotenv import load_dotenv
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 
-from benchmark.retrace_bench.general_taxonomy import FAILURE_MODES, MEMORY_STATUSES, NON_ANSWER_DECISIONS
+from benchmark.retrace_bench.general_taxonomy import (
+    FAILURE_MODE_DEFINITIONS,
+    FAILURE_MODES,
+    MEMORY_STATUSES,
+    NON_ANSWER_DECISIONS,
+)
 from benchmark.retrace_bench.llm_providers import get_provider
 from benchmark.retrace_bench.scorers_general import aggregate_metrics, score_prediction
 from retracemem.authorization import EvidenceProposalBatch, authorize
@@ -482,7 +487,10 @@ def llm_json_answerer(
         "instruction": (
             "Answer as strict JSON only. Do not use Markdown. "
             "Use exact enum strings for decision, memory_state values, and failure_diagnosis. "
-            "Do not invent memory IDs or event IDs."
+            "Do not invent memory IDs or event IDs. "
+            "The failure_mode_definitions below describe what each diagnosis label "
+            "means; they are general label definitions and contain no answer for "
+            "this scenario."
         ),
         "schema": {
             "answer": "short final answer/action text",
@@ -491,6 +499,7 @@ def llm_json_answerer(
             "evidence_event_ids": "minimal list of event_id strings from public_input.event_trace",
             "failure_diagnosis": list(FAILURE_MODES),
         },
+        "failure_mode_definitions": dict(FAILURE_MODE_DEFINITIONS),
         "workflow_context": scenario["workflow_context"],
         "public_input": scenario["public_input"],
         "tasks": scenario["tasks"],
