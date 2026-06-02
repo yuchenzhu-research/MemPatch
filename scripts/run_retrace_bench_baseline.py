@@ -487,6 +487,7 @@ def llm_json_answerer(
         "instruction": (
             "Answer as strict JSON only. Do not use Markdown. "
             "Use exact enum strings for decision, memory_state values, and failure_diagnosis. "
+            "failure_diagnosis must be exactly one enum string (not a list). "
             "Do not invent memory IDs or event IDs. "
             "The failure_mode_definitions below describe what each diagnosis label "
             "means; they are general label definitions and contain no answer for "
@@ -497,7 +498,7 @@ def llm_json_answerer(
             "decision": ["use_current_memory", *NON_ANSWER_DECISIONS],
             "memory_state": {mid: list(MEMORY_STATUSES) for mid in memory_ids},
             "evidence_event_ids": "minimal list of event_id strings from public_input.event_trace",
-            "failure_diagnosis": list(FAILURE_MODES),
+            "failure_diagnosis": "exactly one enum string from: " + ", ".join(FAILURE_MODES),
         },
         "failure_mode_definitions": dict(FAILURE_MODE_DEFINITIONS),
         "workflow_context": scenario["workflow_context"],
