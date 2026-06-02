@@ -10,7 +10,7 @@ from pathlib import Path
 import scripts.run_retrace_bench_baseline as runner
 
 REPO = Path(__file__).resolve().parents[2]
-DATA = REPO / "data" / "retrace_bench" / "sample_40_en" / "scenarios.jsonl"
+DATA = REPO / "data" / "retrace_bench" / "sample_80_hard_en" / "scenarios.jsonl"
 
 # Hidden-gold fields a deployable baseline must never read as a prediction.
 GOLD_TOKENS = (

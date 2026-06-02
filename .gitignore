@@ -4,6 +4,7 @@ reference/
 # Runtime and generated outputs.
 outputs/
 artifacts/
+analysis/
 # Exclude output datasets except fixtures and tests
 *.jsonl
 !tests/**/*.jsonl
@@ -63,6 +64,9 @@ venv/
 .venv-mlx/
 adapters/
 models/
+checkpoints/
+wandb/
+runs/
 .external_repos/
 .reference_cache/
 reference_downloads/
@@ -76,3 +80,7 @@ benchmark_downloads/
 *.tar
 *.tar.gz
 *.jsonl.gz
+*.safetensors
+*.ckpt
+*.pt
+*.pth

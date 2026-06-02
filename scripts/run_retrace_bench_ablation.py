@@ -52,7 +52,7 @@ def load_metrics(path: Path) -> dict:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data", default="data/retrace_bench/sample_40_en/scenarios.jsonl")
+    parser.add_argument("--data", default="data/retrace_bench/sample_80_hard_en/scenarios.jsonl")
     parser.add_argument("--out-dir", default="outputs/retrace_bench/ablation_sample40")
     parser.add_argument("--max-cases", type=int, default=40)
     parser.add_argument("--include-llm", action="store_true")

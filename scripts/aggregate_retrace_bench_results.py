@@ -30,9 +30,9 @@ def main(argv=None):
                 # Try outputs/smoke/retrace_bench_v1/scenarios.jsonl
                 scenarios_path = Path("outputs/smoke/retrace_bench_v1/scenarios.jsonl")
             if not scenarios_path.exists():
-                scenarios_path = Path("data/retrace_bench/v1_smoke/scenarios.jsonl")
+                scenarios_path = Path("data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl")
         else:
-            scenarios_path = Path("data/retrace_bench/v1/scenarios.jsonl")
+            scenarios_path = Path("data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl")
 
     if not scenarios_path.exists():
         print(f"Error: scenarios.jsonl not found at {scenarios_path}. Please specify using --scenarios.")
