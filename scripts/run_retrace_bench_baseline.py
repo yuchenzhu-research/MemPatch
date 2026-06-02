@@ -91,6 +91,19 @@ def append_jsonl(path: Path, row: dict[str, Any]) -> None:
         f.flush()
 
 
+def read_resume_jsonl(path: Path) -> list[dict[str, Any]]:
+    rows = []
+    with path.open("r", encoding="utf-8") as f:
+        for line_no, line in enumerate(f, start=1):
+            if not line.strip():
+                continue
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                print(f"[resume] Ignoring invalid JSONL line {line_no} in {path}", file=sys.stderr)
+    return rows
+
+
 def resolve_data_path(value: str) -> Path:
     path = Path(value)
     if path.is_dir():
@@ -537,6 +550,11 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-cases", type=int, default=None, help="Evaluate only the first N scenarios")
     parser.add_argument("--progress", action="store_true", help="Print per-scenario progress")
     parser.add_argument("--append", action="store_true", help="Append predictions as they finish instead of rewriting --out at the end")
+    parser.add_argument(
+        "--resume",
+        action="store_true",
+        help="Resume from an existing --out JSONL by skipping already written scenario_ids and appending remaining predictions",
+    )
     parser.add_argument("--max-tokens", type=int, default=512, help="Maximum completion tokens for LLM baselines")
     parser.add_argument(
         "--disable-thinking",
@@ -570,10 +588,24 @@ def main(argv: list[str] | None = None) -> int:
     predictions: list[dict[str, Any]] = []
     scored: list[dict[str, Any]] = []
     out = Path(args.out)
-    if args.append and out.exists():
+    completed_ids: set[str] = set()
+    if args.resume and out.exists():
+        existing_by_id: dict[str, dict[str, Any]] = {}
+        for row in read_resume_jsonl(out):
+            scenario_id = row.get("scenario_id")
+            if isinstance(scenario_id, str):
+                existing_by_id[scenario_id] = row
+        predictions = [existing_by_id[scenario["scenario_id"]] for scenario in scenarios if scenario["scenario_id"] in existing_by_id]
+        scored = list(predictions)
+        completed_ids = {row["scenario_id"] for row in predictions}
+        write_jsonl(out, predictions)
+        print(f"[resume] Loaded {len(predictions)} existing predictions from {out}", flush=True)
+    elif args.append and out.exists():
         out.unlink()
     run_start = time.monotonic()
     for idx, scenario in enumerate(scenarios, start=1):
+        if scenario["scenario_id"] in completed_ids:
+            continue
         spinner_done: threading.Event | None = None
         spinner_thread: threading.Thread | None = None
         step_start = time.monotonic()
@@ -621,10 +653,10 @@ def main(argv: list[str] | None = None) -> int:
                 total_seconds=time.monotonic() - run_start,
                 metrics=pred["metrics"],
             )
-        if args.append:
+        if args.append or args.resume:
             append_jsonl(out, pred)
 
-    if not args.append:
+    if not args.append and not args.resume:
         write_jsonl(out, predictions)
     metrics_path = out.with_suffix(".metrics.json")
     aggregate = aggregate_metrics(scored)
