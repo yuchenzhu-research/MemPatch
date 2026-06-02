@@ -1,0 +1,119 @@
+{
+  "dataset_name": "test_800_templateheldout_en",
+  "decision_by_failure_mode": {
+    "conflict_collapse": {
+      "ask_clarification": 18,
+      "escalate": 18,
+      "mark_unresolved": 19,
+      "refuse_due_to_policy": 0,
+      "use_current_memory": 18
+    },
+    "failure_to_forget": {
+      "ask_clarification": 0,
+      "escalate": 18,
+      "mark_unresolved": 18,
+      "refuse_due_to_policy": 18,
+      "use_current_memory": 18
+    },
+    "failure_to_release_or_restore": {
+      "ask_clarification": 18,
+      "escalate": 18,
+      "mark_unresolved": 18,
+      "refuse_due_to_policy": 0,
+      "use_current_memory": 18
+    },
+    "memory_hallucination": {
+      "ask_clarification": 19,
+      "escalate": 0,
+      "mark_unresolved": 18,
+      "refuse_due_to_policy": 18,
+      "use_current_memory": 18
+    },
+    "over_update": {
+      "ask_clarification": 0,
+      "escalate": 24,
+      "mark_unresolved": 24,
+      "refuse_due_to_policy": 0,
+      "use_current_memory": 25
+    },
+    "policy_violation": {
+      "ask_clarification": 18,
+      "escalate": 18,
+      "mark_unresolved": 0,
+      "refuse_due_to_policy": 19,
+      "use_current_memory": 18
+    },
+    "scope_leakage": {
+      "ask_clarification": 18,
+      "escalate": 18,
+      "mark_unresolved": 18,
+      "refuse_due_to_policy": 0,
+      "use_current_memory": 19
+    },
+    "stale_memory_reuse": {
+      "ask_clarification": 24,
+      "escalate": 0,
+      "mark_unresolved": 24,
+      "refuse_due_to_policy": 0,
+      "use_current_memory": 25
+    },
+    "under_update": {
+      "ask_clarification": 24,
+      "escalate": 24,
+      "mark_unresolved": 0,
+      "refuse_due_to_policy": 0,
+      "use_current_memory": 25
+    },
+    "unnecessary_memory_write": {
+      "ask_clarification": 24,
+      "escalate": 0,
+      "mark_unresolved": 0,
+      "refuse_due_to_policy": 24,
+      "use_current_memory": 24
+    },
+    "wrong_source_attribution": {
+      "ask_clarification": 24,
+      "escalate": 0,
+      "mark_unresolved": 24,
+      "refuse_due_to_policy": 0,
+      "use_current_memory": 25
+    }
+  },
+  "domains": {
+    "calendar_task_workflow": 100,
+    "customer_support_crm": 100,
+    "data_analysis_bi": 100,
+    "ecommerce_recommendation": 100,
+    "enterprise_multi_tool_workflow": 100,
+    "personal_assistant_preference": 100,
+    "research_knowledge_work": 100,
+    "software_engineering_agent": 100
+  },
+  "expected_decisions": {
+    "ask_clarification": 187,
+    "escalate": 138,
+    "mark_unresolved": 163,
+    "refuse_due_to_policy": 79,
+    "use_current_memory": 233
+  },
+  "failure_modes": {
+    "conflict_collapse": 73,
+    "failure_to_forget": 72,
+    "failure_to_release_or_restore": 72,
+    "memory_hallucination": 73,
+    "over_update": 73,
+    "policy_violation": 73,
+    "scope_leakage": 73,
+    "stale_memory_reuse": 73,
+    "under_update": 73,
+    "unnecessary_memory_write": 72,
+    "wrong_source_attribution": 73
+  },
+  "prototype_note": "data/retrace_bench/test_800_en is retained as prototype/diagnostic.",
+  "renderer": "templateheldout_v1",
+  "role": "candidate paper-facing held-out benchmark",
+  "scenario_count": 800,
+  "schema_version": "retrace_bench_general_1",
+  "seed": 400000,
+  "training_targets": false
+}

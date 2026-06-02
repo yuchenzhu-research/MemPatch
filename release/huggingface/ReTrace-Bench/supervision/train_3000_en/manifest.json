@@ -1,0 +1,68 @@
+{
+  "dataset_name": "train_3000_en",
+  "scenario_count": 3000,
+  "schema_version": "retrace_bench_general_1",
+  "renderer": "split_template",
+  "split": "train_3000_en",
+  "purpose": "Synthetic supervision pool for future ReTrace-Learn open-model typed revision proposer training (Graph Extractor -> Typed Revision Proposer -> Authorization Court). This is **not** a benchmark and must never be scored as held-out evaluation.",
+  "scenario_id_prefix": "rt-train-",
+  "seed_range": [
+    100000,
+    102999
+  ],
+  "entity_prefixes": {
+    "case": "CTR-",
+    "project": "PRTR-",
+    "person": "PTR-",
+    "workspace": "ws-tr"
+  },
+  "has_training_targets": true,
+  "coverage": {
+    "count": 3000,
+    "by_domain": {
+      "calendar_task_workflow": 375,
+      "customer_support_crm": 375,
+      "data_analysis_bi": 375,
+      "ecommerce_recommendation": 375,
+      "enterprise_multi_tool_workflow": 375,
+      "personal_assistant_preference": 375,
+      "research_knowledge_work": 375,
+      "software_engineering_agent": 375
+    },
+    "by_failure_mode": {
+      "conflict_collapse": 273,
+      "failure_to_forget": 272,
+      "failure_to_release_or_restore": 272,
+      "memory_hallucination": 273,
+      "over_update": 273,
+      "policy_violation": 273,
+      "scope_leakage": 273,
+      "stale_memory_reuse": 273,
+      "under_update": 273,
+      "unnecessary_memory_write": 272,
+      "wrong_source_attribution": 273
+    },
+    "by_expected_decision": {
+      "ask_clarification": 273,
+      "escalate": 273,
+      "mark_unresolved": 273,
+      "refuse_due_to_policy": 273,
+      "use_current_memory": 1908
+    },
+    "by_difficulty": {
+      "L1_single_hop_update": 300,
+      "L2_multi_hop_with_distractor": 900,
+      "L3_conditional_validity": 900,
+      "L4_cross_scope_adversarial_audit": 900
+    },
+    "rates": {
+      "events_ge_7": 1.0,
+      "memories_ge_3": 1.0,
+      "distractors": 0.6,
+      "cross_scope": 0.7,
+      "verified_over_trusted": 0.6817,
+      "false_premise": 0.4547,
+      "non_answer": 0.364
+    }
+  }
+}

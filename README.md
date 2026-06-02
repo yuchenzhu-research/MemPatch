@@ -22,8 +22,13 @@ multi-agent/agentic workflows. It is governed as **two active research tracks**
 
 The rest of this README describes the **ReTrace-Learn** method track; for the
 benchmark track see [`docs/retrace_bench/`](docs/retrace_bench/).
-For repository layout and artifact placement, see
-[`docs/repo_layout.md`](docs/repo_layout.md).
+For a conceptual project map, layout, governance, and dataset definitions, see:
+- [`PROJECT_MAP.md`](PROJECT_MAP.md) — Conceptual map of ReTrace-Bench and ReTrace-Learn.
+- [`docs/project_governance.md`](docs/project_governance.md) — Two-track project governance authoritative document.
+- [`data/README.md`](data/README.md) — Dataset definitions and directory structure details.
+- [`src/README.md`](src/README.md) — Source code directory structure details.
+- [`benchmark/README.md`](benchmark/README.md) — Benchmark evaluation code directory details.
+- [`docs/repo_layout.md`](docs/repo_layout.md) — Repository layout and artifact placement guide.
 
 ## Central Research Claim (ReTrace-Learn)
 
