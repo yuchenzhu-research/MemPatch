@@ -168,15 +168,46 @@ https://creativecommons.org/licenses/by/4.0/
     test_count = count_scenarios(os.path.join(repo_root, "data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl"))
     calib_count = count_scenarios(os.path.join(repo_root, "data/retrace_bench/sample_80_hard_en/scenarios.jsonl"))
     
+    # The viewer split layout is built dynamically so the generated dataset card
+    # only ever advertises splits whose scenarios.jsonl was actually copied above.
+    # The 80-scenario hard calibration set is exposed under the conventional
+    # Hugging Face split name `validation` (matching the published dataset) while
+    # keeping its descriptive on-disk path `calibration/sample_80_hard_en/`.
+    split_layout = [
+        ("test", "benchmark/test_800_templateheldout_en/scenarios.jsonl"),
+        ("validation", "calibration/sample_80_hard_en/scenarios.jsonl"),
+    ]
     if args.include_supervision:
         train_count = count_scenarios(os.path.join(repo_root, "data/retrace_supervision/train_3000_en/scenarios.jsonl"))
         dev_count = count_scenarios(os.path.join(repo_root, "data/retrace_supervision/dev_400_en/scenarios.jsonl"))
         total_count = test_count + calib_count + train_count + dev_count
+        split_layout.extend([
+            ("train", "supervision/train_3000_en/scenarios.jsonl"),
+            ("dev", "supervision/dev_400_en/scenarios.jsonl"),
+        ])
         supervision_status_str = f"""- **supervision/train_3000_en**: {train_count} scenarios (contains SFT training targets)
 - **supervision/dev_400_en**: {dev_count} scenarios"""
     else:
         total_count = test_count + calib_count
         supervision_status_str = "*(Supervision splits train_3000_en and dev_400_en were excluded from this packaging run)*"
+
+    # Fail loudly if any advertised split file is missing, so the dataset card can
+    # never reference a path that was not packaged (which breaks the HF viewer).
+    missing_split_files = [
+        path for _, path in split_layout
+        if not os.path.exists(os.path.join(hf_dir, path))
+    ]
+    if missing_split_files:
+        raise FileNotFoundError(
+            "Generated dataset card would reference missing split files: "
+            + ", ".join(missing_split_files)
+        )
+
+    config_lines = ["configs:", "- config_name: default", "  data_files:"]
+    for split_name, split_path in split_layout:
+        config_lines.append(f"  - split: {split_name}")
+        config_lines.append(f"    path: {split_path}")
+    configs_block = "\n".join(config_lines)
         
     # 4. Generate README.md (Dataset Card)
     readme_path = os.path.join(hf_dir, "README.md")
@@ -196,17 +227,7 @@ tags:
 - memory-revision
 - long-term-memory
 - reliability
-configs:
-- config_name: default
-  data_files:
-  - split: test
-    path: benchmark/test_800_templateheldout_en/scenarios.jsonl
-  - split: calibration
-    path: calibration/sample_80_hard_en/scenarios.jsonl
-  - split: train
-    path: supervision/train_3000_en/scenarios.jsonl
-  - split: dev
-    path: supervision/dev_400_en/scenarios.jsonl
+{configs_block}
 ---
 
 # ReTrace-Bench
@@ -217,7 +238,7 @@ ReTrace-Bench evaluates agent memory revision reliability in multi-agent and age
 
 - **benchmark/test_800_templateheldout_en** is the canonical, paper-facing held-out benchmark split.
 - **Do not train, prompt-tune, policy-optimize, or select checkpoints on `benchmark/test_800_templateheldout_en`.**
-- `calibration/sample_80_hard_en` is a small quickstart/calibration split designed for debugging and pipeline verification.
+- `calibration/sample_80_hard_en` is a small quickstart/calibration split designed for debugging and pipeline verification. It is exposed to the Hugging Face viewer as the `validation` split.
 - `supervision/train_3000_en` and `supervision/dev_400_en` are synthetic supervision/selection pools for learning-based revision proposers. They are **NOT** benchmark tests and may contain `training_targets`.
 - The old prototype/diagnostic split `test_800_en` is excluded from this public release package.
 
