@@ -1,6 +1,6 @@
 # ReTrace 项目文件地图 (Repository File Map)
 
-本文件提供了 `yuchenzhu-research/ReTrace` 仓库中所有主要目录和文件的详细映射与说明，方便后续开发、对齐与审计。
+本文件提供了 ReTrace 仓库中所有主要目录和文件的详细映射与说明，方便后续开发、对齐与审计。
 
 > 项目按两条 active research track 治理：**ReTrace-Bench**（benchmark track，见第 3 节）
 > 与 **ReTrace-Learn**（method track，见第 1–2 节）。规范定义见

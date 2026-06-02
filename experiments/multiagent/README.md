@@ -1,6 +1,7 @@
 # ReTrace Multi-Agent Experiments & Policies
 
-This directory contains the Stage A/B/C evaluation scripts, proposer policies, and dataset generation tools for the Paper 1 evaluation.
+This directory contains the Stage A/B/C evaluation scripts, proposer policies,
+and dataset generation tools for ReTrace-Learn method evaluation.
 
 ## Conceptual Stage Mapping
 
@@ -9,7 +10,7 @@ This directory contains the Stage A/B/C evaluation scripts, proposer policies, a
    - Active proposer: `stagec_policy.py` (`ClosedAPIZeroShotProposer`, `ClosedAPIZeroShotConstrainedProposer`)
 2. **Stage B (`DirectJudge-API`)**
    - Main entry point: `run_stageab_api_eval.py` (Stage B comparison baseline flow)
-3. **Stage C (`ReTrace-AdaptiveProposer`)**
+3. **Stage C (`ReTrace-Learn`)**
    - Proposer policies: `stagec_policy.py` (`ClosedAPIICLProposer`, `OpenModelPromptProposer`, `OpenModelLoRAProposer`)
    - Replay/Local Validation: `run_stagec_adapter_eval.py`
 
@@ -44,5 +45,5 @@ experiments/multiagent/
 For backward compatibility with legacy scripts and older baseline test cases, the following helper files are preserved directly in `experiments/multiagent/`:
 - `fixtures.py`: Pre-configured evaluation environment mocks.
 - `methods.py`: Naive LWW, ReTrace base comparison class baselines.
-- `metrics.py`: Aggregate precision/recall calculators for Paper 1 baselines.
+- `metrics.py`: Aggregate precision/recall calculators for ReTrace-Learn baselines.
 - `episodes_dev.py`: Main dev episodes registry loader.

@@ -1,7 +1,7 @@
 # `experiments/archive/` — preserved historical / reference logic
 
 This directory holds **archived research code** that is no longer part of the
-canonical Paper 1 evaluation path. It is kept for historical reference and as a
+canonical ReTrace-Learn evaluation path. It is kept for historical reference and as a
 starting point for future experiments. It is **not** wired into the active
 package and is **not** a paper-facing entrypoint.
 
