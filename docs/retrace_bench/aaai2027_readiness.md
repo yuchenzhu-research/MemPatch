@@ -54,6 +54,50 @@ evaluation component of ReTrace-Learn.
   MemoryAgentBench / EvoMemBench) and drops "none of these directly evaluate..."
   in favor of "isolates", "complementary", and "operational evaluation target".
 
+## Benchmark artifact interface
+
+ReTrace-Bench now ships a professional, paper-ready evaluation interface (not
+just a data dump):
+
+- **HF dataset card/package checked.** The published dataset
+  `Sylvan-Vale-Moon/ReTrace-Bench` was inspected via `huggingface_hub` and
+  `datasets.load_dataset`: splits `test` (800) / `validation` (80) / `train`
+  (3000) / `dev` (400) load, map to the expected on-disk paths, and the JSON
+  string columns parse with `json.loads`. The online card still carries the
+  older, weaker `validation` wording; the repo-side packaging template
+  (`scripts/package_hf_retrace_bench.py`) and checked-in
+  `release/huggingface/ReTrace-Bench/README.md` now state the strong "viewer
+  compatibility only — not model/checkpoint selection" semantics so the next
+  upload is correct.
+- **Official prediction schema.** Documented in `examples/retrace_bench/` and the
+  HF card: `decision` (5 labels), `memory_state` (`memory_id -> status`, 8
+  labels), `evidence_event_ids` (from `public_input.event_trace`),
+  `failure_diagnosis` (11 labels), and free-text `answer`; canonical nested and
+  flat forms both accepted.
+- **Official Python API.** `benchmark/retrace_bench/api.py` exposes
+  `load_scenarios`, `load_predictions`, `normalize_prediction`,
+  `evaluate_predictions(strict=...)`, and re-exports `HEADLINE_METRICS`,
+  `AUXILIARY_METRICS`, `DECISIONS`, `MEMORY_STATUSES`, `FAILURE_MODES`. It wraps
+  the existing scorer (`score_prediction` / `aggregate_metrics`) without changing
+  scoring behavior.
+- **Official evaluator CLI.** `scripts/evaluate_retrace_bench_predictions.py`
+  scores an external predictions file against a split, requires no API keys, runs
+  no model, and supports `--strict/--no-strict`, `--allow-missing`,
+  `--out-metrics`, `--out-scored`, and `--print-table`.
+- **Example predictions.** `examples/retrace_bench/sample_predictions.jsonl` (a
+  complete calibration-split submission) plus a README quickstart.
+- **Canonical metric constants in tooling.**
+  `scripts/run_retrace_bench_ablation.py` now imports `HEADLINE_METRICS` /
+  `AUXILIARY_METRICS`; `decision_macro_f1` leads the table and
+  `black_box_decision_accuracy` is emitted only as `decision_acc_aux`.
+- **Tests.** `tests/retrace_bench/test_public_api.py`,
+  `test_prediction_evaluator_cli.py`, and `test_hf_package_readme.py` cover the
+  API, CLI, strict/non-strict validation, and the HF template wording.
+- **Packaging note.** `benchmark.retrace_bench` is imported via `PYTHONPATH=.`
+  (it is intentionally not added to the `retracemem` setuptools discovery to
+  avoid perturbing the ReTrace-Learn install); all benchmark commands are
+  documented with the `PYTHONPATH=.` prefix.
+
 ## Remains after today
 
 - **At least one real LLM baseline** run end-to-end (`llm_json_answerer`
