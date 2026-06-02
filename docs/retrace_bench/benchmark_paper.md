@@ -2,8 +2,8 @@
 
 > **Independent benchmark paper.** ReTrace-Bench is a stand-alone
 > benchmark / resource / evaluation paper for agent memory revision
-> reliability under evolving evidence (target: AAAI 2027 main, fallback ACL
-> 2027 main). It is **method-neutral** and **evaluation-only**: it does **not**
+> reliability under evolving evidence. It is **method-neutral** and
+> **evaluation-only**: it does **not**
 > depend on ReTrace-Learn, DPA, or any specific memory architecture, and it is
 > not an evaluation component of ReTrace-Learn. Any memory-enabled agent —
 > LLM-only, RAG, CRUD store, Mem0-style system, or a trained policy — can be

@@ -1,9 +1,9 @@
-# ReTrace-Bench AAAI 2027 Readiness
+# ReTrace-Bench Submission Readiness
 
 **Track:** ReTrace-Bench is an **independent benchmark / resource paper**, not an
-evaluation component of ReTrace-Learn.
-
-**Target:** AAAI 2027 main, fallback ACL 2027 main.
+evaluation component of ReTrace-Learn. This document is an internal readiness
+checklist for the submission-ready benchmark artifact; it intentionally states
+no target venue (the benchmark paper is prepared for blind review).
 
 ## Already strong
 
@@ -59,16 +59,21 @@ evaluation component of ReTrace-Learn.
 ReTrace-Bench now ships a professional, paper-ready evaluation interface (not
 just a data dump):
 
-- **HF dataset card/package checked.** The published dataset
-  `Sylvan-Vale-Moon/ReTrace-Bench` was inspected via `huggingface_hub` and
-  `datasets.load_dataset`: splits `test` (800) / `validation` (80) / `train`
-  (3000) / `dev` (400) load, map to the expected on-disk paths, and the JSON
-  string columns parse with `json.loads`. The online card still carries the
-  older, weaker `validation` wording; the repo-side packaging template
-  (`scripts/package_hf_retrace_bench.py`) and checked-in
-  `release/huggingface/ReTrace-Bench/README.md` now state the strong "viewer
-  compatibility only — not model/checkpoint selection" semantics so the next
-  upload is correct.
+- **HF dataset card/package checked.** The published dataset card was inspected
+  via `huggingface_hub` and `datasets.load_dataset`: splits `test` (800) /
+  `validation` (80) / `train` (3000) / `dev` (400) load, map to the expected
+  on-disk paths, and the JSON string columns parse with `json.loads`. The
+  repo-side packaging template (`scripts/package_hf_retrace_bench.py`), the
+  checked-in `release/huggingface/ReTrace-Bench/README.md`, and the live card
+  all state the strong "viewer compatibility only — not model/checkpoint
+  selection" semantics.
+- **Strict validation contract.** In `strict=True`, `evaluate_predictions`
+  rejects unknown `decision` labels, unknown `memory_state` statuses, evidence
+  IDs absent from `public_input.event_trace`, and `failure_diagnosis` values
+  that are neither a canonical `FAILURE_MODES` label nor a documented alias.
+  Incomplete `memory_state` coverage of the visible `initial_memory` IDs is a
+  warning (never an error), so partial submissions are still scored. Validation
+  messages reference only model-visible IDs and never echo hidden gold.
 - **Official prediction schema.** Documented in `examples/retrace_bench/` and the
   HF card: `decision` (5 labels), `memory_state` (`memory_id -> status`, 8
   labels), `evidence_event_ids` (from `public_input.event_trace`),
@@ -97,6 +102,21 @@ just a data dump):
   (it is intentionally not added to the `retracemem` setuptools discovery to
   avoid perturbing the ReTrace-Learn install); all benchmark commands are
   documented with the `PYTHONPATH=.` prefix.
+
+## Blind-review safety
+
+- Benchmark-facing docs (`benchmark/README.md`, `docs/retrace_bench/*`, the HF
+  card) state no target venue and no conference strategy; `grep` for
+  `AAAI|ACL 20|ICLR|ICML|NeurIPS|fallback|target:` returns only unrelated
+  technical uses (e.g. a regex "fallback" comment, "fallback for unseen
+  template signatures").
+- The blinded paper workspace lives in `papers/retrace_bench/` and uses
+  `[anonymized repository]` / `[anonymized dataset link]` placeholders, no
+  author names, and no public usernames; see
+  `papers/retrace_bench/blind_review_checklist.md`.
+- Real artifact links (GitHub repo, HF dataset) remain only in the public
+  artifact docs (README / HF card), which are de-anonymizable distribution
+  surfaces, not the manuscript text.
 
 ## Remains after today
 

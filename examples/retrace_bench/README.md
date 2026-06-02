@@ -95,12 +95,18 @@ Flat (response fields at top level) is also accepted:
   `stale_memory_reuse`, `under_update`, `over_update`, `conflict_collapse`,
   `scope_leakage`, `policy_violation`, `wrong_source_attribution`,
   `memory_hallucination`, `unnecessary_memory_write`, `failure_to_forget`,
-  `failure_to_release_or_restore`.
+  `failure_to_release_or_restore`. A value that is neither a canonical label nor
+  a documented normalized alias is rejected in strict mode.
 - **`answer`**: free text answer for the black-box task.
 
-In `--strict` mode (default), missing/duplicate/extra predictions and invalid
-labels or evidence IDs raise an error. Use `--no-strict` (or `--allow-missing`)
-to score whatever is valid and collect the rest as warnings/errors.
+In `--strict` mode (default), the following raise an error:
+missing/duplicate/extra predictions, an unknown `decision` label, an unknown
+`memory_state` status, an `evidence_event_ids` entry absent from the scenario's
+`event_trace`, and an unrecognized `failure_diagnosis` label. Omitting a status
+for some visible `initial_memory` IDs is reported as a **warning only** (it does
+not block strict scoring), so partial `memory_state` maps are still scored. Use
+`--no-strict` (or `--allow-missing`) to downgrade all errors to collected
+warnings/errors and score whatever is valid.
 
 The `sample_predictions.jsonl` here is a small, complete, runnable submission
 for the 80-scenario `sample_80_hard_en` calibration split (so the strict command

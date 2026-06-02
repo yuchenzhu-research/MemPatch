@@ -36,6 +36,7 @@ def test_gitignore_sensitive_artifacts_not_committed():
         "data/retrace_bench/test_800_en/",
         "data/retrace_bench/test_800_templateheldout_en/",
         "release/huggingface/ReTrace-Bench/",
+        "examples/retrace_bench/",
         "data/retrace_supervision/train_3000_en/",
         "data/retrace_supervision/dev_400_en/",
     )
