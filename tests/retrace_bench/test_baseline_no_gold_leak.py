@@ -117,3 +117,44 @@ def test_llm_json_answerer_accepts_fenced_json_response():
     assert response["decision"] == "use_current_memory"
     assert response["memory_state"] == {"m1": "current"}
     assert response["evidence_event_ids"] == ["e1"]
+
+
+def test_resume_skips_existing_predictions(tmp_path):
+    out = tmp_path / "crud_memory.jsonl"
+    first_rc = runner.main(
+        [
+            "--data",
+            str(DATA),
+            "--baseline",
+            "crud_memory",
+            "--max-cases",
+            "1",
+            "--append",
+            "--out",
+            str(out),
+        ]
+    )
+    assert first_rc == 0
+    first_rows = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert len(first_rows) == 1
+
+    second_rc = runner.main(
+        [
+            "--data",
+            str(DATA),
+            "--baseline",
+            "crud_memory",
+            "--max-cases",
+            "2",
+            "--resume",
+            "--out",
+            str(out),
+        ]
+    )
+    assert second_rc == 0
+    resumed_rows = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert [row["scenario_id"] for row in resumed_rows] == [
+        first_rows[0]["scenario_id"],
+        "rb-hard-en-00002",
+    ]
+    assert resumed_rows[0] == first_rows[0]
