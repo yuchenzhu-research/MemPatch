@@ -22,6 +22,8 @@ multi-agent/agentic workflows. It is governed as **two active research tracks**
 
 The rest of this README describes the **ReTrace-Learn** method track; for the
 benchmark track see [`docs/retrace_bench/`](docs/retrace_bench/).
+For repository layout and artifact placement, see
+[`docs/repo_layout.md`](docs/repo_layout.md).
 
 ## Central Research Claim (ReTrace-Learn)
 
