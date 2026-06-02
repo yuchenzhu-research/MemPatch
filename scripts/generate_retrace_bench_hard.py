@@ -3,7 +3,7 @@
 
 This emits ``sample_80_hard_en`` directly (public scenario text + hidden gold)
 without a separate blueprint step. It is deliberately harder and more varied
-than the templated ``sample_40_en`` renderer:
+than the earliest small renderer:
 
 * multi-source event traces (7+ events with mixed trust levels / actors);
 * distractor memories and cross-scope traps;

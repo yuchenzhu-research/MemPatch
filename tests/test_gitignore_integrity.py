@@ -31,11 +31,11 @@ def test_gitignore_sensitive_artifacts_not_committed():
         "data/fixtures/",
         "experiments/multiagent/local_training/data/",
         "data/retrace_learn/v1/boundary_audit/",
-        "data/retrace_bench/sample_20/",
         "data/retrace_bench/sample_20_v2/",
-        "data/retrace_bench/sample_40_en/",
         "data/retrace_bench/sample_80_hard_en/",
         "data/retrace_bench/test_800_en/",
+        "data/retrace_bench/test_800_templateheldout_en/",
+        "release/huggingface/ReTrace-Bench/",
         "data/retrace_supervision/train_3000_en/",
         "data/retrace_supervision/dev_400_en/",
     )

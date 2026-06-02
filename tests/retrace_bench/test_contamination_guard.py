@@ -12,4 +12,4 @@ def test_contamination_guard():
         check_contamination("data/retrace_bench/v1/scenarios.jsonl")
 
     with pytest.raises(RuntimeError, match="ReTrace-Bench is evaluation-only"):
-        check_contamination(Path("data/retrace_bench/v1_smoke/queries.jsonl"))
+        check_contamination(Path("data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl"))

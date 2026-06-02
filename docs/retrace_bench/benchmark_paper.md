@@ -77,10 +77,10 @@ suite that scores revision behavior directly:
    gold string into unrelated text does not score well; stale reuse is detected
    even when the stale answer is *paraphrased*.
 
-The headline split is **`sample_80_hard_en`** (80 scenarios, all 8 domains and
-all 11 failure modes, deliberately adversarial). `sample_40_en` is a smaller
-quick-sanity fixture. Larger generated splits (`dev_800_en`, `stress_1760_en`)
-are artifacts and are intentionally not committed.
+The headline split is **`test_800_templateheldout_en`** (800 scenarios, all 8
+domains and all 11 failure modes, template-held out from train/dev). The earlier
+`test_800_en` split is retained only as prototype/diagnostic. `sample_80_hard_en`
+is a smaller hard sample for quick inspection.
 
 ## 4. Metrics
 

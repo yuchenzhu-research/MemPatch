@@ -15,9 +15,13 @@ and diagnostic failure identification.
 
 ## Data Files
 
-- `sample_40_en/scenarios.jsonl`
-- `dev_800_en/scenarios.jsonl`
-- `stress_1760_en/scenarios.jsonl`
+- Hugging Face release: `test.jsonl`, a viewer-friendly flattened form of
+  `data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl`.
+- Source repository benchmark split:
+  `data/retrace_bench/test_800_templateheldout_en/`.
+- Source repository supervision pools:
+  `data/retrace_supervision/train_3000_en/` and
+  `data/retrace_supervision/dev_400_en/` (not benchmark tests).
 
 ## Fields
 
@@ -44,12 +48,11 @@ All entities are synthetic. Identifiers use formats such as `C-1842`,
 
 ## Limitations
 
-The initial release uses template rendering, so linguistic style is controlled
-but less diverse than fully human-written workflows. Hidden labels are
-deterministic and auditable, which is intentional for reproducibility.
+The initial public HF release exposes only the 800-scenario held-out test split.
+The full source repository also contains synthetic supervision and selection
+pools. Hidden labels are deterministic and auditable, which is intentional for
+reproducibility.
 
 ## License
 
-Project license applies unless a separate release license is added at packaging
-time.
-
+The Hugging Face dataset release uses CC-BY-4.0.
