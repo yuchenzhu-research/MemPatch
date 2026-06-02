@@ -61,5 +61,10 @@ runs/
 !data/retrace_supervision/train_3000_en/**
 !data/retrace_supervision/dev_400_en/**
 !release/huggingface/ReTrace-Bench/**
+
+# outputs/ is intentionally TRACKED (benchmark prediction dumps + metrics are
+# committed for reproducibility/sharing). This allowlist overrides the global
+# *.jsonl ignore above so prediction JSONL under outputs/ is committed too.
+# Only machine-local noise inside outputs/ stays ignored.
 !outputs/**
 outputs/**/.DS_Store

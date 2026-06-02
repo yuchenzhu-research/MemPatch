@@ -13,10 +13,12 @@ def test_gitignore_sensitive_artifacts_not_committed():
     )
     files = res.stdout.splitlines()
 
+    # NOTE: outputs/ is intentionally TRACKED (benchmark prediction dumps and
+    # metrics are committed for reproducibility/sharing; see AGENTS.md and the
+    # !outputs/** allowlist in .gitignore), so it is NOT in this prefix list.
     ignored_prefixes = (
         ".external_repos/",
         ".reference_cache/",
-        "outputs/",
         "artifacts/",
         "checkpoints/",
         ".pytest_cache/",
@@ -41,6 +43,7 @@ def test_gitignore_sensitive_artifacts_not_committed():
         "examples/retrace_bench/",
         "data/retrace_supervision/train_3000_en/",
         "data/retrace_supervision/dev_400_en/",
+        "outputs/",
     )
 
     for f in files:
