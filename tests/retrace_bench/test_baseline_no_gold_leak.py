@@ -9,12 +9,21 @@ import subprocess
 import sys
 from pathlib import Path
 
+import pytest
+
 import scripts.run_retrace_bench_ablation as ablation
 import scripts.run_retrace_bench_baseline as runner
 
 REPO = Path(__file__).resolve().parents[2]
 DATA = REPO / "data" / "retrace_bench" / "sample_80_hard_en" / "scenarios.jsonl"
 DATA_V2 = REPO / "data" / "retrace_bench" / "sample_20_v2"
+GENERAL_SPLITS = (
+    REPO / "data" / "retrace_supervision" / "train_3000_en" / "scenarios.jsonl",
+    REPO / "data" / "retrace_supervision" / "dev_400_en" / "scenarios.jsonl",
+    REPO / "data" / "retrace_bench" / "sample_80_hard_en" / "scenarios.jsonl",
+    REPO / "data" / "retrace_bench" / "test_800_en" / "scenarios.jsonl",
+    REPO / "data" / "retrace_bench" / "test_800_templateheldout_en" / "scenarios.jsonl",
+)
 
 # Hidden-gold fields a deployable baseline must never read as a prediction.
 GOLD_TOKENS = (
@@ -161,6 +170,48 @@ def test_resume_skips_existing_predictions(tmp_path):
         first_rows[0]["scenario_id"],
         "rb-hard-en-00002",
     ]
+    assert resumed_rows[0] == first_rows[0]
+
+
+@pytest.mark.parametrize("data_path", GENERAL_SPLITS, ids=lambda p: p.parent.name)
+def test_resume_skips_existing_predictions_on_all_general_splits(tmp_path, data_path):
+    expected_ids = [row["scenario_id"] for row in runner.read_jsonl(data_path)[:2]]
+    assert len(expected_ids) == 2
+
+    out = tmp_path / f"{data_path.parent.name}.jsonl"
+    first_rc = runner.main(
+        [
+            "--data",
+            str(data_path),
+            "--baseline",
+            "crud_memory",
+            "--max-cases",
+            "1",
+            "--append",
+            "--out",
+            str(out),
+        ]
+    )
+    assert first_rc == 0
+    first_rows = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert [row["scenario_id"] for row in first_rows] == [expected_ids[0]]
+
+    second_rc = runner.main(
+        [
+            "--data",
+            str(data_path),
+            "--baseline",
+            "crud_memory",
+            "--max-cases",
+            "2",
+            "--resume",
+            "--out",
+            str(out),
+        ]
+    )
+    assert second_rc == 0
+    resumed_rows = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert [row["scenario_id"] for row in resumed_rows] == expected_ids
     assert resumed_rows[0] == first_rows[0]
 
 
