@@ -7,7 +7,7 @@
 Command:
 
 ```bash
-PYTHONPATH=. python scripts/run_retrace_bench_ablation.py --data data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl --out-dir outputs/retrace_bench/ablation_test_800_templateheldout_offline --max-cases 800
+PYTHONPATH=. python scripts/run_retrace_bench_ablation.py --data data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl --out-dir outputs/retrace_bench/ablation_test_800_templateheldout_offline --max-cases 800 --resume
 ```
 
 ## Results

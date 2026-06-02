@@ -95,8 +95,13 @@ The full offline matrix:
 ```bash
 PYTHONPATH=. python scripts/run_retrace_bench_ablation.py \
   --data data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl \
-  --out-dir outputs/retrace_bench/ablation
+  --out-dir outputs/retrace_bench/ablation \
+  --resume
 ```
+
+For live API baselines, always keep `--resume` on long runs. The runner reads
+the existing prediction JSONL, skips completed `scenario_id`s, and appends only
+the remaining cases.
 
 ## Evaluate external predictions
 
