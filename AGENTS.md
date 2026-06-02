@@ -33,7 +33,8 @@ ReTrace preserves immutable evidence and changes a belief's eligibility for curr
 
 ## Method Boundary / Identity
 
-Paper 1 is centered on multi-agent/subagent shared-memory revision authorization.
+The ReTrace-Learn paper is centered on multi-agent/subagent shared-memory
+revision authorization.
 
 Multiple subagents may submit evidence-bearing memory updates to a shared long-term memory. ReTrace controls which revisions are allowed to affect the shared usable memory basis.
 
@@ -46,14 +47,14 @@ Public API Boundaries:
 - `authorize(...)` is the public deterministic authorization kernel inside ReTrace-Engine. Neither Defeat-Path Authorization (DPA) nor RevisionGate should be invoked directly by external callers. All updates/admissions and deterministic routing happen entirely inside `authorize`.
 - `commit_subagent_submission(...)` and `commit_submission_sequence(...)` are multi-agent integration wrappers around `authorize(...)`.
 
-STALE/CUPMem is an external validation/baseline pathway, not the definition of the paper.
+STALE/CUPMem is an external validation/baseline pathway, not the definition of the method paper.
 
-Latent memory, RL consolidation, and delayed-utility learning belong to Paper 2.
+Latent memory, RL consolidation, and delayed-utility learning belong to future-scope work.
 
-## Paper 1 ReTrace-Learn Training Boundary
+## ReTrace-Learn Paper Training Boundary
 
-Paper 1 includes ReTrace-Learn: learning an explicit typed revision proposal policy
-for multi-agent/subagent shared-memory updates.
+The ReTrace-Learn paper includes learning an explicit typed revision proposal
+policy for multi-agent/subagent shared-memory updates.
 
 The learned policy consumes only method-visible inputs:
 a prior shared-memory context or bounded candidate view, an evidence-bearing
@@ -78,10 +79,11 @@ ReTrace-Learn proposal
     -> SharedMemoryCommitResult
 ```
 
-Paper 2, not Paper 1, owns latent-memory representations,
-long-horizon delayed-future-utility consolidation, and RL over hidden memory states.
-Paper 1 may later test short-horizon explicit-action refinement only if it
-does not introduce latent memory or hidden-state consolidation.
+Future-scope work, not the ReTrace-Learn paper, owns latent-memory
+representations, long-horizon delayed-future-utility consolidation, and RL over
+hidden memory states. The ReTrace-Learn paper may later test short-horizon
+explicit-action refinement only if it does not introduce latent memory or
+hidden-state consolidation.
 
 A Stage C live policy may see conditions and pre-existing REQUIRES anchors
 because they are method-visible candidate structure, but may never see
@@ -158,16 +160,17 @@ To ensure absolute clean methodology and avoid test-set leakage:
 - Keep benchmark-specific logic in adapters or runners.
 - `references/` is the tracked lightweight reference registry/notes directory.
   Store only YAML pointers and short Markdown notes there.
-- `reference/` is local-only for cloned external repositories or downloaded
-  papers. Do not edit it as source, and never commit it.
-- Do not commit `reference/`, `outputs/`, `artifacts/`, `analysis/`, caches,
+- `.external_repos/` and `.reference_cache/` are local-only for cloned external
+  repositories or downloaded papers. Do not edit them as source, and never
+  commit them.
+- Do not commit external clones, `outputs/`, `artifacts/`, `analysis/`, caches,
   local environments, generated artifacts, benchmark downloads, model
   checkpoints/weights, or API keys.
 - After running scripts, tests, builds, or imports, proactively look for and
   remove local cache/generated directories before committing. At minimum check
   for `.pycache_compile/`, `.pytest_cache/`, `__pycache__/`, `*.pyc`,
   `*.egg-info/`, `.DS_Store`, `local/`, `outputs/`, `artifacts/`, `analysis/`,
-  `data_external/`, `reference/`, `models/`, `checkpoints/`, `adapters/`,
+  `data_external/`, `.external_repos/`, `.reference_cache/`, `models/`, `checkpoints/`, `adapters/`,
   `wandb/`, and `runs/`.
 - Put temporary training corpora, framework-specific scratch files, external
   checkouts, and machine-specific run material under ignored `local/` or the
@@ -194,8 +197,8 @@ E3 — Closed-Loop Multi-Agent Workflow:
 E4 — STALE/CUPMem External Validation:
      external stale-memory validation and compatibility analysis.
 
-Do not let external STALE/CUPMem bridge code redefine the primary Paper 1
-method identity or the main evaluation data model.
+Do not let external STALE/CUPMem bridge code redefine the primary
+ReTrace-Learn method identity or the main evaluation data model.
 
 ## Verification
 

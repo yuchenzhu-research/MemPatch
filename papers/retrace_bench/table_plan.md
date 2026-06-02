@@ -2,7 +2,7 @@
 
 Planned paper tables. For each: source file/command, expected columns, whether
 the data already exists, and missing items. Numbers below are illustrative of the
-current offline run on the canonical split; regenerate before camera-ready.
+current offline run on the canonical split; regenerate before final submission.
 
 ---
 
@@ -37,7 +37,7 @@ Full label spaces.
   - `test_800_en` | 800 | prototype/diagnostic | no | no (excluded)
 - **Source:** `data/retrace_bench/*`, `data/retrace_supervision/*`,
   `release/huggingface/ReTrace-Bench/README.md`.
-- **Exists:** yes. **Missing:** confirm counts at camera-ready via
+- **Exists:** yes. **Missing:** confirm counts before final submission via
   `validate_retrace_bench_dataset.py`.
 
 ## Table 4 — Main baseline results (canonical test split)

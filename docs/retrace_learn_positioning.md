@@ -1,4 +1,4 @@
-# Paper 1 Positioning
+# ReTrace-Learn Positioning
 
 ## One sentence
 
@@ -6,7 +6,7 @@ ReTrace preserves immutable evidence and changes a belief's eligibility for
 current answers **only** through verified, temporally valid typed defeat paths
 computed by a deterministic Defeat-Path Authorization kernel.
 
-## What Paper 1 is about
+## What ReTrace-Learn Is About
 
 **Multi-agent / subagent shared-memory revision authorization.** Multiple subagents submit evidence-bearing memory updates to a shared long-term memory. The primary contribution is a trainable shared-memory framework (**ReTrace-Learn**) that learns to extract memory graphs and propose structured typed actions under the feedback of a deterministic verification backend (**ReTrace-Engine**).
 
@@ -20,7 +20,7 @@ The contribution is the **verifiable revision learning system** plus a fair meth
 - Evidence provenance / grounding requirements (such as the optional `scope` field).
 - ReTrace-Learn SFT / RSFT / DPO proposal policy optimization, where the final authorization stays deterministic and API-free.
 
-## Out of scope (belongs to Paper 2)
+## Out Of Scope
 
 - Latent / hidden memory representations and hidden-state consolidation.
 - Learned forgetting.
@@ -28,9 +28,9 @@ The contribution is the **verifiable revision learning system** plus a fair meth
 - Long-horizon delayed-future-utility learning.
 - Biological-memory mechanisms.
 
-These must not be introduced into Paper 1 code or docs. Paper 1 may later test
-short-horizon **explicit-action** refinement only if it introduces no latent
-memory or hidden-state consolidation.
+These must not be introduced into ReTrace-Learn code or docs. The method paper
+may later test short-horizon **explicit-action** refinement only if it
+introduces no latent memory or hidden-state consolidation.
 
 ## Boundaries to respect
 

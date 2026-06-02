@@ -2,9 +2,6 @@
 
 This folder is the **standalone working package for the ReTrace-Bench benchmark
 paper**. It is a writing/index workspace, not a second copy of the code or data.
-It is prepared for **blind review**: it names no target venue, no authors, and no
-public usernames. Use the anonymized placeholders `[anonymized repository]` and
-`[anonymized dataset link]` in any manuscript text.
 
 ReTrace-Bench is an independent **benchmark / resource / evaluation** paper on
 agent memory revision reliability under evolving evidence. It is method-neutral
@@ -21,7 +18,6 @@ Mem0-style system, or a trained policy) can be scored on it.
 - `figure_plan.md` — planned figures, inputs, and whether they can be produced
   now.
 - `artifact_checklist.md` — artifact-track readiness checklist.
-- `blind_review_checklist.md` — anonymization checklist for the manuscript.
 
 ## Where the canonical artifact lives (do not duplicate here)
 
@@ -50,8 +46,6 @@ The authoritative code, data, and docs stay in their existing locations:
   `docs/retrace_bench/template_lookup_test_800_templateheldout_en.md`,
   `docs/retrace_bench/template_signature_report.md`,
   `docs/retrace_bench/split_leakage_report.md`
-- Submission readiness: `docs/retrace_bench/submission_readiness.md`
-
 ## Reproducing the headline numbers
 
 ```bash
@@ -69,7 +63,5 @@ PYTHONPATH=. python scripts/run_retrace_bench_ablation.py \
   --max-cases 800
 ```
 
-For blind review, replace any concrete repository or dataset URL in the
-manuscript with `[anonymized repository]` / `[anonymized dataset link]`. The real
-links live only in the public artifact docs (`benchmark/README.md`, the HF card)
-and can be de-anonymized after review.
+Public artifact links live in the benchmark README and Hugging Face card; paper
+drafts should use the link policy required by the submission venue.

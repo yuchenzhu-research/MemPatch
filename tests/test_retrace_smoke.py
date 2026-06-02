@@ -1,6 +1,6 @@
 """Consolidated ReTrace smoke tests (Phase 4).
 
-Fast, offline, no-API checks over the canonical Paper 1 surfaces:
+Fast, offline, no-API checks over the canonical ReTrace-Learn surfaces:
 the typed-action parser, RevisionGate target rules, the deterministic DPA
 precedence as observed through the public ``commit_submission_sequence``
 wrapper, and Stage B (DirectJudge) canonicalization.

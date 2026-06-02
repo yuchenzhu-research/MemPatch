@@ -1,11 +1,11 @@
 """Stage C adapter / local / SFT-style typed revision proposers.
 
-These proposers complete the Stage C (`ReTrace-AdaptiveProposer`) family by
+These proposers complete the Stage C (`ReTrace-Learn`) family by
 turning *already-decoded* model text into a `ProposalPolicyOutput` that flows
 through the exact same RevisionGate -> deterministic DPA -> commit path used by
 Stage A / Stage B.
 
-Design intent (see AGENTS.md "Paper 1 Stage C Training Boundary"):
+Design intent (see AGENTS.md "ReTrace-Learn Paper Training Boundary"):
 
 * The expensive / non-deterministic part (decoding a local adapter or SFT
   checkpoint, e.g. via MLX or transformers + LoRA) happens *offline* and is

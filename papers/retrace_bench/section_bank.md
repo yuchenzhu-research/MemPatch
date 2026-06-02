@@ -1,8 +1,7 @@
 # ReTrace-Bench — Section Bank
 
-Consolidated, paper-ready prose for the benchmark paper, cleaned of internal TODO
-notes and venue language. Blind-review safe: no authors, no usernames, no target
-venue. Trim/adapt when moving to LaTeX. Canonical sources are noted per section.
+Consolidated prose for the benchmark paper. Trim/adapt when moving to LaTeX.
+Canonical sources are noted per section.
 
 ---
 

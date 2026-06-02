@@ -1,10 +1,10 @@
-"""Stage C (ReTrace-AdaptiveProposer) API-ICL exemplar contract — fail-closed.
+"""Stage C (ReTrace-Learn) API-ICL exemplar contract — fail-closed.
 
 Stage C still proposes *typed actions only*; RevisionGate and the deterministic
 DPA / ``authorize(...)`` path are unchanged. API-ICL improves only the proposer
 by conditioning it on a few in-context exemplars of well-formed typed revisions.
 
-Per ``AGENTS.md`` (Paper 1 Stage C Training Boundary), exemplars used for any
+Per ``AGENTS.md`` (ReTrace-Learn Paper Training Boundary), exemplars used for any
 live smoke or training export must be **human-approved**:
 
 * tied to an immutable review-pack manifest hash (``source_manifest_sha256``);

@@ -1,18 +1,18 @@
 - name: STALE / CUPMem
   category: Agent Memory Revision / Conflict Resolution
-  status: Baseline
-  paper_url: https://arxiv.org/abs/2403.11111
-  repo_url: https://github.com/sjtu-nlp/STALE
-  dataset_url: https://github.com/sjtu-nlp/STALE
+  status: Unverified Pointer
+  paper_url: ""
+  repo_url: ""
+  dataset_url: ""
   notes_file: references/agent_memory/notes/stale.md
   what_to_borrow: DPA logic is conceptually inspired by handling stale memory updates.
   what_to_avoid: Standard STALE uses hardcoded heuristic resolution; we use deterministic DPA and learned proposer policy.
 
 - name: Memora
   category: Multi-Agent Shared Memory
-  status: Related Work
-  paper_url: https://arxiv.org/abs/2402.22222
-  repo_url: https://github.com/agent-memory/memora
+  status: Unverified Pointer
+  paper_url: ""
+  repo_url: ""
   dataset_url: ""
   notes_file: references/agent_memory/notes/memora.md
   what_to_borrow: Structure of memory consolidation and multi-agent coordination.
@@ -20,9 +20,9 @@
 
 - name: MemConflict
   category: Belief Conflict Resolution
-  status: Related Work
-  paper_url: https://arxiv.org/abs/2405.33333
-  repo_url: https://github.com/conflict-memory/memconflict
+  status: Unverified Pointer
+  paper_url: ""
+  repo_url: ""
   dataset_url: ""
   notes_file: references/agent_memory/notes/memconflict.md
   what_to_borrow: Taxonomy of conflicts (factual, temporal, preference).
@@ -30,9 +30,9 @@
 
 - name: LongMemEval
   category: Long-Term Memory Retrieval
-  status: Evaluation Reference
-  paper_url: https://arxiv.org/abs/2401.44444
-  repo_url: https://github.com/longmem/LongMemEval
+  status: Unverified Pointer
+  paper_url: ""
+  repo_url: ""
   dataset_url: ""
   notes_file: references/agent_memory/notes/longmemeval.md
   what_to_borrow: Bounded candidate memory view for retrieval evaluation.
@@ -40,9 +40,9 @@
 
 - name: LoCoMo
   category: Long-Term Memory Consolidation
-  status: Related Work
-  paper_url: https://arxiv.org/abs/2312.55555
-  repo_url: https://github.com/locomo/LoCoMo
+  status: Unverified Pointer
+  paper_url: ""
+  repo_url: ""
   dataset_url: ""
   notes_file: references/agent_memory/notes/locomo.md
   what_to_borrow: Architecture design for moving from short-term context to long-term database.
@@ -60,9 +60,9 @@
 
 - name: MemoryArena
   category: Multi-Agent Social Memory
-  status: Related Work
-  paper_url: https://arxiv.org/abs/2310.05555
-  repo_url: https://github.com/memory-arena/MemoryArena
+  status: Unverified Pointer
+  paper_url: ""
+  repo_url: ""
   dataset_url: ""
   notes_file: ""
   what_to_borrow: Multi-agent interaction environment and communication logging.
@@ -70,9 +70,9 @@
 
 - name: Mem2ActBench
   category: Memory-to-Action Evaluation
-  status: Related Work
-  paper_url: https://arxiv.org/abs/2408.88888
-  repo_url: https://github.com/mem2act/Mem2ActBench
+  status: Unverified Pointer
+  paper_url: ""
+  repo_url: ""
   dataset_url: ""
   notes_file: ""
   what_to_borrow: Evaluation protocols matching memory states to downstream actions.

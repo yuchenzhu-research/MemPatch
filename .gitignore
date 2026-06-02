@@ -4,8 +4,9 @@ outputs/
 artifacts/
 analysis/
 data_external/
-# Singular `reference/` is local-only for cloned repos/downloaded papers.
 # Plural `references/` is tracked lightweight notes/registries; do not ignore it.
+# Use `.external_repos/` or `.reference_cache/` for local source inspection.
+# `reference/` remains ignored as a legacy local-only clone/cache path.
 reference/
 reference_downloads/
 benchmark_downloads/

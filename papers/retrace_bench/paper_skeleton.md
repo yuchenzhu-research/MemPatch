@@ -1,9 +1,7 @@
 # ReTrace-Bench — Paper Skeleton
 
-Blind-review skeleton for the benchmark paper. No authors, no affiliations, no
-target venue. Use `[anonymized repository]` / `[anonymized dataset link]` for
-links. Each section points to consolidated prose in `section_bank.md` and to the
-canonical source docs.
+Skeleton for the benchmark paper. Each section points to consolidated prose in
+`section_bank.md` and to the canonical source docs.
 
 ---
 
@@ -121,4 +119,4 @@ baselines and a gold-replay oracle consistency reference.
 
 - Validation gates, leakage checks, oracle consistency, full taxonomy tables,
   prediction schema, per-domain/per-mode breakdowns. See `table_plan.md`
-  appendix tables and `blind_review_checklist.md`.
+  appendix tables.

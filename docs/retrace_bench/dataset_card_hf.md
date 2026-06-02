@@ -15,13 +15,17 @@ and diagnostic failure identification.
 
 ## Data Files
 
-- Hugging Face release: `test.jsonl`, a viewer-friendly flattened form of
-  `data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl`.
-- Source repository benchmark split:
-  `data/retrace_bench/test_800_templateheldout_en/`.
-- Source repository supervision pools:
-  `data/retrace_supervision/train_3000_en/` and
-  `data/retrace_supervision/dev_400_en/` (not benchmark tests).
+- Hugging Face `test`: viewer-friendly flattened form of
+  `data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl` (800
+  scenarios).
+- Hugging Face `validation`: viewer-compatible calibration split from
+  `data/retrace_bench/sample_80_hard_en/scenarios.jsonl` (80 scenarios). This
+  split is for quickstarts and viewer compatibility, not model/checkpoint
+  selection.
+- Hugging Face `train`: supervision pool from
+  `data/retrace_supervision/train_3000_en/scenarios.jsonl` (3000 scenarios).
+- Hugging Face `dev`: selection pool from
+  `data/retrace_supervision/dev_400_en/scenarios.jsonl` (400 scenarios).
 
 ## Fields
 
@@ -48,10 +52,11 @@ All entities are synthetic. Identifiers use formats such as `C-1842`,
 
 ## Limitations
 
-The initial public HF release exposes only the 800-scenario held-out test split.
-The full source repository also contains synthetic supervision and selection
-pools. Hidden labels are deterministic and auditable, which is intentional for
-reproducibility.
+The public HF release exposes the held-out test split, calibration split, and
+synthetic supervision / selection pools. Only `test` is the canonical held-out
+benchmark split; `validation` is a quickstart/calibration split, and `train` /
+`dev` are supervision and selection pools. Hidden labels are deterministic and
+auditable, which is intentional for reproducibility.
 
 ## License
 

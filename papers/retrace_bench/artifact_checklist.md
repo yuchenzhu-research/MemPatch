@@ -29,9 +29,9 @@ Status of the benchmark artifact track. `[x]` done, `[ ]` remaining.
   (complete `sample_80_hard_en` submission) + quickstart README.
 - [x] **Tests.** `tests/retrace_bench/test_public_api.py`,
   `test_prediction_evaluator_cli.py`, `test_hf_package_readme.py`.
-- [x] **No venue-target leaks** in benchmark-facing docs (see
-  `blind_review_checklist.md` and `docs/retrace_bench/submission_readiness.md`).
-- [x] **No author/username leaks** in the `papers/retrace_bench/` workspace.
+- [x] **Artifact-facing docs use venue-neutral wording.**
+- [x] **Paper-workspace docs avoid author, affiliation, and public username
+  identifiers.**
 - [x] **Deterministic dataset validators.**
   `scripts/validate_retrace_bench_dataset.py` (reference integrity, hygiene,
   coverage, distribution gates).

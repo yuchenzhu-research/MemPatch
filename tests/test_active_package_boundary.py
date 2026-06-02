@@ -1,7 +1,7 @@
 """Regression guard: the active package must not depend on runner scripts or
 archived experiment code.
 
-Paper 1 cleanup invariant: shared logic lives in ``src/retracemem/`` and Stage
+ReTrace-Learn cleanup invariant: shared logic lives in ``src/retracemem/`` and Stage
 A/B/C plug into it. The active package must never import:
 
 - any ``experiments.*`` module (runner scripts / archived code), or

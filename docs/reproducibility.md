@@ -50,5 +50,6 @@ Each run writes a self-describing directory under `outputs/` (git-ignored):
 
 ## What is never committed
 
-Per `AGENTS.md`: `outputs/`, `reference/`, caches, local environments, generated
-artifacts, benchmark downloads, checkpoints, adapter weights, and API keys.
+Per `AGENTS.md`: `outputs/`, external clones, caches, local environments,
+generated artifacts, benchmark downloads, checkpoints, adapter weights, and API
+keys.

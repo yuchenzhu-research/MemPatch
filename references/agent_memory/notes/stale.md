@@ -1,9 +1,9 @@
 # STALE / CUPMem Reference Note
 
 * **Paper Title**: STALE: Evaluating and Mitigating Stale Memory in LLM Agents
-* **Venue / arXiv Status**: Peer-reviewed, ACL 2024 (Inspiration Standard)
-* **Official Links**: https://arxiv.org/abs/2403.11111
-* **GitHub / HuggingFace**: https://github.com/sjtu-nlp/STALE
+* **Venue / arXiv Status**: unverified pointer
+* **Official Links**: pending verification
+* **GitHub / HuggingFace**: pending verification
 
 ## Core Details
 

@@ -27,7 +27,8 @@ This repository is governed by two active tracks:
 - `docs/`: durable project, method, benchmark, and release documentation.
 - `references/`: lightweight reference registries and notes only.
 - `release/huggingface/ReTrace-Bench/`: exact Hugging Face dataset release
-  package. Current release exposes `test.jsonl` only.
+  package. Current release exposes `test`, `validation`, `train`, and `dev`
+  splits mapped to the canonical source data under `data/`.
 
 ## Local-Only Directories
 
@@ -39,7 +40,8 @@ The following are intentionally ignored and should not be committed:
   files, external checkouts, and machine-specific scratch material.
 - `models/`, `checkpoints/`, `adapters/`: trained weights and adapters.
 - `data_external/`: downloaded external benchmark/data snapshots.
-- `reference/`: local cloned external repositories or papers.
+- `.external_repos/`, `.reference_cache/`: local cloned external repositories
+  or paper/source inspection caches.
 - `analysis/`: scratch analysis notes for one-off project iteration.
 - `.venv*/`, caches, `__pycache__/`, `.pytest_cache/`, `.pycache_compile/`.
 

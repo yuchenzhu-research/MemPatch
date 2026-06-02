@@ -1,9 +1,9 @@
 # LoCoMo Reference Note
 
 * **Paper Title**: LoCoMo: Long-Context Memory Benchmark for Agentic Tasks
-* **Venue / arXiv Status**: EMNLP 2024 (Inspiration Standard)
-* **Official Links**: https://arxiv.org/abs/2312.55555
-* **GitHub / HuggingFace**: https://github.com/locomo/LoCoMo
+* **Venue / arXiv Status**: unverified pointer
+* **Official Links**: pending verification
+* **GitHub / HuggingFace**: pending verification
 
 ## Core Details
 
