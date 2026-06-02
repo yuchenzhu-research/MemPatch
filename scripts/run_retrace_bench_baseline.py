@@ -416,6 +416,42 @@ def heuristic_memory_state(scenario: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def _parse_llm_json_response(raw: str) -> dict[str, Any]:
+    """Parse an LLM JSON object, tolerating common fenced-code wrapping."""
+    text = raw.strip()
+    try:
+        parsed = json.loads(text)
+        if isinstance(parsed, dict):
+            return parsed
+    except json.JSONDecodeError:
+        pass
+
+    if text.startswith("```"):
+        lines = text.splitlines()
+        if lines and lines[0].lstrip().startswith("```"):
+            lines = lines[1:]
+        if lines and lines[-1].strip().startswith("```"):
+            lines = lines[:-1]
+        fenced_body = "\n".join(lines).strip()
+        try:
+            parsed = json.loads(fenced_body)
+            if isinstance(parsed, dict):
+                return parsed
+        except json.JSONDecodeError:
+            pass
+
+    decoder = json.JSONDecoder()
+    for start in (idx for idx, char in enumerate(text) if char == "{"):
+        try:
+            parsed, _end = decoder.raw_decode(text[start:])
+        except json.JSONDecodeError:
+            continue
+        if isinstance(parsed, dict):
+            return parsed
+
+    raise json.JSONDecodeError("No JSON object found in LLM response", raw, 0)
+
+
 def llm_json_answerer(
     scenario: dict[str, Any],
     provider: Any,
@@ -450,7 +486,7 @@ def llm_json_answerer(
     kwargs.update(generation_kwargs or {})
     raw = provider.generate(json.dumps(prompt, ensure_ascii=False), **kwargs)
     try:
-        parsed = json.loads(raw)
+        parsed = _parse_llm_json_response(raw)
     except json.JSONDecodeError:
         parsed = {"answer": raw, "decision": None, "memory_state": {}, "evidence_event_ids": [], "failure_diagnosis": None}
     return parsed
