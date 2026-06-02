@@ -4,6 +4,8 @@ outputs/
 artifacts/
 analysis/
 data_external/
+# Singular `reference/` is local-only for cloned repos/downloaded papers.
+# Plural `references/` is tracked lightweight notes/registries; do not ignore it.
 reference/
 reference_downloads/
 benchmark_downloads/
