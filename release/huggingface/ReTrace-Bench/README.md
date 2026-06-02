@@ -42,7 +42,7 @@ ReTrace-Bench evaluates agent memory revision reliability in multi-agent and age
 ## Repository & Official Evaluator
 
 - **GitHub repository:** https://github.com/yuchenzhu-research/ReTrace
-- **Benchmark version:** `0.1.0` (commit `a80e9b482e7f8967c094faea7f2de2486913c68e`)
+- **Benchmark version:** `0.1.0` (commit `cdcf6624d6b5bbed0eb681b9cc5ee10e9584609a`)
 
 ReTrace-Bench ships an official scorer that runs no model and needs no API keys.
 Clone the repository, then score a JSONL predictions file against a split:
@@ -153,7 +153,7 @@ publication; until then please use the following placeholder:
   author       = {ReTrace-Bench Authors},
   year         = {2026},
   howpublished = {\url{https://github.com/yuchenzhu-research/ReTrace}},
-  note         = {Benchmark version 0.1.0, commit a80e9b482e7f8967c094faea7f2de2486913c68e}
+  note         = {Benchmark version 0.1.0, commit cdcf6624d6b5bbed0eb681b9cc5ee10e9584609a}
 }
 ```
 
