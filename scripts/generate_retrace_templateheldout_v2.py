@@ -184,8 +184,9 @@ def _state_text(
         )
     elif decision == "ask_clarification":
         resolution = (
-            f"a required condition for {case_id} (an effective date or approval "
-            f"timestamp) is missing, so the current value cannot yet be confirmed"
+            f"the only missing piece for {case_id} is a single input the requester "
+            f"alone can supply (their intended effective date or approval timestamp), "
+            f"and once that input is provided the current value can be confirmed"
         )
     elif decision == "refuse_due_to_policy":
         resolution = (
@@ -195,8 +196,9 @@ def _state_text(
         )
     else:  # mark_unresolved
         resolution = (
-            f"two credible in-scope records for {case_id} disagree and neither is "
-            f"the authoritative basis"
+            f"two credible in-scope records for {case_id} disagree, no party "
+            f"currently holds the authoritative basis, and no further input can "
+            f"resolve the conflict until new authoritative evidence arrives"
         )
 
     # Mode-specific factual framing (the mechanism), prepended as state.

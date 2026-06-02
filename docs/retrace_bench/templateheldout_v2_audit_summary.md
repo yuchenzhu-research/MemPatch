@@ -33,12 +33,20 @@ Healthy in v1 (kept in v2): `memory_state_accuracy` (0.746 vs 0.807) and
 ## Honest positioning
 
 - The v1 direction is **valuable**; v1 is **not** useless and v2 is **not**
-  proven perfect — it removes the named artifacts, and pilots (Phase 7) are
-  needed to confirm decision accuracy drops and diagnosis distribution
-  de-collapses on v2.
+  proven perfect — it removes the named artifacts. Pilots (Phase 7) have now
+  been run (see `templateheldout_v2_pilot_results.md`) and confirm: non-answer
+  decision accuracy drops (0.39–0.65 on v2 vs 0.81–0.88 on v1), false
+  `scope_leakage` over-prediction falls to ~0, and diagnosis no longer collapses.
 - Do **not** present v1 `failure_diagnosis_accuracy` or the leaked decision
   numbers as headline claims; keep diagnosis as diagnostic analysis.
-- v1 stays as prototype/diagnostic; v2 is candidate, not frozen, pending user
-  approval.
+- **v1 is DEPRECATED / diagnostic** (documented in the v1 split README); it is
+  retained unchanged only for reproducibility of the committed baselines. v2 is
+  the candidate paper-facing split — still **not frozen** pending final full-800
+  numbers and review.
+- Residual v2 issue surfaced by the pilots: `ask_clarification` vs
+  `mark_unresolved` were conflated once the leaked action verb was removed. v2
+  now adds a **state cue** (the only missing piece is a single input the
+  requester alone can supply, vs no input can resolve the conflict) to make the
+  two recoverable without an action word.
 - Metric-renaming (#5) is a scorer change, intentionally **not** bundled into
   this generator work (no silent rewrite of historical outputs).

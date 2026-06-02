@@ -1,6 +1,19 @@
 # ReTrace-Bench test_800_templateheldout_en
 
-This split is the candidate paper-facing held-out ReTrace-Bench set.
+> **Status: DEPRECATED / diagnostic (v1).** This split is retained for
+> reproducibility of the already-committed API baselines, but it is **no longer
+> the paper-facing split**. A model-output audit
+> (`docs/retrace_bench/templateheldout_v1_model_audit.md`) found two artifacts
+> that inflate/obscure results: (1) decision-word leakage in the authoritative
+> records (the gold action verb appears verbatim, so black-box decision is
+> partly solvable by copying it), and (2) a universal cross-scope distractor that
+> biases models toward over-predicting `scope_leakage`. The hardened replacement
+> is `data/retrace_bench/test_800_templateheldout_v2_en/` (renderer
+> `templateheldout_v2`); pilot evidence is in
+> `docs/retrace_bench/templateheldout_v2_pilot_results.md`. Treat v1 decision and
+> failure-diagnosis numbers as **diagnostic only**, not headline claims.
+
+This split was the prior candidate paper-facing held-out ReTrace-Bench set.
 
 - 800 synthetic English workflow scenarios.
 - Evaluation-only: it has no `training_targets`.
