@@ -14,6 +14,11 @@ tags:
 - memory-revision
 - long-term-memory
 - reliability
+configs:
+- config_name: default
+  data_files:
+  - split: test
+    path: test.jsonl
 ---
 
 # ReTrace-Bench
@@ -25,25 +30,39 @@ stale, out-of-scope, unsupported, or policy-invalid memory.
 
 ## Dataset Splits
 
-The paper-facing held-out benchmark split is:
+This Hugging Face release contains only the paper-facing held-out benchmark
+test split:
 
-- `data/test_800_templateheldout_en/`
+- `test.jsonl`
 
-Use this split for final benchmark evaluation only. Models and prompts should
-not train, prompt-tune, select checkpoints, optimize policies, or perform model
-selection on `test_800_templateheldout_en`.
+Use this split for final benchmark evaluation only. Models and prompts should not
+train, prompt-tune, select checkpoints, optimize policies, or perform model
+selection on this test split.
 
 The previous repository split `test_800_en` is prototype/diagnostic only and is
 not included as the final benchmark split in this release package.
 
-This release also includes:
-
-- `data/sample_80_hard_en/` - a small hard sample for smoke tests and examples.
-
 The upstream ReTrace repository also contains `train_3000_en` and `dev_400_en`
-as synthetic supervision/selection pools. They are not included in this
-Hugging Face benchmark release and must not be treated as held-out benchmark
-tests.
+as synthetic supervision/selection pools. They are not included in this Hugging
+Face benchmark release and must not be treated as held-out benchmark tests.
+
+## Viewer-Friendly Format
+
+The upstream benchmark records contain nested event traces, memory states, and
+rubrics. Hugging Face Dataset Viewer expects stable Arrow columns, so this
+release stores complex nested objects as JSON strings:
+
+- `event_trace_json`
+- `initial_memory_json`
+- `tasks_json`
+- `expected_memory_state_json`
+- `rubric_json`
+- `metadata_json`
+
+This preserves the full test scenario while keeping the dataset browser
+scrollable and queryable. The stable scalar/list columns include scenario IDs,
+domain, failure mode, expected decision, expected answer, evidence IDs, and
+diagnosis.
 
 ## Main Task Views
 
@@ -68,8 +87,8 @@ The intended headline metrics are:
 - `failure_diagnosis_accuracy`
 - `stale_reuse_rate`
 
-Diagnostic documents and scoring helpers are included under `docs/` and
-`schema/`.
+Diagnostic documents and scoring helpers live in the upstream ReTrace
+repository.
 
 ## Template Shortcut Diagnostic
 
@@ -86,10 +105,6 @@ and zero train-to-test event-template overlap in the included diagnostic report.
 
 ## Baselines
 
-Offline baseline results are included in:
-
-- `docs/baseline_results_test_800_templateheldout_en.md`
-
 Oracle state/evidence/diagnosis rows are diagnostic upper-bound paths, not
 deployable or comparable baselines. In the current offline results, oracle
 memory-state, evidence, and diagnosis scores are high while oracle black-box
@@ -100,16 +115,9 @@ labels are intentionally decorrelated from primary failure mode shortcuts.
 
 ## Schema
 
-Important schema and scoring references:
-
-- `schema/general_schema.py`
-- `schema/general_taxonomy.py`
-- `schema/scorers_general.py`
-- `docs/schema_v2_proposal.md`
-- `docs/dataset_design.md`
-- `docs/failure_modes.md`
-- `docs/metrics_v2.md`
-- `docs/quality_gates_v2.md`
+Important schema, scoring, leakage, and baseline references are available in
+the upstream ReTrace repository under `benchmark/retrace_bench/`,
+`docs/retrace_bench/`, and `release/huggingface/ReTrace-Bench/`.
 
 ## License
 
@@ -122,4 +130,4 @@ See `LICENSE` for the license pointer.
 
 Source repository: `yuchenzhu-research/ReTrace`
 
-Source commit: `7e11bf67097f31bf2c072236331b2229d662a609`
+Source data commit: `7e11bf67097f31bf2c072236331b2229d662a609`
