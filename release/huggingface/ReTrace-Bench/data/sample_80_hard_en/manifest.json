@@ -1,0 +1,7 @@
+{
+  "dataset_name": "sample_80_hard_en",
+  "scenario_count": 80,
+  "schema_version": "retrace_bench_general_1",
+  "renderer": "hard_template",
+  "split": "calibration_hard"
+}
