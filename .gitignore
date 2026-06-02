@@ -1,4 +1,6 @@
-# Local reference clones are intentionally kept out of the project history.
+# Local external-reference clones are intentionally kept out of project history.
+# Use tracked `references/` only for lightweight YAML registries and Markdown
+# notes. Use ignored `reference/` only for local cloned repos / downloaded papers.
 reference/
 
 # Runtime and generated outputs.
@@ -9,14 +11,7 @@ analysis/
 *.jsonl
 !tests/**/*.jsonl
 !data/fixtures/**/*.jsonl
-!data/retrace_bench/sample_20/*.jsonl
-!data/retrace_bench/sample_20/*.json
-!data/retrace_bench/sample_20/README.md
 # Committed calibration fixtures (small, hand/template generated, not full datasets).
-!data/retrace_bench/sample_40_en/
-!data/retrace_bench/sample_40_en/*.jsonl
-!data/retrace_bench/sample_40_en/*.json
-!data/retrace_bench/sample_40_en/README.md
 !data/retrace_bench/sample_80_hard_en/
 !data/retrace_bench/sample_80_hard_en/*.jsonl
 !data/retrace_bench/sample_80_hard_en/*.json
@@ -44,6 +39,10 @@ analysis/
 !data/retrace_bench/test_800_templateheldout_en/*.jsonl
 !data/retrace_bench/test_800_templateheldout_en/*.json
 !data/retrace_bench/test_800_templateheldout_en/README.md
+!release/huggingface/ReTrace-Bench/
+!release/huggingface/ReTrace-Bench/*.jsonl
+!release/huggingface/ReTrace-Bench/*.md
+!release/huggingface/ReTrace-Bench/LICENSE
 data_external/
 .pycache_compile/
 __pycache__/

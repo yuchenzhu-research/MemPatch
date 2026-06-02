@@ -156,8 +156,19 @@ To ensure absolute clean methodology and avoid test-set leakage:
 - Standard library first.
 - Keep core DPA logic API-free and deterministic.
 - Keep benchmark-specific logic in adapters or runners.
-- Do not edit `reference/`.
-- Do not commit `reference/`, `outputs/`, caches, local environments, generated artifacts, benchmark downloads, or API keys.
+- `references/` is the tracked lightweight reference registry/notes directory.
+  Store only YAML pointers and short Markdown notes there.
+- `reference/` is local-only for cloned external repositories or downloaded
+  papers. Do not edit it as source, and never commit it.
+- Do not commit `reference/`, `outputs/`, `artifacts/`, `analysis/`, caches,
+  local environments, generated artifacts, benchmark downloads, model
+  checkpoints/weights, or API keys.
+- After running scripts, tests, builds, or imports, proactively look for and
+  remove local cache/generated directories before committing. At minimum check
+  for `.pycache_compile/`, `.pytest_cache/`, `__pycache__/`, `*.pyc`,
+  `*.egg-info/`, `.DS_Store`, `outputs/`, `artifacts/`, `analysis/`,
+  `data_external/`, `reference/`, `models/`, `checkpoints/`, `adapters/`,
+  `wandb/`, and `runs/`.
 - Preserve the canonical dataclass contracts in `src/retracemem/schemas.py`.
 - Add or update tests for every new behavior.
 
