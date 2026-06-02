@@ -374,12 +374,21 @@ def retrace_oracle_engine(scenario: dict[str, Any]) -> dict[str, Any]:
         memory_state[bid] = status_map.get(status, "current")
     for mid in introduced:
         memory_state[mid] = expected_state.get(mid, "current")
-    decision = {
-        "policy_violation": "refuse_due_to_policy",
-        "conflict_collapse": "mark_unresolved",
-        "scope_leakage": "escalate",
-        "memory_hallucination": "ask_clarification",
-    }.get(scenario["primary_failure_mode"], "use_current_memory")
+    # Gold-replay reference: the oracle already reads hidden_gold for answer,
+    # evidence, and diagnosis, so it must also replay the gold decision rather
+    # than reconstruct it from a hard-coded failure_mode -> decision mapping.
+    # Each failure mode admits several valid decisions (see DECISIONS_BY_MODE in
+    # scripts/generate_retrace_templateheldout_test.py), so the old mapping was
+    # systematically wrong on the template-heldout split.
+    decision = gold.get("expected_decision")
+    if decision is None:
+        print(
+            "[retrace_oracle_engine] WARNING: scenario "
+            f"{scenario['scenario_id']} has no hidden_gold.expected_decision; "
+            "falling back to use_current_memory (non-canonical split).",
+            file=sys.stderr,
+        )
+        decision = "use_current_memory"
     return {
         "answer": gold.get("expected_answer"),
         "decision": decision,

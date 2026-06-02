@@ -52,6 +52,19 @@ TASK_TYPES = (
 
 TRUST_LEVELS = ("verified", "trusted", "untrusted")
 
+# Canonical five-way revision-decision action space. This is the single source
+# of truth for decision labels; scorers, generators, and baselines import it
+# rather than redefining their own copies.
+DECISIONS = (
+    "use_current_memory",
+    "escalate",
+    "ask_clarification",
+    "refuse_due_to_policy",
+    "mark_unresolved",
+)
+
+# Decisions whose correct action is NOT to answer from current memory. Used for
+# the non_answer_decision_accuracy headline metric.
 NON_ANSWER_DECISIONS = (
     "escalate",
     "ask_clarification",

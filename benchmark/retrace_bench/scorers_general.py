@@ -5,7 +5,37 @@ from __future__ import annotations
 from collections import Counter
 from typing import Any
 
-from benchmark.retrace_bench.general_taxonomy import FAILURE_MODES
+from benchmark.retrace_bench.general_taxonomy import (
+    DECISIONS,
+    FAILURE_MODES,
+    NON_ANSWER_DECISIONS,
+)
+
+
+# Paper-facing headline metrics. These are what ReTrace-Bench reports as the
+# primary scores in tables; they are computed in aggregate_metrics() (not as
+# per-example raw signals). decision_macro_f1 is the primary decision metric
+# because it is robust to the dominant use_current_memory class.
+HEADLINE_METRICS = (
+    "decision_macro_f1",
+    "non_answer_decision_accuracy",
+    "memory_state_accuracy",
+    "evidence_f1",
+    "failure_diagnosis_accuracy",
+    "stale_reuse_rate",
+)
+
+# Auxiliary / diagnostic raw signals. Reported for completeness but not as the
+# headline numbers. In particular black_box_decision_accuracy can be dominated
+# by the majority use_current_memory class, so it is auxiliary, not headline.
+AUXILIARY_METRICS = (
+    "black_box_decision_accuracy",
+    "decision_balanced_accuracy",
+    "use_current_memory_accuracy",
+    "answer_key_fact_accuracy",
+    "answer_exact_match",
+    "format_failure_rate",
+)
 
 
 DIAGNOSIS_ALIASES = {
@@ -211,7 +241,12 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
     )
 
     metrics = {
-        # Primary metrics.
+        # Per-example raw signals. Paper-facing headline decision metrics
+        # (decision_macro_f1, non_answer_decision_accuracy, ...) are computed in
+        # aggregate_metrics(); see HEADLINE_METRICS / AUXILIARY_METRICS. Note
+        # that black_box_decision_accuracy is an auxiliary raw signal, not the
+        # headline decision metric, because it is dominated by the majority
+        # use_current_memory class.
         "black_box_decision_accuracy": float(decision_matches(predicted_decision, expected_decision, decision_aliases)),
         "memory_state_accuracy": state_correct / state_total,
         "evidence_f1": _f1(response.get("evidence_event_ids", []), gold.get("expected_evidence_event_ids", [])),
@@ -241,13 +276,9 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
     return metrics
 
 
-ALL_DECISIONS = {
-    "use_current_memory",
-    "escalate",
-    "ask_clarification",
-    "refuse_due_to_policy",
-    "mark_unresolved",
-}
+# Backward-compatible alias of the centralized decision label space defined in
+# general_taxonomy.DECISIONS. Kept as a set for existing membership checks.
+ALL_DECISIONS = set(DECISIONS)
 
 
 def canonicalize_decision(val: Any, expected_decision: Any, aliases: Any = None) -> str:
@@ -314,7 +345,7 @@ def aggregate_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
             decision_balanced_accuracy = sum(recalls) / len(expected_classes)
             decision_macro_f1 = sum(f1s) / len(expected_classes)
 
-        non_answer_classes = {"escalate", "ask_clarification", "refuse_due_to_policy", "mark_unresolved"}
+        non_answer_classes = set(NON_ANSWER_DECISIONS)
         non_answer_indices = [i for i, e in enumerate(exp_list) if e in non_answer_classes]
         if non_answer_indices:
             non_answer_correct = sum(1 for i in non_answer_indices if pred_list[i] == exp_list[i])
@@ -361,9 +392,21 @@ def aggregate_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "failure_diagnosis_accuracy": sum(r.get("metrics", {}).get("failure_diagnosis_accuracy", 0.0) for r in domain_rows) / len(domain_rows),
         }
 
+    # Grouped views so paper-facing scripts know which numbers are headline vs.
+    # auxiliary without having to hard-code metric names. ``metrics`` is kept as
+    # the flat all-metrics dict for backward compatibility with existing
+    # consumers (e.g. scripts/run_retrace_bench_ablation.py:load_metrics).
+    headline_metrics = {k: metrics_dict[k] for k in HEADLINE_METRICS if k in metrics_dict}
+    auxiliary_metrics = {k: metrics_dict[k] for k in AUXILIARY_METRICS if k in metrics_dict}
+
     return {
         "count": count,
         "metrics": metrics_dict,
+        "headline_metrics": headline_metrics,
+        "auxiliary_metrics": auxiliary_metrics,
+        "all_metrics": metrics_dict,
+        "per_decision_counts": per_decision_counts,
+        "per_decision_accuracy": per_decision_accuracy,
         "per_failure_mode": per_failure_mode,
         "per_domain": per_domain,
     }
