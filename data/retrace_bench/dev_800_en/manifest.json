@@ -1,6 +1,0 @@
-{
-  "dataset_name": "dev_800_en",
-  "scenario_count": 800,
-  "schema_version": "retrace_bench_general_1",
-  "renderer": "template"
-}

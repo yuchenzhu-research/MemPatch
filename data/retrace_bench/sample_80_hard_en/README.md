@@ -4,7 +4,7 @@ Hard calibration split for the general agent-memory reliability benchmark
 (80 English scenarios, `retrace_bench_general_1` schema). This is a small
 committed calibration fixture, **not** a full evaluation dataset.
 
-It is deliberately harder and more varied than `sample_40_en`:
+It is deliberately compact but adversarial:
 
 - multi-source event traces (7+ events with mixed trust levels and actors);
 - distractor memories and cross-scope traps;
@@ -42,5 +42,5 @@ PYTHONPATH=. python scripts/validate_retrace_bench_dataset.py \
 pytest tests/retrace_bench/test_sample_80_hard_validation.py -q
 ```
 
-`manifest.json` holds dataset metadata. Larger generated splits (`dev_800_en`,
-`stress_1760_en`) are artifacts and are intentionally not committed.
+`manifest.json` holds dataset metadata. The paper-facing held-out split is
+`data/retrace_bench/test_800_templateheldout_en/`.

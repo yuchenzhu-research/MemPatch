@@ -7,9 +7,16 @@ family.
 
 ## Splits
 
-- `data/retrace_bench/sample_40_en/` - 40 scenarios for human inspection.
-- `data/retrace_bench/dev_800_en/` - 800 scenarios for baseline development.
-- `data/retrace_bench/stress_1760_en/` - 1760 scenarios for larger evaluation.
+- `data/retrace_bench/test_800_templateheldout_en/` - 800 scenario
+  paper-facing held-out benchmark split.
+- `data/retrace_bench/test_800_en/` - 800 scenario prototype/diagnostic split;
+  retained for comparison only, not the final benchmark.
+- `data/retrace_bench/sample_80_hard_en/` - 80 scenario hard sample for quick
+  inspection and baseline smoke checks.
+- `data/retrace_bench/sample_20_v2/` - tiny v2 schema smoke fixture.
+- `data/retrace_supervision/train_3000_en/` and
+  `data/retrace_supervision/dev_400_en/` - synthetic supervision/selection
+  pools for future ReTrace-Learn work; not benchmark test sets.
 
 Each split stores `scenarios.jsonl` plus a small `manifest.json`.
 
@@ -48,4 +55,3 @@ modes. Difficulty follows a deterministic 15/30/35/20 distribution across L1-L4.
 Validation enforces minimum rates for distractors, cross-scope traps, verified
 contradictions of stale trusted notes, false-premise rejection, and non-answer
 actions.
-

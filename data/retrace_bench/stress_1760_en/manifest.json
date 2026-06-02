@@ -1,6 +1,0 @@
-{
-  "dataset_name": "stress_1760_en",
-  "scenario_count": 1760,
-  "schema_version": "retrace_bench_general_1",
-  "renderer": "template"
-}

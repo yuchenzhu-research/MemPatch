@@ -3,9 +3,12 @@
 ## Commands
 
 ```bash
-python scripts/generate_retrace_bench_blueprints.py --count 1760 --out data/retrace_bench/blueprints_1760.jsonl --seed 42
-python scripts/render_retrace_bench_dataset.py --blueprints data/retrace_bench/blueprints_1760.jsonl --out data/retrace_bench/stress_1760_en/scenarios.jsonl --renderer template --seed 42
-python scripts/validate_retrace_bench_dataset.py --data data/retrace_bench/stress_1760_en/scenarios.jsonl
+python scripts/generate_retrace_templateheldout_test.py \
+  --count 800 \
+  --out data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl \
+  --seed 400000
+python scripts/validate_retrace_bench_dataset.py \
+  --data data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl
 ```
 
 ## Audit Rules
@@ -21,9 +24,14 @@ python scripts/validate_retrace_bench_dataset.py --data data/retrace_bench/stres
 ## Baseline Runs
 
 ```bash
-python scripts/run_retrace_bench_baseline.py --data data/retrace_bench/dev_800_en/scenarios.jsonl --baseline latest_only --out outputs/retrace_bench/latest_only_dev800.jsonl
-python scripts/run_retrace_bench_baseline.py --data data/retrace_bench/dev_800_en/scenarios.jsonl --baseline retrieve_all --out outputs/retrace_bench/retrieve_all_dev800.jsonl
+python scripts/run_retrace_bench_baseline.py \
+  --data data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl \
+  --baseline latest_only \
+  --out outputs/retrace_bench/latest_only_templateheldout.jsonl
+python scripts/run_retrace_bench_baseline.py \
+  --data data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl \
+  --baseline retrieve_all \
+  --out outputs/retrace_bench/retrieve_all_templateheldout.jsonl
 ```
 
 Each run writes predictions and a sibling `.metrics.json` summary.
-
