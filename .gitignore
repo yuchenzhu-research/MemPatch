@@ -1,75 +1,38 @@
-# Local external-reference clones are intentionally kept out of project history.
-# Use tracked `references/` only for lightweight YAML registries and Markdown
-# notes. Use ignored `reference/` only for local cloned repos / downloaded papers.
-reference/
-
-# Runtime and generated outputs.
+# Local-only generated/runtime material.
+local/
 outputs/
 artifacts/
 analysis/
-# Exclude output datasets except fixtures and tests
-*.jsonl
-!tests/**/*.jsonl
-!data/fixtures/**/*.jsonl
-# Committed calibration fixtures (small, hand/template generated, not full datasets).
-!data/retrace_bench/sample_80_hard_en/
-!data/retrace_bench/sample_80_hard_en/*.jsonl
-!data/retrace_bench/sample_80_hard_en/*.json
-!data/retrace_bench/sample_80_hard_en/README.md
-# v2 toy smoke sample (4 scenarios) referenced by manifest.json and the v2 smoke test.
-!data/retrace_bench/sample_20_v2/
-!data/retrace_bench/sample_20_v2/*.jsonl
-!data/retrace_bench/sample_20_v2/*.json
-!data/retrace_bench/sample_20_v2/README.md
-# Internal train/dev/test split package (committed: scenarios + manifest + README).
-!data/retrace_supervision/
-!data/retrace_supervision/train_3000_en/
-!data/retrace_supervision/train_3000_en/*.jsonl
-!data/retrace_supervision/train_3000_en/*.json
-!data/retrace_supervision/train_3000_en/README.md
-!data/retrace_supervision/dev_400_en/
-!data/retrace_supervision/dev_400_en/*.jsonl
-!data/retrace_supervision/dev_400_en/*.json
-!data/retrace_supervision/dev_400_en/README.md
-!data/retrace_bench/test_800_en/
-!data/retrace_bench/test_800_en/*.jsonl
-!data/retrace_bench/test_800_en/*.json
-!data/retrace_bench/test_800_en/README.md
-!data/retrace_bench/test_800_templateheldout_en/
-!data/retrace_bench/test_800_templateheldout_en/*.jsonl
-!data/retrace_bench/test_800_templateheldout_en/*.json
-!data/retrace_bench/test_800_templateheldout_en/README.md
-!release/huggingface/ReTrace-Bench/
-!release/huggingface/ReTrace-Bench/*.jsonl
-!release/huggingface/ReTrace-Bench/*.md
-!release/huggingface/ReTrace-Bench/LICENSE
 data_external/
+reference/
+reference_downloads/
+benchmark_downloads/
+.external_repos/
+.reference_cache/
+
+# Python/build/editor caches.
 .pycache_compile/
+.pytest_cache/
 __pycache__/
 *.py[cod]
-
-# Local environments and editor state.
-.venv/
-.env
+*.egg-info/
+.venv*/
 venv/
+.env
 .DS_Store
 
-# Packaging and test metadata.
-*.egg-info/
-.pytest_cache/
-
-
-# Local MLX / model-training artifacts.
-.venv-mlx/
+# Training/model artifacts.
 adapters/
 models/
 checkpoints/
 wandb/
 runs/
-.external_repos/
-.reference_cache/
-reference_downloads/
-benchmark_downloads/
+*.safetensors
+*.ckpt
+*.pt
+*.pth
+
+# External/binary downloads.
 *.pdf
 *.parquet
 *.arrow
@@ -79,7 +42,18 @@ benchmark_downloads/
 *.tar
 *.tar.gz
 *.jsonl.gz
-*.safetensors
-*.ckpt
-*.pt
-*.pth
+
+# JSONL is ignored by default; only active fixtures, releases, and test data
+# are allowlisted below. Do not broadly unignore `data/retrace_bench/**` because
+# that directory is also used for local generated diagnostics/blueprints.
+*.jsonl
+!tests/**/*.jsonl
+!data/fixtures/**/*.jsonl
+!data/retrace_learn/v1/boundary_audit/**
+!data/retrace_bench/sample_20_v2/**
+!data/retrace_bench/sample_80_hard_en/**
+!data/retrace_bench/test_800_en/**
+!data/retrace_bench/test_800_templateheldout_en/**
+!data/retrace_supervision/train_3000_en/**
+!data/retrace_supervision/dev_400_en/**
+!release/huggingface/ReTrace-Bench/**

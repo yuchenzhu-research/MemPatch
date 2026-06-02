@@ -35,11 +35,13 @@ The following are intentionally ignored and should not be committed:
 
 - `outputs/`: run outputs, predictions, metrics, temporary reports.
 - `artifacts/`: local generated artifacts.
+- `local/`: catch-all local workspace for temporary training corpora, converted
+  files, external checkouts, and machine-specific scratch material.
 - `models/`, `checkpoints/`, `adapters/`: trained weights and adapters.
 - `data_external/`: downloaded external benchmark/data snapshots.
 - `reference/`: local cloned external repositories or papers.
 - `analysis/`: scratch analysis notes for one-off project iteration.
-- `.venv/`, caches, `__pycache__/`, `.pytest_cache/`, `.pycache_compile/`.
+- `.venv*/`, caches, `__pycache__/`, `.pytest_cache/`, `.pycache_compile/`.
 
 ## Training Placement
 
@@ -50,6 +52,8 @@ For server training:
 - Write training runs to `outputs/local_training/` or a user-specified ignored
   run directory.
 - Write checkpoints/adapters to `checkpoints/`, `models/`, or `adapters/`.
+- Use `local/` for temporary training corpora, converted data, external clones,
+  or framework-specific scratch directories that should never enter git.
 - Commit only small manifests, configs, scripts, and final release metadata.
   Do not commit model weights, raw run outputs, caches, or downloaded external
   corpora.
