@@ -34,6 +34,7 @@ class SiliconFlowProvider(BaseLLMProvider):
                 resp = client.chat.completions.create(
                     model=self.model,
                     messages=[{"role": "user", "content": prompt}],
+                    timeout=60.0,
                     **kwargs,
                 )
                 return resp.choices[0].message.content or ""
