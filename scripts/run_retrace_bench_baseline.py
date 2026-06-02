@@ -656,16 +656,18 @@ def main(argv: list[str] | None = None) -> int:
         if args.append or args.resume:
             append_jsonl(out, pred)
 
+        # Write intermediate metrics.json dynamically on each step
+        metrics_path = out.with_suffix(".metrics.json")
+        aggregate = aggregate_metrics(scored)
+        aggregate["baseline"] = args.baseline
+        aggregate["group"] = baseline_group(args.baseline)
+        aggregate["is_oracle"] = is_oracle_baseline(args.baseline)
+        metrics_path.write_text(json.dumps(aggregate, indent=2, sort_keys=True), encoding="utf-8")
+
     if not args.append and not args.resume:
         write_jsonl(out, predictions)
-    metrics_path = out.with_suffix(".metrics.json")
-    aggregate = aggregate_metrics(scored)
-    aggregate["baseline"] = args.baseline
-    aggregate["group"] = baseline_group(args.baseline)
-    aggregate["is_oracle"] = is_oracle_baseline(args.baseline)
-    metrics_path.write_text(json.dumps(aggregate, indent=2, sort_keys=True), encoding="utf-8")
-    print(f"Wrote {len(predictions)} predictions to {out}")
-    print(f"Wrote metrics to {metrics_path}")
+    print(f"Finished. Wrote {len(predictions)} predictions to {out}")
+    print(f"Final metrics written to {metrics_path}")
     return 0
 
 
