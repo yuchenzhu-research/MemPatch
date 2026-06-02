@@ -34,6 +34,7 @@ from benchmark.retrace_bench.scorers_general import (
     AUXILIARY_METRICS,
     HEADLINE_METRICS,
     aggregate_metrics,
+    normalize_failure_mode,
     score_prediction,
 )
 
@@ -117,10 +118,17 @@ def _scenario_event_ids(scenario: dict[str, Any]) -> set[str]:
     return {e.get("event_id") for e in events if e.get("event_id") is not None}
 
 
+def _scenario_memory_ids(scenario: dict[str, Any]) -> set[str]:
+    """Memory IDs visible to the model (initial_memory only; never gold)."""
+    memories = scenario.get("public_input", {}).get("initial_memory", [])
+    return {m.get("memory_id") for m in memories if m.get("memory_id") is not None}
+
+
 def _validate_response(
     scenario_id: Any,
     response: dict[str, Any],
     event_ids: set[str],
+    memory_ids: set[str],
     errors: list[str],
     warnings: list[str],
 ) -> None:
@@ -153,6 +161,14 @@ def _validate_response(
                     f"{scenario_id}: invalid memory_state labels {bad} "
                     f"(expected one of {sorted(MEMORY_STATUSES)})"
                 )
+            # Completeness: a status is expected for every visible memory ID.
+            # This is a warning (not error) in both modes so partial coverage is
+            # scored; only initial_memory IDs are used, so no gold is exposed.
+            omitted = sorted(mid for mid in memory_ids if mid not in memory_state)
+            if omitted:
+                warnings.append(
+                    f"{scenario_id}: memory_state omits visible memory IDs {omitted}"
+                )
 
     # evidence_event_ids: optional, but if present must reference real events.
     if "evidence_event_ids" not in response:
@@ -168,10 +184,21 @@ def _validate_response(
                     f"{scenario_id}: evidence_event_ids reference IDs not in event_trace: {unknown}"
                 )
 
-    # failure_diagnosis / answer: soft fields. Missing is a warning only; the
-    # scorer normalizes free-text diagnoses so we do not hard-fail on label.
+    # failure_diagnosis: required to be one of FAILURE_MODES (or an accepted
+    # normalized alias) when present. Missing is a warning; an unrecognized
+    # label is an error so strict mode rejects it. The scorer still normalizes
+    # free-text aliases, so documented aliases pass.
     if "failure_diagnosis" not in response:
         warnings.append(f"{scenario_id}: missing response field 'failure_diagnosis'")
+    else:
+        diagnosis = response.get("failure_diagnosis")
+        if normalize_failure_mode(diagnosis) not in FAILURE_MODES:
+            errors.append(
+                f"{scenario_id}: invalid failure_diagnosis label {diagnosis!r} "
+                f"(expected one of {sorted(FAILURE_MODES)} or a documented alias)"
+            )
+
+    # answer: free text. Missing is a warning only.
     if "answer" not in response:
         warnings.append(f"{scenario_id}: missing response field 'answer'")
 
@@ -231,7 +258,14 @@ def evaluate_predictions(
         if norm is None:
             continue
         response = norm["response"]
-        _validate_response(sid, response, _scenario_event_ids(scenario), errors, warnings)
+        _validate_response(
+            sid,
+            response,
+            _scenario_event_ids(scenario),
+            _scenario_memory_ids(scenario),
+            errors,
+            warnings,
+        )
         if not isinstance(response, dict) or not response:
             continue
         gold = scenario.get("hidden_gold", {}) or {}

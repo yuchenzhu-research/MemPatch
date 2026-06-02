@@ -117,6 +117,30 @@ def test_invalid_memory_state_and_evidence_raise_in_strict_mode():
         evaluate_predictions(scenarios, [{"scenario_id": "s1", "response": bad_ev}], strict=True)
 
 
+def test_invalid_failure_diagnosis_raises_in_strict_mode():
+    scenarios = [_scenario("s1")]
+    bad = _good_response()
+    bad["failure_diagnosis"] = "totally_made_up_mode"
+    predictions = [{"scenario_id": "s1", "response": bad}]
+    with pytest.raises(ValueError):
+        evaluate_predictions(scenarios, predictions, strict=True)
+    result = evaluate_predictions(scenarios, predictions, strict=False)
+    assert any("invalid failure_diagnosis label" in e for e in result["errors"])
+    assert result["count"] == 1  # still scored in non-strict mode
+
+
+def test_memory_state_completeness_emits_warning_not_error():
+    scenario = _scenario("s1")
+    scenario["public_input"]["initial_memory"] = [
+        {"memory_id": "m1"},
+        {"memory_id": "m2"},
+    ]
+    resp = _good_response()  # only covers m1
+    result = evaluate_predictions(scenarios=[scenario], predictions=[{"scenario_id": "s1", "response": resp}], strict=True)
+    assert result["errors"] == []  # omission must not block strict mode
+    assert any("omits visible memory IDs" in w and "m2" in w for w in result["warnings"])
+
+
 def test_normalize_prediction_canonical_and_flat():
     canonical = normalize_prediction({"scenario_id": "s1", "response": _good_response()})
     flat = normalize_prediction({"scenario_id": "s1", **_good_response()})

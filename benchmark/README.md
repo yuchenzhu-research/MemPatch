@@ -162,3 +162,5 @@ prompt-based systems as if it were one.
 - Baselines on the canonical split: [`docs/retrace_bench/baseline_results_test_800_templateheldout_en.md`](../docs/retrace_bench/baseline_results_test_800_templateheldout_en.md)
 - Manual validation protocol: [`docs/retrace_bench/manual_validation_protocol.md`](../docs/retrace_bench/manual_validation_protocol.md)
 - Hugging Face dataset card: [`release/huggingface/ReTrace-Bench/README.md`](../release/huggingface/ReTrace-Bench/README.md)
+- Benchmark-paper workspace (blind-review safe): [`papers/retrace_bench/`](../papers/retrace_bench/README.md)
+- Submission readiness checklist: [`docs/retrace_bench/submission_readiness.md`](../docs/retrace_bench/submission_readiness.md)
