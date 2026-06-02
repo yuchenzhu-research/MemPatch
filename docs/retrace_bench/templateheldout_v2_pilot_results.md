@@ -75,6 +75,31 @@ Making cross-scope distractors conditional (not universal) removes the reflexive
   worth monitoring as a residual salience pattern.
 - These are first-100 pilots, not the full 800. Numbers are directional.
 
+## 4b. Addendum — `ask_clarification` state-cue fix (indicative, N=42)
+
+The §3 pilots ran on the v2 split *before* the `ask_clarification` vs
+`mark_unresolved` cue was added. The v2 generator was then updated so the
+verified record states **who can resolve the situation**: for `ask_clarification`
+"the only missing piece is a single input the requester alone can supply … once
+provided the value can be confirmed"; for `mark_unresolved` "no party currently
+holds the authoritative basis, and no further input can resolve the conflict
+until new authoritative evidence arrives". This is a *state* cue, not an action
+verb (no leakage; the v2 leakage/atomicity tests still pass).
+
+A DeepSeek-V4-Pro re-run on the cued v2 split was **stopped at 42/800 by user
+request**, so these numbers are indicative only (small, first-segment-biased):
+
+| decision (n in 42) | old v2 (first-100) | cued v2 (N=42) |
+|---|---|---|
+| ask_clarification (9) | 0.04 | **0.67** |
+| mark_unresolved (7) | 0.85 | **1.00** |
+
+Critically, in the cued run **zero** `ask_clarification` gold cases were
+mispredicted as `mark_unresolved` (predicted: ask 6, use_current 2, refuse 1),
+versus 14/23 → `mark_unresolved` before the cue. The conflation is removed at
+this sample size; a full run is still needed to confirm at scale and to check
+the small-n `escalate` dip (1/6 here) is just sampling.
+
 ## 5. Bottom line
 
 The v2 direction is validated: it removes the two artifacts that made v1's
