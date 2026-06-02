@@ -40,11 +40,14 @@ The authoritative code, data, and docs stay in their existing locations:
 - Dataset design: `docs/retrace_bench/dataset_design.md`
 - Canonical baseline results:
   `docs/retrace_bench/baseline_results_test_800_templateheldout_en.md`
-- Manual validation protocol: `docs/retrace_bench/manual_validation_protocol.md`
+- Manual validation protocol and report:
+  `docs/retrace_bench/manual_validation_protocol.md`,
+  `docs/retrace_bench/manual_validation_report.md`
 - Leakage / template-heldout reports:
   `docs/retrace_bench/template_lookup_test_800_templateheldout_en.md`,
   `docs/retrace_bench/template_signature_report.md`,
   `docs/retrace_bench/split_leakage_report.md`
+
 ## Reproducing the headline numbers
 
 ```bash

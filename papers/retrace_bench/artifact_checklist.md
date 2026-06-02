@@ -22,9 +22,11 @@ Status of the benchmark artifact track. `[x]` done, `[ ]` remaining.
 - [x] **Baseline reproduction commands.** `scripts/run_retrace_bench_baseline.py`
   and `scripts/run_retrace_bench_ablation.py`; results pre-rendered in
   `docs/retrace_bench/baseline_results_test_800_templateheldout_en.md`.
-- [x] **Manual validation protocol.**
-  `docs/retrace_bench/manual_validation_protocol.md` (88-cell sample sheet in
-  `manual_validation_sample_88.md`).
+- [x] **Manual validation pass.**
+  `docs/retrace_bench/manual_validation_report.md` records a completed
+  project-author pass over the 88-cell stratified sample; protocol and sample
+  index live in `manual_validation_protocol.md` and
+  `manual_validation_sample_88.md`.
 - [x] **Sample predictions.** `examples/retrace_bench/sample_predictions.jsonl`
   (complete `sample_80_hard_en` submission) + quickstart README.
 - [x] **Tests.** `tests/retrace_bench/test_public_api.py`,
@@ -39,7 +41,5 @@ Status of the benchmark artifact track. `[x]` done, `[ ]` remaining.
   `test_800_templateheldout_en` (`llm_json_answerer` needs a provider/API key).
 - [ ] **Optional real memory-framework baseline** (genuine Mem0/Graphiti-style
   system rather than the in-repo heuristic).
-- [ ] **Completed manual validation report** (human reviewer pass over the
-  88-cell sample).
 - [ ] **Final paper tables/figures** assembled from the canonical split
   (per-domain / per-failure-mode breakdowns rendered, baseline plot refreshed).

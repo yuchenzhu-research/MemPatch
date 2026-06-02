@@ -5,7 +5,7 @@ ReTrace
 ├── ReTrace-Bench
 │   ├── benchmark/retrace_bench/       # benchmark package: schema/scoring/baselines
 │   ├── data/retrace_bench/            # held-out benchmark/calibration data
-│   ├── data/retrace_supervision/      # supervision/dev pools for future ReTrace-Learn
+│   ├── data/retrace_supervision/      # supervision/dev pools shared with ReTrace-Learn
 │   ├── docs/retrace_bench/            # benchmark docs/results
 │   └── scripts/run_retrace_bench_*.py # benchmark runners
 │
