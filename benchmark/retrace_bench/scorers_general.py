@@ -66,6 +66,11 @@ def _toks(value: Any) -> set[str]:
 
 
 def normalize_failure_mode(value: Any) -> str:
+    # Some models emit failure_diagnosis as a single-element list/tuple
+    # (e.g. ["under_update"]) rather than a bare enum string. Unwrap it so the
+    # exact-match path below applies; strings are unaffected (backward compatible).
+    if isinstance(value, (list, tuple)):
+        value = value[0] if value else ""
     text = _norm(value)
     if text in FAILURE_MODES:
         return text
