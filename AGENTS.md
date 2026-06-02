@@ -166,9 +166,13 @@ To ensure absolute clean methodology and avoid test-set leakage:
 - After running scripts, tests, builds, or imports, proactively look for and
   remove local cache/generated directories before committing. At minimum check
   for `.pycache_compile/`, `.pytest_cache/`, `__pycache__/`, `*.pyc`,
-  `*.egg-info/`, `.DS_Store`, `outputs/`, `artifacts/`, `analysis/`,
+  `*.egg-info/`, `.DS_Store`, `local/`, `outputs/`, `artifacts/`, `analysis/`,
   `data_external/`, `reference/`, `models/`, `checkpoints/`, `adapters/`,
   `wandb/`, and `runs/`.
+- Put temporary training corpora, framework-specific scratch files, external
+  checkouts, and machine-specific run material under ignored `local/` or the
+  ignored training artifact directories above. Do not add new `.gitignore`
+  entries for each framework unless a new artifact class is genuinely needed.
 - Preserve the canonical dataclass contracts in `src/retracemem/schemas.py`.
 - Add or update tests for every new behavior.
 
