@@ -39,6 +39,54 @@ ReTrace-Bench evaluates agent memory revision reliability in multi-agent and age
 - `supervision/train_3000_en` and `supervision/dev_400_en` are synthetic supervision/selection pools for learning-based revision proposers. They are **NOT** benchmark tests and may contain `training_targets`.
 - The old prototype/diagnostic split `test_800_en` is excluded from this public release package.
 
+## Repository & Official Evaluator
+
+- **GitHub repository:** https://github.com/yuchenzhu-research/ReTrace
+- **Benchmark version:** `0.1.0` (commit `a80e9b482e7f8967c094faea7f2de2486913c68e`)
+
+ReTrace-Bench ships an official scorer that runs no model and needs no API keys.
+Clone the repository, then score a JSONL predictions file against a split:
+
+```bash
+PYTHONPATH=. python scripts/evaluate_retrace_bench_predictions.py \
+  --data data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl \
+  --predictions path/to/predictions.jsonl \
+  --out-metrics outputs/retrace_bench/my_model.metrics.json \
+  --out-scored outputs/retrace_bench/my_model.scored.jsonl \
+  --print-table
+```
+
+See `examples/retrace_bench/` in the repository for a runnable example and the
+Python API (`benchmark.retrace_bench.api`).
+
+## Prediction Schema
+
+One JSON object per line, matched to scenarios by `scenario_id`. Both the
+canonical nested `response` form and a flat form (response fields at top level)
+are accepted:
+
+```json
+{
+  "scenario_id": "rb-hard-en-00001",
+  "response": {
+    "answer": "<free-text answer>",
+    "decision": "use_current_memory",
+    "memory_state": {"<memory_id>": "outdated"},
+    "evidence_event_ids": ["<event_id from public_input.event_trace>"],
+    "failure_diagnosis": "stale_memory_reuse"
+  }
+}
+```
+
+- `decision`: one of the five revision-decision labels (`use_current_memory`,
+  `escalate`, `ask_clarification`, `refuse_due_to_policy`, `mark_unresolved`).
+- `memory_state`: `memory_id -> status`; each status is one of `current`,
+  `outdated`, `blocked`, `unresolved`, `out_of_scope`, `deleted`,
+  `should_not_store`, `restored`.
+- `evidence_event_ids`: `event_id` values from `public_input.event_trace`.
+- `failure_diagnosis`: one of the eleven failure-mode labels.
+- `answer`: free text.
+
 ## Current Dataset Scale
 
 - **benchmark/test_800_templateheldout_en**: 800 scenarios
@@ -93,6 +141,21 @@ The held-out test split is designed with strict template-independent validation 
 ## Baseline Caveat
 
 Please note that the **oracle** row documented in baseline results represents a diagnostic verification path for replaying typed state/evidence/diagnosis structures through the deterministic ReTrace-Engine. It is **not** a deployable memory baseline and should not be treated as a black-box decision upper bound.
+
+## Citation
+
+If you use ReTrace-Bench, please cite it. A BibTeX entry will be finalized on
+publication; until then please use the following placeholder:
+
+```bibtex
+@misc{retrace_bench,
+  title        = {ReTrace-Bench: Evaluating Agent Memory Revision Reliability},
+  author       = {ReTrace-Bench Authors},
+  year         = {2026},
+  howpublished = {\url{https://github.com/yuchenzhu-research/ReTrace}},
+  note         = {Benchmark version 0.1.0, commit a80e9b482e7f8967c094faea7f2de2486913c68e}
+}
+```
 
 ## License
 

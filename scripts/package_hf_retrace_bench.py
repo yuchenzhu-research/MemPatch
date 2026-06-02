@@ -6,11 +6,43 @@ Copies canonical files from data/ and docs/ to release/huggingface/ReTrace-Bench
 
 import argparse
 import os
+import re
 import shutil
+import subprocess
 import json
 
 
 SCENARIO_JSONL_NAME = "scenarios.jsonl"
+
+# Canonical public GitHub repository for the benchmark artifact. The dataset
+# card links back here for the evaluator, schema, and reproducible baselines.
+GITHUB_URL = "https://github.com/yuchenzhu-research/ReTrace"
+
+
+def get_benchmark_version(repo_root):
+    """Best-effort read of benchmark.retrace_bench.__version__ without importing."""
+    init_path = os.path.join(repo_root, "benchmark", "retrace_bench", "__init__.py")
+    try:
+        text = open(init_path, encoding="utf-8").read()
+    except OSError:
+        return "unknown"
+    match = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', text)
+    return match.group(1) if match else "unknown"
+
+
+def get_commit_hash(repo_root):
+    """Best-effort current git commit hash; 'unknown' if git is unavailable."""
+    try:
+        out = subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            cwd=repo_root,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        return out.stdout.strip() or "unknown"
+    except (OSError, subprocess.CalledProcessError):
+        return "unknown"
 
 
 def to_viewer_row(scenario):
@@ -208,6 +240,9 @@ https://creativecommons.org/licenses/by/4.0/
         config_lines.append(f"  - split: {split_name}")
         config_lines.append(f"    path: {split_path}")
     configs_block = "\n".join(config_lines)
+
+    benchmark_version = get_benchmark_version(repo_root)
+    commit_hash = get_commit_hash(repo_root)
         
     # 4. Generate README.md (Dataset Card)
     readme_path = os.path.join(hf_dir, "README.md")
@@ -238,9 +273,57 @@ ReTrace-Bench evaluates agent memory revision reliability in multi-agent and age
 
 - **benchmark/test_800_templateheldout_en** is the canonical, paper-facing held-out benchmark split.
 - **Do not train, prompt-tune, policy-optimize, or select checkpoints on `benchmark/test_800_templateheldout_en`.**
-- `calibration/sample_80_hard_en` is a small quickstart/calibration split designed for debugging and pipeline verification. It is exposed to the Hugging Face viewer as the `validation` split.
+- `calibration/sample_80_hard_en` is a small calibration/quickstart/smoke split designed for debugging and pipeline verification. It is exposed to the Hugging Face viewer as the `validation` split **for viewer compatibility only** — it is **not** a model-selection / checkpoint-selection validation set and must not be used to tune or select systems.
 - `supervision/train_3000_en` and `supervision/dev_400_en` are synthetic supervision/selection pools for learning-based revision proposers. They are **NOT** benchmark tests and may contain `training_targets`.
 - The old prototype/diagnostic split `test_800_en` is excluded from this public release package.
+
+## Repository & Official Evaluator
+
+- **GitHub repository:** {GITHUB_URL}
+- **Benchmark version:** `{benchmark_version}` (commit `{commit_hash}`)
+
+ReTrace-Bench ships an official scorer that runs no model and needs no API keys.
+Clone the repository, then score a JSONL predictions file against a split:
+
+```bash
+PYTHONPATH=. python scripts/evaluate_retrace_bench_predictions.py \\
+  --data data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl \\
+  --predictions path/to/predictions.jsonl \\
+  --out-metrics outputs/retrace_bench/my_model.metrics.json \\
+  --out-scored outputs/retrace_bench/my_model.scored.jsonl \\
+  --print-table
+```
+
+See `examples/retrace_bench/` in the repository for a runnable example and the
+Python API (`benchmark.retrace_bench.api`).
+
+## Prediction Schema
+
+One JSON object per line, matched to scenarios by `scenario_id`. Both the
+canonical nested `response` form and a flat form (response fields at top level)
+are accepted:
+
+```json
+{{
+  "scenario_id": "rb-hard-en-00001",
+  "response": {{
+    "answer": "<free-text answer>",
+    "decision": "use_current_memory",
+    "memory_state": {{"<memory_id>": "outdated"}},
+    "evidence_event_ids": ["<event_id from public_input.event_trace>"],
+    "failure_diagnosis": "stale_memory_reuse"
+  }}
+}}
+```
+
+- `decision`: one of the five revision-decision labels (`use_current_memory`,
+  `escalate`, `ask_clarification`, `refuse_due_to_policy`, `mark_unresolved`).
+- `memory_state`: `memory_id -> status`; each status is one of `current`,
+  `outdated`, `blocked`, `unresolved`, `out_of_scope`, `deleted`,
+  `should_not_store`, `restored`.
+- `evidence_event_ids`: `event_id` values from `public_input.event_trace`.
+- `failure_diagnosis`: one of the eleven failure-mode labels.
+- `answer`: free text.
 
 ## Current Dataset Scale
 
@@ -295,6 +378,21 @@ The held-out test split is designed with strict template-independent validation 
 ## Baseline Caveat
 
 Please note that the **oracle** row documented in baseline results represents a diagnostic verification path for replaying typed state/evidence/diagnosis structures through the deterministic ReTrace-Engine. It is **not** a deployable memory baseline and should not be treated as a black-box decision upper bound.
+
+## Citation
+
+If you use ReTrace-Bench, please cite it. A BibTeX entry will be finalized on
+publication; until then please use the following placeholder:
+
+```bibtex
+@misc{{retrace_bench,
+  title        = {{ReTrace-Bench: Evaluating Agent Memory Revision Reliability}},
+  author       = {{ReTrace-Bench Authors}},
+  year         = {{2026}},
+  howpublished = {{\\url{{{GITHUB_URL}}}}},
+  note         = {{Benchmark version {benchmark_version}, commit {commit_hash}}}
+}}
+```
 
 ## License
 
