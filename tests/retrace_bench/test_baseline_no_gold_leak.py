@@ -87,3 +87,33 @@ def test_non_oracle_marked_not_oracle(tmp_path):
     metrics = json.loads(out.with_suffix(".metrics.json").read_text(encoding="utf-8"))
     assert metrics["is_oracle"] is False
     assert metrics["group"] == "memory_baseline"
+
+
+def test_llm_json_answerer_accepts_fenced_json_response():
+    scenario = {
+        "scenario_id": "s1",
+        "workflow_context": "Use the latest verified operational note.",
+        "public_input": {
+            "initial_memory": [{"memory_id": "m1", "text": "old note"}],
+            "event_trace": [{"event_id": "e1", "text": "verified note", "related_memory_ids": ["m1"]}],
+        },
+        "tasks": [{"prompt": "What should be used?"}],
+    }
+
+    class FencedProvider:
+        def generate(self, _prompt: str, **_kwargs: object) -> str:
+            return """```json
+{
+  "answer": "verified note",
+  "decision": "use_current_memory",
+  "memory_state": {"m1": "current"},
+  "evidence_event_ids": ["e1"],
+  "failure_diagnosis": "under_update"
+}
+```"""
+
+    response = runner.llm_json_answerer(scenario, FencedProvider())
+
+    assert response["decision"] == "use_current_memory"
+    assert response["memory_state"] == {"m1": "current"}
+    assert response["evidence_event_ids"] == ["e1"]
