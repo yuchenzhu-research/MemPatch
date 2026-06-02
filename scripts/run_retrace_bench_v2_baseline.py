@@ -2,8 +2,46 @@ import os
 import json
 import argparse
 import sys
+from pathlib import Path
+
+REPO = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(REPO))
+
 from benchmark.retrace_bench.schemas_v2 import scenario_from_dict, PredictionV2, scenario_to_dict
 from benchmark.retrace_bench.taxonomy_v2 import TaskProtocolV2, MemoryStatusV2
+
+
+def _prediction_key(row: dict) -> tuple[str, str] | None:
+    scenario_id = row.get("scenario_id")
+    task_id = row.get("task_id")
+    if isinstance(scenario_id, str) and isinstance(task_id, str):
+        return (scenario_id, task_id)
+    return None
+
+
+def _read_jsonl_tolerant(path: str) -> list[dict]:
+    rows = []
+    with open(path, "r", encoding="utf-8") as f:
+        for line_no, line in enumerate(f, start=1):
+            if not line.strip():
+                continue
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError:
+                print(f"[resume] Ignoring invalid JSONL line {line_no} in {path}", file=sys.stderr)
+    return rows
+
+
+def _append_jsonl(path: str, row: dict) -> None:
+    with open(path, "a", encoding="utf-8") as f:
+        f.write(json.dumps(row, ensure_ascii=False) + "\n")
+        f.flush()
+
+
+def _write_jsonl(path: str, rows: list[dict]) -> None:
+    with open(path, "w", encoding="utf-8") as f:
+        for row in rows:
+            f.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
 def latest_only_baseline(scenario) -> list:
@@ -89,6 +127,9 @@ def main():
     parser.add_argument("--data", required=True, help="Path to dataset directory")
     parser.add_argument("--baseline", required=True, choices=["latest_only_v2", "retrieve_all_v2"], help="Baseline strategy")
     parser.add_argument("--out", required=True, help="Output path for JSONL predictions")
+    parser.add_argument("--max-cases", type=int, default=None, help="Evaluate only the first N scenarios")
+    parser.add_argument("--append", action="store_true", help="Append predictions as they finish instead of rewriting --out at the end")
+    parser.add_argument("--resume", action="store_true", help="Resume from an existing --out JSONL by skipping completed scenario/task pairs")
     args = parser.parse_args()
 
     scenarios_path = os.path.join(args.data, "scenarios.jsonl")
@@ -100,34 +141,57 @@ def main():
     if out_dir and not os.path.exists(out_dir):
         os.makedirs(out_dir, exist_ok=True)
 
-    predictions = []
+    scenarios = []
     try:
         with open(scenarios_path, "r", encoding="utf-8") as f:
             for line in f:
                 if not line.strip():
                     continue
                 s_dict = json.loads(line)
-                scenario = scenario_from_dict(s_dict)
-                
-                if args.baseline == "latest_only_v2":
-                    preds = latest_only_baseline(scenario)
-                elif args.baseline == "retrieve_all_v2":
-                    preds = retrieve_all_baseline(scenario)
-                
-                predictions.extend(preds)
+                scenarios.append(scenario_from_dict(s_dict))
+                if args.max_cases is not None and len(scenarios) >= args.max_cases:
+                    break
     except Exception as e:
         print(f"Failed to process scenarios: {e}", file=sys.stderr)
         sys.exit(1)
 
-    # Save to file
-    try:
-        with open(args.out, "w", encoding="utf-8") as f:
-            for pred in predictions:
-                f.write(json.dumps(scenario_to_dict(pred)) + "\n")
-        print(f"✓ Wrote {len(predictions)} predictions to {args.out}")
-    except Exception as e:
-        print(f"Failed to write predictions: {e}", file=sys.stderr)
-        sys.exit(1)
+    predictions = []
+    completed_keys = set()
+    if args.resume and os.path.exists(args.out):
+        expected_keys = {(scenario.scenario_id, task.task_id) for scenario in scenarios for task in scenario.tasks}
+        existing_by_key = {}
+        for row in _read_jsonl_tolerant(args.out):
+            key = _prediction_key(row)
+            if key in expected_keys:
+                existing_by_key[key] = row
+        predictions = [existing_by_key[key] for scenario in scenarios for task in scenario.tasks if (key := (scenario.scenario_id, task.task_id)) in existing_by_key]
+        completed_keys = set(existing_by_key)
+        _write_jsonl(args.out, predictions)
+        print(f"[resume] Loaded {len(predictions)} existing predictions from {args.out}", flush=True)
+    elif args.append and os.path.exists(args.out):
+        os.unlink(args.out)
+
+    for scenario in scenarios:
+        if args.baseline == "latest_only_v2":
+            preds = latest_only_baseline(scenario)
+        elif args.baseline == "retrieve_all_v2":
+            preds = retrieve_all_baseline(scenario)
+        for pred in preds:
+            pred_row = scenario_to_dict(pred)
+            key = _prediction_key(pred_row)
+            if key in completed_keys:
+                continue
+            predictions.append(pred_row)
+            if args.append or args.resume:
+                _append_jsonl(args.out, pred_row)
+
+    if not args.append and not args.resume:
+        try:
+            _write_jsonl(args.out, predictions)
+        except Exception as e:
+            print(f"Failed to write predictions: {e}", file=sys.stderr)
+            sys.exit(1)
+    print(f"✓ Wrote {len(predictions)} predictions to {args.out}")
 
 
 if __name__ == "__main__":

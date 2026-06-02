@@ -11,7 +11,8 @@ Command (offline, no API):
 PYTHONPATH=. python scripts/run_retrace_bench_ablation.py \
   --data data/retrace_bench/test_800_en/scenarios.jsonl \
   --out-dir outputs/retrace_bench/ablation_test_800_offline \
-  --max-cases 800
+  --max-cases 800 \
+  --resume
 ```
 
 ## Split Policy

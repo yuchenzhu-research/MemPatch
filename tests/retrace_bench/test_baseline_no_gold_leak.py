@@ -5,12 +5,16 @@ from __future__ import annotations
 
 import inspect
 import json
+import subprocess
+import sys
 from pathlib import Path
 
+import scripts.run_retrace_bench_ablation as ablation
 import scripts.run_retrace_bench_baseline as runner
 
 REPO = Path(__file__).resolve().parents[2]
 DATA = REPO / "data" / "retrace_bench" / "sample_80_hard_en" / "scenarios.jsonl"
+DATA_V2 = REPO / "data" / "retrace_bench" / "sample_20_v2"
 
 # Hidden-gold fields a deployable baseline must never read as a prediction.
 GOLD_TOKENS = (
@@ -158,3 +162,84 @@ def test_resume_skips_existing_predictions(tmp_path):
         "rb-hard-en-00002",
     ]
     assert resumed_rows[0] == first_rows[0]
+
+
+def test_ablation_resume_passes_through_to_baseline_runner(tmp_path, monkeypatch):
+    commands: list[list[str]] = []
+
+    def fake_run_cmd(cmd: list[str]) -> None:
+        commands.append(cmd)
+
+    monkeypatch.setattr(ablation, "run_cmd", fake_run_cmd)
+    monkeypatch.setattr(ablation, "load_metrics", lambda _path: {})
+
+    rc = ablation.main(
+        [
+            "--data",
+            str(DATA),
+            "--out-dir",
+            str(tmp_path),
+            "--max-cases",
+            "2",
+            "--include-llm",
+            "--resume",
+        ]
+    )
+
+    assert rc == 0
+    assert commands
+    assert all("--resume" in cmd for cmd in commands)
+    llm_commands = [cmd for cmd in commands if "llm_json_answerer" in cmd]
+    assert llm_commands and "--append" in llm_commands[0]
+
+
+def test_v2_baseline_resume_skips_existing_predictions(tmp_path):
+    out = tmp_path / "latest_only_v2.jsonl"
+    first = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "scripts" / "run_retrace_bench_v2_baseline.py"),
+            "--data",
+            str(DATA_V2),
+            "--baseline",
+            "latest_only_v2",
+            "--max-cases",
+            "1",
+            "--append",
+            "--out",
+            str(out),
+        ],
+        cwd=REPO,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+    assert "Wrote 3 predictions" in first.stdout
+    first_rows = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert len(first_rows) == 3
+
+    second = subprocess.run(
+        [
+            sys.executable,
+            str(REPO / "scripts" / "run_retrace_bench_v2_baseline.py"),
+            "--data",
+            str(DATA_V2),
+            "--baseline",
+            "latest_only_v2",
+            "--max-cases",
+            "2",
+            "--resume",
+            "--out",
+            str(out),
+        ],
+        cwd=REPO,
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+    assert "[resume] Loaded 3 existing predictions" in second.stdout
+    resumed_rows = [json.loads(line) for line in out.read_text(encoding="utf-8").splitlines() if line.strip()]
+    assert len(resumed_rows) == 6
+    assert resumed_rows[:3] == first_rows
+    assert resumed_rows[-1]["scenario_id"] == "dev-build-02"

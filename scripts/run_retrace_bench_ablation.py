@@ -58,6 +58,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--model", default="deepseek-ai/DeepSeek-V4-Flash")
     parser.add_argument("--max-tokens", type=int, default=256)
     parser.add_argument("--disable-thinking", action="store_true")
+    parser.add_argument("--resume", action="store_true", help="Resume each baseline from existing JSONL outputs when present")
     args = parser.parse_args(argv)
 
     out_dir = Path(args.out_dir)
@@ -96,6 +97,8 @@ def main(argv: list[str] | None = None) -> int:
             )
             if args.disable_thinking:
                 cmd.append("--disable-thinking")
+        if args.resume:
+            cmd.append("--resume")
         run_cmd(cmd)
         metrics = load_metrics(out.with_suffix(".metrics.json"))
         row = {
