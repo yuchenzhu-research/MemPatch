@@ -18,67 +18,61 @@ configs:
 - config_name: default
   data_files:
   - split: test
-    path: test.jsonl
+    path: benchmark/test_800_templateheldout_en/scenarios.jsonl
+  - split: calibration
+    path: calibration/sample_80_hard_en/scenarios.jsonl
+  - split: train
+    path: supervision/train_3000_en/scenarios.jsonl
+  - split: dev
+    path: supervision/dev_400_en/scenarios.jsonl
 ---
 
 # ReTrace-Bench
 
-ReTrace-Bench is a synthetic English benchmark for evaluating agent memory
-revision reliability. It tests whether an agent can use event evidence to keep,
-update, block, restore, forget, or reject long-term memory facts without reusing
-stale, out-of-scope, unsupported, or policy-invalid memory.
+ReTrace-Bench evaluates agent memory revision reliability in multi-agent and agentic workflows. It tests whether systems can correctly process new evidence to update, block, release, reaffirm, or reject memory states without introducing stale, out-of-scope, or policy-invalid memory.
 
-## Dataset Splits
+## IMPORTANT Notice
 
-This Hugging Face release contains only the paper-facing held-out benchmark
-test split:
+- **benchmark/test_800_templateheldout_en** is the canonical, paper-facing held-out benchmark split.
+- **Do not train, prompt-tune, policy-optimize, or select checkpoints on `benchmark/test_800_templateheldout_en`.**
+- `calibration/sample_80_hard_en` is a small quickstart/calibration split designed for debugging and pipeline verification.
+- `supervision/train_3000_en` and `supervision/dev_400_en` are synthetic supervision/selection pools for learning-based revision proposers. They are **NOT** benchmark tests and may contain `training_targets`.
+- The old prototype/diagnostic split `test_800_en` is excluded from this public release package.
 
-- `test.jsonl`
+## Current Dataset Scale
 
-Use this split for final benchmark evaluation only. Models and prompts should not
-train, prompt-tune, select checkpoints, optimize policies, or perform model
-selection on this test split.
+- **benchmark/test_800_templateheldout_en**: 800 scenarios
+- **calibration/sample_80_hard_en**: 80 scenarios
+- **supervision/train_3000_en**: 3000 scenarios (contains SFT training targets)
+- **supervision/dev_400_en**: 400 scenarios
+- **Total packaged scenarios**: 4280 scenarios
 
-The previous repository split `test_800_en` is prototype/diagnostic only and is
-not included as the final benchmark split in this release package.
+## Scenario Task Views
 
-The upstream ReTrace repository also contains `train_3000_en` and `dev_400_en`
-as synthetic supervision/selection pools. They are not included in this Hugging
-Face benchmark release and must not be treated as held-out benchmark tests.
+Each scenario evaluates an agent memory state through four distinct task views:
 
-## Viewer-Friendly Format
+1. **`black_box_task`**: Evaluate end-to-end question answering utilizing revised memory state.
+2. **`memory_state_task`**: Predict final eligibility statuses of all tracked beliefs.
+3. **`evidence_retrieval_task`**: Identify evidence items that active memory changes are grounded upon.
+4. **`diagnostic_task`**: Detect and classify memory-revision failures or conflicts.
 
-The upstream benchmark records contain nested event traces, memory states, and
-rubrics. Hugging Face Dataset Viewer expects stable Arrow columns, so this
-release stores complex nested objects as JSON strings:
+For Hugging Face dataset viewer compatibility, nested scenario structures are
+published as JSON string columns:
 
-- `event_trace_json`
-- `initial_memory_json`
+- `secondary_failure_modes_json`
+- `public_input_json`
 - `tasks_json`
-- `expected_memory_state_json`
-- `rubric_json`
+- `hidden_gold_json`
 - `metadata_json`
+- `training_targets_json`
 
-This preserves the full test scenario while keeping the dataset browser
-scrollable and queryable. The stable scalar/list columns include scenario IDs,
-domain, failure mode, expected decision, expected answer, evidence IDs, and
-diagnosis.
-
-## Main Task Views
-
-Each scenario contains visible workflow evidence and four task views:
-
-- `black_box_task`
-- `memory_state_task`
-- `evidence_retrieval_task`
-- `diagnostic_task`
-
-The hidden labels are for scoring and audit only. They should not be exposed to
-systems under evaluation.
+Parse these columns with `json.loads(...)` to recover the canonical nested
+objects. The source-of-truth local files under `data/` keep the native nested
+JSONL schema.
 
 ## Primary Metrics
 
-The intended headline metrics are:
+Benchmark evaluations report the following primary metrics:
 
 - `decision_macro_f1`
 - `non_answer_decision_accuracy`
@@ -87,47 +81,19 @@ The intended headline metrics are:
 - `failure_diagnosis_accuracy`
 - `stale_reuse_rate`
 
-Diagnostic documents and scoring helpers live in the upstream ReTrace
-repository.
+## Quality Diagnostics for `test_800_templateheldout_en`
 
-## Template Shortcut Diagnostic
+The held-out test split is designed with strict template-independent validation guarantees:
+- Includes scenarios across **all 8 domains** and **all 11 failure modes**.
+- **Template lookup coverage**: `0.000`
+- **Template lookup decision accuracy**: `0.291`
+- **Template lookup macro-F1**: `0.090`
+- **Train/dev template signature overlap with candidate test**: `0.00%`
 
-The template-lookup diagnostic is a shortcut-leakage probe, not a deployable
-memory baseline. On `test_800_templateheldout_en`, the train-signature lookup
-has:
+## Baseline Caveat
 
-- coverage: `0.000`
-- decision accuracy: `0.291`
-- decision macro-F1: `0.090`
-
-The candidate held-out split has zero train-to-test scenario-signature overlap
-and zero train-to-test event-template overlap in the included diagnostic report.
-
-## Baselines
-
-Oracle state/evidence/diagnosis rows are diagnostic upper-bound paths, not
-deployable or comparable baselines. In the current offline results, oracle
-memory-state, evidence, and diagnosis scores are high while oracle black-box
-decision accuracy is low. This is expected for this diagnostic row because the
-oracle path primarily replays typed state/evidence/diagnosis structure through
-the deterministic authorization path, while the benchmark's black-box decision
-labels are intentionally decorrelated from primary failure mode shortcuts.
-
-## Schema
-
-Important schema, scoring, leakage, and baseline references are available in
-the upstream ReTrace repository under `benchmark/retrace_bench/`,
-`docs/retrace_bench/`, and `release/huggingface/ReTrace-Bench/`.
+Please note that the **oracle** row documented in baseline results represents a diagnostic verification path for replaying typed state/evidence/diagnosis structures through the deterministic ReTrace-Engine. It is **not** a deployable memory baseline and should not be treated as a black-box decision upper bound.
 
 ## License
 
-This dataset release is licensed under Creative Commons Attribution 4.0
-International (CC BY 4.0).
-
-See `LICENSE` for the license pointer.
-
-## Source
-
-Source repository: `yuchenzhu-research/ReTrace`
-
-Source data commit: `7e11bf67097f31bf2c072236331b2229d662a609`
+This dataset is distributed under the [Creative Commons Attribution 4.0 International (CC BY 4.0)](LICENSE) license.
