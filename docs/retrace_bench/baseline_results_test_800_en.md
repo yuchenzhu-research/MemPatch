@@ -1,7 +1,9 @@
-# Offline baseline results — `test_800_en` (held-out)
+# Offline Baseline Results — `test_800_en` Prototype/Diagnostic Split
 
-Held-out internal evaluation split: `data/retrace_bench/test_800_en/scenarios.jsonl`
-(800 scenarios, all 8 domains + 11 failure modes).
+Prototype/diagnostic split:
+`data/retrace_bench/test_800_en/scenarios.jsonl` (800 scenarios, all 8 domains
++ 11 failure modes). This split is retained for historical comparison only and
+must not be used for paper-facing headline results.
 
 Command (offline, no API):
 
@@ -12,14 +14,12 @@ PYTHONPATH=. python scripts/run_retrace_bench_ablation.py \
   --max-cases 800
 ```
 
-## Held-out policy
+## Split Policy
 
-`test_800_en` is the internal ReTrace-Bench held-out evaluation set. It is **not**
-used for any training, prompt tuning, policy optimization, or checkpoint
-selection. Method development uses the disjoint `train_3000_en` (supervision
-pool) and `dev_400_en` (selection) splits only — these share no scenario, case,
-entity, memory ID, event ID, exact text, hidden gold, or seed range with the
-test split (see `docs/retrace_bench/split_leakage_report.md`).
+`test_800_en` is not the canonical paper-facing held-out split. Use
+`test_800_templateheldout_en` for headline benchmark numbers, leakage reports,
+and artifact-facing evaluation claims. Method development uses the disjoint
+`train_3000_en` (supervision pool) and `dev_400_en` (selection) splits.
 
 ## Baseline table
 
@@ -50,8 +50,8 @@ The oracle row is an **upper bound**, not a deployable / comparable baseline.
   hardest). It is **not** a comparable deployable method; it consumes the
   structured authorization view and is shown only to bound achievable scores.
 - The spread between deployable baselines (~0.64–0.73 decision) and the oracle
-  (1.0) confirms the held-out split is discriminative and not solvable by naive
-  recency or retrieval.
+  (1.0) confirms this prototype/diagnostic split is discriminative and not
+  solvable by naive recency or retrieval.
 
 ## Reproducibility / hygiene
 

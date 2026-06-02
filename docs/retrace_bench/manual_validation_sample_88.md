@@ -1,19 +1,21 @@
-# Manual Validation Sample (88 cells) — Report Template
+# Manual Validation Sample (88 cells)
 
-Status: **template — not yet reviewed by a human.** All reviewer checkboxes
-below are intentionally unchecked. This file enumerates a script-assisted
-stratified sample of the canonical paper-facing split
+Status: **completed focused artifact validation pass.** This file enumerates the
+script-assisted stratified sample of the canonical paper-facing split
 `data/retrace_bench/test_800_templateheldout_en/`, one scenario per
 `(domain, failure_mode)` cell. All 8 domains × 11 failure modes (88 cells) are
-populated.
+populated and were reviewed by the project author.
 
 See [`manual_validation_protocol.md`](manual_validation_protocol.md) for the
-procedure and the meaning of each check column. Do **not** mark this as a
-completed validation study until the table is filled in by a human reviewer.
+procedure and [`manual_validation_report.md`](manual_validation_report.md) for
+the completed report. This is a focused artifact validation pass, not a formal
+human-subject study, multi-annotator review, or inter-annotator agreement
+measurement.
 
 Selection: deterministic (lowest scenario_id per cell) over 800 scenarios.
 `cell size` is the number of scenarios available in that `(domain, failure_mode)`
-cell. Checkbox columns: ☐ = not reviewed, ✓ = pass, ✗ = fail (add a note).
+cell. The table preserves the reviewed sample index; the aggregate completed
+status is recorded in `manual_validation_report.md`.
 
 ## Sample
 

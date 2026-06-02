@@ -160,6 +160,8 @@ prompt-based systems as if it were one.
 
 - Benchmark paper draft: [`docs/retrace_bench/benchmark_paper.md`](../docs/retrace_bench/benchmark_paper.md)
 - Baselines on the canonical split: [`docs/retrace_bench/baseline_results_test_800_templateheldout_en.md`](../docs/retrace_bench/baseline_results_test_800_templateheldout_en.md)
-- Manual validation protocol: [`docs/retrace_bench/manual_validation_protocol.md`](../docs/retrace_bench/manual_validation_protocol.md)
+- Manual validation protocol and report:
+  [`protocol`](../docs/retrace_bench/manual_validation_protocol.md),
+  [`report`](../docs/retrace_bench/manual_validation_report.md)
 - Hugging Face dataset card: [`release/huggingface/ReTrace-Bench/README.md`](../release/huggingface/ReTrace-Bench/README.md)
 - Benchmark-paper workspace: [`papers/retrace_bench/`](../papers/retrace_bench/README.md)

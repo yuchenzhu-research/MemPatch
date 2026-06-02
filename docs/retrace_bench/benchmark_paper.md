@@ -90,6 +90,10 @@ complementary to existing memory benchmarks:
    `must_not_include` rubrics so a "retrieve-everything" answer that stuffs the
    gold string into unrelated text does not score well; stale reuse is detected
    even when the stale answer is *paraphrased*.
+5. **Artifact validation.** The canonical test split passes deterministic
+   validators and a focused project-author manual pass over an 88-cell
+   stratified sample; this is a release-readiness check, not a formal
+   multi-annotator annotation study.
 
 ### Split roles
 

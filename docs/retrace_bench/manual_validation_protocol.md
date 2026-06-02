@@ -1,16 +1,15 @@
 # ReTrace-Bench Manual Validation Protocol
 
-Status: **planned / recommended protocol.** This document specifies a credible,
-honestly executable manual validation procedure for the canonical paper-facing
-held-out split `data/retrace_bench/test_800_templateheldout_en/`. It does **not**
-claim that a completed human annotation study has been performed. The
-script-assisted stratified sample to be reviewed is enumerated in
-[`manual_validation_sample_88.md`](manual_validation_sample_88.md); reviewer
-checkboxes there are intentionally left unchecked until a human reviewer fills
-them in.
+Status: **completed focused artifact validation pass.** This document specifies
+the manual validation checks used for the canonical paper-facing held-out split
+`data/retrace_bench/test_800_templateheldout_en/`. A project-author manual pass
+over the 88-cell stratified sample has been completed; see
+[`manual_validation_report.md`](manual_validation_report.md).
 
-This is a focused reviewer-facing protocol, not a large annotation study. It is
-designed to be runnable by a small number of reviewers in a single pass.
+This is a focused artifact validation pass, not a formal human-subject study,
+large-scale annotation effort, multi-annotator review, or inter-annotator
+agreement measurement. The automated validator remains required for the final
+released split.
 
 ## 1. Sampling
 
@@ -45,8 +44,8 @@ For each sampled scenario the reviewer verifies:
 ## 3. Recording fixes
 
 - Record any blueprint/renderer fix triggered by review (scenario id, cell, and
-  the nature of the fix) in the reviewer-notes column of
-  `manual_validation_sample_88.md`.
+  the nature of the fix) in the reviewer notes or the completed validation
+  report.
 - Fixes must be applied at the blueprint/renderer level and the split
   regenerated; do not hand-edit `scenarios.jsonl`.
 
@@ -66,7 +65,9 @@ stale trusted notes, false-premise rejection, and non-answer actions).
 
 ## 5. Honest-status rule
 
-Do **not** describe this protocol as a completed human validation study unless a
-filled-in `manual_validation_sample_88.md` (or an equivalent signed manifest)
-accompanies it. Until then this is a recommended protocol plus an enumerated
-sample template.
+Describe the completed pass precisely: one project-author manual pass over the
+8-domain × 11-failure-mode stratified sample, checking visible-evidence
+solvability, hidden-gold consistency, public-text leakage, and non-answer
+justification. Do **not** describe it as a formal human-subject study, a
+large-scale annotation study, a multi-annotator review, or an inter-annotator
+agreement result.
