@@ -11,8 +11,7 @@ Mem0-style system, or a trained policy) can be scored on it.
 ## What is in this folder
 
 - `paper_skeleton.md` — section-by-section skeleton to lift into LaTeX.
-- `section_bank.md` — consolidated, paper-ready prose for each section, drawn
-  from the canonical docs and cleaned of internal TODO / venue language.
+- `section_bank.md` — consolidated, paper-ready prose for each section.
 - `table_plan.md` — planned tables, their source commands/files, columns, and
   what data already exists vs. is missing.
 - `figure_plan.md` — planned figures, inputs, and whether they can be produced
