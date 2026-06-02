@@ -1,10 +1,14 @@
 # ReTrace-Bench: A Benchmark for Agent Memory Revision Reliability
 
-> Benchmark-paper framing notes. ReTrace-Bench is an **evaluation-only**
-> benchmark and is independent of any training method (it does **not** depend
-> on ReTrace-Learn, DPA, or any specific memory architecture). Any
-> memory-enabled agent — LLM-only, RAG, CRUD store, Mem0-style system, or a
-> trained policy — can be scored on it.
+> **Independent benchmark paper.** ReTrace-Bench is a stand-alone
+> benchmark / resource / evaluation paper for agent memory revision
+> reliability under evolving evidence (target: AAAI 2027 main, fallback ACL
+> 2027 main). It is **method-neutral** and **evaluation-only**: it does **not**
+> depend on ReTrace-Learn, DPA, or any specific memory architecture, and it is
+> not an evaluation component of ReTrace-Learn. Any memory-enabled agent —
+> LLM-only, RAG, CRUD store, Mem0-style system, or a trained policy — can be
+> scored on it. It is **complementary** to existing long-term and agent memory
+> benchmarks rather than a replacement for them.
 
 ## 1. Problem: shared memory revision reliability
 
@@ -29,33 +33,43 @@ targets reliability under:
 - **stale memory reuse** — the most common failure: confidently reusing an
   outdated answer that is still lexically plausible.
 
-## 2. Gap: what existing benchmarks do *not* measure
+## 2. Positioning relative to existing benchmarks
 
-Existing memory/agent benchmarks evaluate adjacent but distinct capabilities:
+Recent benchmarks already probe important aspects of long-term and agent memory,
+including long-term conversational memory, knowledge updates, abstention,
+factual/reflective memory, and agent memory capability. ReTrace-Bench is
+complementary: rather than measuring how much an agent can remember, it isolates
+memory-revision reliability under evolving evidence as an operational evaluation
+target. Each scenario is scored through structured views: revision decision over
+a five-way action space, per-memory state, supporting evidence retrieval, and
+failure-mode diagnosis under scope, trust, policy, and stale-reuse traps.
 
-- **Long-context retrieval** (e.g. needle-in-a-haystack style): can a model find
-  a fact in a long window? This measures recall over a *static* context, not
-  whether the model *revises* a belief when newer, conflicting evidence arrives.
-- **Long-term dialogue memory** (e.g. persona / session-history benchmarks):
-  consistency of recalled facts across sessions, but typically without
-  adversarial scope traps, trust conflicts, or policy constraints.
-- **Stale-memory probes** (e.g. update-vs-stale tasks): detect that a fact
-  changed, but usually as an isolated single-fact update rather than a typed,
-  multi-failure-mode revision over a shared workflow trace.
-- **General agent benchmarks** (tool use, web tasks): end-to-end task success,
-  where memory reliability is entangled with planning and tool execution and is
-  never scored in isolation.
+Concretely, related resources sit along adjacent axes:
 
-None of these **directly** evaluate *shared memory revision reliability* — the
-combination of (a) deciding the correct action under evolving evidence, scope,
-trust/source conflict, and policy; (b) producing the correct per-memory state;
-(c) grounding the decision in the minimal supporting evidence; and (d)
-diagnosing the failure mode when an agent gets it wrong.
+- **LongMemEval** — long-term conversational memory over extended sessions:
+  emphasizes how much an assistant can recall and stay consistent across time.
+- **MemBench** — agent memory capability and effectiveness under varied memory
+  operations.
+- **LoCoMo** — very long-term conversational memory and reasoning over
+  multi-session dialogue history.
+- **MemoryAgentBench** *(if appropriate)* — agentic memory across read/write/
+  update operations and downstream task use.
+- **EvoMemBench** *(if appropriate)* — memory behavior under evolving
+  information over time.
+
+ReTrace-Bench is complementary to these: it isolates *revision reliability
+rather than memory capacity alone*, using structured multi-view scoring over a
+typed five-way decision space and an explicit failure-mode taxonomy. We do not
+claim to subsume or replace prior work; rather, ReTrace-Bench provides an
+operational evaluation target for *what an agent should do to a memory entry
+when the evidence changes* — keep, supersede, block, restore, forget, or
+quarantine it — and whether that action is grounded in the visible evidence.
 
 ## 3. Contribution
 
-ReTrace-Bench fills this gap with **structured workflow traces** and a metric
-suite that scores revision behavior directly:
+ReTrace-Bench contributes **structured workflow traces** and a metric suite that
+scores revision behavior directly, as an operational evaluation target
+complementary to existing memory benchmarks:
 
 1. **Structured scenarios.** Each scenario is a workflow trace — an
    `event_trace` of timestamped, multi-source events (mixed trust levels,
@@ -77,29 +91,51 @@ suite that scores revision behavior directly:
    gold string into unrelated text does not score well; stale reuse is detected
    even when the stale answer is *paraphrased*.
 
-The headline split is **`test_800_templateheldout_en`** (800 scenarios, all 8
-domains and all 11 failure modes, template-held out from train/dev). The earlier
-`test_800_en` split is retained only as prototype/diagnostic. `sample_80_hard_en`
-is a smaller hard sample for quick inspection.
+### Split roles
+
+- **`test_800_templateheldout_en`** is the canonical paper-facing held-out test
+  split (800 scenarios, all 8 domains and all 11 failure modes, template-held
+  out from train/dev). All headline numbers come from this split.
+- **`test_800_en`** is a prototype/diagnostic split only and must **not** be
+  used for paper headline numbers.
+- **`sample_80_hard_en`** is a calibration / quickstart / smoke split for quick
+  inspection and pipeline verification. On Hugging Face it may be exposed as the
+  `validation` split for dataset-viewer compatibility only; it is **not** a
+  model-selection / checkpoint-selection validation set.
+- **`train_3000_en`** and **`dev_400_en`** (under `data/retrace_supervision/`)
+  are supervision / selection pools for learning-based systems and are **not**
+  benchmark test sets.
 
 ## 4. Metrics
 
-Headline metrics (see `docs/retrace_bench` and `benchmark/retrace_bench/scorers_general.py`):
+The paper-facing **headline metrics** (the constants `HEADLINE_METRICS` in
+`benchmark/retrace_bench/scorers_general.py`, computed in `aggregate_metrics`):
 
-- **decision accuracy** (`black_box_decision_accuracy`) — strict enum match.
-- **decision_macro_f1** / **decision_balanced_accuracy** — robust to the
-  majority `use_current_memory` class.
+- **decision_macro_f1** — *primary decision metric*; macro-averaged F1 over the
+  five-way decision space, robust to the dominant `use_current_memory` class.
 - **non_answer_decision_accuracy** — accuracy on cases whose correct action is a
   *non-answer* (`escalate`, `ask_clarification`, `refuse_due_to_policy`,
   `mark_unresolved`); a strong test of whether an agent knows when *not* to act.
 - **memory_state_accuracy** — fraction of memories given the correct status.
 - **evidence_f1** — F1 of cited evidence event IDs vs. the minimal gold set.
 - **failure_diagnosis_accuracy** — correctly naming the failure mode.
-- **stale_reuse_rate** — rate of reusing a stale/wrong answer (lower is better;
-  detected even when paraphrased).
+- **stale_reuse_rate** — rate of reusing a stale/wrong answer (**lower is
+  better**; detected even when paraphrased).
 
-Reported with **per-domain** and **per-failure-mode** breakdowns so weaknesses
-are localizable rather than averaged away.
+**Auxiliary metrics** (`AUXILIARY_METRICS`; reported for completeness, not as
+headline numbers):
+
+- **black_box_decision_accuracy** — strict enum decision match. *Reported as an
+  auxiliary raw decision signal because it can be dominated by the majority
+  `use_current_memory` class*; `decision_macro_f1` is the headline decision
+  metric instead.
+- **decision_balanced_accuracy** — macro-averaged per-class recall.
+- **answer_key_fact_accuracy** — rubric / token-F1 key-fact match for answers.
+- **answer_exact_match** — strict normalized equality (diagnostic only; too
+  strict for open text).
+- **format_failure_rate** — rate of unparseable / missing decisions.
+- **per-domain** and **per-failure-mode** breakdowns so weaknesses are
+  localizable rather than averaged away.
 
 ## 5. Baselines and the oracle boundary
 
@@ -114,14 +150,18 @@ memory-architecture families:
 | `crud_memory` | memory store | no | last-write-wins CRUD over visible IDs |
 | `mem0_style` | memory store | no | compact fact store with add/update/delete keywords |
 | `llm_json_answerer` | API model | no | direct LLM, strict-JSON schema (provider required) |
-| `retrace_oracle_engine` | **oracle** | **yes** | **upper bound only — not deployable** |
+| `retrace_oracle_engine` | **oracle** | **yes** | **gold-replay consistency reference — not a deployable method** |
 
-**`retrace_oracle_engine` is an oracle upper bound, not a comparable deployable
-method.** It is allowed to read hidden gold to construct the correct typed
-revision and routes it through the deterministic engine; it exists to (a) verify
-the benchmark is solvable and internally consistent and (b) bound the achievable
-score. It must never be presented alongside the deployable baselines as if it
-were a competing system. The runner enforces this: the oracle is grouped under
+**`retrace_oracle_engine` is a gold-replay consistency reference / oracle
+consistency diagnostic, not a comparable deployable method.** It is allowed to
+read `hidden_gold` (answer, decision, evidence, diagnosis) and replays the gold
+typed revision through the deterministic engine; it exists to (a) verify the
+benchmark is internally consistent and solvable from the gold labels and
+(b) bound the achievable state/evidence/diagnosis scores. It must never be
+presented alongside the deployable baselines as if it were a competing system.
+The runner enforces this: the oracle is grouped under
 `is_oracle=true` / `group="oracle"`, separate from the deployable baselines.
 
-See `baseline_results_sample_80_hard_en.md` for current numbers.
+See `baseline_results_test_800_templateheldout_en.md` for current paper-facing
+numbers on the canonical held-out split, and `baseline_results_sample_80_hard_en.md`
+for the calibration/quickstart split.

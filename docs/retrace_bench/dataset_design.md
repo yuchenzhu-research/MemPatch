@@ -7,16 +7,21 @@ family.
 
 ## Splits
 
-- `data/retrace_bench/test_800_templateheldout_en/` - 800 scenario
-  paper-facing held-out benchmark split.
-- `data/retrace_bench/test_800_en/` - 800 scenario prototype/diagnostic split;
-  retained for comparison only, not the final benchmark.
-- `data/retrace_bench/sample_80_hard_en/` - 80 scenario hard sample for quick
-  inspection and baseline smoke checks.
+- `data/retrace_bench/test_800_templateheldout_en/` - **canonical paper-facing
+  held-out test split** (800 scenarios). All headline numbers come from here.
+- `data/retrace_bench/test_800_en/` - 800 scenario **prototype/diagnostic split
+  only**; retained for comparison and must **not** be used for paper headline
+  numbers.
+- `data/retrace_bench/sample_80_hard_en/` - 80 scenario
+  **calibration / quickstart / smoke** split for quick inspection and pipeline
+  verification. On Hugging Face it may be exposed as the `validation` split for
+  dataset-viewer compatibility only; this is **not** a model-selection /
+  checkpoint-selection validation set.
 - `data/retrace_bench/sample_20_v2/` - tiny v2 schema smoke fixture.
 - `data/retrace_supervision/train_3000_en/` and
-  `data/retrace_supervision/dev_400_en/` - synthetic supervision/selection
-  pools for future ReTrace-Learn work; not benchmark test sets.
+  `data/retrace_supervision/dev_400_en/` - synthetic **supervision / selection
+  pools** for learning-based systems (e.g. future ReTrace-Learn work); they are
+  **not** benchmark test sets.
 
 Each split stores `scenarios.jsonl` plus a small `manifest.json`.
 
@@ -55,3 +60,13 @@ modes. Difficulty follows a deterministic 15/30/35/20 distribution across L1-L4.
 Validation enforces minimum rates for distractors, cross-scope traps, verified
 contradictions of stale trusted notes, false-premise rejection, and non-answer
 actions.
+
+## Manual Validation
+
+Beyond the automated validators, a recommended manual validation protocol
+covers a stratified 8-domain × 11-failure-mode sample of the canonical
+held-out split. See [`manual_validation_protocol.md`](manual_validation_protocol.md)
+for the procedure and [`manual_validation_sample_88.md`](manual_validation_sample_88.md)
+for the enumerated sample / report template. The manual protocol is documented
+as planned/recommended and is not claimed as a completed human study until the
+report template is filled in.

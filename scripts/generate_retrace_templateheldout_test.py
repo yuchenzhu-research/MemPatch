@@ -11,16 +11,8 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Any
 
-from benchmark.retrace_bench.general_taxonomy import DOMAINS, FAILURE_MODES
+from benchmark.retrace_bench.general_taxonomy import DECISIONS, DOMAINS, FAILURE_MODES
 
-
-DECISIONS = (
-    "use_current_memory",
-    "escalate",
-    "ask_clarification",
-    "mark_unresolved",
-    "refuse_due_to_policy",
-)
 
 DECISIONS_BY_MODE = {
     "stale_memory_reuse": ("use_current_memory", "ask_clarification", "mark_unresolved"),

@@ -35,7 +35,7 @@ ReTrace-Bench evaluates agent memory revision reliability in multi-agent and age
 
 - **benchmark/test_800_templateheldout_en** is the canonical, paper-facing held-out benchmark split.
 - **Do not train, prompt-tune, policy-optimize, or select checkpoints on `benchmark/test_800_templateheldout_en`.**
-- `calibration/sample_80_hard_en` is a small quickstart/calibration split designed for debugging and pipeline verification. It is exposed to the Hugging Face viewer as the `validation` split.
+- `calibration/sample_80_hard_en` is a small calibration/quickstart/smoke split designed for debugging and pipeline verification. It is exposed to the Hugging Face viewer as the `validation` split **for viewer compatibility only** — it is **not** a model-selection / checkpoint-selection validation set and must not be used to tune or select systems.
 - `supervision/train_3000_en` and `supervision/dev_400_en` are synthetic supervision/selection pools for learning-based revision proposers. They are **NOT** benchmark tests and may contain `training_targets`.
 - The old prototype/diagnostic split `test_800_en` is excluded from this public release package.
 
