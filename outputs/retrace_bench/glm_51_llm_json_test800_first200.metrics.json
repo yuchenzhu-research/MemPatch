@@ -1,0 +1,270 @@
+{
+  "all_metrics": {
+    "answer_exact_match": 0.025,
+    "answer_key_fact_accuracy": 0.545,
+    "black_box_decision_accuracy": 0.92,
+    "conflict_collapse_rate": 0.065,
+    "decision_balanced_accuracy": 0.8800546448087433,
+    "decision_macro_f1": 0.8966044776119404,
+    "evidence_f1": 0.638666666666668,
+    "failure_diagnosis_accuracy": 0.395,
+    "failure_to_forget_rate": 0.01,
+    "failure_to_release_or_restore_rate": 0.0,
+    "forbidden_fact_hits": 0.145,
+    "format_failure_rate": 0.0,
+    "memory_hallucination_rate": 0.005,
+    "memory_state_accuracy": 0.807,
+    "non_answer_decision_accuracy": 0.8920863309352518,
+    "over_update_rate": 0.025,
+    "per_decision_accuracy": {
+      "ask_clarification": 0.8666666666666667,
+      "escalate": 1.0,
+      "mark_unresolved": 1.0,
+      "refuse_due_to_policy": 0.55,
+      "use_current_memory": 0.9836065573770492
+    },
+    "per_decision_counts": {
+      "ask_clarification": 45,
+      "escalate": 34,
+      "mark_unresolved": 40,
+      "refuse_due_to_policy": 20,
+      "use_current_memory": 61
+    },
+    "policy_violation_anchor_hit_rate": 0.02,
+    "policy_violation_rate": 0.045,
+    "scope_leakage_anchor_hit_rate": 0.0,
+    "scope_leakage_rate": 0.32,
+    "stale_anchor_hit_rate": 0.0,
+    "stale_memory_reuse_rate": 0.055,
+    "stale_reuse_rate": 0.095,
+    "under_update_rate": 0.01,
+    "unnecessary_memory_write_rate": 0.04,
+    "use_current_memory_accuracy": 0.9836065573770492,
+    "wrong_source_attribution_rate": 0.08
+  },
+  "auxiliary_metrics": {
+    "answer_exact_match": 0.025,
+    "answer_key_fact_accuracy": 0.545,
+    "black_box_decision_accuracy": 0.92,
+    "decision_balanced_accuracy": 0.8800546448087433,
+    "format_failure_rate": 0.0,
+    "use_current_memory_accuracy": 0.9836065573770492
+  },
+  "baseline": "llm_json_answerer",
+  "count": 200,
+  "group": "api_baseline",
+  "headline_metrics": {
+    "decision_macro_f1": 0.8966044776119404,
+    "evidence_f1": 0.638666666666668,
+    "failure_diagnosis_accuracy": 0.395,
+    "memory_state_accuracy": 0.807,
+    "non_answer_decision_accuracy": 0.8920863309352518,
+    "stale_reuse_rate": 0.095
+  },
+  "is_oracle": false,
+  "metrics": {
+    "answer_exact_match": 0.025,
+    "answer_key_fact_accuracy": 0.545,
+    "black_box_decision_accuracy": 0.92,
+    "conflict_collapse_rate": 0.065,
+    "decision_balanced_accuracy": 0.8800546448087433,
+    "decision_macro_f1": 0.8966044776119404,
+    "evidence_f1": 0.638666666666668,
+    "failure_diagnosis_accuracy": 0.395,
+    "failure_to_forget_rate": 0.01,
+    "failure_to_release_or_restore_rate": 0.0,
+    "forbidden_fact_hits": 0.145,
+    "format_failure_rate": 0.0,
+    "memory_hallucination_rate": 0.005,
+    "memory_state_accuracy": 0.807,
+    "non_answer_decision_accuracy": 0.8920863309352518,
+    "over_update_rate": 0.025,
+    "per_decision_accuracy": {
+      "ask_clarification": 0.8666666666666667,
+      "escalate": 1.0,
+      "mark_unresolved": 1.0,
+      "refuse_due_to_policy": 0.55,
+      "use_current_memory": 0.9836065573770492
+    },
+    "per_decision_counts": {
+      "ask_clarification": 45,
+      "escalate": 34,
+      "mark_unresolved": 40,
+      "refuse_due_to_policy": 20,
+      "use_current_memory": 61
+    },
+    "policy_violation_anchor_hit_rate": 0.02,
+    "policy_violation_rate": 0.045,
+    "scope_leakage_anchor_hit_rate": 0.0,
+    "scope_leakage_rate": 0.32,
+    "stale_anchor_hit_rate": 0.0,
+    "stale_memory_reuse_rate": 0.055,
+    "stale_reuse_rate": 0.095,
+    "under_update_rate": 0.01,
+    "unnecessary_memory_write_rate": 0.04,
+    "use_current_memory_accuracy": 0.9836065573770492,
+    "wrong_source_attribution_rate": 0.08
+  },
+  "per_decision_accuracy": {
+    "ask_clarification": 0.8666666666666667,
+    "escalate": 1.0,
+    "mark_unresolved": 1.0,
+    "refuse_due_to_policy": 0.55,
+    "use_current_memory": 0.9836065573770492
+  },
+  "per_decision_counts": {
+    "ask_clarification": 45,
+    "escalate": 34,
+    "mark_unresolved": 40,
+    "refuse_due_to_policy": 20,
+    "use_current_memory": 61
+  },
+  "per_domain": {
+    "calendar_task_workflow": {
+      "black_box_decision_accuracy": 1.0,
+      "count": 25,
+      "evidence_f1": 0.6546666666666665,
+      "failure_diagnosis_accuracy": 0.44,
+      "memory_state_accuracy": 0.8180000000000001
+    },
+    "customer_support_crm": {
+      "black_box_decision_accuracy": 0.96,
+      "count": 25,
+      "evidence_f1": 0.6186666666666665,
+      "failure_diagnosis_accuracy": 0.32,
+      "memory_state_accuracy": 0.8079999999999999
+    },
+    "data_analysis_bi": {
+      "black_box_decision_accuracy": 0.92,
+      "count": 25,
+      "evidence_f1": 0.6759999999999999,
+      "failure_diagnosis_accuracy": 0.52,
+      "memory_state_accuracy": 0.7780000000000001
+    },
+    "ecommerce_recommendation": {
+      "black_box_decision_accuracy": 0.96,
+      "count": 25,
+      "evidence_f1": 0.6559999999999998,
+      "failure_diagnosis_accuracy": 0.24,
+      "memory_state_accuracy": 0.862
+    },
+    "enterprise_multi_tool_workflow": {
+      "black_box_decision_accuracy": 0.88,
+      "count": 25,
+      "evidence_f1": 0.6399999999999999,
+      "failure_diagnosis_accuracy": 0.36,
+      "memory_state_accuracy": 0.8380000000000001
+    },
+    "personal_assistant_preference": {
+      "black_box_decision_accuracy": 0.88,
+      "count": 25,
+      "evidence_f1": 0.5906666666666666,
+      "failure_diagnosis_accuracy": 0.4,
+      "memory_state_accuracy": 0.8080000000000002
+    },
+    "research_knowledge_work": {
+      "black_box_decision_accuracy": 0.88,
+      "count": 25,
+      "evidence_f1": 0.6199999999999999,
+      "failure_diagnosis_accuracy": 0.48,
+      "memory_state_accuracy": 0.782
+    },
+    "software_engineering_agent": {
+      "black_box_decision_accuracy": 0.88,
+      "count": 25,
+      "evidence_f1": 0.6533333333333331,
+      "failure_diagnosis_accuracy": 0.4,
+      "memory_state_accuracy": 0.7620000000000001
+    }
+  },
+  "per_failure_mode": {
+    "conflict_collapse": {
+      "black_box_decision_accuracy": 0.8888888888888888,
+      "count": 18,
+      "evidence_f1": 0.648148148148148,
+      "failure_diagnosis_accuracy": 0.7222222222222222,
+      "memory_state_accuracy": 0.8999999999999999,
+      "stale_reuse_rate": 0.0
+    },
+    "failure_to_forget": {
+      "black_box_decision_accuracy": 0.7222222222222222,
+      "count": 18,
+      "evidence_f1": 0.7129629629629628,
+      "failure_diagnosis_accuracy": 0.1111111111111111,
+      "memory_state_accuracy": 0.7111111111111111,
+      "stale_reuse_rate": 0.05555555555555555
+    },
+    "failure_to_release_or_restore": {
+      "black_box_decision_accuracy": 1.0,
+      "count": 18,
+      "evidence_f1": 0.6203703703703702,
+      "failure_diagnosis_accuracy": 0.0,
+      "memory_state_accuracy": 0.6277777777777778,
+      "stale_reuse_rate": 0.0
+    },
+    "memory_hallucination": {
+      "black_box_decision_accuracy": 0.8888888888888888,
+      "count": 18,
+      "evidence_f1": 0.5407407407407407,
+      "failure_diagnosis_accuracy": 0.05555555555555555,
+      "memory_state_accuracy": 0.8111111111111111,
+      "stale_reuse_rate": 0.05555555555555555
+    },
+    "over_update": {
+      "black_box_decision_accuracy": 1.0,
+      "count": 18,
+      "evidence_f1": 0.6574074074074072,
+      "failure_diagnosis_accuracy": 0.16666666666666666,
+      "memory_state_accuracy": 0.8194444444444443,
+      "stale_reuse_rate": 0.05555555555555555
+    },
+    "policy_violation": {
+      "black_box_decision_accuracy": 0.8333333333333334,
+      "count": 18,
+      "evidence_f1": 0.6055555555555556,
+      "failure_diagnosis_accuracy": 0.5,
+      "memory_state_accuracy": 0.6888888888888889,
+      "stale_reuse_rate": 0.3333333333333333
+    },
+    "scope_leakage": {
+      "black_box_decision_accuracy": 1.0,
+      "count": 18,
+      "evidence_f1": 0.7129629629629629,
+      "failure_diagnosis_accuracy": 0.7777777777777778,
+      "memory_state_accuracy": 0.8361111111111111,
+      "stale_reuse_rate": 0.05555555555555555
+    },
+    "stale_memory_reuse": {
+      "black_box_decision_accuracy": 1.0,
+      "count": 19,
+      "evidence_f1": 0.6842105263157894,
+      "failure_diagnosis_accuracy": 0.5789473684210527,
+      "memory_state_accuracy": 0.9078947368421053,
+      "stale_reuse_rate": 0.0
+    },
+    "under_update": {
+      "black_box_decision_accuracy": 1.0,
+      "count": 19,
+      "evidence_f1": 0.6964912280701754,
+      "failure_diagnosis_accuracy": 0.10526315789473684,
+      "memory_state_accuracy": 0.868421052631579,
+      "stale_reuse_rate": 0.0
+    },
+    "unnecessary_memory_write": {
+      "black_box_decision_accuracy": 0.7777777777777778,
+      "count": 18,
+      "evidence_f1": 0.4981481481481482,
+      "failure_diagnosis_accuracy": 0.4444444444444444,
+      "memory_state_accuracy": 0.8166666666666668,
+      "stale_reuse_rate": 0.5
+    },
+    "wrong_source_attribution": {
+      "black_box_decision_accuracy": 1.0,
+      "count": 18,
+      "evidence_f1": 0.6425925925925925,
+      "failure_diagnosis_accuracy": 0.8888888888888888,
+      "memory_state_accuracy": 0.8805555555555556,
+      "stale_reuse_rate": 0.0
+    }
+  }
+}
