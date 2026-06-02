@@ -72,7 +72,7 @@ governance. Do not add code or active docs for them; mention only as backlog.
   paper/track.
 - **`memory_policy.md` optimization** — not active work.
 - **Microsoft SkillOpt integration** — not active work.
-- **Paper 2 latent-memory line** — latent/hidden memory state, learned
+- **Future latent-memory line** — latent/hidden memory state, learned
   forgetting, RL consolidation, delayed-future-utility learning, and
   biological-memory mechanisms are reserved for a future paper and must not
   appear in this codebase as active scope.
@@ -85,13 +85,13 @@ governance. Do not add code or active docs for them; mention only as backlog.
 - **No vendoring.** Do not vendor or commit external repositories, cloned source
   trees, or PDFs.
 - **Ignored local clones.** If a local clone is needed for diagnostics, it must
-  live under an ignored directory (`reference/`, `.external_repos/`,
-  `.reference_cache/`) and must never be committed. Do not edit or commit those
-  directories except to remove accidentally tracked content.
+  live under an ignored directory (`.external_repos/` or `.reference_cache/`)
+  and must never be committed. Do not edit or commit those directories except to
+  remove accidentally tracked content.
 - If an external clone or large source is ever found tracked, remove it from git
   and replace it with one registry entry plus one short note file.
 
 ## Do-not-commit (preserved from `AGENTS.md`)
 
-Never commit `reference/`, `outputs/`, caches, local environments, generated
+Never commit external clones, `outputs/`, caches, local environments, generated
 artifacts, benchmark downloads, model weights/checkpoints, or API keys.

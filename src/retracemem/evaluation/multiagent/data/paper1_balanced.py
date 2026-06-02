@@ -1,6 +1,6 @@
 """Deterministic ``paper1_balanced`` internal validation suite.
 
-This is an **internal balanced synthetic validation set** for Paper 1
+This is an **internal balanced synthetic validation set** for ReTrace-Learn
 (Multi-Agent / Subagent Shared-Memory Revision Authorization). It is NOT a
 Stage C training set, and it is NOT an external benchmark. It must not be
 described as official STALE / Memora / CUPMem; those remain separate external

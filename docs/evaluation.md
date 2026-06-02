@@ -8,7 +8,7 @@ chain. Stage A and Stage C are typed-action proposer families that feed the same
 | --- | --- | --- |
 | A | `ReTrace-API-ZeroShot` / `ReTrace-Prompt` | typed proposer → RevisionGate → DPA |
 | B | `DirectJudge-API` | direct usability verdict; **no** typed actions / gate / DPA |
-| C | `ReTrace-AdaptiveProposer` | adaptive typed proposer → same commit / DPA path |
+| C | `ReTrace-Learn` | trainable typed proposer → same commit / DPA path |
 
 ## Offline smoke (no API key)
 

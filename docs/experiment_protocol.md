@@ -6,12 +6,14 @@ The framework evaluates different proposer methods over the identical candidate 
 
 - **Prompt-Proposer (Stage A / `ReTrace-Prompt`)**: Zero-shot prompted typed proposer → `RevisionGate` → DPA. Baseline proposer.
 - **DirectJudge (Stage B / `DirectJudge-API`)**: Predicts a final usability verdict directly, completely bypassing the ReTrace-Engine (no typed actions, gate, or DPA). Baseline only.
-- **ReTrace-Learn (Stage C / `ReTrace-AdaptiveProposer`)**: Trainable typed-proposer framework (optimizable via SFT, RSFT, DPO) routing proposals through the identical commit / DPA path of the ReTrace-Engine.
+- **ReTrace-Learn (Stage C)**: Trainable typed-proposer framework (optimizable via SFT, RSFT, DPO) routing proposals through the identical commit / DPA path of the ReTrace-Engine.
 
 The evaluations map to:
-- **Fixed-Candidate Controlled Revision (Experiment 1)**: Evaluates proposer decision quality given pre-constructed candidate views.
-- **Raw-Dialogue End-to-End Revision (Experiment 2)**: Evaluates the pipeline from raw dialogue (Graph Extractor + Typed Revision Proposer + ReTrace-Engine).
-- **External Validation on STALE / CUPMem (Experiment 3)**: Validates ReTrace-Learn on external benchmarks.
+- **E0 — Oracle/Replay Kernel Validation**: hand-authored typed proposals for engineering/mechanism verification.
+- **E1 — Fixed-Candidate Revision Evaluation**: evaluates proposer decision quality given pre-constructed candidate views.
+- **E2 — Stage C Training and Model-Driven Proposal Evaluation**: trains and evaluates learning-based proposal policies.
+- **E3 — Closed-Loop Multi-Agent Workflow**: evaluates how shared-memory commits affect downstream agent actions and future submissions.
+- **E4 — STALE/CUPMem External Validation**: validates ReTrace-Learn on external benchmarks through isolated adapters.
 
 ## Inputs and the leakage boundary
 
@@ -49,7 +51,7 @@ fixed-candidate contract; neither is an external benchmark. Select with
   `failure_type_counts`, `domain_counts`, `generator_version`, and
   `code_commit_sha`.
 
-`paper1_balanced` is for **Paper 1 internal validation only**; it is not a
+`paper1_balanced` is for **ReTrace-Learn internal validation only**; it is not a
 Stage C training set and must not be described as official STALE / Memora /
 CUPMem. Those remain separate external validation pathways (E4) and are not
 claimed here.
@@ -87,11 +89,19 @@ python3 scripts/export_stagec_data.py
 
 ## Paper experiment hierarchy (per `AGENTS.md`)
 
-- **Experiment 1: Fixed-Candidate Controlled Revision**
+- **E0: Oracle/Replay Kernel Validation**
+  Verify deterministic parser/gate/DPA behavior with hand-authored typed
+  proposals. This is engineering/mechanism validation, not a learned-method
+  result.
+- **E1: Fixed-Candidate Revision Evaluation**
   Test whether the Typed Revision Proposer can be learned when the candidate memory graph/view is already given. Compares DirectJudge, Prompt-Proposer, SFT, RSFT, DPO, Oracle, and ablations.
-- **Experiment 2: Raw-Dialogue End-to-End Revision Authorization**
-  Test whether the full ReTrace-Learn system can go from raw multi-subagent dialogue to final statuses using Graph Extractor + Typed Revision Proposer + ReTrace-Engine.
-- **Experiment 3: External Validation on STALE / CUPMem**
+- **E2: Stage C Training and Model-Driven Proposal Evaluation**
+  Train and evaluate learning-based proposal policies, including Graph Extractor
+  and Typed Revision Proposer outputs routed through ReTrace-Engine.
+- **E3: Closed-Loop Multi-Agent Workflow**
+  Test whether committed shared memory changes downstream agent actions and
+  future subagent submissions.
+- **E4: External Validation on STALE / CUPMem**
   Show that ReTrace-Learn is effective on external stale-memory benchmarks using structural mapping.
 
 Historical implementations of the action-ablation and composition studies, and the STALE/CUPMem external validation, are archived under `experiments/archive/`; if needed for final paper numbers they should be reimplemented through the shared pipeline.

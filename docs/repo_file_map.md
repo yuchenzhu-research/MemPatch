@@ -50,7 +50,7 @@
 ---
 
 ## 2. ReTrace-Learn 训练模块 (`src/retrace_learn/`)
-本模块是 Paper 1 中支持策略训练的重点部分，涵盖了图提取器（Graph Extractor）、修正提案器（Revision Proposer）以及 DPA-in-the-Loop 强化学习奖励系统。
+本模块是 ReTrace-Learn method track 中支持策略训练的重点部分，涵盖了图提取器（Graph Extractor）、修正提案器（Revision Proposer）以及 DPA-in-the-Loop 强化学习奖励系统。
 
 ### 数据管道与生成器 (`data/`)
 * `src/retrace_learn/data/build_synthetic_raw_dialogue.py`: 生成合成多 Agent 对话语料并计算 DPA 黄金真值的生成引擎。
@@ -75,7 +75,7 @@
 ---
 
 ## 3. ReTrace-Bench 评准套件 (`benchmark/retrace_bench/`)
-独立评测基准套件的代码及各子模块，服务于 Paper 2。
+独立评测基准套件的代码及各子模块，服务于 ReTrace-Bench benchmark track。
 * `benchmark/retrace_bench/taxonomy.py`: v1 常量与 Enum。
 * `benchmark/retrace_bench/schemas.py`: v1 评测数据类结构。
 * `benchmark/retrace_bench/taxonomy_v2.py`: v2 扩展常量与 Enum。
@@ -110,4 +110,4 @@
 * `docs/retrace_learn_pipeline.md`: ReTrace-Learn 核心管道逻辑文档。
 * `docs/retrace_bench/`: ReTrace-Bench 评测设计及协议说明。
 * `release/huggingface/ReTrace-Bench/`: Hugging Face dataset release package;
-  当前只发布 viewer-friendly `test.jsonl` 测试集。
+  当前发布 `test` / `validation` / `train` / `dev` 四个 viewer-friendly split。

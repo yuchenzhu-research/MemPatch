@@ -21,4 +21,4 @@ ReTrace
 - **`benchmark/retrace_bench/`**: Evaluation-only code, metrics, baseline scoring logic.
 - **`data/retrace_bench/`**: Benchmark held-out tests and calibration datasets.
 - **`data/retrace_supervision/`**: Supervision/dev selection pools used for learning policies (not benchmark tests).
-- **`release/huggingface/`**: A generated local packaging area. It is not a repository source of truth (canonical data lives under `data/`).
+- **`release/huggingface/`**: Release-package snapshots generated from `data/`. It is not a repository source of truth.

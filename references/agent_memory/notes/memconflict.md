@@ -1,9 +1,9 @@
 # MemConflict Reference Note
 
 * **Paper Title**: MemConflict: Resolving Belief and Memory Conflict in Long-Term LLM Interactions
-* **Venue / arXiv Status**: arXiv-only (Preprint, Reference Inspiration)
-* **Official Links**: https://arxiv.org/abs/2405.33333
-* **GitHub / HuggingFace**: https://github.com/conflict-memory/memconflict
+* **Venue / arXiv Status**: unverified pointer
+* **Official Links**: pending verification
+* **GitHub / HuggingFace**: pending verification
 
 ## Core Details
 

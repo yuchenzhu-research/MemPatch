@@ -20,6 +20,11 @@ multi-agent/agentic workflows. It is governed as **two active research tracks**
 > Authorization Court **inside ReTrace-Learn**. It is not a standalone paper or a
 > separate top-level track.
 
+| Track / paper | Role | Start here |
+| --- | --- | --- |
+| ReTrace-Bench | Benchmark/resource paper for agent memory revision reliability. | [`RETRACE_BENCH.md`](RETRACE_BENCH.md), [`benchmark/README.md`](benchmark/README.md), [`papers/retrace_bench/`](papers/retrace_bench/) |
+| ReTrace-Learn | Method paper for trainable typed revision proposal with deterministic authorization. | [`RETRACE_LEARN.md`](RETRACE_LEARN.md), [`docs/retrace_learn_pipeline.md`](docs/retrace_learn_pipeline.md), [`papers/retrace_learn/`](papers/retrace_learn/) |
+
 The rest of this README describes the **ReTrace-Learn** method track; for the
 benchmark track see [`docs/retrace_bench/`](docs/retrace_bench/).
 For a conceptual project map, layout, governance, and dataset definitions, see:
@@ -115,11 +120,21 @@ The project evaluates open-weight trainable models against strong baseline alter
 
 ### Research Map
 
-- **Fixed-Candidate Protocol** (Stage E1): Evaluates proposer quality over identical pre-constructed candidate memory graphs. Runner: `scripts/run_fixed_candidate_matrix.py`.
-- **Raw-Dialogue Protocol** (Stage E2): Evaluates the end-to-end pipeline (Graph Extractor + Proposer + Engine) from raw dialogue. Runner: `scripts/run_raw_dialogue_matrix.py`.
-- **External Validation on STALE / CUPMem** (Stage E3): Validates ReTrace-Learn's performance on external stale-memory benchmarks using mapped schemas.
+- **E0: Oracle/Replay Kernel Validation** — hand-authored typed proposals for
+  mechanism verification.
+- **E1: Fixed-Candidate Revision Evaluation** — evaluates proposer quality over
+  identical pre-constructed candidate memory graphs.
+- **E2: Stage C Training and Model-Driven Proposal Evaluation** — trains and
+  evaluates learning-based proposal policies.
+- **E3: Closed-Loop Multi-Agent Workflow** — tests shared-memory effects on
+  downstream agent actions and future submissions.
+- **E4: STALE/CUPMem External Validation** — validates ReTrace-Learn on external
+  stale-memory benchmarks using isolated adapters.
 
-> **Paper boundary.** Paper 1 focuses on explicit typed memory-revision proposal learning and deterministic DPA verification. Latent memory states, delayed-future-utility consolidation, biological memory mechanisms, and RL over hidden states are reserved for Paper 2.
+> **Method-paper boundary.** The ReTrace-Learn paper focuses on explicit typed
+> memory-revision proposal learning and deterministic DPA verification. Latent
+> memory states, delayed-future-utility consolidation, biological memory
+> mechanisms, and RL over hidden states are future-scope work.
 
 ---
 
@@ -243,8 +258,8 @@ internal, deterministically generated sets — neither is an external benchmark:
   (7 failure types × 2 domains × 5 variants). `--max-cases 400` still loads only 70.
 - **`paper1_balanced`** — internal balanced synthetic validation set, 420 cases
   (14 failure types × 2 domains × 15 variants), built programmatically by
-  `retracemem.evaluation.multiagent.data.paper1_balanced`. Used for Paper 1
-  internal validation only; not a Stage C training set and not official
+  `retracemem.evaluation.multiagent.data.paper1_balanced`. Used for
+  ReTrace-Learn internal validation only; not a Stage C training set and not official
   STALE / Memora / CUPMem (those are separate external pathways, not claimed here).
 
 See `docs/experiment_protocol.md` for details.
@@ -257,21 +272,21 @@ records, raw proposer outputs, `dpa_traces.jsonl`, `metrics.json`,
 
 ---
 
-## What is **not** part of Paper 1
+## What is **not** part of ReTrace-Learn
 
 Latent / hidden memory state, learned forgetting, RL consolidation,
 delayed-future-utility learning, and biological-memory mechanisms belong to
-**Paper 2** and must not appear in this codebase. STALE/CUPMem is an external
-validation/baseline pathway, not the definition of the method.
+future-scope work and must not appear in this codebase. STALE/CUPMem is an
+external validation/baseline pathway, not the definition of the method.
 
 ## Legacy / archived paths
 
-`experiments/archive/` holds preserved-but-non-canonical research code (E2 action
-ablation, E3 composition, E4 STALE/CUPMem external validation, and older
-comparison/diagnostic runners). It is **not** imported by `src/retracemem/` and is
-**not** a paper-facing command — see `experiments/archive/README.md`. If those
-experiments are needed for final paper numbers, reimplement them through the
-shared evaluation pipeline.
+`experiments/archive/` holds preserved-but-non-canonical research code
+(historical action ablations, composition studies, E4 STALE/CUPMem external
+validation, and older comparison/diagnostic runners). It is **not** imported by
+`src/retracemem/` and is **not** a paper-facing command — see
+`experiments/archive/README.md`. If those experiments are needed for final paper
+numbers, reimplement them through the shared evaluation pipeline.
 
 ---
 

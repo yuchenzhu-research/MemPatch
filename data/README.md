@@ -11,7 +11,10 @@ Contains held-out benchmark and calibration split data.
 - **`sample_80_hard_en`**: A small calibration / quickstart / smoke dataset for debugging and pipeline verification. On Hugging Face it may be exposed as the `validation` split for dataset-viewer compatibility only; it is **not** a model-selection / checkpoint-selection validation set.
 
 ### `data/retrace_supervision/`
-Contains synthetic supervision and selection pools for learning-based systems (e.g. the ReTrace-Learn pipeline). These are **not** held-out benchmark test sets and may contain training targets.
+Contains synthetic supervision and selection pools shared across the two active
+tracks. ReTrace-Bench publishes them as HF `train` / `dev` splits, and
+ReTrace-Learn consumes them for SFT / selection. They are **not** held-out
+benchmark test sets and may contain training targets.
 - **`train_3000_en`**: Supervision/selection pool containing 3000 scenarios.
 - **`dev_400_en`**: Dev/selection pool containing 400 scenarios.
 

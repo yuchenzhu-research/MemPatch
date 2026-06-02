@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Public evaluation entrypoint for ReTrace Paper 1.
+"""Public evaluation entrypoint for ReTrace-Learn.
 
 Thin CLI over the shared multi-agent evaluation engine
 (`retracemem.evaluation.multiagent`). All three method families plug into the
@@ -7,7 +7,7 @@ same pipeline:
 
     python3 scripts/evaluate.py stage-a --mock        # ReTrace-API-ZeroShot (typed -> gate -> DPA)
     python3 scripts/evaluate.py stage-b --mock        # DirectJudge-API baseline (final status only)
-    python3 scripts/evaluate.py stage-c --smoke       # ReTrace-AdaptiveProposer (adaptive typed proposer)
+    python3 scripts/evaluate.py stage-c --smoke       # ReTrace-Learn (trainable typed proposer)
 
 Stage A and Stage B are evaluated *jointly* on the same fixed-candidate cases
 for a fair comparison (experiment E1), so `stage-a` and `stage-b` are entry
@@ -132,7 +132,7 @@ def _run_stagec(args: argparse.Namespace) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="ReTrace Paper 1 evaluation entrypoint.")
+    parser = argparse.ArgumentParser(description="ReTrace-Learn evaluation entrypoint.")
     sub = parser.add_subparsers(dest="command", required=True)
 
     # Stage A and Stage B share the joint A-vs-B runner.
@@ -141,7 +141,7 @@ def main() -> None:
         _add_stageab_args(sp)
         sp.set_defaults(func=_run_stageab)
 
-    sc = sub.add_parser("stage-c", help="Run the Stage C ReTrace-AdaptiveProposer evaluation.")
+    sc = sub.add_parser("stage-c", help="Run the Stage C ReTrace-Learn evaluation.")
     _add_stagec_args(sc)
     sc.set_defaults(func=_run_stagec)
 

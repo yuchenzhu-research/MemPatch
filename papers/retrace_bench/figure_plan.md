@@ -1,7 +1,7 @@
 # ReTrace-Bench — Figure Plan
 
 Planned figures. For each: purpose, input data, and whether it can be produced
-now. Figures must be blind-review safe (no author/repo identifiers in captions).
+now.
 
 ---
 

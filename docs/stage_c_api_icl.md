@@ -1,6 +1,6 @@
 # Stage C API-ICL: exemplar contract and status
 
-Stage C is `ReTrace-AdaptiveProposer`: it still proposes **typed actions only**,
+Stage C is `ReTrace-Learn`: it still proposes **typed actions only**,
 and the RevisionGate + deterministic DPA / `authorize(...)` path is unchanged.
 API-ICL is the first Stage C variant — it conditions the proposer on a few
 in-context exemplars of well-formed typed revisions. Only the proposer changes.
@@ -17,7 +17,7 @@ Stage C API-ICL proposer (k approved exemplars in context)
   through the canonical parser + shared DPA path.
 - **API-ICL**: **not wired to a turnkey live CLI** and **fail-closed**. It cannot
   run without a *human-approved* exemplar pack. This is intentional per
-  `AGENTS.md` (Paper 1 Stage C Training Boundary): no development-candidate
+  `AGENTS.md` (ReTrace-Learn Paper Training Boundary): no development-candidate
   episode may be promoted for smoke/training without a recorded human decision,
   and no run may see gold typed targets or evaluator final statuses.
 - **Hosted-FT / Open LoRA-SFT**: offline data-prep / example configs only; not

@@ -1,4 +1,4 @@
-# Engineering note (Tencent Qingyun audience)
+# Engineering Note
 
 **Framing: a research prototype with production-minded engineering design — not
 a production-ready system.** This note describes the engineering surface; the

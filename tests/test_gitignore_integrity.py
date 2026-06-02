@@ -14,7 +14,8 @@ def test_gitignore_sensitive_artifacts_not_committed():
     files = res.stdout.splitlines()
 
     ignored_prefixes = (
-        "reference/",
+        ".external_repos/",
+        ".reference_cache/",
         "outputs/",
         "artifacts/",
         "checkpoints/",

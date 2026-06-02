@@ -1,9 +1,9 @@
 # LongMemEval Reference Note
 
 * **Paper Title**: LongMemEval: Benchmarking Chatbots on Long-Term and Multi-Turn Memory
-* **Venue / arXiv Status**: arXiv-only (Preprint, Reference Inspiration)
-* **Official Links**: https://arxiv.org/abs/2401.44444
-* **GitHub / HuggingFace**: https://github.com/longmem/LongMemEval
+* **Venue / arXiv Status**: unverified pointer
+* **Official Links**: pending verification
+* **GitHub / HuggingFace**: pending verification
 
 ## Core Details
 

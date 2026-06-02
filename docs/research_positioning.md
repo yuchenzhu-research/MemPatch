@@ -1,7 +1,7 @@
-# Research positioning (ICLR Paper 1)
+# ReTrace-Learn Research Positioning
 
-> This is the short ICLR-facing framing. The detailed in-scope/out-of-scope
-> contract lives in [`paper1_positioning.md`](paper1_positioning.md) and the
+> This is the short method-facing framing. The detailed in-scope/out-of-scope
+> contract lives in [`retrace_learn_positioning.md`](retrace_learn_positioning.md) and the
 > binding rules in `AGENTS.md`.
 
 ## Problem
@@ -35,13 +35,13 @@ closed).
 
 ## Experimental decomposition
 
-* **Stage A (`ReTrace-API-ZeroShot`)** tests whether *typed decomposition +
+* **Stage A (`ReTrace-Prompt`)** tests whether *typed decomposition +
   deterministic authorization* beats…
 * **Stage B (`DirectJudge-API`)**, a direct final-status judge with no typed
   actions / gate / DPA.
-* **Stage C (`ReTrace-AdaptiveProposer`)** tests whether an adaptive typed
-  proposer improves proposal quality while the gate and DPA stay deterministic
-  and unchanged.
+* **Stage C (`ReTrace-Learn`)** tests whether a trainable typed proposer
+  improves proposal quality while the gate and DPA stay deterministic and
+  unchanged.
 
 All stages are compared over **identical** fixed-candidate contexts (fair
 comparison); the commit path is shared and append-only.
@@ -57,4 +57,4 @@ deterministic, so authorized snapshots are reproducible from the trace.
 Action ablation (which typed actions carry the gains) and multi-action
 composition, plus a live Stage A-vs-B failure attribution. Latent memory, RL
 consolidation, learned forgetting, and delayed-future-utility learning are
-**Paper 2** and must not enter Paper 1.
+future-scope work and must not enter the ReTrace-Learn paper.

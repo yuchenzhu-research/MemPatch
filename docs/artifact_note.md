@@ -1,7 +1,7 @@
-# ICLR artifact note
+# Artifact Note
 
-A reviewer-facing summary of what runs, how to reproduce it, and what is and is
-not claimed.
+A neutral artifact summary of what runs, how to reproduce it, and what is and
+is not claimed.
 
 ## One-command offline reproduction
 
@@ -56,4 +56,4 @@ provider config (see [`api_providers.md`](api_providers.md)).
 * Stage C live / API-ICL is not turnkey; the API-ICL proposer is fail-closed
   without human-approved exemplars (`AGENTS.md` training boundary).
 * Latent memory, RL consolidation, learned forgetting, and delayed-future-utility
-  learning are **Paper 2** and intentionally absent.
+  learning are future-scope work and intentionally absent.

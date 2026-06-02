@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Stage C (ReTrace-AdaptiveProposer) evaluation runner for ICLR 2027 Paper 1.
+"""Stage C (ReTrace-Learn) evaluation runner.
 
 Stage C evaluates an adapter / local / SFT-style typed revision proposer on the
 same dev70 episode structure used by Stage A / Stage B, and routes its typed
@@ -267,7 +267,7 @@ def run_stagec_eval(config: StageCEvalConfig) -> tuple[dict[str, Any], dict[str,
         max_cases = 3
 
     print("=" * 80)
-    print("STAGE C (ReTrace-AdaptiveProposer) EVALUATION RUNNER")
+    print("STAGE C (ReTrace-Learn) EVALUATION RUNNER")
     print("=" * 80)
     print(f"Proposer source : {config.proposer_source}")
     print(f"Policy variant  : {config.policy_variant}")
@@ -346,7 +346,7 @@ def run_stagec_eval(config: StageCEvalConfig) -> tuple[dict[str, Any], dict[str,
     manifest = {
         "run_identifier": "stagec_development_run / not_final_paper_result",
         "stage": "C",
-        "method_family": "ReTrace-AdaptiveProposer",
+        "method_family": "ReTrace-Learn",
         "executed_at": datetime.datetime.now().isoformat(),
         "proposer_source": config.proposer_source,
         "policy_variant": config.policy_variant,
@@ -383,7 +383,7 @@ def run_stagec_eval(config: StageCEvalConfig) -> tuple[dict[str, Any], dict[str,
 
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Stage C (ReTrace-AdaptiveProposer) evaluation runner"
+        description="Stage C (ReTrace-Learn) evaluation runner"
     )
     source_group = parser.add_mutually_exclusive_group()
     source_group.add_argument(

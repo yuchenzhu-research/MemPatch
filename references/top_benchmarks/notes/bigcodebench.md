@@ -1,9 +1,9 @@
 # BigCodeBench Reference Note
 
 * **Benchmark Name**: BigCodeBench: Benchmarking Tool-Use Capabilities of Code Agents
-* **Venue / Publication Status**: Peer-reviewed, NeurIPS 2024
-* **Official Repo**: https://github.com/bigcode-project/bigcodebench
-* **Dataset / HuggingFace Link**: https://huggingface.co/datasets/bigcode/bigcodebench
+* **Venue / Publication Status**: unverified pointer
+* **Official Repo**: pending verification
+* **Dataset / HuggingFace Link**: pending verification
 
 ## Core Details
 

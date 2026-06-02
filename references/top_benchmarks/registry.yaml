@@ -40,9 +40,9 @@
 
 - name: BigCodeBench
   category: Coding Agents
-  status: Related Benchmark
-  paper_url: https://arxiv.org/abs/2406.12345
-  repo_url: https://github.com/bigcode-project/bigcodebench
+  status: Unverified Pointer
+  paper_url: ""
+  repo_url: ""
   dataset_url: ""
   notes_file: references/top_benchmarks/notes/bigcodebench.md
   what_to_borrow: Granular tool usage tracking.
