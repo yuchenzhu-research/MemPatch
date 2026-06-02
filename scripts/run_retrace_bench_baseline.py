@@ -502,6 +502,10 @@ def llm_json_answerer(
         parsed = _parse_llm_json_response(raw)
     except json.JSONDecodeError:
         parsed = {"answer": raw, "decision": None, "memory_state": {}, "evidence_event_ids": [], "failure_diagnosis": None}
+    if isinstance(parsed, dict) and "failure_diagnosis" in parsed:
+        diag = parsed["failure_diagnosis"]
+        if isinstance(diag, str):
+            parsed["failure_diagnosis"] = [diag]
     return parsed
 
 
