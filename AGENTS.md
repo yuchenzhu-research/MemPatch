@@ -163,13 +163,17 @@ To ensure absolute clean methodology and avoid test-set leakage:
 - `.external_repos/` and `.reference_cache/` are local-only for cloned external
   repositories or downloaded papers. Do not edit them as source, and never
   commit them.
-- Do not commit external clones, `outputs/`, `artifacts/`, `analysis/`, caches,
+- Do not commit external clones, `artifacts/`, `analysis/`, caches,
   local environments, generated artifacts, benchmark downloads, model
   checkpoints/weights, or API keys.
+- `outputs/` IS tracked: benchmark prediction dumps and `.metrics.json` under
+  `outputs/retrace_bench/` are committed so pilot/baseline results are
+  reproducible and shareable on GitHub. Still never commit API keys, caches, or
+  `.DS_Store` inside it.
 - After running scripts, tests, builds, or imports, proactively look for and
   remove local cache/generated directories before committing. At minimum check
   for `.pycache_compile/`, `.pytest_cache/`, `__pycache__/`, `*.pyc`,
-  `*.egg-info/`, `.DS_Store`, `local/`, `outputs/`, `artifacts/`, `analysis/`,
+  `*.egg-info/`, `.DS_Store`, `local/`, `artifacts/`, `analysis/`,
   `data_external/`, `.external_repos/`, `.reference_cache/`, `models/`, `checkpoints/`, `adapters/`,
   `wandb/`, and `runs/`.
 - Put temporary training corpora, framework-specific scratch files, external

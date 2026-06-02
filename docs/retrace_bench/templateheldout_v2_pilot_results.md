@@ -75,9 +75,9 @@ Making cross-scope distractors conditional (not universal) removes the reflexive
   worth monitoring as a residual salience pattern.
 - These are first-100 pilots, not the full 800. Numbers are directional.
 
-## 4b. Addendum — `ask_clarification` state-cue fix (indicative, N=42)
+## 4b. Full-800 cued-v2 pilots — `ask_clarification` state cue at scale
 
-The §3 pilots ran on the v2 split *before* the `ask_clarification` vs
+The §1–§4 pilots ran on the v2 split *before* the `ask_clarification` vs
 `mark_unresolved` cue was added. The v2 generator was then updated so the
 verified record states **who can resolve the situation**: for `ask_clarification`
 "the only missing piece is a single input the requester alone can supply … once
@@ -86,25 +86,116 @@ holds the authoritative basis, and no further input can resolve the conflict
 until new authoritative evidence arrives". This is a *state* cue, not an action
 verb (no leakage; the v2 leakage/atomicity tests still pass).
 
-A DeepSeek-V4-Pro re-run on the cued v2 split was **stopped at 42/800 by user
-request**, so these numbers are indicative only (small, first-segment-biased):
+This section replaces the earlier indicative N=42 re-run with the **full 800**
+on the cued v2 split, all three models, `llm_json_answerer`,
+`--max-tokens 768 --disable-thinking`, SiliconFlow. Gold decision distribution
+over the 800 cases: `use_current_memory` 233, `ask_clarification` 187,
+`mark_unresolved` 163, `escalate` 138, `refuse_due_to_policy` 79. Diagnosis gold
+is ~balanced (72–73 per mode across all 11 modes). Raw predictions and
+`*.metrics.json` are committed under `outputs/retrace_bench/pilot_v2/`.
 
-| decision (n in 42) | old v2 (first-100) | cued v2 (N=42) |
+### Headline (full 800, cued v2)
+
+| Model | decision_acc | non_answer_decision_acc | failure_diagnosis_acc | evidence_f1 | memory_state_acc | format_failure_rate |
+|---|---|---|---|---|---|---|
+| DeepSeek-V4-Pro | 0.780 | 0.748 | 0.573 | 0.712 | 0.726 | 0.000 |
+| Kimi-K2.6 | 0.814 | 0.778 | 0.578 | 0.515 | 0.758 | 0.000 |
+| GLM-5.1 | 0.934 | 0.938 | 0.517 | 0.678 | 0.762 | 0.001 |
+
+`decision_acc` is the auxiliary `black_box_decision_accuracy`; the
+class-balanced `decision_macro_f1` is 0.750 / 0.801 / 0.925 respectively.
+GLM-5.1 had a single unparseable row (1/800 = 0.00125); the other two runs had
+zero format failures.
+
+### Per-decision accuracy (full 800, gold decision → correct rate)
+
+| decision (n) | DeepSeek-V4-Pro | Kimi-K2.6 | GLM-5.1 |
+|---|---|---|---|
+| use_current_memory (233) | 0.858 | 0.901 | 0.923 |
+| escalate (138) | **0.384** | 0.957 | 0.928 |
+| ask_clarification (187) | 0.781 | 0.813 | 0.882 |
+| mark_unresolved (163) | 0.963 | **0.528** | 1.000 |
+| refuse_due_to_policy (79) | 0.861 | 0.899 | 0.962 |
+
+### `ask_clarification` recovered; ask→mark conflation is resolved at scale
+
+The cue holds on the full split. `ask_clarification` accuracy is now
+0.78–0.88 (vs 0.00–0.04 on the pre-cue v2 first-100 in §3), and almost no
+`ask_clarification` gold collapses into `mark_unresolved`:
+
+| Model | ask_clarification acc | ask gold → predicted `mark_unresolved` |
 |---|---|---|
-| ask_clarification (9) | 0.04 | **0.67** |
-| mark_unresolved (7) | 0.85 | **1.00** |
+| DeepSeek-V4-Pro | 0.781 | 1 / 187 (0.5%) |
+| Kimi-K2.6 | 0.813 | 0 / 187 (0.0%) |
+| GLM-5.1 | 0.882 | 3 / 187 (1.6%) |
 
-Critically, in the cued run **zero** `ask_clarification` gold cases were
-mispredicted as `mark_unresolved` (predicted: ask 6, use_current 2, refuse 1),
-versus 14/23 → `mark_unresolved` before the cue. The conflation is removed at
-this sample size; a full run is still needed to confirm at scale and to check
-the small-n `escalate` dip (1/6 here) is just sampling.
+For comparison, on the pre-cue v2 first-100 the three models sent
+14/23, 16/23, and the majority of `ask_clarification` gold to `mark_unresolved`.
+The residual `ask_clarification` errors now leak mostly to `use_current_memory`
+(DeepSeek 25, Kimi 28, GLM 7) and a few to `refuse_due_to_policy`, **not** to
+`mark_unresolved`. The conflation the cue targeted is removed at full scale.
+
+### Residual decision-boundary issues (do NOT overclaim fixed)
+
+- **A separate `mark_unresolved` ↔ `escalate` boundary is still model-specific.**
+  Kimi-K2.6 splits `mark_unresolved` gold almost evenly into `escalate`
+  (86 mark / 75 escalate of 163), dragging its `mark_unresolved` accuracy to
+  0.528. This is the *reverse* direction from the ask/mark issue and is not
+  addressed by the ask/mark cue.
+- **DeepSeek-V4-Pro under-recognizes `escalate`** (0.384): of 138 `escalate`
+  gold it predicts escalate 53, `use_current_memory` 41, `mark_unresolved` 23,
+  `refuse_due_to_policy` 21 — i.e. it often treats an escalation trigger as
+  answerable. GLM-5.1 (0.928) and Kimi (0.957) handle `escalate` well, so this
+  is a DeepSeek-specific salience gap, not a split defect, but it is worth
+  flagging before freeze.
+- **Diagnosis accuracy is non-trivial and does not collapse** (0.52–0.58),
+  using 10–12 distinct predicted labels; combined with the scorer list-unwrap
+  fix this remains trustworthy at scale.
+
+### scope_leakage over-prediction (full 800)
+
+The conditional-distractor fix holds at scale: false `scope_leakage` on
+non-scope gold is ~0.
+
+| Model | predicted scope_leakage (/800) | false scope_leakage on non-scope gold |
+|---|---|---|
+| DeepSeek-V4-Pro | 71 | 12 / 727 = 0.017 |
+| Kimi-K2.6 | 58 | 0 / 727 = 0.000 |
+| GLM-5.1 | 71 | 0 / 727 = 0.000 |
+
+### v1 → v2 (split-level; different models)
+
+The committed v1 first-200 baselines are different models (DeepSeek-V3, GLM-51),
+so this is a **split-level** read, not a strict same-model delta:
+
+| | v1 first-200 (DeepSeek-V3 / GLM-51) | v2 full-800 (DeepSeek-V4-Pro / Kimi / GLM-5.1) |
+|---|---|---|
+| decision_acc | 0.845 / 0.920 | 0.780 / 0.814 / 0.934 |
+| failure_diagnosis_acc | 0.310 / 0.395 | 0.573 / 0.578 / 0.517 |
+| evidence_f1 | 0.714 / 0.639 | 0.712 / 0.515 / 0.678 |
+| memory_state_acc | 0.746 / 0.807 | 0.726 / 0.758 / 0.762 |
+
+The within-model first-100 comparison in §1 is the clean leakage evidence
+(decision drops 15–33 pts once the action verb is de-actionalized); the v1
+first-200 row above is consistent with it at the split level. Diagnosis does
+*not* collapse on v2 (it is higher than the v1 first-200 baselines, aided by the
+list-unwrap scorer fix), and evidence_f1 stays non-trivial (0.52–0.71).
 
 ## 5. Bottom line
 
-The v2 direction is validated: it removes the two artifacts that made v1's
-decision (and, via the list-scoring bug, parts of diagnosis) untrustworthy, while
-keeping memory-state / evidence / stale-reuse discriminative. v2 remains a
-**candidate** — the `ask_clarification`/`mark_unresolved` ambiguity should be
-resolved before v2 is presented as the frozen paper-facing split. v1 is retained
-unchanged as prototype/diagnostic.
+v2 is validated at full scale and the `ask_clarification` state cue works: the
+two v1 artifacts (decision-word leakage, universal cross-scope distractor) are
+gone, and the ask→mark conflation that blocked the pre-cue v2 is resolved across
+all three models at N=800 (≤1.6% ask→mark, ask accuracy 0.78–0.88), with
+scope_leakage false-positive rate ~0 and diagnosis non-collapsing.
+
+**Recommendation:** v2 is ready to **freeze as the paper-facing split** on the
+split-design axis — the cued decision taxonomy, conditional distractors, and
+atomic rubrics are sound. The remaining concerns are **model behaviors, not
+split flaws**: a `mark_unresolved`↔`escalate` boundary that some models (Kimi)
+handle poorly, and DeepSeek's weak `escalate` recall. These do not require
+changing the data, but should be reported as honest per-model limitations rather
+than hidden. If a stricter freeze bar is desired, one optional hardening pass on
+the `mark_unresolved` vs `escalate` state cue (mirroring the ask/mark cue) would
+tighten that boundary; otherwise v2 can be frozen as-is with the residuals
+documented. v1 is retained unchanged as prototype/diagnostic.
