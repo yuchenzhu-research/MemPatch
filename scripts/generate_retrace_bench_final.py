@@ -48,6 +48,17 @@ def main() -> int:
     parser.add_argument("--github-seeds", default="data/source_seeds/github_workflow_seeds.jsonl")
     parser.add_argument("--out", default="data/retrace_bench")
     parser.add_argument("--smoke", action="store_true", help="Generate small smoke datasets for verification")
+    parser.add_argument(
+        "--only",
+        default=None,
+        help="Comma-separated split names to generate (e.g. hard or hard,main)",
+    )
+    parser.add_argument(
+        "--count",
+        action="append",
+        default=[],
+        help="Override split size as split=N (repeatable, e.g. --count hard=50)",
+    )
     args = parser.parse_args()
 
     seed_path = Path(args.github_seeds)
@@ -63,8 +74,21 @@ def main() -> int:
         "hard": 500 if not args.smoke else 30,
         "realistic": 200 if not args.smoke else 20,
         "calibration": 80 if not args.smoke else 20,
-        "private_hidden": 200 if not args.smoke else 20
+        "private_hidden": 200 if not args.smoke else 20,
     }
+    count_overrides: dict[str, int] = {}
+    for item in args.count:
+        if "=" not in item:
+            raise SystemExit(f"invalid --count value {item!r}; expected split=N")
+        split_key, raw_n = item.split("=", 1)
+        count_overrides[split_key.strip()] = int(raw_n)
+    splits_config.update(count_overrides)
+    if args.only:
+        only_splits = {s.strip() for s in args.only.split(",") if s.strip()}
+        unknown = only_splits - set(splits_config)
+        if unknown:
+            raise SystemExit(f"unknown --only split(s): {sorted(unknown)}")
+        splits_config = {k: v for k, v in splits_config.items() if k in only_splits}
 
     # For each split, generate, validate, and write scenarios
     for split_name, count in splits_config.items():

@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000025",
+  "model": "Pro/zai-org/GLM-5.1",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300024 uses the default deployment gate configuration on stable v1, as the security patch was backported only to the stable legacy branch v1.2 and the production branch v2.0 does not need or receive it.\",\n  \"memory_state\": {\n    \"m-rt-hard-000025-target\": \"current\",\n    \"m-rt-hard-000025-condition\": \"current\",\n    \"m-rt-hard-000025-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000025-1\",\n    \"e-rt-hard-000025-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+}

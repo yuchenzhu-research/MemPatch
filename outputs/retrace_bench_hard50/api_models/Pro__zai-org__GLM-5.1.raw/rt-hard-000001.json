@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000001",
+  "model": "Pro/zai-org/GLM-5.1",
+  "raw_response": "{\n  \"black_box_task\": {\n    \"decision\": \"use_current_memory\",\n    \"answer\": \"CASE-300000 uses default deployment gate configuration on stable v1; the YAML feature was not included in the stable release.\"\n  },\n  \"memory_state_task\": {\n    \"m-rt-hard-000001-target\": \"current\",\n    \"m-rt-hard-000001-condition\": \"current\",\n    \"m-rt-hard-000001-distractor\": \"out_of_scope\"\n  },\n  \"evidence_retrieval_task\": [\n    \"e-rt-hard-000001-2\",\n    \"e-rt-hard-000001-3\"\n  ],\n  \"diagnostic_task\": {\n    \"failure_diagnosis\": \"scope_leakage\"\n  }\n}"
+}

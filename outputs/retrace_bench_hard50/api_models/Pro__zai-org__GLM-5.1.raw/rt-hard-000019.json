@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000019",
+  "model": "Pro/zai-org/GLM-5.1",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300018 uses default case route configuration with opt-in validation on stable v2.0.1.\",\n  \"memory_state\": {\n    \"m-rt-hard-000019-target\": \"outdated\",\n    \"m-rt-hard-000019-condition\": \"current\",\n    \"m-rt-hard-000019-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000019-1\",\n    \"e-rt-hard-000019-2\",\n    \"e-rt-hard-000019-3\"\n  ],\n  \"failure_diagnosis\": \"stale_memory_reuse\"\n}"
+}

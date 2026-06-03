@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000045",
+  "model": "Pro/moonshotai/Kimi-K2.6",
+  "raw_response": "{\"decision\":\"use_current_memory\",\"answer\":\"CASE-300044 remains on default claim record configuration (stable v1) with no authorized update applied; PR #501 is on hold and lacks verified release approval.\",\"memory_state\":{\"m-rt-hard-000045-target\":\"current\",\"m-rt-hard-000045-condition\":\"current\",\"m-rt-hard-000045-distractor\":\"out_of_scope\"},\"evidence_event_ids\":[\"e-rt-hard-000045-1\",\"e-rt-hard-000045-3\",\"e-rt-hard-000045-distractor-ver\",\"e-rt-hard-000045-distractor-auth\"],\"failure_diagnosis\":\"scope_leakage\"}"
+}

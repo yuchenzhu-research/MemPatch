@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000021",
+  "model": "Pro/zai-org/GLM-5.1",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300020 remains on the default claim record configuration on stable v1, as Python 3.11 commits are rejected for the main release branch.\",\n  \"memory_state\": {\n    \"m-rt-hard-000021-target\": \"current\",\n    \"m-rt-hard-000021-condition\": \"current\",\n    \"m-rt-hard-000021-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000021-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+}
