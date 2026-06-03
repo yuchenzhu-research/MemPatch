@@ -155,7 +155,7 @@ def actions_to_proposal_batches(
                 verifier=verifier,
                 replacement_belief_id=action.replacement_belief_id,
                 rationale=action.rationale or None,
-                metadata={"scope": action.scope} if action.scope else {},
+                metadata={},
             )
         )
     if not edges:

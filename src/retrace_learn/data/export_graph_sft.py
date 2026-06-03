@@ -1,4 +1,4 @@
-"""Export ``graph_extraction_sft.jsonl`` (Module 1 SFT data).
+"""Export ``graph_extraction_sft.jsonl`` (Stage 1 Graph Builder SFT data).
 
 raw multi-subagent dialogue -> structured memory graph. Each row is validated
 against :class:`retrace_learn.schemas.GraphExtractionExample` before writing.

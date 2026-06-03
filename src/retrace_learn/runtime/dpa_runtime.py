@@ -1,4 +1,6 @@
-"""Module 3: Parser + RevisionGate + DPA runtime.
+"""ReTrace-Engine commit path: Parser + RevisionGate + DPA runtime.
+
+(Implementation detail of stages 2-3, not a separate paper-level module.)
 
 This wraps the deterministic kernel (``retracemem.authorize``) with the
 ReTrace-Learn JSON parsing front-end. It is the program-only runtime that turns

@@ -1,4 +1,4 @@
-"""Module 1: Raw Dialogue Graph Extractor.
+"""Stage 1 Graph Builder: raw dialogue -> candidate memory graph.
 
 Turns multi-subagent dialogue into a structured memory graph:
 ``evidence_nodes``, ``belief_nodes``, ``condition_nodes``,

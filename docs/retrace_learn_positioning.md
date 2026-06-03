@@ -8,7 +8,7 @@ computed by a deterministic Defeat-Path Authorization kernel.
 
 ## What ReTrace-Learn Is About
 
-**Multi-agent / subagent shared-memory revision authorization.** Multiple subagents submit evidence-bearing memory updates to a shared long-term memory. The primary contribution is a trainable shared-memory framework (**ReTrace-Learn**) that learns to extract memory graphs and propose structured typed actions under the feedback of a deterministic verification backend (**ReTrace-Engine**).
+**Multi-agent / subagent shared-memory revision authorization.** Multiple subagents submit evidence-bearing memory updates to a shared long-term memory. The primary contribution is a trainable shared-memory framework (**ReTrace-Learn**) whose two learned stages — a **Graph Builder** (raw dialogue → candidate memory graph) and a **Proposal Policy** (candidate graph → typed revision proposal) — are trained under the feedback of a deterministic verification backend (**ReTrace-Engine**) via **DPA-guided RSFT/DPO**. DPA is a deterministic verifier and does not learn.
 
 The contribution is the **verifiable revision learning system** plus a fair method comparison (Prompt-Proposer vs. DirectJudge baseline vs. ReTrace-Learn) over identical contexts, with a deterministic authorization engine guaranteeing reproducible commits and training signals.
 
@@ -17,7 +17,7 @@ The contribution is the **verifiable revision learning system** plus a fair meth
 - The deterministic `authorize(...)` kernel inside ReTrace-Engine, DPA semantics, and precedence.
 - `RevisionGate` structural / local / auditable admission.
 - The minimal, expressive typed action vocabulary (`SUPERSEDES`, `BLOCKS`, `RELEASES`, `REAFFIRMS`, `UNCERTAIN`, `NO_REVISION`) and its distinction from DPA **final statuses** (`AUTHORIZED`, `BLOCKED`, `SUPERSEDED`, `UNRESOLVED`).
-- Evidence provenance / grounding requirements (such as the optional `scope` field).
+- Evidence provenance / grounding requirements: every action (including `NO_REVISION`) cites the visible new evidence that grounds it. The action object is closed-world — there is no open-ended `scope` field.
 - ReTrace-Learn SFT / RSFT / DPO proposal policy optimization, where the final authorization stays deterministic and API-free.
 
 ## Out Of Scope

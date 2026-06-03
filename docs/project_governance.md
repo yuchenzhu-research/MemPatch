@@ -38,21 +38,29 @@ not the benchmark. Pre-v1 supervision scaffolding was removed from the active tr
 
 ## Active track 2 — ReTrace-Learn (method track)
 
-Method paper / trainable method track. Owns the three-part method pipeline:
+Method paper / trainable method track. ReTrace-Learn v1 has **three
+paper-facing stages** (only the first two are learned):
 
 ```text
-Graph Extractor  ->  Typed Revision Proposer  ->  Authorization Court
-   (learned)              (learned)                 (deterministic)
+Graph Builder  ->  Proposal Policy  ->  DPA-guided RSFT / DPO
+  (learned)          (learned)            (training protocol)
 ```
 
-The **Authorization Court** is implemented by **ReTrace-Engine** via the single
-public entrypoint `authorize(...)`. The final memory commit is deterministic and
-API-free.
+1. **Graph Builder** — raw dialogue / memory snapshot -> candidate memory graph.
+2. **Proposal Policy** — candidate graph + new evidence -> typed revision proposal.
+3. **DPA-guided RSFT / DPO** — DPA verifies/filters/ranks proposals and creates
+   the RSFT/DPO training signals for the Proposal Policy. This is a training
+   *protocol*, not a trainable module; DPA itself does not learn.
+
+The deterministic commit path — **ReTrace-Engine** (Parser + RevisionGate + DPA
++ Audit Trace), reached via the single public entrypoint `authorize(...)` — is an
+*implementation detail* of stages 2–3, not a separate paper-level module. The
+final memory commit is deterministic and API-free.
 
 Canonical locations:
 
-- `src/retrace_learn/` — learned modules (data, runtime, training).
-- `src/retracemem/` — the deterministic Authorization Court (ReTrace-Engine):
+- `src/retrace_learn/` — learned stages (data, runtime, training).
+- `src/retracemem/` — the deterministic ReTrace-Engine:
   `authorize(...)`, RevisionGate, Defeat-Path Authorization (DPA), schemas.
 - method training/evaluation scripts (`scripts/evaluate.py`,
   `scripts/export_stagec_data.py`, etc.) and method docs
@@ -62,7 +70,7 @@ Canonical locations:
 ### ReTrace-Engine is a submodule, not a track
 
 - Use "ReTrace-Engine" **only** as the implementation name for the deterministic
-  Authorization Court inside ReTrace-Learn.
+  commit path inside ReTrace-Learn.
 - ReTrace-Engine is **not** a standalone paper, **not** a standalone top-level
   research track, and **not** a third big module.
 - `authorize(...)` is the sole public authorization entrypoint; neither DPA nor

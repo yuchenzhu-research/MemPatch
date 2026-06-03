@@ -21,9 +21,9 @@ Legacy planning documents and old raw source-material files are no longer active
 ReTrace is an umbrella project governed as **two active research tracks** (see `docs/project_governance.md`):
 
 1. **ReTrace-Bench** — benchmark track. Evaluation-only; owns benchmark data, schema, scoring, baselines, the four v1.0 evaluation splits (`main`/`hard`/`realistic`/`calibration`), and leakage checks. Locations: `benchmark/retrace_bench/`, `data/retrace_bench/`, `docs/retrace_bench/`, benchmark scripts/tests. Pre-v1 supervision pools have been removed from the active tree due to leakage issues (recoverable from Git history). Clean ReTrace-Learn training/validation datasets live under `data/retrace_learn/v1_0/`.
-2. **ReTrace-Learn** — method track. Owns the pipeline Graph Extractor -> Typed Revision Proposer -> Authorization Court. Locations: `src/retrace_learn/`, `src/retracemem/`, method scripts/docs.
+2. **ReTrace-Learn** — method track. ReTrace-Learn v1 has three paper-facing stages: **Graph Builder** -> **Proposal Policy** -> **DPA-guided RSFT/DPO** (only the first two are learned; stage 3 is a training protocol). Locations: `src/retrace_learn/`, `src/retracemem/`, method scripts/docs.
 
-**ReTrace-Engine** is the implementation name for the deterministic Authorization Court **inside ReTrace-Learn** — it is not a standalone paper, a standalone top-level track, or a third module.
+**ReTrace-Engine** (Parser + RevisionGate + DPA + Audit Trace, reached via `authorize(...)`) is the implementation name for the deterministic commit path **inside ReTrace-Learn** — it is an implementation detail of stages 2–3, not a standalone paper, a standalone top-level track, or a third paper-level module. DPA is a deterministic verifier and does not learn.
 
 Out of active scope (backlog only, do not add code/active docs): ReTrace-SkillOpt / frozen-agent skill optimization, `memory_policy.md` optimization, Microsoft SkillOpt integration.
 
@@ -41,7 +41,7 @@ Multiple subagents may submit evidence-bearing memory updates to a shared long-t
 Stage naming and configuration hierarchy:
 - Prompt-Proposer / Stage A = `ReTrace-Prompt` (API baseline model proposes typed revision actions over a fixed candidate view, then routes through ReTrace-Engine).
 - DirectJudge / Stage B = `DirectJudge-API` (API baseline model directly predicts final belief usability status, completely bypassing the ReTrace-Engine).
-- ReTrace-Learn = `ReTrace-Learn` (the main trainable system: consumes raw dialogues/submissions -> extracts graph nodes/dependencies via a learned Graph Extractor -> proposes typed actions via a learned Typed Revision Proposer -> commits through deterministic ReTrace-Engine).
+- ReTrace-Learn = `ReTrace-Learn` (the main trainable system: consumes raw dialogues/submissions -> builds candidate graph nodes/dependencies via the learned **Graph Builder** -> proposes typed actions via the learned **Proposal Policy** -> commits through the deterministic ReTrace-Engine, with **DPA-guided RSFT/DPO** supplying the training signal for the Proposal Policy).
 
 Public API Boundaries:
 - `authorize(...)` is the public deterministic authorization kernel inside ReTrace-Engine. Neither Defeat-Path Authorization (DPA) nor RevisionGate should be invoked directly by external callers. All updates/admissions and deterministic routing happen entirely inside `authorize`.

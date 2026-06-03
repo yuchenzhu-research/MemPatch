@@ -53,13 +53,18 @@ def test_uncertain_reaffirms_target_belief_only():
             RevisionAction(action_type=at, target_condition_id="c1", evidence_ids=("e1",)).validate()
 
 
-def test_no_revision_forbids_targets_and_needs_no_evidence():
-    RevisionAction(action_type="NO_REVISION").validate()
+def test_no_revision_requires_evidence_and_forbids_targets():
+    # NO_REVISION is evidence-grounded too: it must cite the new evidence.
+    RevisionAction(action_type="NO_REVISION", evidence_ids=("e1",)).validate()
     with pytest.raises(SchemaValidationError):
-        RevisionAction(action_type="NO_REVISION", target_belief_id="b1").validate()
+        RevisionAction(action_type="NO_REVISION").validate()
+    with pytest.raises(SchemaValidationError):
+        RevisionAction(
+            action_type="NO_REVISION", target_belief_id="b1", evidence_ids=("e1",)
+        ).validate()
 
 
-def test_non_no_revision_requires_evidence():
+def test_every_action_requires_evidence():
     with pytest.raises(SchemaValidationError):
         RevisionAction(action_type="REAFFIRMS", target_belief_id="b1").validate()
 
@@ -69,30 +74,15 @@ def test_unknown_action_rejected():
         RevisionAction(action_type="DELETE", target_belief_id="b1", evidence_ids=("e1",)).validate()
 
 
-def test_scope_validation():
-    # scope can be missing/None
+def test_action_object_is_closed_world():
+    # The v1 action object has no open-ended ``scope`` field.
     a = RevisionAction(action_type="REAFFIRMS", target_belief_id="b1", evidence_ids=("e1",))
     a.validate()
-    assert a.scope is None
-
-    # scope can be a string
-    a_str = RevisionAction(
-        action_type="REAFFIRMS", target_belief_id="b1", evidence_ids=("e1",), scope="partial"
-    )
-    a_str.validate()
-    assert a_str.scope == "partial"
-    assert a_str.to_dict()["scope"] == "partial"
-
-    # scope must be a string if provided
-    with pytest.raises(SchemaValidationError):
-        RevisionAction(
-            action_type="REAFFIRMS", target_belief_id="b1", evidence_ids=("e1",), scope=123  # type: ignore
-        ).validate()
-
-    # round-trip check
-    d = a_str.to_dict()
-    roundtripped = RevisionAction.from_dict(d)
-    assert roundtripped.scope == "partial"
+    assert "scope" not in a.to_dict()
+    # round-trip preserves the closed-world shape and ignores stray keys.
+    roundtripped = RevisionAction.from_dict({**a.to_dict(), "scope": "ignored"})
+    assert not hasattr(roundtripped, "scope")
+    assert roundtripped.to_dict() == a.to_dict()
 
 
 def test_synthetic_examples_validate_and_roundtrip():

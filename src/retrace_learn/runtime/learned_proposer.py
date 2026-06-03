@@ -1,4 +1,4 @@
-"""Module 2: Typed Revision Proposer.
+"""Stage 2 Proposal Policy: candidate graph + new evidence -> typed proposal.
 
 Given a current memory graph + new evidence + candidate beliefs / replacements /
 condition anchors, propose typed revision actions from the canonical vocabulary.

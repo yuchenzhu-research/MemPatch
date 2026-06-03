@@ -1,4 +1,7 @@
-"""Section E ablation: defeat-path ranker variants vs DPA replay.
+"""Future/optional ablation: defeat-path ranker variants vs DPA replay.
+
+(The defeat-path ranker is not part of the v1 three-stage method; it is a safe,
+advisory future extension.)
 
 Confirms the safety properties of the learned path ranker:
 
