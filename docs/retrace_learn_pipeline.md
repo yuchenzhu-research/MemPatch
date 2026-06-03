@@ -2,19 +2,27 @@
 
 ReTrace-Learn turns multi-agent/subagent shared-memory revision authorization into a verifiable learning problem.
 
+ReTrace-Learn v1 has **three paper-facing stages**:
+
+1. **Graph Builder** — raw dialogue / memory snapshot → candidate memory graph (learned).
+2. **Proposal Policy** — candidate graph + new evidence → typed revision proposal (learned).
+3. **DPA-guided RSFT / DPO** — DPA verifies/filters/ranks proposals and creates RSFT/DPO training signals (a training *protocol*; DPA does not learn).
+
+The deterministic commit path below (**ReTrace-Engine** = Parser + RevisionGate + DPA + Audit Trace) is an *implementation detail* of stages 2–3, not a separate paper-level module.
+
 ## Component Terminology Map
 
-| Informal Chinese Name | Formal Name | Target Module Location |
+| Stage / role | Formal Name | Target Module Location |
 | --- | --- | --- |
-| 碎片成图器 | **Graph Extractor** | `src/retrace_learn/runtime/graph_extractor.py` |
-| 法案修订器 | **Typed Revision Proposer** | `src/retrace_learn/runtime/learned_proposer.py` |
-| 授权法庭 / 法庭判断 | **ReTrace-Engine** | `src/retracemem/authorization.py` |
+| Stage 1 (learned) | **Graph Builder** | `src/retrace_learn/runtime/graph_extractor.py` |
+| Stage 2 (learned) | **Proposal Policy** | `src/retrace_learn/runtime/learned_proposer.py` |
+| Deterministic commit path (impl detail) | **ReTrace-Engine** | `src/retracemem/authorization.py` |
 
 ---
 
-## 1. Graph Extractor (碎片成图器)
+## 1. Graph Builder
 
-The Graph Extractor processes raw text dialogue logs and updates to yield a structured candidate topology.
+The Graph Builder processes raw text dialogue logs and updates to yield a structured candidate topology.
 
 - **Interface Definition**:
   ```python
@@ -36,19 +44,19 @@ The Graph Extractor processes raw text dialogue logs and updates to yield a stru
   - `metadata`: Optional extra tracking parameters.
 - **Expected Output**:
   - A structured graph dictionary mapping:
-    - `evidence_nodes`: list of unique evidence logs.
-    - `belief_nodes`: list of claimed belief propositions.
-    - `condition_nodes`: list of prerequisite conditions.
-    - `candidate_replacement_beliefs`: list of beliefs flagged for potential supersedes.
-    - `dependency_edges`: REQUIRES edges linking beliefs to conditions.
+    - `evidence_nodes`: unique evidence logs (keyed by `evidence_id`).
+    - `belief_nodes`: existing memory beliefs / old candidates that can be *targeted* (keyed by `belief_id`).
+    - `condition_nodes`: prerequisite conditions / constraints (keyed by `condition_id`) — not replacement beliefs.
+    - `candidate_replacement_beliefs`: *new* belief-like candidates selectable as `replacement_belief_id` in `SUPERSEDES` (keyed by `belief_id`, never `replacement_id`). Shares a belief-like schema with `belief_nodes` but is a **separate** list and must not be merged.
+    - `dependency_edges`: REQUIRES edges linking beliefs to conditions, keyed by `belief_id` + `condition_id` (never `source_id` / `target_id`).
 - **Rules**:
-  - The Extractor must **never** compute or output belief final statuses (`AUTHORIZED`, `SUPERSEDED`, `BLOCKED`, `UNRESOLVED`).
+  - The Graph Builder must **never** compute or output belief final statuses (`AUTHORIZED`, `SUPERSEDED`, `BLOCKED`, `UNRESOLVED`).
 
 ---
 
-## 2. Typed Revision Proposer (法案修订器)
+## 2. Proposal Policy
 
-The Proposer generates revision proposals (proposed changes) over the extracted graph topology.
+The Proposal Policy generates revision proposals (proposed changes) over the extracted graph topology.
 
 - **Interface Definition**:
   ```python
@@ -72,18 +80,19 @@ The Proposer generates revision proposals (proposed changes) over the extracted 
     - `UNCERTAIN`
     - `REAFFIRMS`
     - `NO_REVISION`
+  - Each proposed action is closed-world (canonical `action_type`; ids drawn from the candidate graph / visible evidence; no open `scope` field) and **every** action, including `NO_REVISION`, must cite the visible new evidence that grounds it.
 - **Rules**:
-  - The Proposer has **no authority** to change memory directly or directly predict final statuses. It only emits action proposals.
+  - The Proposal Policy has **no authority** to change memory directly or directly predict final statuses. It only emits action proposals.
 
 ---
 
-## 3. ReTrace-Engine (授权法庭 / 法庭判断)
+## 3. ReTrace-Engine (deterministic commit path — implementation detail)
 
-The Engine executes deterministic, DPA-filtered updates. It is the single source of truth for final memory statuses.
+The Engine executes deterministic, DPA-filtered updates. It is the single source of truth for final memory statuses, and is an implementation detail of stages 2–3 rather than a separate paper-level module.
 
 - **Implementation**:
   - **Parser**: Converts inputs into TMS graph representations.
-  - **RevisionGate**: Evaluates proposals against structural constraints (e.g. scope check, verifier credentials). Admitted edges mutate the TMS; rejected ones are safely dropped.
+  - **RevisionGate**: Evaluates proposals against structural constraints (e.g. well-formedness, grounding, verifier credentials). Admitted edges mutate the TMS; rejected ones are safely dropped.
   - **Defeat-Path Authorization (DPA)**: Resolves the active status ($\sigma_t(b)$) for each belief $b$ using canonical precedence:
     $$\text{SUPERSEDES} > \text{PREREQUISITE\_BLOCK} > \text{UNRESOLVED\_UNCERTAIN} > \text{AUTHORIZED}$$
 

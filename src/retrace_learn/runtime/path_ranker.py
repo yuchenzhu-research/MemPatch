@@ -1,4 +1,6 @@
-"""Section E: Learned defeat-path ranker (safe, auditable).
+"""Future/optional: Learned defeat-path ranker (safe, auditable).
+
+Not part of the v1 three-stage method; advisory, never on the commit path.
 
 This does **not** replace DPA and the LLM never emits a final status directly.
 Instead the ranker scores *DPA-legal* candidate defeat paths and selects one.

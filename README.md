@@ -80,15 +80,15 @@ authorize(view, proposal_batches, *, audit_metadata=None) -> AuthorizationResult
 
 ## Action Vocabulary vs. Final DPA Status
 
-A proposer emits **typed revision actions** over candidate structures using a minimal, expressive action set. Each action can optionally carry a `"scope"` field (e.g., `"full"` or `"partial"`):
+A proposer emits **typed revision actions** over candidate structures using a minimal, expressive action set. The action object is **closed-world** — `action_type` from the canonical enum and every id slot drawn from the candidate graph / visible evidence, with no open-ended `scope` field. Every action (including `NO_REVISION`) must cite at least one grounding `evidence_id`:
 
 ```json
 {
   "action_type": "SUPERSEDES",
   "target_belief_id": "...",
+  "target_condition_id": null,
   "replacement_belief_id": "...",
   "evidence_ids": ["..."],
-  "scope": "full_or_partial_optional",
   "rationale": "short optional explanation"
 }
 ```
@@ -100,7 +100,7 @@ A proposer emits **typed revision actions** over candidate structures using a mi
 | `RELEASES` | New evidence releases a blocked condition (requires `target_condition_id`) |
 | `REAFFIRMS` | New evidence reaffirms a belief (requires `target_belief_id`) |
 | `UNCERTAIN` | New evidence introduces unresolved uncertainty (requires `target_belief_id`) |
-| `NO_REVISION` | No revision proposed |
+| `NO_REVISION` | After inspecting the new evidence, no revision is made (no target ids; still cites the grounding `evidence_id`) |
 
 The **ReTrace-Engine** then resolves the graph and assigns each belief a deterministic **final status**:
 

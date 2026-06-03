@@ -1,4 +1,4 @@
-"""Export ``typed_revision_sft.jsonl`` (Module 2 SFT data).
+"""Export ``typed_revision_sft.jsonl`` (Stage 2 Proposal Policy SFT data).
 
 memory graph + new evidence -> gold typed revision actions. Gold final statuses
 are computed by the deterministic DPA runtime (not hand-written), and each row is

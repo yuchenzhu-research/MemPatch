@@ -1,4 +1,4 @@
-"""Module 4: DPA-in-the-loop training reward.
+"""Stage 3 DPA-guided training signal: the DPA-in-the-loop reward.
 
 Computes a decomposed reward for a (sampled actions -> parser -> RevisionGate ->
 DPA) rollout, scored against gold final statuses and (optionally) gold actions.

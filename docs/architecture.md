@@ -4,19 +4,21 @@ This document describes the internal architecture of the **ReTrace-Learn** metho
 track. (For the umbrella project's two-track structure see
 [`project_governance.md`](project_governance.md).)
 
-Within ReTrace-Learn, a **trainable proposal system** (Graph Extractor + Typed
-Revision Proposer) is separated from the **deterministic Authorization Court**,
-implemented by **ReTrace-Engine**. ReTrace-Engine is a submodule of ReTrace-Learn,
-not a standalone track: it never calls an LLM API and is fully deterministic;
-everything model- or benchmark-specific lives outside it.
+Within ReTrace-Learn, the **two learned stages** (Graph Builder + Proposal
+Policy) are separated from the **deterministic commit path**, implemented by
+**ReTrace-Engine**. ReTrace-Engine is an *implementation detail* of ReTrace-Learn
+(not a standalone track or paper-level module): it never calls an LLM API and is
+fully deterministic; everything model- or benchmark-specific lives outside it.
+DPA-guided RSFT/DPO is the training *protocol* layered on top — DPA itself does
+not learn.
 
 ## Layers
 
 ```text
-ReTrace-Learn (Graph Extractor + Typed Revision Proposer) ── learned modules
-        │  proposes typed revision actions (with optional scope)
+ReTrace-Learn (Graph Builder + Proposal Policy) ── learned stages
+        │  proposes closed-world typed revision actions
         ▼
-ReTrace-Engine Backend (deterministic authorization)
+ReTrace-Engine Backend (deterministic authorization — implementation detail)
     ├── Parser + RevisionGate  ── structural, local, auditable admission of proposed edges
     ├── authorize(view, proposal_batches, …)  ── the single public kernel (runs DPA)
     └── Defeat-Path Authorization (DPA)  ── computes final statuses
@@ -34,7 +36,7 @@ SharedMemoryCommitResult  ── authorized snapshot + audit trace
 
 - `typed_revision_policy.py` — `PromptTypedRevisionPolicy` and the `ClosedAPIZeroShot*` proposers used by **Prompt-Proposer (Stage A)**. Builds prompts from method-visible candidate structure only.
 - `replay.py` — the replay path: parses decoded generations into typed actions, with optional constrained post-validation.
-- `src/retrace_learn/` — trainable Graph Extractor and Typed Revision Proposer policies, rollouts, SFT datasets, DPA-in-the-loop reward signal, and RL loops (DPO, GRPO).
+- `src/retrace_learn/` — the learned Graph Builder and Proposal Policy stages, rollouts, SFT datasets, and the DPA-guided RSFT/DPO training signal (online GRPO is a future/optional extension).
 
 ### Shared evaluation engine (`src/retracemem/evaluation/multiagent/`)
 

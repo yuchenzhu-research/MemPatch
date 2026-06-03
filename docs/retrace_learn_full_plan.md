@@ -13,7 +13,7 @@ ReTrace-Learn upgrades the shared-memory revision authorization process by remov
 | 1. Raw Dialogues / Subagent Submissions (Text)                           |
 |    |                                                                     |
 |    v                                                                     |
-| 2. Learned Graph Extractor (Module 1, SFT)                               |
+| 2. Graph Builder (Stage 1, learned: SFT)                                 |
 |    |                                                                     |
 |    +--> Extracted Candidate Memory Graph (Dict)                          |
 |         - evidence_nodes, belief_nodes, condition_nodes,                 |
@@ -24,12 +24,12 @@ ReTrace-Learn upgrades the shared-memory revision authorization process by remov
 |    |                                                                     |
 |    +--> SharedCandidateView (Dataclass)                                  |
 |                                                                          |
-| 4. Learned Typed Revision Proposer (Module 2, SFT / RL)                  |
+| 4. Proposal Policy (Stage 2, learned: SFT / DPA-guided RSFT/DPO)         |
 |    |                                                                     |
 |    +--> Proposed Revision Actions (SUPERSEDES, BLOCKS, etc.)             |
 |    |                                                                     |
 |    v                                                                     |
-| 5. ReTrace-Engine Backend (deterministic runtime)                         |
+| 5. ReTrace-Engine commit path (deterministic; impl detail of stages 2-3)  |
 |    - Parser                                                              |
 |    - RevisionGate (Structural Admission)                                 |
 |    - Defeat-Path Authorization (DPA)                                     |

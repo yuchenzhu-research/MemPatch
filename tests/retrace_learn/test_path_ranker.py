@@ -1,4 +1,4 @@
-"""Learned defeat-path ranker safety tests (Section E)."""
+"""Learned defeat-path ranker safety tests (future/optional extension)."""
 from __future__ import annotations
 
 from retrace_learn.data.build_synthetic_raw_dialogue import build_synthetic_episodes, get_smoke_episode

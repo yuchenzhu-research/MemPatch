@@ -4,22 +4,23 @@ Engineering scaffolding that upgrades ReTrace from a prompt-engineered baseline 
 
 ---
 
-## 1. ReTrace-Learn Overall Goal
+## 1. ReTrace-Learn v1: three paper-facing stages
 
-Train small (2B/4B) models to perform the two *learnable* steps of the pipeline,
-while all authorization stays deterministic and auditable:
+ReTrace-Learn v1 has exactly **three** paper-facing stages. Only the first two
+are learned; the third is a training protocol, not a trainable module:
 
 ```
-raw dialogue / subagent submissions
-  → [L] Graph Extractor            (Module 1, learned)
-  → belief / evidence / condition / replacement candidates
-  → [L] Typed Revision Proposer    (Module 2, learned)
-  → ReTrace-Engine                 (Module 3, deterministic kernel)
-    → Parser + RevisionGate + Defeat-Path Authorization (DPA)
-  → DPA-in-the-loop reward         (Module 4, training signal)
-  → [L optional] defeat-path ranker (Section E, safe/advisory)
-  → auditable final belief statuses
+1. Graph Builder      raw dialogue / memory snapshot -> candidate memory graph   (learned)
+2. Proposal Policy    candidate graph + new evidence -> typed revision proposal   (learned)
+3. DPA-guided RSFT/DPO  DPA verifies/filters/ranks proposals -> RSFT/DPO signals  (protocol)
 ```
+
+The deterministic commit path — **ReTrace-Engine** (`authorize(...)`), its
+**Parser**, **RevisionGate**, **DPA**, and the **Audit Trace** — is an
+*implementation detail* of stages 2–3, **not** a separate paper-level module.
+DPA is a deterministic verifier / feedback source: it does **not** learn. The
+learned components are the Graph Builder and the Proposal Policy; DPA-guided
+RSFT/DPO trains the Proposal Policy.
 
 Hard constraints (enforced in code/tests):
 - Canonical action vocabulary only: `SUPERSEDES, BLOCKS, RELEASES, UNCERTAIN, REAFFIRMS, NO_REVISION`.
@@ -28,15 +29,22 @@ Hard constraints (enforced in code/tests):
   candidate beliefs/replacements, conditions, pre-existing REQUIRES anchors). It never
   sees gold revision targets or evaluator final statuses.
 
-## 2. Module map
+The first realistic experiment can fix/oracle the candidate graph and train only
+the Proposal Policy.
 
-| Module | File | Learned? | In → Out |
-|--------|------|----------|----------|
-| 1. Graph extractor | `runtime/graph_extractor.py` | yes (`LearnedGraphExtractor`) / oracle (`RuleBasedGraphExtractor`) | raw_dialogue, roles → memory graph dict |
-| 2. Typed revision proposer | `runtime/learned_proposer.py` | yes (`LearnedTypedRevisionProposer`) / replay (`ScriptedProposer`) | `SharedCandidateView` → `ProposalOutput` (typed actions) |
-| 3. Parser + Gate + DPA runtime | `runtime/dpa_runtime.py` | no (kernel) | raw text / actions → `RuntimeResult` (final statuses + audit) |
-| 4. DPA-in-the-loop reward | `runtime/reward.py` | no (signal) | actions + parser + DPA + gold → `LearnRewardBreakdown` |
-| E. Defeat-path ranker | `runtime/path_ranker.py` | yes (`LearnedPathRanker`) / baseline (`HeuristicPathRanker`) | legal candidate paths → selected path (replayable status) |
+## 2. Implementation map
+
+The table below lists the *files* that implement the three stages plus the
+deterministic commit path. "Stage" maps each file to its paper-facing stage;
+rows marked *impl detail* / *future* are not separate paper modules.
+
+| File | Stage | Learned? | In → Out |
+|------|-------|----------|----------|
+| `runtime/graph_extractor.py` | 1 Graph Builder | yes (`LearnedGraphExtractor`) / oracle (`RuleBasedGraphExtractor`) | raw_dialogue, roles → memory graph dict |
+| `runtime/learned_proposer.py` | 2 Proposal Policy | yes (`LearnedTypedRevisionProposer`) / replay (`ScriptedProposer`) | `SharedCandidateView` → `ProposalOutput` (typed actions) |
+| `runtime/dpa_runtime.py` | impl detail (ReTrace-Engine) | no (kernel) | raw text / actions → `RuntimeResult` (final statuses + audit) |
+| `runtime/reward.py` | 3 DPA-guided signal | no (signal) | actions + parser + DPA + gold → `LearnRewardBreakdown` |
+| `runtime/path_ranker.py` | future/optional | yes (`LearnedPathRanker`) / baseline (`HeuristicPathRanker`) | legal candidate paths → selected path (replayable status) |
 
 Bridge: `runtime/views.py` converts graph/candidate dicts into the kernel's
 `SharedCandidateView` and converts `RevisionAction`s into the kernel's
@@ -61,8 +69,23 @@ dependency_edges_by_belief, gold_actions, gold_final_statuses, metadata`.
 dpa_final_statuses, gold_final_statuses, reward_breakdown, total_reward,
 failure_category, audit_trace, metadata`.
 
+The candidate graph keeps `belief_nodes` (existing memory beliefs / old
+candidates that can be *targeted*) and `candidate_replacement_beliefs` (new
+belief-like candidates selectable as `replacement_belief_id` in `SUPERSEDES`) as
+**separate** lists — they share a belief-like schema but must not be merged.
+`condition_nodes` are prerequisites/constraints (not replacement beliefs).
+`dependency_edges` use `belief_id` + `condition_id` (edge_type `REQUIRES`), never
+`source_id`/`target_id`; replacement candidates are keyed by `belief_id`, never
+`replacement_id`.
+
+The v1 action object is **closed-world** (no open `scope` field):
+`action_type` from the canonical enum, `target_belief_id` from candidate beliefs,
+`replacement_belief_id` from candidate replacement beliefs, `target_condition_id`
+from candidate conditions, `evidence_ids` from visible evidence.
+
 `RevisionAction` field constraints (`RevisionAction.validate`):
-- every non-`NO_REVISION` action carries ≥1 `evidence_id`;
+- **every** action carries ≥1 grounding `evidence_id`, **including `NO_REVISION`**
+  (which must cite the new evidence; this matches the runtime parser);
 - `SUPERSEDES` → `target_belief_id` + `replacement_belief_id` (no condition; replacement ≠ target);
 - `BLOCKS`/`RELEASES` → `target_condition_id` only;
 - `UNCERTAIN`/`REAFFIRMS` → `target_belief_id` only;
@@ -87,6 +110,15 @@ T1/T2 are evaluated by `eval/eval_graph_extraction.py`; T3 by
 `eval/eval_dpa_reward.py`. The synthetic episodes in
 `data/build_synthetic_raw_dialogue.py` provide one worked example per task and
 score 1.0 under the oracle extractor/proposer (harness sanity check).
+
+**Generator boundary.** `data/build_synthetic_raw_dialogue.py` is a
+*smoke/sanity* generator (all six actions, DPA-computed gold statuses) — it is
+**not** the large-scale ReTrace-Learn training generator, and its examples are
+not the final method training corpus. Future Learn training data (graph SFT,
+proposal SFT, DPA RSFT/DPO preference rows) should live under
+`data/retrace_learn/v1_0/`; that large generator is not implemented in v1.
+ReTrace-Bench splits under `data/retrace_bench/` are **evaluation-only** and must
+never be used as ReTrace-Learn training data.
 
 ## 5. SFT training plan
 
@@ -124,11 +156,16 @@ Each term is computed from parser/gate/DPA outputs vs gold:
 `final_status_*` from `dpa_final_statuses` vs `gold_final_statuses`; grounding from
 candidate id sets in the view; over/under/stale from gold-vs-pred status deltas;
 `spurious_uncertain` from `gold_actions`. `classify_failure` picks the dominant
-failure for curriculum/analysis. Used online by GRPO
-(`training/train_grpo.py::score_completion`) and offline to build DPO preference
-pairs (`data/export_rl_rollouts.py::build_preference_pairs`).
+failure for curriculum/analysis. This reward is the **DPA-guided training
+signal** for stage 3: consumed offline to build DPO/RSFT preference pairs
+(`data/export_rl_rollouts.py::build_preference_pairs`). An online GRPO path
+(`training/train_grpo.py::score_completion`) is a future/optional extension.
 
-## 7. Learned defeat-path ranker (Section E)
+## 7. Learned defeat-path ranker (future/optional)
+
+> Not part of the v1 three-stage method. `path_ranker.py` is a safe, advisory
+> future extension kept for experiments; it is never on the deterministic commit
+> path and emits no final status. Treat it as optional.
 
 `path_ranker.py` ranks **DPA-legal** candidate paths
 (`DIRECT_SUPERSEDE, PREREQUISITE_BLOCK, UNRESOLVED_UNCERTAIN, AUTHORIZED_DEFAULT`)
@@ -152,11 +189,11 @@ src/retrace_learn/
   schemas.py                 # data contracts + RevisionAction validation
   runtime/
     views.py                 # dict ↔ SharedCandidateView / EvidenceProposalBatch bridge
-    graph_extractor.py       # Module 1 (rule-based oracle + learned wrapper)
-    learned_proposer.py      # Module 2 (learned proposer + scripted replay)
-    dpa_runtime.py           # Module 3 (parser + gate + authorize() wrapper)
-    reward.py                # Module 4 (DPA-in-the-loop reward)
-    path_ranker.py           # Section E (safe defeat-path ranker)
+    graph_extractor.py       # Stage 1 Graph Builder (rule-based oracle + learned wrapper)
+    learned_proposer.py      # Stage 2 Proposal Policy (learned proposer + scripted replay)
+    dpa_runtime.py           # impl detail: ReTrace-Engine (parser + gate + authorize() wrapper)
+    reward.py                # Stage 3 DPA-guided training signal
+    path_ranker.py           # future/optional: safe defeat-path ranker
   data/
     build_synthetic_raw_dialogue.py  # synthetic episodes (all 6 actions)
     jsonl_io.py
@@ -171,9 +208,10 @@ tests/retrace_learn/
     test_schema_validation.py / test_reward.py / test_path_ranker.py / test_end_to_end_smoke.py
 ```
 
-Implemented now: schemas, all four runtime modules, the bridge, synthetic data,
+Implemented now: schemas, the runtime modules, the bridge, synthetic smoke data,
 three exporters, four eval scripts, dataset-building halves of all trainers, tests.
-Stubbed (lazy, GPU-gated): the actual `train()` loops in the three trainers.
+Stubbed (lazy, GPU-gated): the actual `train()` loops in the trainers. The path
+ranker and online GRPO trainer are future/optional, not part of the v1 method.
 
 ## 9. Minimal smoke test (`tests/retrace_learn/test_end_to_end_smoke.py`)
 

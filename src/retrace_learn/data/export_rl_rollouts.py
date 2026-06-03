@@ -1,4 +1,4 @@
-"""Export ``dpa_rl_rollouts.jsonl`` (Module 4 RL / DPO / GRPO data).
+"""Export ``dpa_rl_rollouts.jsonl`` (Stage 3 DPA-guided RSFT / DPO data).
 
 For each episode we sample several candidate completions (the gold oracle plus
 controlled perturbations), run each through parser + RevisionGate + DPA, and

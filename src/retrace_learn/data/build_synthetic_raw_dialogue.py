@@ -1,4 +1,10 @@
-"""Build synthetic raw multi-subagent dialogues + gold labels for ReTrace-Learn.
+"""Smoke/sanity synthetic dialogues + gold labels for ReTrace-Learn.
+
+This is a **smoke/sanity generator only** \u2014 NOT the large-scale ReTrace-Learn
+training generator. It exists to exercise the full pipeline (Graph Builder ->
+Proposal Policy -> DPA commit) end to end and to give the schema/reward tests one
+worked example per canonical action. The future large-scale training corpus is
+out of scope here and should be generated under ``data/retrace_learn/v1_0/``.
 
 Each :class:`SyntheticEpisode` carries a hand-authored dialogue (written in the
 ReTrace-Learn markup so the rule-based extractor recovers the graph exactly), the

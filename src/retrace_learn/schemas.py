@@ -58,11 +58,17 @@ class RevisionAction:
     Field-level constraints (enforced by :meth:`validate`):
 
     * ``action_type`` in :data:`CANONICAL_ACTIONS`;
-    * every non-``NO_REVISION`` action carries at least one ``evidence_id``;
+    * every action carries at least one grounding ``evidence_id``
+      (including ``NO_REVISION``);
     * ``SUPERSEDES`` -> ``target_belief_id`` + ``replacement_belief_id``;
     * ``BLOCKS`` / ``RELEASES`` -> ``target_condition_id`` only;
     * ``UNCERTAIN`` / ``REAFFIRMS`` -> ``target_belief_id`` only;
     * ``NO_REVISION`` -> no belief/condition/replacement target.
+
+    The v1 action object is closed-world: ``action_type`` from the canonical
+    enum and every id slot drawn from the candidate graph / visible evidence.
+    There is no open-ended ``scope`` field (the runtime parser and
+    ``TypedRevisionTarget`` do not model one).
     """
 
     action_type: str
@@ -70,7 +76,6 @@ class RevisionAction:
     target_condition_id: str | None = None
     replacement_belief_id: str | None = None
     evidence_ids: tuple[str, ...] = ()
-    scope: str | None = None
     rationale: str = ""
 
     def to_dict(self) -> dict[str, Any]:
@@ -80,7 +85,6 @@ class RevisionAction:
             "target_condition_id": self.target_condition_id,
             "replacement_belief_id": self.replacement_belief_id,
             "evidence_ids": list(self.evidence_ids),
-            "scope": self.scope,
             "rationale": self.rationale,
         }
 
@@ -94,17 +98,22 @@ class RevisionAction:
             target_condition_id=d.get("target_condition_id"),
             replacement_belief_id=d.get("replacement_belief_id"),
             evidence_ids=tuple(d.get("evidence_ids", ()) or ()),
-            scope=d.get("scope"),
             rationale=d.get("rationale", "") or "",
         )
 
     def validate(self) -> None:
-        if self.scope is not None and not isinstance(self.scope, str):
-            raise SchemaValidationError("scope must be a string or null")
-
         if self.action_type not in CANONICAL_ACTIONS:
             raise SchemaValidationError(
                 f"action_type '{self.action_type}' not in canonical vocabulary"
+            )
+
+        # Every action carries grounding evidence -- including NO_REVISION,
+        # which means "after inspecting this new evidence, make no revision."
+        # This matches the runtime parser, which requires every action to cite
+        # the new evidence id.
+        if not self.evidence_ids:
+            raise SchemaValidationError(
+                f"{self.action_type} requires at least one evidence_id"
             )
 
         if self.action_type == "NO_REVISION":
@@ -113,12 +122,6 @@ class RevisionAction:
                     "NO_REVISION must not carry target belief/condition/replacement"
                 )
             return
-
-        # Every non-NO_REVISION action must cite grounding evidence.
-        if not self.evidence_ids:
-            raise SchemaValidationError(
-                f"{self.action_type} requires at least one evidence_id"
-            )
 
         if self.action_type == "SUPERSEDES":
             if not self.target_belief_id:
@@ -158,7 +161,7 @@ def validate_actions(actions: list[RevisionAction]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Memory graph (output of Module 1 / input of Module 2)
+# Memory graph (output of Graph Builder / input of Proposal Policy)
 # ---------------------------------------------------------------------------
 
 _GRAPH_KEYS = (
@@ -208,9 +211,9 @@ def validate_memory_graph(graph: dict[str, Any]) -> None:
 
 @dataclass(frozen=True)
 class GraphExtractionExample:
-    """Row of ``graph_extraction_sft.jsonl`` (Module 1 SFT).
+    """Row of ``graph_extraction_sft.jsonl`` (Graph Builder SFT).
 
-    raw multi-subagent dialogue -> structured memory graph.
+    raw multi-subagent dialogue -> structured candidate memory graph.
     """
 
     example_id: str
@@ -248,9 +251,9 @@ class GraphExtractionExample:
 
 @dataclass(frozen=True)
 class TypedRevisionExample:
-    """Row of ``typed_revision_sft.jsonl`` (Module 2 SFT).
+    """Row of ``typed_revision_sft.jsonl`` (Proposal Policy SFT).
 
-    memory graph + new evidence -> gold typed revision actions.
+    candidate memory graph + new evidence -> gold typed revision actions.
     """
 
     example_id: str
@@ -336,9 +339,11 @@ class TypedRevisionExample:
 
 @dataclass(frozen=True)
 class RLRolloutExample:
-    """Row of ``dpa_rl_rollouts.jsonl`` (Module 4 RL / DPO / GRPO).
+    """Row of ``dpa_rl_rollouts.jsonl`` (DPA-guided RSFT / DPO).
 
-    A single sampled rollout scored through parser + RevisionGate + DPA.
+    A single sampled Proposal Policy rollout scored through
+    parser + RevisionGate + DPA. The DPA verdict supplies the preference /
+    reward signal; DPA itself does not learn.
     """
 
     example_id: str

@@ -1,4 +1,7 @@
-"""GRPO with the DPA-in-the-loop reward (Stage RL-3, online RL variant).
+"""GRPO with the DPA-in-the-loop reward (online RL variant; future/optional).
+
+Not part of the v1 three-stage method. v1 stage 3 is DPA-guided RSFT/DPO built
+offline from exported rollouts; this online GRPO loop is a future extension.
 
 GRPO samples multiple completions per prompt and ranks them by a reward function.
 Here the reward function *is* the deterministic pipeline: each sampled completion
