@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000097",
+  "model": "deepseek-ai/DeepSeek-V4-Pro",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300096 uses default deployment gate configuration on stable v1, and any update requires verified release approval. No verified release approval event exists, so the status remains unchanged.\",\n  \"memory_state\": {\n    \"m-rt-hard-000097-target\": \"current\",\n    \"m-rt-hard-000097-condition\": \"current\",\n    \"m-rt-hard-000097-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000097-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+}

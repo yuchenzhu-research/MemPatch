@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000107",
+  "model": "deepseek-ai/DeepSeek-V4-Pro",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300106 remains on default case route configuration (stable v1). No verified release approval has been granted, so no update is authorized.\",\n  \"memory_state\": {\n    \"m-rt-hard-000107-target\": \"current\",\n    \"m-rt-hard-000107-condition\": \"current\",\n    \"m-rt-hard-000107-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000107-1\",\n    \"e-rt-hard-000107-2\",\n    \"e-rt-hard-000107-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+}

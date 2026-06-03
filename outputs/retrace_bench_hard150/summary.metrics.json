@@ -1,0 +1,162 @@
+{
+  "count": 150,
+  "distributions": {
+    "decision_skew": {
+      "top_decision": "use_current_memory",
+      "top_decision_share": 0.7667
+    },
+    "difficulty": {
+      "L3": 75,
+      "L4": 75
+    },
+    "expected_decision": {
+      "mark_unresolved": 25,
+      "refuse_due_to_policy": 10,
+      "use_current_memory": 115
+    },
+    "failure_mode": {
+      "conflict_collapse": 20,
+      "failure_to_release_or_restore": 5,
+      "over_update": 15,
+      "policy_violation": 10,
+      "scope_leakage": 25,
+      "stale_memory_reuse": 40,
+      "under_update": 15,
+      "wrong_source_attribution": 20
+    },
+    "filler_stats": {
+      "avg_background_events": 1.6,
+      "avg_event_count": 7.0,
+      "scenarios_with_background_fill": 120
+    },
+    "pattern": {
+      "authority_conflict": 10,
+      "backport_only_fix": 10,
+      "branch_scope_leakage": 10,
+      "ci_failed_after_claim": 10,
+      "closed_as_duplicate_not_fixed": 10,
+      "docs_ahead_of_code": 10,
+      "label_state_mismatch": 10,
+      "maintainer_correction_over_user_claim": 10,
+      "merged_but_unreleased": 10,
+      "multi_memory_coupling": 10,
+      "negative_evidence_required": 10,
+      "release_then_revert": 10,
+      "security_policy_override": 10,
+      "stale_comment_after_new_release": 10,
+      "version_scope_leakage": 10
+    },
+    "pattern_balance": {
+      "expected_patterns": 15,
+      "max_count": 10,
+      "min_count": 10,
+      "patterns_present": 15,
+      "spread": 0
+    },
+    "source_type": {
+      "controlled_synthetic": 150
+    }
+  },
+  "methods": {
+    "DeepSeek-V4-Pro": {
+      "answer_state_consistency": 0.4866666666666667,
+      "black_box_decision_accuracy": 0.7733333333333333,
+      "counterevidence_recall": 0.6733333333333333,
+      "decision_macro_f1": 0.35211429888235973,
+      "evidence_f1": 0.8629206349206352,
+      "evidence_precision": 0.8121111111111112,
+      "failure_diagnosis_accuracy": 0.20666666666666667,
+      "format_failure_rate": 0.0,
+      "joint_revision_success": 0.24666666666666667,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "memory_state_accuracy": 0.8155555555555561,
+      "minimal_evidence_exact_match": 0.6133333333333333,
+      "non_answer_decision_accuracy": 0.02857142857142857,
+      "overcitation_rate": 0.18788888888888888,
+      "stale_reuse_rate": 0.02666666666666667
+    },
+    "gold_oracle": {
+      "answer_state_consistency": 1.0,
+      "black_box_decision_accuracy": 1.0,
+      "counterevidence_recall": 0.3333333333333333,
+      "decision_macro_f1": 1.0,
+      "evidence_f1": 1.0,
+      "evidence_precision": 1.0,
+      "failure_diagnosis_accuracy": 1.0,
+      "format_failure_rate": 0.0,
+      "joint_revision_success": 1.0,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "memory_state_accuracy": 1.0,
+      "minimal_evidence_exact_match": 1.0,
+      "non_answer_decision_accuracy": 1.0,
+      "overcitation_rate": 0.0,
+      "stale_reuse_rate": 0.0
+    },
+    "latest_only": {
+      "answer_state_consistency": 0.0,
+      "black_box_decision_accuracy": 0.7666666666666667,
+      "counterevidence_recall": 0.3333333333333333,
+      "decision_macro_f1": 0.289308176100629,
+      "evidence_f1": 0.0,
+      "evidence_precision": 0.0,
+      "failure_diagnosis_accuracy": 0.1,
+      "format_failure_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "latest_event_shortcut_failure_rate": 0.23333333333333334,
+      "memory_state_accuracy": 0.5222222222222223,
+      "minimal_evidence_exact_match": 0.0,
+      "non_answer_decision_accuracy": 0.0,
+      "overcitation_rate": 1.0,
+      "stale_reuse_rate": 0.0
+    },
+    "retrieve_all": {
+      "answer_state_consistency": 0.0,
+      "black_box_decision_accuracy": 0.7666666666666667,
+      "counterevidence_recall": 0.9333333333333333,
+      "decision_macro_f1": 0.289308176100629,
+      "evidence_f1": 0.43650793650793623,
+      "evidence_precision": 0.29111111111111115,
+      "failure_diagnosis_accuracy": 0.1,
+      "format_failure_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "latest_event_shortcut_failure_rate": 0.23333333333333334,
+      "memory_state_accuracy": 0.5222222222222223,
+      "minimal_evidence_exact_match": 0.0,
+      "non_answer_decision_accuracy": 0.0,
+      "overcitation_rate": 0.7088888888888887,
+      "stale_reuse_rate": 0.06666666666666667
+    }
+  },
+  "release_status": "scale_test_not_final_release",
+  "report_metrics": [
+    "decision_macro_f1",
+    "black_box_decision_accuracy",
+    "non_answer_decision_accuracy",
+    "memory_state_accuracy",
+    "evidence_f1",
+    "minimal_evidence_exact_match",
+    "evidence_precision",
+    "overcitation_rate",
+    "counterevidence_recall",
+    "failure_diagnosis_accuracy",
+    "stale_reuse_rate",
+    "latest_event_shortcut_failure_rate",
+    "answer_state_consistency",
+    "joint_revision_success",
+    "format_failure_rate"
+  ],
+  "scale_to_hard_500_reasons": [
+    "latest_only remains weak on joint_revision_success",
+    "retrieve_all still overcites, preserving difficulty signal",
+    "DeepSeek joint_revision_success is low but non-zero (discriminative)",
+    "failure_diagnosis_accuracy remains meaningful but not trivial"
+  ],
+  "scale_to_hard_500_recommendation": "worth_scaling_to_hard_500",
+  "semantic_alignment_notes": [
+    "Pattern counts are approximately balanced (10-10 per pattern across 15 patterns).",
+    "Expected decision distribution is moderately skewed toward `use_current_memory` (76.7%).",
+    "Background filler is present but moderate (avg 1.6 bg events; 7.0 total events on average).",
+    "Failure-mode labels are pattern-bound via PATTERN_SPEC; validator + gold oracle passing indicates semantic alignment at generation time."
+  ],
+  "split_label": "hard_150_en"
+}
