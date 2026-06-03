@@ -54,7 +54,7 @@ is isolated in proposers / runners / adapters.
 
 ```bash
 env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src tests experiments
-python3 -m pytest        # full offline suite (444 tests at time of writing)
+python3 -m pytest        # full offline suite
 ```
 
 The suite includes provider-mode tests (payload shape + response parsing per

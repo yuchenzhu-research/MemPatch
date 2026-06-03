@@ -21,10 +21,8 @@ This repository is governed by two active tracks:
   - `hard_300_en/`: long-context / multi-evidence stress split (300).
   - `realistic_100_en/`: realistic-style workflow split (100), annotation pending.
   - `calibration_80_en/`: smoke / quickstart split (80).
-- `data/retrace_learn/supervision_*`: synthetic supervision and dev-selection
-  pools (`supervision_train_3000_en`, `supervision_dev_400_en`). These are for
-  ReTrace-Learn training/selection, not benchmark tests.
-- `data/retrace_learn/`: small method-track fixtures and manifests.
+- `data/retrace_learn/`: method-track fixtures, boundary-audit data, and manifests.
+  Clean v1.0 training datasets will be generated under `data/retrace_learn/v1_0/`.
 - `docs/`: durable project, method, benchmark, and release documentation.
 - `references/`: lightweight reference registries and notes only.
 - `release/huggingface/ReTrace-Bench/`: exact Hugging Face dataset release
@@ -51,7 +49,7 @@ The following are intentionally ignored and should not be committed:
 For server training:
 
 - Keep committed training/export source data under
-  `data/retrace_learn/supervision_*` or generated from scripts into `outputs/`.
+  `data/retrace_learn/v1_0/` or generated from scripts into `outputs/`.
 - Write training runs to `outputs/local_training/` or a user-specified ignored
   run directory.
 - Write checkpoints/adapters to `checkpoints/`, `models/`, or `adapters/`.

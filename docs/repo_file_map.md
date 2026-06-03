@@ -101,7 +101,6 @@
 * `experiments/multiagent/select_prompt_smoke_examples.py`: 选取并审计 Stage C API-ICL 的人工作业样本包。
 * `experiments/multiagent/apply_smoke_review_decisions.py`: 冻结人工决策包并向 manifest 写入校验哈希。
 * `experiments/multiagent/local_training/prepare_mlx_stagec_data.py`: 本地 MLX 训练数据准备。
-* `experiments/archive/`: 历史归档遗留代码，不影响 canonical 逻辑。
 
 ---
 

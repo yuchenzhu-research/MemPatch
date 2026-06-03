@@ -24,8 +24,3 @@ experiments/multiagent/
 ├── configs/                      # Multi-agent experiment configurations
 └── local_training/               # MLX LoRA training utility scripts
 ```
-
-## Legacy and Archived Helpers
-
-- Preserved baseline and comparison helper scripts (such as `fixtures.py`, `methods.py`, `metrics.py`, `episodes_dev.py`) reside strictly isolated inside [`experiments/archive/`](file:///Users/yuchenzhu/Desktop/ReTrace/experiments/archive/) and are not used in the canonical evaluation flow.
-- Obsolete data generators and v2-baseline files are isolated under [`experiments/archive/obsolete_generation/`](file:///Users/yuchenzhu/Desktop/ReTrace/experiments/archive/obsolete_generation/).
