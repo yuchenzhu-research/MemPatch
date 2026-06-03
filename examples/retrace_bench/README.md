@@ -21,7 +21,7 @@ So every benchmark command below is prefixed with `PYTHONPATH=.`.
 
 ```bash
 PYTHONPATH=. python scripts/evaluate_retrace_bench_predictions.py \
-  --data data/retrace_bench/sample_80_hard_en/scenarios.jsonl \
+  --data data/retrace_bench/calibration_80_en/scenarios.jsonl \
   --predictions examples/retrace_bench/sample_predictions.jsonl \
   --out-metrics outputs/retrace_bench/sample_predictions.metrics.json \
   --out-scored outputs/retrace_bench/sample_predictions.scored.jsonl \
@@ -29,8 +29,8 @@ PYTHONPATH=. python scripts/evaluate_retrace_bench_predictions.py \
 ```
 
 `--data` accepts either a `scenarios.jsonl` file or a directory containing one.
-For the canonical paper-facing benchmark, point `--data` at
-`data/retrace_bench/test_800_templateheldout_en/`.
+For the primary paper-facing benchmark, point `--data` at
+`data/retrace_bench/main_3000_en/` (or `hard_300_en/` for the stress split).
 
 You can also call the Python API directly:
 
@@ -39,7 +39,7 @@ from benchmark.retrace_bench.api import (
     load_scenarios, load_predictions, evaluate_predictions,
 )
 
-scenarios = load_scenarios("data/retrace_bench/sample_80_hard_en")
+scenarios = load_scenarios("data/retrace_bench/calibration_80_en")
 predictions = load_predictions("examples/retrace_bench/sample_predictions.jsonl")
 result = evaluate_predictions(scenarios, predictions, strict=True)
 print(result["headline_metrics"])
@@ -54,16 +54,16 @@ Canonical (nested `response`):
 
 ```json
 {
-  "scenario_id": "rb-hard-en-00001",
+  "scenario_id": "rb-cal-en-000001",
   "response": {
-    "answer": "C-2000 should follow the updated release blocker path verified for PROJ-A11.",
+    "answer": "<free-text answer for the black-box task>",
     "decision": "use_current_memory",
     "memory_state": {
-      "m-rb-hard-en-00001-target": "outdated",
-      "m-rb-hard-en-00001-replacement": "current"
+      "m-rb-cal-en-000001-target": "current",
+      "m-rb-cal-en-000001-distractor": "out_of_scope"
     },
-    "evidence_event_ids": ["e-rb-hard-en-00001-06"],
-    "failure_diagnosis": "stale_memory_reuse"
+    "evidence_event_ids": ["e-rb-cal-en-000001-08"],
+    "failure_diagnosis": "under_update"
   }
 }
 ```
@@ -72,12 +72,12 @@ Flat (response fields at top level) is also accepted:
 
 ```json
 {
-  "scenario_id": "rb-hard-en-00001",
+  "scenario_id": "rb-cal-en-000001",
   "answer": "...",
   "decision": "use_current_memory",
-  "memory_state": {"m-rb-hard-en-00001-target": "outdated"},
-  "evidence_event_ids": ["e-rb-hard-en-00001-06"],
-  "failure_diagnosis": "stale_memory_reuse"
+  "memory_state": {"m-rb-cal-en-000001-target": "current"},
+  "evidence_event_ids": ["e-rb-cal-en-000001-08"],
+  "failure_diagnosis": "under_update"
 }
 ```
 
@@ -109,6 +109,7 @@ not block strict scoring), so partial `memory_state` maps are still scored. Use
 warnings/errors and score whatever is valid.
 
 The `sample_predictions.jsonl` here is a small, complete, runnable submission
-for the 80-scenario `sample_80_hard_en` calibration split (so the strict command
-above scores cleanly). It is only an illustration — it is **not** a submission
-for the canonical 800-scenario `test_800_templateheldout_en` benchmark split.
+for the 80-scenario `calibration_80_en` smoke/quickstart split (so the strict
+command above scores cleanly). It is only an illustration — it is **not** a
+submission for the paper-facing `main_3000_en` / `hard_300_en` splits, and the
+`calibration` split must not be used for model selection or headline claims.
