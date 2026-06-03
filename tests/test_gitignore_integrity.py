@@ -39,9 +39,6 @@ def test_gitignore_sensitive_artifacts_not_committed():
         "data/retrace_bench/hard_300_en/",
         "data/retrace_bench/realistic_100_en/",
         "data/retrace_bench/calibration_80_en/",
-        # ReTrace-Learn supervision pools (moved out of the benchmark tree).
-        "data/retrace_learn/supervision_train_3000_en/",
-        "data/retrace_learn/supervision_dev_400_en/",
         "release/huggingface/ReTrace-Bench/",
         "examples/retrace_bench/",
         "outputs/",
