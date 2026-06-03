@@ -40,10 +40,10 @@ from dataclasses import dataclass
 from datetime import datetime, timedelta
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from benchmark.retrace_bench.general_taxonomy import DIFFICULTIES, DOMAINS, FAILURE_MODES
-from scripts.generate_retrace_templateheldout_test import main as generate_templateheldout_main
+from experiments.archive.obsolete_generation.generate_retrace_templateheldout_test import main as generate_templateheldout_main
 
 DOMAIN_NOUN = {
     "software_engineering_agent": ("release blocker", "deployment note", "build owner"),
