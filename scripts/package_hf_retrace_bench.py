@@ -15,7 +15,6 @@ import json
 import os
 import re
 import shutil
-import subprocess
 
 SCENARIO_JSONL_NAME = "scenarios.jsonl"
 
@@ -41,21 +40,6 @@ def get_benchmark_version(repo_root):
         return "unknown"
     match = re.search(r'__version__\s*=\s*["\']([^"\']+)["\']', text)
     return match.group(1) if match else "unknown"
-
-
-def get_commit_hash(repo_root):
-    """Best-effort current git commit hash; 'unknown' if git is unavailable."""
-    try:
-        out = subprocess.run(
-            ["git", "rev-parse", "HEAD"],
-            cwd=repo_root,
-            capture_output=True,
-            text=True,
-            check=True,
-        )
-        return out.stdout.strip() or "unknown"
-    except (OSError, subprocess.CalledProcessError):
-        return "unknown"
 
 
 def to_viewer_row(scenario):
@@ -104,7 +88,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def build_readme(counts, benchmark_version, commit_hash, configs_block):
+def build_readme(counts, benchmark_version, configs_block):
     main_c, hard_c, real_c, calib_c = (
         counts["main"], counts["hard"], counts["realistic"], counts["calibration"]
     )
@@ -167,7 +151,7 @@ diagnosis.
 Source-of-truth scenarios are nested JSON objects with `scenario_id`, `split`,
 `domain`, `primary_failure_mode`, `difficulty`, `workflow_context`,
 `public_input` (`initial_memory`, `event_trace`), `tasks`, `hidden_gold`, and
-`metadata`. For Hugging Face viewer compatibility, nested fields are published as
+`metadata`. So the Hugging Face viewer can render every column, nested fields are published as
 JSON string columns (`public_input_json`, `tasks_json`, `hidden_gold_json`,
 `metadata_json`, `secondary_failure_modes_json`); parse them with
 `json.loads(...)`.
@@ -246,19 +230,7 @@ is a smoke/quickstart split only: **it is not a model-selection / checkpoint-sel
 this release. The legacy pre-v1.0 layout is not part of this release and is
 recoverable only from the Git tag `legacy-retrace-bench-pre-v1.0`.
 
-## 12. Citation
-
-```bibtex
-@misc{{retrace_bench,
-  title        = {{ReTrace-Bench: Evaluating Agent Memory Revision Reliability}},
-  author       = {{ReTrace-Bench Authors}},
-  year         = {{2026}},
-  howpublished = {{\\url{{{GITHUB_URL}}}}},
-  note         = {{Benchmark version {benchmark_version}, commit {commit_hash}}}
-}}
-```
-
-## 13. License
+## 12. License
 
 Distributed under the [Creative Commons Attribution 4.0 International (CC BY 4.0)](LICENSE) license.
 
@@ -313,7 +285,7 @@ def main():
     configs_block = "\n".join(config_lines)
 
     readme = build_readme(
-        counts, get_benchmark_version(repo_root), get_commit_hash(repo_root), configs_block
+        counts, get_benchmark_version(repo_root), configs_block
     )
     with open(os.path.join(hf_dir, "README.md"), "w", encoding="utf-8") as f:
         f.write(readme)

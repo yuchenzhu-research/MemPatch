@@ -69,3 +69,11 @@ runs/
 # Only machine-local noise inside outputs/ stays ignored.
 !outputs/**
 outputs/**/.DS_Store
+# Local ReTrace-Learn / method scratch outputs that land at the outputs/ root.
+# These are NOT part of the ReTrace-Bench release (benchmark dumps live under
+# outputs/retrace_bench/). Ignore only the root-level files, not the subtree.
+/outputs/fc_*.jsonl
+/outputs/fc_*.json
+/outputs/multiagent_*.jsonl
+/outputs/multiagent_*.json
+/outputs/stale_cupmem_*.json

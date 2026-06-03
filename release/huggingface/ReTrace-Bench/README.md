@@ -145,19 +145,7 @@ is a smoke/quickstart split only: **it is not a model-selection / checkpoint-sel
 this release. The legacy pre-v1.0 layout is not part of this release and is
 recoverable only from the Git tag `legacy-retrace-bench-pre-v1.0`.
 
-## 12. Citation
-
-```bibtex
-@misc{retrace_bench,
-  title        = {ReTrace-Bench: Evaluating Agent Memory Revision Reliability},
-  author       = {ReTrace-Bench Authors},
-  year         = {2026},
-  howpublished = {\url{https://github.com/yuchenzhu-research/ReTrace}},
-  note         = {Benchmark version 1.0.0, commit 95b14f86a58fda15fc0e8d468d965932d76f1e89}
-}
-```
-
-## 13. License
+## 12. License
 
 Distributed under the [Creative Commons Attribution 4.0 International (CC BY 4.0)](LICENSE) license.
 
