@@ -4,7 +4,7 @@ import argparse
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(REPO))
 
 from benchmark.retrace_bench.schemas_v2 import scenario_from_dict, PredictionV2, scenario_to_dict

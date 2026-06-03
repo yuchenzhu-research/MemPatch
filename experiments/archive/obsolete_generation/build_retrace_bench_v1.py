@@ -6,7 +6,7 @@ import sys
 from pathlib import Path
 
 # Add root to python path to allow imports when run directly
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from benchmark.retrace_bench.generation.expand_scenarios import expand_templates, DOMAINS
 from benchmark.retrace_bench.generation.validate_generated import validate_scenarios

@@ -13,7 +13,7 @@ from collections import Counter
 import pytest
 
 from benchmark.retrace_bench.general_taxonomy import DOMAINS, FAILURE_MODES
-from scripts.generate_retrace_templateheldout_v2 import build_scenario
+from experiments.archive.obsolete_generation.generate_retrace_templateheldout_v2 import build_scenario
 from scripts.validate_retrace_bench_dataset import validate_dataset
 
 ACTION_WORD_PREFIXES = (
