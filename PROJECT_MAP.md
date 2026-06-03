@@ -22,6 +22,28 @@ ReTrace
 
 The deterministic commit path (ReTrace-Engine = `authorize(...)`, Parser, RevisionGate, DPA, Audit Trace) is an *implementation detail* of stages 2–3, not a separate paper module. DPA is a deterministic verifier and does **not** learn.
 
+## Paper analysis code boundary (future figures/tables — not yet implemented)
+
+Paper analysis code (JSON/JSONL → figures/tables) is a **separate concern** from
+the method core, the benchmark evaluator, and the data. It is **not implemented
+in this pass**; this note only fixes where it should live so future work stays
+outside the core packages.
+
+Recommended locations (pick one convention when the scripts are written):
+
+- thin entrypoints under `scripts/`:
+  `make_retrace_bench_tables.py`, `make_retrace_bench_figures.py`,
+  `make_retrace_learn_tables.py`, `make_retrace_learn_figures.py`; or
+- analysis packages under the paper dirs:
+  `papers/retrace_bench/analysis/`, `papers/retrace_learn/analysis/`.
+
+Rules for analysis scripts:
+
+- **consume** JSON/JSONL outputs (e.g. under `outputs/`), never raw benchmark data;
+- **emit** CSV/LaTeX/PDF/SVG/PNG under `papers/<track>/figures/` or `papers/<track>/tables/`;
+- must **not** modify ReTrace-Bench data, the scorer, or any scoring semantics;
+- must **not** live inside `benchmark/retrace_bench/`, `src/retrace_learn/`, or `src/retracemem/`.
+
 ## Explanations
 
 - **`src/retrace_learn/`**: The learned method layer. Owns the Graph Builder and Proposal Policy models, datasets, SFT, and DPA-guided training logic.

@@ -64,13 +64,13 @@
 * `src/retrace_learn/runtime/engine_errors.py`: 确定性后端各阶段（Parser、Gate、DPA）的结构化错误规约。
 * `src/retrace_learn/runtime/graph_extractor.py`: 提取器推理外壳，将原始文本转化为规范的图数据。
 * `src/retrace_learn/runtime/learned_proposer.py`: 包装生成策略并向 Engine 提交修改边申请。
-* `src/retrace_learn/runtime/path_ranker.py`: 对合法 defeat 路径进行安全评分并审计排序。
+* `src/retrace_learn/runtime/path_ranker.py`（future/optional，非 v1 三阶段方法）: 对合法 defeat 路径进行安全评分并审计排序。
 * `src/retrace_learn/runtime/reward.py`: DPA-in-the-Loop 强化学习奖励设计。
 
 ### 模型训练脚本 (`training/`)
 * `src/retrace_learn/training/train_lora_sft.py`: 基于 HuggingFace 对 Extractor / Proposer 进行 LoRA 微调。
 * `src/retrace_learn/training/train_dpo.py`: 通过 DPA-in-the-loop 偏好轨迹进行 DPO 强化学习训练。
-* `src/retrace_learn/training/train_grpo.py`: 基于 GRPO 算法和在线 DPA-in-the-loop 奖励进行推理优化。
+* `src/retrace_learn/training/train_grpo.py`（future/optional，非 v1 方法）: 基于 GRPO 算法和在线 DPA-in-the-loop 奖励进行推理优化（仅 smoke sanity）。
 
 ---
 

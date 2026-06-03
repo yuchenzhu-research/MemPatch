@@ -10,6 +10,14 @@ lora:
   dropout: 0.05
   target_modules: [q_proj, k_proj, v_proj, o_proj, gate_proj, up_proj, down_proj]
 
+# Real training input. Set data.train_path to a ReTrace-Learn JSONL dataset
+# (graph_extraction_sft.jsonl for task=graph, typed_revision_sft.jsonl for
+# task=revision), e.g. under data/retrace_learn/v1_0/. Without an explicit
+# data.train_path (or --input), real training refuses to run on smoke episodes;
+# pass --smoke for a sanity loop. ReTrace-Bench paths are rejected.
+# data:
+#   train_path: data/retrace_learn/v1_0/typed_revision_sft.jsonl
+
 train:
   task: revision          # one of: graph | revision
   output_dir: outputs/retrace_learn/ckpt_qwen3b_lora

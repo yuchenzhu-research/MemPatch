@@ -135,9 +135,37 @@ Configs: `training/configs/qwen_3b_lora.yaml`, `qwen_4b_lora.yaml`. Heavy deps
 (torch/transformers/peft/trl) are imported lazily inside `train()`; `--dry-run`
 builds and inspects datasets with stdlib only.
 
-## 6. DPA-in-the-loop reward (`reward.py`)
+**Training input boundary.** Real training reads explicit JSONL rows via
+`--input <jsonl>` or config `data.train_path` (graph: `GraphExtractionExample`
+rows, revision: `TypedRevisionExample` rows). The synthetic episodes in
+`data/build_synthetic_raw_dialogue.py` are **smoke/sanity only and are not a real
+training corpus** — `train()` refuses to run on them unless `--smoke` is passed
+explicitly. The same holds for DPO (`--input` / `data.preference_path`, else
+`--smoke`); GRPO is future/optional and only exposes the `--smoke` sanity loop.
+`data/retrace_bench/` paths are rejected by the contamination guard.
+
+## 6. Stage 3 — DPA-guided preference construction (`reward.py`)
+
+Stage 3 trains the **Proposal Policy** by **DPA-induced preference
+construction**, not by optimizing a hand-tuned scalar reward. DPA is a
+*deterministic verifier* (it does not learn): for each episode it runs candidate
+completions through parser + RevisionGate + DPA, then **filters and ranks** them
+by DPA-correctness against gold final statuses. That ranking is what produces the
+training data:
+
+- **RSFT positives** — completions DPA verifies as correct become accepted
+  supervised targets;
+- **DPO chosen/rejected pairs** — within an episode the DPA-best completion is
+  `chosen` and lower-ranked completions are `rejected`
+  (`data/export_rl_rollouts.py::build_preference_pairs`, which sorts by DPA score
+  and pairs the top rollout against the rest).
+
+This preference-construction path is the central Stage 3 claim. The scalar reward
+below is **not** the core method: it is just the deterministic scoring function
+used to rank/filter rollouts, plus optional analysis and online-GRPO support.
 
 ```
+# Optional/analysis scalar reward (ranking + GRPO support; not the core claim):
 R = + w_final  * final_status_reward      # fraction of gold final statuses DPA reproduces
     + w_json   * valid_json_reward         # parser + schema valid
     + w_tgrd   * target_grounding_reward   # fraction of revision actions with grounded targets
@@ -156,10 +184,11 @@ Each term is computed from parser/gate/DPA outputs vs gold:
 `final_status_*` from `dpa_final_statuses` vs `gold_final_statuses`; grounding from
 candidate id sets in the view; over/under/stale from gold-vs-pred status deltas;
 `spurious_uncertain` from `gold_actions`. `classify_failure` picks the dominant
-failure for curriculum/analysis. This reward is the **DPA-guided training
-signal** for stage 3: consumed offline to build DPO/RSFT preference pairs
-(`data/export_rl_rollouts.py::build_preference_pairs`). An online GRPO path
-(`training/train_grpo.py::score_completion`) is a future/optional extension.
+failure for curriculum/analysis. The exact scalar weights are a tunable
+implementation detail — the paper-facing claim is *DPA-guided RSFT/DPO*, i.e.
+preference data induced by the deterministic verifier. An online GRPO path
+(`training/train_grpo.py::score_completion`) that consumes this scalar reward
+directly is a future/optional extension, not part of the v1 method.
 
 ## 7. Learned defeat-path ranker (future/optional)
 
