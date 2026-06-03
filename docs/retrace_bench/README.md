@@ -24,7 +24,7 @@ layout is recoverable from the Git tag `legacy-retrace-bench-pre-v1.0`.
 ## Conceptual Framing & Boundary
 
 ReTrace-Bench is strictly **evaluation-only** and independent of the method paper framework (ReTrace-Learn).
-- **ReTrace-Learn**: The trainable method (SFT/RL/DPO) that trains Graph Extractors and Typed Revision Proposers. Uses internal data under `data/retrace_learn/`.
+- **ReTrace-Learn**: The trainable method (SFT/RSFT/DPO) that trains a Graph Builder and Proposal Policy. Uses internal data under `data/retrace_learn/`.
 - **ReTrace-Bench**: The independent benchmark paper evaluating different agent memory updating strategies. The evaluation data under `data/retrace_bench/` must **never** be used for training or validation tuning.
 - **DPA Diagnostic Track**: Structured revision / Defeat-Path Authorization remains an optional diagnostic protocol. It is **not** mandatory for all benchmark participants. The main track is the model-agnostic **Black-box Task Protocol**.
 
@@ -73,4 +73,3 @@ For users of ReTrace-Bench v1:
 - The legacy schemas (`schemas.py`) and taxonomy (`taxonomy.py`) remain fully functional.
 - The v1 scripts (`validate_retrace_bench.py` and `run_retrace_bench_baseline.py`) are preserved unchanged.
 - v2 is designed additively, and includes a deterministic mapping layer to convert v1 history lists into v2 event traces.
-

@@ -220,9 +220,9 @@ def test_reward_no_revision_overuse_penalty():
 
     # All NO_REVISION actions.
     no_rev_actions = [
-        RevisionAction(action_type="NO_REVISION"),
-        RevisionAction(action_type="NO_REVISION"),
-        RevisionAction(action_type="NO_REVISION"),
+        RevisionAction(action_type="NO_REVISION", evidence_ids=("ev2",)),
+        RevisionAction(action_type="NO_REVISION", evidence_ids=("ev2",)),
+        RevisionAction(action_type="NO_REVISION", evidence_ids=("ev2",)),
     ]
     parse_result = ParseResult(
         valid_json=True, schema_valid=True, actions=tuple(no_rev_actions)
@@ -255,7 +255,7 @@ def test_reward_no_revision_overuse_zero_when_no_gold():
     view = ep.build_view()
     gold = ep.gold_final_statuses()
 
-    no_rev_actions = [RevisionAction(action_type="NO_REVISION")]
+    no_rev_actions = [RevisionAction(action_type="NO_REVISION", evidence_ids=("ev2",))]
     parse_result = ParseResult(
         valid_json=True, schema_valid=True, actions=tuple(no_rev_actions)
     )

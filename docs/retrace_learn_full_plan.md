@@ -20,16 +20,16 @@ ReTrace-Learn upgrades the shared-memory revision authorization process by remov
 |           candidate_replacement_beliefs, dependency_edges                |
 |    |                                                                     |
 |    v                                                                     |
-| 3. Bridge Wrapper (src/retrace_learn/runtime/views.py)                   |
+|    Bridge Wrapper (implementation detail: runtime/views.py)              |
 |    |                                                                     |
 |    +--> SharedCandidateView (Dataclass)                                  |
 |                                                                          |
-| 4. Proposal Policy (Stage 2, learned: SFT / DPA-guided RSFT/DPO)         |
+| 3. Proposal Policy (Stage 2, learned: SFT / DPA-guided RSFT/DPO)         |
 |    |                                                                     |
 |    +--> Proposed Revision Actions (SUPERSEDES, BLOCKS, etc.)             |
 |    |                                                                     |
 |    v                                                                     |
-| 5. ReTrace-Engine commit path (deterministic; impl detail of stages 2-3)  |
+|    ReTrace-Engine commit path (deterministic; impl detail of stages 2-3)  |
 |    - Parser                                                              |
 |    - RevisionGate (Structural Admission)                                 |
 |    - Defeat-Path Authorization (DPA)                                     |
@@ -50,7 +50,7 @@ ReTrace-Learn upgrades the shared-memory revision authorization process by remov
 ### Raw-Dialogue Protocol
 - **Input**: A chronological sequence of raw dialogues, agent utterances, or subagent tool submissions.
 - **Task**: 
-  1. Extract the memory graph elements (beliefs, conditions, dependency anchors, evidence text) from raw dialogue.
+  1. Build the memory graph elements (beliefs, conditions, dependency anchors, evidence text) from raw dialogue.
   2. Assemble a temporal candidate view.
   3. Propose typed revision actions.
   4. Pass everything to the deterministic ReTrace-Engine.
@@ -61,15 +61,15 @@ ReTrace-Learn upgrades the shared-memory revision authorization process by remov
 ## 3. Strict No-Gold-Leakage Boundary
 
 To guarantee evaluation validity and prevent data leakage:
-1. **Method-Visible Constraint**: During SFT, RSFT, DPO, and inference, the learned policy sees *only* method-visible inputs (such as the output of the graph extractor and the new evidence). It is completely blind to gold actions or DPA final statuses.
+1. **Method-Visible Constraint**: During SFT, RSFT, DPO, and inference, the learned policy sees *only* method-visible inputs (such as the output of the Graph Builder and the new evidence). It is completely blind to gold actions or DPA final statuses.
 2. **Evaluator Isolation**: Gold final statuses reside strictly within the evaluation boundary and are used solely to compute rewards or score outputs.
 3. **No-DirectJudge Fallback**: The learned proposer MUST ONLY emit typed revision actions from the canonical vocabulary. It is strictly prohibited from predicting final DPA statuses (`AUTHORIZED`, `SUPERSEDED`, `BLOCKED`, `UNRESOLVED`) directly, preserving the deterministic nature of the `ReTrace-Engine`.
 
 ---
 
-## 4. Graph Extractor Target Schema
+## 4. Graph Builder Target Schema
 
-The target output of the **Learned Graph Extractor** must serialize to a strict JSON structure matching the following key mapping:
+The target output of the learned **Graph Builder** must serialize to a strict JSON structure matching the following key mapping:
 
 ```json
 {

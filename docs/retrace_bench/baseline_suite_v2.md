@@ -27,7 +27,7 @@ To evaluate the difficulty of ReTrace-Bench v2, we establish a suite of baseline
    - *Strategy*: A graph-based memory adapter tracking state invalidation and conflicts.
 
 7. **ReTrace-Learn structured method**:
-   - *Strategy*: Uses learned Graph Extractors and Typed Proposers routing proposals through the deterministic DPA engine.
+   - *Strategy*: Uses a learned Graph Builder and Proposal Policy routing proposals through the deterministic DPA engine.
 
 8. **oracle memory-state**:
    - *Strategy*: Directly feeds the gold memory status values into the agent. Establishes the upper bound of task performance if memory tracking is perfect.

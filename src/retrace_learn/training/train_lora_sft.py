@@ -1,4 +1,4 @@
-"""LoRA SFT for the graph extractor (Stage SFT-1) and revision proposer (SFT-2).
+"""LoRA SFT for the Graph Builder (Stage 1) and Proposal Policy (Stage 2).
 
 The dataset builders are pure-stdlib and runnable (``--dry-run``). ``train()``
 lazily imports transformers/peft/trl and is a thin skeleton: it is intentionally

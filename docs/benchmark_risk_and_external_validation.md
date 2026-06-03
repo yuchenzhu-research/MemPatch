@@ -10,7 +10,8 @@ contamination risk profiles:
 - Hand-authored multi-subagent dialogues → graph extraction → gold typed
   revision actions → gold DPA final statuses.
 - **Risk**: Author bias in action construction. Mitigated by:
-  - Requiring explicit evidence grounding for every non-`NO_REVISION` action.
+  - Requiring explicit evidence grounding for every action, including
+    `NO_REVISION`.
   - Running all gold actions through the deterministic backend to verify that
     the claimed gold final statuses are actually reproduced.
   - Separating authoring (teacher) from evaluation (DPA kernel).

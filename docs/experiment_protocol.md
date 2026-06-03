@@ -94,10 +94,10 @@ python3 scripts/export_stagec_data.py
   proposals. This is engineering/mechanism validation, not a learned-method
   result.
 - **E1: Fixed-Candidate Revision Evaluation**
-  Test whether the Typed Revision Proposer can be learned when the candidate memory graph/view is already given. Compares DirectJudge, Prompt-Proposer, SFT, RSFT, DPO, Oracle, and ablations.
+  Test whether the Proposal Policy can be learned when the candidate memory graph/view is already given. Compares DirectJudge, Prompt-Proposer, SFT, RSFT, DPO, Oracle, and ablations.
 - **E2: Stage C Training and Model-Driven Proposal Evaluation**
-  Train and evaluate learning-based proposal policies, including Graph Extractor
-  and Typed Revision Proposer outputs routed through ReTrace-Engine.
+  Train and evaluate learning-based proposal policies, including Graph Builder
+  and Proposal Policy outputs routed through ReTrace-Engine.
 - **E3: Closed-Loop Multi-Agent Workflow**
   Test whether committed shared memory changes downstream agent actions and
   future subagent submissions.

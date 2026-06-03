@@ -43,10 +43,10 @@ For a conceptual project map, layout, governance, and dataset definitions, see:
 Rather than relying purely on hand-written rules or black-box LLM status predictions, the contribution consists of:
 ```text
 benchmark/task definition
-+ learned graph extraction (raw content -> structured graph JSON)
-+ learned typed revision proposal (graph JSON + snapshot -> action JSON)
-+ deterministic authorization engine (Parser + RevisionGate + Defeat-Path Authorization)
-+ DPA-in-the-loop training signal (reward / SFT / DPO feedback)
++ Graph Builder (learned: raw content -> structured graph JSON)
++ Proposal Policy (learned: graph JSON + snapshot -> action JSON)
++ deterministic authorization commit path (Parser + RevisionGate + Defeat-Path Authorization)
++ DPA-guided RSFT/DPO training signal (protocol; DPA does not learn)
 + strong baselines and external validation
 ```
 
@@ -58,9 +58,9 @@ The overall architecture routes raw content through learned and deterministic mo
 
 ```text
 Raw multi-subagent content / dialogue
-    → ReTrace-Learn Graph Extractor         (learned)
+    → ReTrace-Learn Graph Builder           (learned)
     → structured evidence / belief / condition / dependency graph JSON
-    → ReTrace-Learn Typed Revision Proposer  (learned)
+    → ReTrace-Learn Proposal Policy          (learned)
     → typed revision action JSON
     → Authorization Court — ReTrace-Engine    (deterministic)
         → Parser
@@ -117,7 +117,7 @@ The project evaluates open-weight trainable models against strong baseline alter
 
 1. **Strong LLM DirectJudge**: A baseline that directly predicts the final status from raw dialogues/views, bypassing the ReTrace-Engine. It is used to answer: *Why not directly ask a frontier LLM?*
 2. **Prompt-Proposer (Stage A)**: Prompted frontier LLM (e.g., DeepSeek, Gemini) that generates actions over candidate structures. It is used to answer: *Why train a proposer instead of prompting?*
-3. **Open-weight ReTrace-Learn model**: Trainable model optimized via SFT (graph extraction & revision proposing), DPA-filtered Rejection Sampling Fine-Tuning (RSFT), and Direct Preference Optimization (DPO).
+3. **Open-weight ReTrace-Learn model**: Trainable model optimized via SFT for Graph Builder / Proposal Policy and DPA-guided Rejection Sampling Fine-Tuning (RSFT) / Direct Preference Optimization (DPO) for the Proposal Policy.
 
 ### Research Map
 

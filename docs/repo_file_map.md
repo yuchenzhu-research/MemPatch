@@ -50,10 +50,10 @@
 ---
 
 ## 2. ReTrace-Learn 训练模块 (`src/retrace_learn/`)
-本模块是 ReTrace-Learn method track 中支持策略训练的重点部分，涵盖了图提取器（Graph Extractor）、修正提案器（Revision Proposer）以及 DPA-in-the-Loop 强化学习奖励系统。
+本模块是 ReTrace-Learn method track 中支持策略训练的重点部分，涵盖两个 learned stages：Graph Builder 与 Proposal Policy；DPA-guided RSFT/DPO 是训练协议，DPA 本身不学习。
 
 ### 数据管道与生成器 (`data/`)
-* `src/retrace_learn/data/build_synthetic_raw_dialogue.py`: 生成合成多 Agent 对话语料并计算 DPA 黄金真值的生成引擎。
+* `src/retrace_learn/data/build_synthetic_raw_dialogue.py`: smoke/sanity-only 合成对话样例生成器，不是大规模真实训练语料生成器。
 * `src/retrace_learn/data/export_graph_sft.py`: 导出图提取任务 of SFT 数据。
 * `src/retrace_learn/data/export_revision_sft.py`: 导出修正提案预测任务 of SFT 数据。
 * `src/retrace_learn/data/export_rl_rollouts.py`: 生成带 DPA 奖励评分 of RL 轨迹数据。
@@ -62,13 +62,13 @@
 ### 运行时与奖励引擎 (`runtime/`)
 * `src/retrace_learn/runtime/dpa_runtime.py`: 承载解析 SFT/RL 输出，并打通 RevisionGate -> DPA 的推理生命周期。
 * `src/retrace_learn/runtime/engine_errors.py`: 确定性后端各阶段（Parser、Gate、DPA）的结构化错误规约。
-* `src/retrace_learn/runtime/graph_extractor.py`: 提取器推理外壳，将原始文本转化为规范的图数据。
-* `src/retrace_learn/runtime/learned_proposer.py`: 包装生成策略并向 Engine 提交修改边申请。
+* `src/retrace_learn/runtime/graph_extractor.py`: Graph Builder 推理外壳，将原始文本转化为规范的图数据。
+* `src/retrace_learn/runtime/learned_proposer.py`: Proposal Policy 运行时包装，输出 typed revision actions 后交给 deterministic commit path。
 * `src/retrace_learn/runtime/path_ranker.py`（future/optional，非 v1 三阶段方法）: 对合法 defeat 路径进行安全评分并审计排序。
-* `src/retrace_learn/runtime/reward.py`: DPA-in-the-Loop 强化学习奖励设计。
+* `src/retrace_learn/runtime/reward.py`: DPA-guided RSFT/DPO 训练信号与分析奖励设计。
 
 ### 模型训练脚本 (`training/`)
-* `src/retrace_learn/training/train_lora_sft.py`: 基于 HuggingFace 对 Extractor / Proposer 进行 LoRA 微调。
+* `src/retrace_learn/training/train_lora_sft.py`: 基于 HuggingFace 对 Graph Builder / Proposal Policy 进行 LoRA 微调。
 * `src/retrace_learn/training/train_dpo.py`: 通过 DPA-in-the-loop 偏好轨迹进行 DPO 强化学习训练。
 * `src/retrace_learn/training/train_grpo.py`（future/optional，非 v1 方法）: 基于 GRPO 算法和在线 DPA-in-the-loop 奖励进行推理优化（仅 smoke sanity）。
 
