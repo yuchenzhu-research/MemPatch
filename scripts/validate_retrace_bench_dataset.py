@@ -23,6 +23,7 @@ from benchmark.retrace_bench.general_taxonomy import (
     TRUST_LEVELS,
     canonical_hidden_gold_fields,
 )
+from benchmark.retrace_bench.generation.pattern_spec import validate_pattern_semantics
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -129,6 +130,8 @@ def validate_one(
         errors.append(f"{sid}: hidden_gold.expected_failure_diagnosis is missing")
     elif expected_diag not in FAILURE_MODES:
         errors.append(f"{sid}: hidden_gold.expected_failure_diagnosis '{expected_diag}' not in FAILURE_MODES")
+
+    errors.extend(validate_pattern_semantics(scenario, gold))
 
     if len(events) < 2:
         errors.append(f"{sid}: expected at least 2 events")

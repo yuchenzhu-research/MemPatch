@@ -2,9 +2,12 @@ import random
 from typing import Any, Dict, List, Set
 from benchmark.retrace_bench.general_taxonomy import (
     DOMAINS,
-    FAILURE_MODES,
-    DECISIONS,
+    PATTERNS,
     normalize_memory_state,
+)
+from benchmark.retrace_bench.generation.pattern_spec import (
+    build_wrong_answer_traps,
+    resolve_pattern_binding,
 )
 from benchmark.retrace_bench.generation.evidence_dependency_graph import EvidenceDependencyGraph
 from benchmark.retrace_bench.generation.adversarial_distractors import (
@@ -13,24 +16,6 @@ from benchmark.retrace_bench.generation.adversarial_distractors import (
     generate_rollback_distractor,
     generate_ci_distractor,
 )
-
-PATTERNS = [
-    "merged_but_unreleased",
-    "closed_as_duplicate_not_fixed",
-    "docs_ahead_of_code",
-    "release_then_revert",
-    "version_scope_leakage",
-    "branch_scope_leakage",
-    "authority_conflict",
-    "ci_failed_after_claim",
-    "security_policy_override",
-    "backport_only_fix",
-    "maintainer_correction_over_user_claim",
-    "stale_comment_after_new_release",
-    "label_state_mismatch",
-    "multi_memory_coupling",
-    "negative_evidence_required"
-]
 
 DOMAIN_FRAMES = {
     "software_engineering_agent": {
@@ -71,10 +56,12 @@ DOMAIN_FRAMES = {
 def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict[str, Any]:
     rng = random.Random(seed + index * 101)
     
-    # Stratified selection
+    # Stratified selection: pattern first, then derive labels from PATTERN_SPEC.
     domain = DOMAINS[index % len(DOMAINS)]
     pattern = PATTERNS[index % len(PATTERNS)]
-    failure_mode = FAILURE_MODES[index % len(FAILURE_MODES)]
+    binding = resolve_pattern_binding(pattern, index)
+    failure_mode = binding.failure_mode
+    expected_decision = binding.expected_decision
     
     frame = DOMAIN_FRAMES[domain]
     topic = frame["topics"][(index // len(DOMAINS)) % len(frame["topics"])]
@@ -103,7 +90,6 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
     m_distractor = f"m-{scenario_id}-distractor"
     
     # Determine gold behavior and outputs based on pattern and difficulty
-    expected_decision = "use_current_memory"
     expected_failure_diagnosis = failure_mode
     
     # Standard values
@@ -147,7 +133,6 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
     
     # 15 patterns logics
     if pattern == "merged_but_unreleased":
-        expected_decision = "use_current_memory"
         event_trace = [
             {"event_id": e1_id, "timestamp_order": 1, "actor_role": "user", "trust_level": "trusted", "visibility_scope": scope, "event_type": "issue", "text": f"Issue #100 reports {case_id} lacks YAML support.", "related_memory_ids": [m_target]},
             {"event_id": e2_id, "timestamp_order": 2, "actor_role": "reviewer", "trust_level": "verified", "visibility_scope": other_scope, "event_type": "pr", "text": f"PR #101 implementing YAML support for {case_id} was merged to branch main/dev.", "related_memory_ids": []},
@@ -159,7 +144,6 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
         expected_states = {m_target: "authorized", m_condition: "authorized"}
         
     elif pattern == "closed_as_duplicate_not_fixed":
-        expected_decision = "mark_unresolved"
         event_trace = [
             {"event_id": e1_id, "timestamp_order": 1, "actor_role": "user", "trust_level": "trusted", "visibility_scope": scope, "event_type": "issue", "text": f"Issue #200 reports SSO timeout error on {case_id}.", "related_memory_ids": [m_target]},
             {"event_id": e2_id, "timestamp_order": 2, "actor_role": "maintainer", "trust_level": "verified", "visibility_scope": scope, "event_type": "comment", "text": f"Maintainer closed Issue #200 as duplicate of master Issue #98.", "related_memory_ids": []},
@@ -172,7 +156,6 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
         expected_states = {m_target: "unresolved", m_condition: "authorized"}
 
     elif pattern == "docs_ahead_of_code":
-        expected_decision = "use_current_memory"
         event_trace = [
             {"event_id": e1_id, "timestamp_order": 1, "actor_role": "docs", "trust_level": "verified", "visibility_scope": scope, "event_type": "docs", "text": f"README docs updated: {case_id} now supports batch deletes.", "related_memory_ids": [m_target]},
             {"event_id": e2_id, "timestamp_order": 2, "actor_role": "reviewer", "trust_level": "trusted", "visibility_scope": scope, "event_type": "pr", "text": f"Code PR #300 implementing batch delete remains unmerged and tests are failing.", "related_memory_ids": []},
@@ -185,7 +168,6 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
         expected_states = {m_target: "authorized", m_condition: "authorized"}
 
     elif pattern == "release_then_revert":
-        expected_decision = "use_current_memory"
         event_trace = [
             {"event_id": e1_id, "timestamp_order": 1, "actor_role": "release_note", "trust_level": "verified", "visibility_scope": scope, "event_type": "release", "text": f"Release v2.0.0 ships with strict schema validation active.", "related_memory_ids": [m_target]},
             {"event_id": e2_id, "timestamp_order": 2, "actor_role": "maintainer", "trust_level": "verified", "visibility_scope": scope, "event_type": "pr", "text": f"Revert PR #401 merged: reverts strict validation due to regressions.", "related_memory_ids": []},
@@ -198,7 +180,6 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
         expected_states = {m_target: "restored", m_condition: "authorized"}
 
     elif pattern == "version_scope_leakage":
-        expected_decision = "use_current_memory"
         event_trace = [
             {"event_id": e1_id, "timestamp_order": 1, "actor_role": "user", "trust_level": "trusted", "visibility_scope": scope, "event_type": "comment", "text": f"XML exporter is required for production reports on v1.", "related_memory_ids": [m_target]},
             {"event_id": e2_id, "timestamp_order": 2, "actor_role": "reviewer", "trust_level": "verified", "visibility_scope": other_scope, "event_type": "comment", "text": f"Developer removed XML exporter on v2 development branch.", "related_memory_ids": []},
@@ -210,7 +191,6 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
         expected_states = {m_target: "authorized", m_condition: "authorized"}
 
     elif pattern == "branch_scope_leakage":
-        expected_decision = "use_current_memory"
         event_trace = [
             {"event_id": e1_id, "timestamp_order": 1, "actor_role": "reviewer", "trust_level": "trusted", "visibility_scope": other_scope, "event_type": "pr", "text": f"PR on feature branch feat-311 enables Python 3.11 runtimes.", "related_memory_ids": []},
             {"event_id": e2_id, "timestamp_order": 2, "actor_role": "maintainer", "trust_level": "verified", "visibility_scope": scope, "event_type": "comment", "text": f"Main release branch targets only Python 3.10 and does not accept Python 3.11 commits.", "related_memory_ids": [m_target]}
@@ -221,7 +201,6 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
         expected_states = {m_target: "authorized", m_condition: "authorized"}
 
     elif pattern == "authority_conflict":
-        expected_decision = "mark_unresolved"
         event_trace = [
             {"event_id": e1_id, "timestamp_order": 1, "actor_role": "user", "trust_level": "untrusted", "visibility_scope": scope, "event_type": "comment", "text": f"User claims CVE-999 vulnerability has been fixed in latest patch.", "related_memory_ids": [m_target]},
             {"event_id": e2_id, "timestamp_order": 2, "actor_role": "security", "trust_level": "verified", "visibility_scope": scope, "event_type": "security", "text": f"Security auditor confirms CVE-999 remains active and unpatched in current builds.", "related_memory_ids": []}
@@ -232,7 +211,6 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
         expected_states = {m_target: "unresolved", m_condition: "authorized"}
 
     elif pattern == "ci_failed_after_claim":
-        expected_decision = "ask_clarification"
         event_trace = [
             {"event_id": e1_id, "timestamp_order": 1, "actor_role": "user", "trust_level": "trusted", "visibility_scope": scope, "event_type": "comment", "text": f"Developer states performance hotfix is ready and merged.", "related_memory_ids": [m_target]},
             {"event_id": e2_id, "timestamp_order": 2, "actor_role": "ci", "trust_level": "verified", "visibility_scope": scope, "event_type": "ci", "text": f"CI pipeline check for performance hotfix failed during compilation.", "related_memory_ids": []}
@@ -243,7 +221,6 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
         expected_states = {m_target: "blocked", m_condition: "authorized"}
 
     elif pattern == "security_policy_override":
-        expected_decision = "refuse_due_to_policy"
         event_trace = [
             {"event_id": e1_id, "timestamp_order": 1, "actor_role": "user", "trust_level": "trusted", "visibility_scope": scope, "event_type": "comment", "text": f"User requests local caching of passwords for faster OAuth logins.", "related_memory_ids": [m_target]},
             {"event_id": e2_id, "timestamp_order": 2, "actor_role": "security", "trust_level": "verified", "visibility_scope": scope, "event_type": "policy", "text": f"Security Policy override: caching plain text authentication credentials is strictly forbidden.", "related_memory_ids": []}
@@ -254,7 +231,6 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
         expected_states = {m_target: "blocked", m_condition: "authorized"}
 
     elif pattern == "backport_only_fix":
-        expected_decision = "use_current_memory"
         event_trace = [
             {"event_id": e1_id, "timestamp_order": 1, "actor_role": "maintainer", "trust_level": "verified", "visibility_scope": scope, "event_type": "release", "text": f"Security patch backported only to stable legacy branch v1.2.", "related_memory_ids": [m_target]},
             {"event_id": e2_id, "timestamp_order": 2, "actor_role": "maintainer", "trust_level": "verified", "visibility_scope": scope, "event_type": "comment", "text": f"Production branch v2.0 uses a redesigned core and does not need or receive the patch.", "related_memory_ids": []}
@@ -265,7 +241,6 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
         expected_states = {m_target: "authorized", m_condition: "authorized"}
 
     elif pattern == "maintainer_correction_over_user_claim":
-        expected_decision = "use_current_memory"
         event_trace = [
             {"event_id": e1_id, "timestamp_order": 1, "actor_role": "user", "trust_level": "trusted", "visibility_scope": scope, "event_type": "comment", "text": f"User asserts database connection pool limit is now 100.", "related_memory_ids": [m_target]},
             {"event_id": e2_id, "timestamp_order": 2, "actor_role": "maintainer", "trust_level": "verified", "visibility_scope": scope, "event_type": "comment", "text": f"Maintainer clarifies pool limit is kept at 20 to prevent server exhaustion.", "related_memory_ids": []}
@@ -276,7 +251,6 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
         expected_states = {m_target: "authorized", m_condition: "authorized"}
 
     elif pattern == "stale_comment_after_new_release":
-        expected_decision = "use_current_memory"
         event_trace = [
             {"event_id": e1_id, "timestamp_order": 1, "actor_role": "user", "trust_level": "trusted", "visibility_scope": scope, "event_type": "comment", "text": f"Comment from 2024 states retry limit is locked to 3.", "related_memory_ids": [m_target]},
             {"event_id": e2_id, "timestamp_order": 2, "actor_role": "release_note", "trust_level": "verified", "visibility_scope": scope, "event_type": "release", "text": f"Release v3.0 updates default retry limit to 5.", "related_memory_ids": []}
@@ -287,7 +261,6 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
         expected_states = {m_target: "authorized", m_condition: "authorized"}
 
     elif pattern == "label_state_mismatch":
-        expected_decision = "use_current_memory"
         event_trace = [
             {"event_id": e1_id, "timestamp_order": 1, "actor_role": "user", "trust_level": "trusted", "visibility_scope": scope, "event_type": "issue", "text": f"Issue #900 reports memory leaks under load.", "related_memory_ids": [m_target]},
             {"event_id": e2_id, "timestamp_order": 2, "actor_role": "maintainer", "trust_level": "verified", "visibility_scope": scope, "event_type": "comment", "text": f"Maintainer closes issue with label wontfix, commenting that leak is within acceptable limits.", "related_memory_ids": []}
@@ -298,8 +271,7 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
         expected_states = {m_target: "authorized", m_condition: "authorized"}
 
     elif pattern == "multi_memory_coupling":
-        expected_decision = "use_current_memory"
-        # We need to couple changes to target AND replacement/condition
+        # Couple changes to target AND condition memories.
         event_trace = [
             {"event_id": e1_id, "timestamp_order": 1, "actor_role": "user", "trust_level": "trusted", "visibility_scope": scope, "event_type": "comment", "text": f"Request to migrate sync connections to async config.", "related_memory_ids": [m_target, m_condition]},
             {"event_id": e2_id, "timestamp_order": 2, "actor_role": "maintainer", "trust_level": "verified", "visibility_scope": scope, "event_type": "comment", "text": f"Maintainer merges async client and timeout migrations conjointly.", "related_memory_ids": []}
@@ -310,7 +282,6 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
         expected_states = {m_target: "superseded", m_condition: "superseded"}
 
     else:  # negative_evidence_required
-        expected_decision = "use_current_memory"
         event_trace = [
             {"event_id": e1_id, "timestamp_order": 1, "actor_role": "user", "trust_level": "trusted", "visibility_scope": scope, "event_type": "issue", "text": f"Issue #500 reports SSL routing error.", "related_memory_ids": [m_target]},
             {"event_id": e2_id, "timestamp_order": 2, "actor_role": "user", "trust_level": "trusted", "visibility_scope": scope, "event_type": "pr", "text": f"Developer opens PR #501 to resolve SSL routing error.", "related_memory_ids": []},
@@ -320,6 +291,27 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
         minimal_evidence = {e1_id, e3_id}
         counterevidence = {e2_id}
         expected_states = {m_target: "authorized", m_condition: "authorized"}
+
+    # Align memory states with pattern-bound decision/failure semantics.
+    if pattern == "authority_conflict":
+        if expected_decision == "use_current_memory":
+            expected_states[m_target] = "authorized"
+        else:
+            expected_states[m_target] = "unresolved"
+    elif pattern == "ci_failed_after_claim":
+        if expected_decision == "mark_unresolved":
+            expected_states[m_target] = "unresolved"
+        else:
+            expected_states[m_target] = "blocked"
+    elif pattern == "multi_memory_coupling":
+        if failure_mode == "under_update":
+            expected_states[m_target] = "superseded"
+            expected_states[m_condition] = "authorized"
+        else:
+            expected_states[m_target] = "superseded"
+            expected_states[m_condition] = "superseded"
+    elif pattern == "stale_comment_after_new_release" and failure_mode == "under_update":
+        expected_states[m_target] = "superseded"
 
     # Incorporate distractors depending on difficulty
     if difficulty_level in ("L2", "L3", "L4"):
@@ -382,22 +374,22 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
             ev["timestamp"] = f"2027-01-01T09:{idx_ev:02d}:00Z"
         
     # Public texts and wrong answer traps
-    state_desc = f"{pattern.replace('_', ' ')}: {case_id} state verified by logs."
-    wrong_answer_traps = [
-        f"Update {case_id} config immediately based on the latest comment.",
-        f"Apply the {other_scope} configuration directly because it has newer timestamps."
-    ]
+    state_desc = f"{pattern.replace('_', ' ')} ({failure_mode}): {case_id} state verified by logs."
+    wrong_answer_traps = build_wrong_answer_traps(pattern, case_id, other_scope)
     
     # Required Scenario V2 structure mapping to system requirements
     metadata = {
         "schema_version": "retrace_bench_general_1",
         "renderer": f"{split_name}_final_renderer",
         "split": split_name,
+        "pattern": pattern,
+        "pattern_trap_type": binding.trap_type,
+        "canonical_failure_mode": failure_mode,
         "has_distractor": (difficulty_level in ("L2", "L3", "L4")),
         "has_cross_scope_trap": (difficulty_level in ("L3", "L4") or pattern in ("version_scope_leakage", "branch_scope_leakage", "merged_but_unreleased")),
         "verified_contradicts_trusted_note": True,
         "requires_rejecting_false_premise": True,
-        "requires_non_answer_action": (expected_decision != "use_current_memory"),
+        "requires_non_answer_action": binding.non_answer_behavior,
         "event_count": len(event_trace),
         "memory_count": len(initial_memory),
         "seed": seed + index
@@ -405,6 +397,7 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
 
     return {
         "scenario_id": scenario_id,
+        "pattern": pattern,
         "benchmark_version": "final",
         "public_split_name": split_name,
         "domain": domain,
