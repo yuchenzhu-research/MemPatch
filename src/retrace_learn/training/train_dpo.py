@@ -1,4 +1,4 @@
-"""DPO over DPA-in-the-loop preference pairs (Stage RL-3, preference variant).
+"""DPO over DPA-guided preference pairs (Stage 3 protocol).
 
 Preference pairs come from ``export_rl_rollouts.build_preference_pairs`` —
 ``chosen`` is the higher-reward completion, ``rejected`` the lower-reward one,

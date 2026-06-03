@@ -38,8 +38,8 @@ when **all** of the following hold (otherwise it fails closed):
 2. `approval.decision == "approved"`, with `approval.reviewer` and
    `approval.reviewed_at` recorded.
 3. Every exemplar contains only method-visible fields (no gold / evaluator fields).
-4. Every non-`NO_REVISION` action cites visible new evidence via non-empty
-   `evidence_ids`.
+4. Every action, including `NO_REVISION`, cites visible new evidence via
+   non-empty `evidence_ids`.
 
 ```json
 {
