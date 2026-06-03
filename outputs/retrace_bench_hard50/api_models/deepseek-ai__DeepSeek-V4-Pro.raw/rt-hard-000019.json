@@ -1,5 +1,5 @@
 {
   "scenario_id": "rt-hard-000019",
   "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300018 remains on the default case route configuration from stable v1. The strict validation introduced in v2.0.0 was reverted in v2.0.1, so no verified release approval update has been applied.\",\n  \"memory_state\": {\n    \"m-rt-hard-000019-target\": \"current\",\n    \"m-rt-hard-000019-condition\": \"current\",\n    \"m-rt-hard-000019-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000019-1\",\n    \"e-rt-hard-000019-2\",\n    \"e-rt-hard-000019-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300018 remains on the default case route configuration on stable v1. The strict validation introduced in v2.0.0 was reverted in v2.0.1, so no verified release approval update has been applied.\",\n  \"memory_state\": {\n    \"m-rt-hard-000019-target\": \"current\",\n    \"m-rt-hard-000019-condition\": \"current\",\n    \"m-rt-hard-000019-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000019-1\",\n    \"e-rt-hard-000019-2\",\n    \"e-rt-hard-000019-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
 }

@@ -20,24 +20,21 @@
     "software_engineering_agent": 7
   },
   "expected_decisions": {
-    "ask_clarification": 3,
+    "ask_clarification": 0,
     "escalate": 0,
-    "mark_unresolved": 7,
+    "mark_unresolved": 9,
     "refuse_due_to_policy": 3,
-    "use_current_memory": 37
+    "use_current_memory": 38
   },
   "failure_modes": {
-    "conflict_collapse": 5,
-    "failure_to_forget": 4,
-    "failure_to_release_or_restore": 4,
-    "memory_hallucination": 4,
+    "conflict_collapse": 7,
+    "failure_to_release_or_restore": 2,
     "over_update": 5,
-    "policy_violation": 5,
-    "scope_leakage": 5,
-    "stale_memory_reuse": 5,
+    "policy_violation": 3,
+    "scope_leakage": 8,
+    "stale_memory_reuse": 14,
     "under_update": 5,
-    "unnecessary_memory_write": 4,
-    "wrong_source_attribution": 4
+    "wrong_source_attribution": 6
   },
   "generation_commit": "final_release",
   "intended_use": "AAAI ReTrace-Bench paper evaluation baseline reference",

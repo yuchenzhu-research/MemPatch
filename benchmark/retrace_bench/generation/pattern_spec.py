@@ -355,6 +355,18 @@ def validate_pattern_semantics(scenario: dict[str, Any], gold: dict[str, Any]) -
     if pattern == "authority_conflict" and expected_decision not in {"use_current_memory", "mark_unresolved"}:
         errors.append(f"{sid}: authority_conflict decision must be use_current_memory or mark_unresolved")
 
+    expected_answer = str(gold.get("expected_answer") or "").lower()
+    if expected_answer:
+        answer_blob = expected_answer.replace("_", " ")
+        if pattern.replace("_", " ") in answer_blob or pattern in expected_answer:
+            errors.append(f"{sid}: expected_answer leaks pattern name '{pattern}'")
+        for failure_label in FAILURE_MODES:
+            if failure_label.replace("_", " ") in answer_blob or failure_label in expected_answer:
+                errors.append(
+                    f"{sid}: expected_answer leaks failure label '{failure_label}'"
+                )
+                break
+
     return errors
 
 

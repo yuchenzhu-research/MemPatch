@@ -1,5 +1,5 @@
 {
   "scenario_id": "rt-hard-000046",
   "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300045 remains on default preference rule configuration on stable v1.4.0; the YAML feature was not included in the stable release.\",\n  \"memory_state\": {\n    \"m-rt-hard-000046-target\": \"current\",\n    \"m-rt-hard-000046-condition\": \"current\",\n    \"m-rt-hard-000046-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000046-1\",\n    \"e-rt-hard-000046-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300045 remains on default preference rule configuration per stable v1.4.0 release notes, which do not include the YAML feature.\",\n  \"memory_state\": {\n    \"m-rt-hard-000046-target\": \"current\",\n    \"m-rt-hard-000046-condition\": \"current\",\n    \"m-rt-hard-000046-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000046-1\",\n    \"e-rt-hard-000046-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
 }

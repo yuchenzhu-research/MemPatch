@@ -1,5 +1,5 @@
 {
   "scenario_id": "rt-hard-000024",
   "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300023 uses default metric definition configuration on stable v1. No verified release approval has been recorded, so the prior state remains authorized.\",\n  \"memory_state\": {\n    \"m-rt-hard-000024-target\": \"current\",\n    \"m-rt-hard-000024-condition\": \"current\",\n    \"m-rt-hard-000024-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000024-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300023 uses default metric definition configuration on stable v1. No verified release approval has been recorded, so the prior state remains the authorized status.\",\n  \"memory_state\": {\n    \"m-rt-hard-000024-target\": \"current\",\n    \"m-rt-hard-000024-condition\": \"current\",\n    \"m-rt-hard-000024-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000024-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
 }

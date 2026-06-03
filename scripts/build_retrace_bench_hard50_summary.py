@@ -278,8 +278,9 @@ def main(argv: list[str] | None = None) -> int:
                 "### Model outputs",
             ]
         )
-        for model in API_MODELS:
-            pred = api_preds.get(model, {}).get(sid, {}).get("response", {})
+        available_api_models = [model for model in API_MODELS if api_preds.get(model)]
+        for model in available_api_models:
+            pred = api_preds[model][sid].get("response", {})
             inspect_lines.append(
                 f"- **{short_model_name(model)}:** decision=`{pred.get('decision')}` "
                 f"evidence=`{pred.get('evidence_event_ids')}` diagnosis=`{pred.get('failure_diagnosis')}`"
