@@ -1,22 +1,27 @@
 # ReTrace Data Layout
 
-This directory organizes datasets, validation splits, and supervision pools.
+This directory organizes the ReTrace-Bench v1.0 evaluation splits and the
+ReTrace-Learn supervision pools.
 
 ## Structure
 
-### `data/retrace_bench/`
-Contains held-out benchmark and calibration split data.
-- **`test_800_templateheldout_en`**: The canonical paper-facing held-out benchmark test split containing 800 scenarios. All headline numbers come from here. No training targets are included.
-- **`test_800_en`**: Old prototype/diagnostic benchmark split (kept for historical compatibility only). Must **not** be used for paper headline numbers.
-- **`sample_80_hard_en`**: A small calibration / quickstart / smoke dataset for debugging and pipeline verification. On Hugging Face it may be exposed as the `validation` split for dataset-viewer compatibility only; it is **not** a model-selection / checkpoint-selection validation set.
+### `data/retrace_bench/` (ReTrace-Bench v1.0)
+Four paper-facing evaluation splits (public names `main` / `hard` / `realistic`
+/ `calibration`). All are de-actionalized and pass a decision-word leakage
+audit; benchmark rows carry no training targets.
+- **`main_3000_en`**: Controlled benchmark main split (3000 scenarios). Primary headline results.
+- **`hard_300_en`**: Long-context / multi-evidence / multi-memory stress split (300 scenarios; 20–100 events, ≥5 memories, ≥2 evidence events per case).
+- **`realistic_100_en`**: Realistic-style workflow split (100 scenarios). `source_type = realistic_style_synthetic`, `annotation_status = pending`; `hidden_gold` is intentionally empty until human annotation (template in `annotations_template.jsonl`). No human validation or public-source provenance is claimed.
+- **`calibration_80_en`**: Smoke / quickstart split (80 scenarios). **Not** for model selection, checkpoint selection, tuning, or headline claims.
 
-### `data/retrace_supervision/`
-Contains synthetic supervision and selection pools shared across the two active
-tracks. ReTrace-Bench publishes them as HF `train` / `dev` splits, and
-ReTrace-Learn consumes them for SFT / selection. They are **not** held-out
-benchmark test sets and may contain training targets.
-- **`train_3000_en`**: Supervision/selection pool containing 3000 scenarios.
-- **`dev_400_en`**: Dev/selection pool containing 400 scenarios.
+The legacy pre-v1.0 layout is recoverable from the Git tag
+`legacy-retrace-bench-pre-v1.0`.
+
+### `data/retrace_learn/supervision_*`
+Synthetic supervision / selection pools for the ReTrace-Learn method track.
+They are **not** benchmark test sets and may contain training targets.
+- **`supervision_train_3000_en`**: Supervision/selection pool (3000 scenarios).
+- **`supervision_dev_400_en`**: Dev/selection pool (400 scenarios).
 
 ### `data/retrace_learn/`
 Legacy/internal ReTrace-Learn method data (e.g. `v1/internal_dev` and `v1/boundary_audit`).

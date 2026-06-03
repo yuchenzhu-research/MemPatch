@@ -1,5 +1,8 @@
 # Offline Baseline Results: test_800_templateheldout_en
 
+> **Legacy (pre-v1.0) document.** Describes a legacy pre-v1.0 split/pilot, recoverable from the Git tag `legacy-retrace-bench-pre-v1.0`. Retained for provenance only; it does **not** describe the ReTrace-Bench v1.0 splits (`main`/`hard`/`realistic`/`calibration`).
+
+
 `data/retrace_bench/test_800_templateheldout_en/` is the canonical paper-facing held-out benchmark split. `data/retrace_bench/test_800_en/` is retained as prototype/diagnostic only and must not be used for paper headline numbers.
 
 `data/retrace_supervision/train_3000_en/` and `data/retrace_supervision/dev_400_en/` are synthetic supervision/selection pools, not benchmark test sets. The template lookup diagnostic is a shortcut-leakage probe, not a deployable memory baseline.

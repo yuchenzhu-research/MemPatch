@@ -13,19 +13,25 @@ CRUD memory, Mem0-style memory systems, and trained memory models. The benchmark
 supports black-box answering, memory-state classification, evidence retrieval,
 and diagnostic failure identification.
 
-## Data Files
+## Data Files (ReTrace-Bench v1.0)
 
-- Hugging Face `test`: viewer-friendly flattened form of
-  `data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl` (800
-  scenarios).
-- Hugging Face `validation`: viewer-compatible calibration split from
-  `data/retrace_bench/sample_80_hard_en/scenarios.jsonl` (80 scenarios). This
-  split is for quickstarts and viewer compatibility, not model/checkpoint
-  selection.
-- Hugging Face `train`: supervision pool from
-  `data/retrace_supervision/train_3000_en/scenarios.jsonl` (3000 scenarios).
-- Hugging Face `dev`: selection pool from
-  `data/retrace_supervision/dev_400_en/scenarios.jsonl` (400 scenarios).
+Four paper-facing splits, published under public names `main` / `hard` /
+`realistic` / `calibration` (never train / dev / validation / test):
+
+- Hugging Face `main`: viewer-friendly flattened form of
+  `data/retrace_bench/main_3000_en/scenarios.jsonl` (3000 scenarios) — controlled
+  benchmark main split.
+- Hugging Face `hard`: `data/retrace_bench/hard_300_en/scenarios.jsonl` (300
+  scenarios) — long-context / multi-evidence stress split.
+- Hugging Face `realistic`: `data/retrace_bench/realistic_100_en/scenarios.jsonl`
+  (100 scenarios) — realistic-style workflow split, `annotation_status = pending`
+  (gold not yet annotated; empty template under `annotations/`).
+- Hugging Face `calibration`: `data/retrace_bench/calibration_80_en/scenarios.jsonl`
+  (80 scenarios) — smoke / quickstart only, not for model selection or headline
+  claims.
+
+Supervision / selection pools (`data/retrace_learn/supervision_*`) are **not**
+part of the public benchmark release.
 
 ## Fields
 
@@ -52,11 +58,15 @@ All entities are synthetic. Identifiers use formats such as `C-1842`,
 
 ## Limitations
 
-The public HF release exposes the held-out test split, calibration split, and
-synthetic supervision / selection pools. Only `test` is the canonical held-out
-benchmark split; `validation` is a quickstart/calibration split, and `train` /
-`dev` are supervision and selection pools. Hidden labels are deterministic and
-auditable, which is intentional for reproducibility.
+The public HF release exposes the four v1.0 splits `main` / `hard` / `realistic`
+/ `calibration`. `main` carries the primary headline results; `hard` is a
+long-context stress split; `calibration` is smoke/quickstart only and must not
+be used for model selection or headline claims. The `realistic` split is
+**unannotated** in this release (`annotation_status = pending`) — no human
+validation or public-source provenance is claimed. Hidden labels on the
+synthetic splits are deterministic and auditable, which is intentional for
+reproducibility. The legacy pre-v1.0 layout is recoverable from the Git tag
+`legacy-retrace-bench-pre-v1.0`.
 
 ## License
 

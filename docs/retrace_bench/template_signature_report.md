@@ -1,5 +1,8 @@
 # ReTrace-Bench Template Signature Report
 
+> **Legacy (pre-v1.0) document.** Describes a legacy pre-v1.0 split/pilot, recoverable from the Git tag `legacy-retrace-bench-pre-v1.0`. Retained for provenance only; it does **not** describe the ReTrace-Bench v1.0 splits (`main`/`hard`/`realistic`/`calibration`).
+
+
 This diagnostic de-identifies scenario text before comparing templates. It normalizes scenario IDs, case/project/person/workspace IDs, memory/event IDs, timestamps, numeric counters, and split prefixes.
 
 The existing `test_800_en` is treated as prototype/diagnostic. The new `test_800_templateheldout_en` is the candidate paper-facing held-out split.

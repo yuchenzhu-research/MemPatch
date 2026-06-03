@@ -1,8 +1,11 @@
 # ReTrace-Bench — Table Plan
 
 Planned paper tables. For each: source file/command, expected columns, whether
-the data already exists, and missing items. Numbers below are illustrative of the
-current offline run on the canonical split; regenerate before final submission.
+the data already exists, and missing items. ReTrace-Bench v1.0 uses four
+paper-facing splits (`main` / `hard` / `realistic` / `calibration`); headline
+baselines require a full model-suite rerun on the v1.0 splits and are not yet
+committed. Any numbers below are illustrative and must be regenerated before
+final submission.
 
 ---
 
@@ -26,21 +29,21 @@ Full label spaces.
 - **Source:** `benchmark/retrace_bench/general_taxonomy.py`.
 - **Exists:** yes (static). **Missing:** none.
 
-## Table 3 — Split summary
+## Table 3 — Split summary (ReTrace-Bench v1.0)
 
-- **Columns:** split | count | role | train/tune allowed? | in public release?
+- **Columns:** split (public name) | count | role | model selection allowed? | in public release?
 - **Rows:**
-  - `test_800_templateheldout_en` | 800 | canonical held-out test | no | yes
-  - `sample_80_hard_en` | 80 | calibration/quickstart (HF `validation`) | no | yes
-  - `train_3000_en` | 3000 | supervision pool | yes | yes
-  - `dev_400_en` | 400 | selection pool | yes | yes
-  - `test_800_en` | 800 | prototype/diagnostic | no | no (excluded)
-- **Source:** `data/retrace_bench/*`, `data/retrace_supervision/*`,
-  `release/huggingface/ReTrace-Bench/README.md`.
+  - `main` (`main_3000_en`) | 3000 | controlled benchmark main split | no | yes
+  - `hard` (`hard_300_en`) | 300 | long-context / multi-evidence stress | no | yes
+  - `realistic` (`realistic_100_en`) | 100 | realistic-style, annotation pending | no | yes
+  - `calibration` (`calibration_80_en`) | 80 | smoke / quickstart only | no | yes
+- **Source:** `data/retrace_bench/*`,
+  `release/huggingface/ReTrace-Bench/README.md`. Supervision pools
+  (`data/retrace_learn/supervision_*`) are not benchmark splits.
 - **Exists:** yes. **Missing:** confirm counts before final submission via
   `validate_retrace_bench_dataset.py`.
 
-## Table 4 — Main baseline results (canonical test split)
+## Table 4 — Main baseline results (`main` split)
 
 - **Columns:** group | baseline | oracle? | decision macro-F1 | non-answer acc. |
   memory state | evidence F1 | diagnosis | stale reuse | (aux) decision acc. |
@@ -51,15 +54,12 @@ Full label spaces.
 - **Source / command:**
   ```bash
   PYTHONPATH=. python scripts/run_retrace_bench_ablation.py \
-    --data data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl \
-    --out-dir outputs/retrace_bench/ablation_test_800_templateheldout_offline \
-    --max-cases 800
+    --data data/retrace_bench/main_3000_en/scenarios.jsonl \
+    --out-dir outputs/retrace_bench/ablation_main_3000_offline
   ```
-  Pre-rendered in
-  `docs/retrace_bench/baseline_results_test_800_templateheldout_en.md`.
-- **Exists:** yes (offline baselines + oracle). **Missing:** at least one real
-  LLM baseline (`llm_json_answerer`, needs a provider/API key); optional real
-  Mem0/Graphiti-style baseline.
+- **Exists:** no — v1.0 baselines must be regenerated on `main` (and `hard`).
+  **Missing:** the full offline baseline + oracle run on the v1.0 splits, plus
+  at least one real LLM baseline (`llm_json_answerer`, needs a provider/API key).
 
 ## Table 5 — Per-failure-mode breakdown
 
@@ -80,12 +80,11 @@ Full label spaces.
 ## Table 7 — Ablations / diagnostics
 
 - **Columns:** variant | headline metrics.
-- **Rows:** e.g. evidence-only vs. full; difficulty L1→L4 trend; template-lookup
-  shortcut probe (leakage upper bound, clearly labeled non-deployable).
-- **Source:** `scripts/run_retrace_bench_ablation.py`,
-  `template_lookup_test_800_templateheldout_en.md`.
-- **Exists:** partially (template-lookup probe exists). **Missing:** consolidated
-  ablation table.
+- **Rows:** e.g. evidence-only vs. full; difficulty L1→L4 trend; decision-word
+  leakage probe (upper bound, clearly labeled non-deployable).
+- **Source:** `scripts/run_retrace_bench_ablation.py`, the v1.0 leakage audit in
+  `benchmark/retrace_bench/generation/release_manifest.py`.
+- **Exists:** partially. **Missing:** consolidated ablation table on v1.0 splits.
 
 ## Appendix tables
 
@@ -93,9 +92,10 @@ Full label spaces.
   `validate_retrace_bench_dataset.py` output (e.g. non_answer 0.709,
   verified_over_trusted 0.666, events_ge_7 0.84, distractors 1.0, cross_scope
   1.0). Exists: yes.
-- **A2 Leakage checks:** template-signature overlap; template-lookup probe
-  scores. Source: `template_signature_report.md`,
-  `template_lookup_test_800_templateheldout_en.md`,
-  `split_leakage_report.md`. Exists: yes.
+- **A2 Leakage checks:** v1.0 decision-word leakage audit (no authoritative
+  record contains a decision phrase); cross-split ID/text disjointness. Source:
+  `benchmark/retrace_bench/generation/release_manifest.py`,
+  per-split `manifest.json` (`leakage_audit_summary`). Legacy
+  template-signature reports retained for provenance only. Exists: yes.
 - **A3 Oracle consistency:** oracle headline metrics + the memory-state 0.968
   ceiling explanation. Source: baseline-results doc. Exists: yes.

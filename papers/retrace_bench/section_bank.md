@@ -98,23 +98,31 @@ integrity (evidence/memory IDs resolve), public-text hygiene, task coverage
 (all four views present), and distribution gates (e.g. minimum event counts,
 distractor and cross-scope rates, non-answer share, verified-over-trusted rate).
 
-**Splits and roles.**
-- `test_800_templateheldout_en` — canonical, paper-facing held-out test split;
-  templates are held out from the supervision pools. Never train/tune/select on
-  it.
-- `sample_80_hard_en` — small calibration / quickstart / smoke split; exposed to
-  the Hugging Face viewer as the `validation` split *for viewer compatibility
-  only*, never for model or checkpoint selection.
-- `train_3000_en`, `dev_400_en` — supervision / selection pools, not benchmark
-  test sets.
-- `test_800_en` — prototype/diagnostic split, excluded from the public release
-  and from headline numbers.
+**Splits and roles (ReTrace-Bench v1.0).** Four paper-facing splits, public
+names `main` / `hard` / `realistic` / `calibration` (never train / dev /
+validation / test):
+- `main_3000_en` (`main`, 3000) — controlled benchmark main split; all headline
+  numbers come from here. Never train/tune/select on it.
+- `hard_300_en` (`hard`, 300) — rule-defined long-context / multi-evidence /
+  multi-memory stress split (20–100 events, ≥5 memories, ≥2 evidence per case).
+- `realistic_100_en` (`realistic`, 100) — realistic-style workflow split;
+  `source_type = realistic_style_synthetic`, `annotation_status = pending`. No
+  human validation or public-source provenance is claimed.
+- `calibration_80_en` (`calibration`, 80) — smoke / quickstart split only; never
+  for model or checkpoint selection or headline claims.
 
-**Leakage / template-heldout.** Template signatures in the test split are held
-out from the supervision pools, and a template-lookup probe quantifies how much
-a pure template-memorization shortcut could achieve (it is a leakage probe, not
-a deployable baseline). See `template_lookup_test_800_templateheldout_en.md`,
-`template_signature_report.md`, and `split_leakage_report.md`.
+Supervision / selection pools (`data/retrace_learn/supervision_*`) are not
+benchmark test sets. The legacy pre-v1.0 layout is recoverable from the Git tag
+`legacy-retrace-bench-pre-v1.0`.
+
+**Leakage audit.** Every split is de-actionalized and passes a decision-word
+leakage audit: no authoritative/verified record contains a decision phrase tied
+to one of the five gold decisions, so the gold decision must be recovered by
+reasoning over state rather than string matching. The per-split `manifest.json`
+records a `leakage_audit_summary`; the audit logic lives in
+`benchmark/retrace_bench/generation/release_manifest.py`. Legacy
+template-signature reports (`template_signature_report.md`,
+`split_leakage_report.md`) are retained for provenance only.
 
 *Source:* `docs/retrace_bench/generation_and_audit_protocol.md`,
 `docs/retrace_bench/contamination_policy.md`.
@@ -170,7 +178,9 @@ recency/retrieval heuristics collapse on non-answer decisions and evidence
 grounding even when they score reasonably on majority-class accuracy.
 
 *Source:*
-`docs/retrace_bench/baseline_results_test_800_templateheldout_en.md`.
+a v1.0 offline baseline run on `main_3000_en` (to be regenerated; the legacy
+`docs/retrace_bench/baseline_results_test_800_templateheldout_en.md` is retained
+for provenance only).
 
 ## 9 Related Work
 

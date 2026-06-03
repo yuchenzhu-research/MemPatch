@@ -34,15 +34,16 @@ def test_gitignore_sensitive_artifacts_not_committed():
         "data/fixtures/",
         "experiments/multiagent/local_training/data/",
         "data/retrace_learn/v1/boundary_audit/",
-        "data/retrace_bench/sample_20_v2/",
-        "data/retrace_bench/sample_80_hard_en/",
-        "data/retrace_bench/test_800_en/",
-        "data/retrace_bench/test_800_templateheldout_en/",
-        "data/retrace_bench/test_800_templateheldout_v2_en/",
+        # ReTrace-Bench v1.0 paper-facing splits.
+        "data/retrace_bench/main_3000_en/",
+        "data/retrace_bench/hard_300_en/",
+        "data/retrace_bench/realistic_100_en/",
+        "data/retrace_bench/calibration_80_en/",
+        # ReTrace-Learn supervision pools (moved out of the benchmark tree).
+        "data/retrace_learn/supervision_train_3000_en/",
+        "data/retrace_learn/supervision_dev_400_en/",
         "release/huggingface/ReTrace-Bench/",
         "examples/retrace_bench/",
-        "data/retrace_supervision/train_3000_en/",
-        "data/retrace_supervision/dev_400_en/",
         "outputs/",
     )
 

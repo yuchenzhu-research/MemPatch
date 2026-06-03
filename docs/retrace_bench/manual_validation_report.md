@@ -1,5 +1,12 @@
 # ReTrace-Bench Manual Validation Report
 
+> **Legacy (pre-v1.0) document.** This report describes a manual pass over the
+> legacy `test_800_templateheldout_en` split, recoverable from the Git tag
+> `legacy-retrace-bench-pre-v1.0`. It is retained for provenance only and does
+> **not** carry over to the ReTrace-Bench v1.0 splits
+> (`main`/`hard`/`realistic`/`calibration`), which have not yet been manually
+> validated.
+
 ## Scope
 
 - **Split:** `test_800_templateheldout_en`

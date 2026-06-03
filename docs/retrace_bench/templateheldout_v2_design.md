@@ -1,5 +1,8 @@
 # ReTrace-Bench `test_800_templateheldout_v2_en` — design notes
 
+> **Legacy (pre-v1.0) document.** Describes a legacy pre-v1.0 split/pilot, recoverable from the Git tag `legacy-retrace-bench-pre-v1.0`. Retained for provenance only; it does **not** describe the ReTrace-Bench v1.0 splits (`main`/`hard`/`realistic`/`calibration`).
+
+
 **Status:** additive, non-frozen successor to the v1 template-held-out split.
 **Generator:** `scripts/generate_retrace_templateheldout_v2.py` (v1 generator
 `scripts/generate_retrace_templateheldout_test.py` is left untouched).

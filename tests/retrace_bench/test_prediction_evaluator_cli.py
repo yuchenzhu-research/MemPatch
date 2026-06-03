@@ -10,7 +10,7 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 CLI = REPO_ROOT / "scripts" / "evaluate_retrace_bench_predictions.py"
-DATA = REPO_ROOT / "data" / "retrace_bench" / "sample_80_hard_en" / "scenarios.jsonl"
+DATA = REPO_ROOT / "data" / "retrace_bench" / "calibration_80_en" / "scenarios.jsonl"
 PREDICTIONS = REPO_ROOT / "examples" / "retrace_bench" / "sample_predictions.jsonl"
 
 

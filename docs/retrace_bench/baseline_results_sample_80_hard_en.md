@@ -1,5 +1,8 @@
 # Baseline results — `sample_80_hard_en`
 
+> **Legacy (pre-v1.0) document.** Describes a legacy pre-v1.0 split/pilot, recoverable from the Git tag `legacy-retrace-bench-pre-v1.0`. Retained for provenance only; it does **not** describe the ReTrace-Bench v1.0 splits (`main`/`hard`/`realistic`/`calibration`).
+
+
 Current baseline results on the headline hard split (80 scenarios, all 8 domains
 and all 11 failure modes). Deterministic baselines are reproducible offline; the
 API baseline (`llm_json_answerer`) is provider-dependent and not reported here.

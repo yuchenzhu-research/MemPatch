@@ -16,19 +16,20 @@ This repository is governed by two active tracks:
   leakage checks, baselines, SFT export, and evaluation.
 - `tests/`: regression tests. Keep these unless the corresponding code/data
   path is removed in the same change.
-- `data/retrace_bench/`: benchmark data only.
-  - `test_800_templateheldout_en/`: paper-facing held-out test split.
-  - `test_800_en/`: prototype/diagnostic split.
-  - `sample_80_hard_en/`: compact hard calibration sample.
-  - `sample_20_v2/`: tiny schema smoke fixture.
-- `data/retrace_supervision/`: synthetic supervision and dev-selection pools.
-  These are for future ReTrace-Learn training/selection, not benchmark tests.
+- `data/retrace_bench/`: ReTrace-Bench v1.0 evaluation splits only.
+  - `main_3000_en/`: controlled benchmark main split (3000).
+  - `hard_300_en/`: long-context / multi-evidence stress split (300).
+  - `realistic_100_en/`: realistic-style workflow split (100), annotation pending.
+  - `calibration_80_en/`: smoke / quickstart split (80).
+- `data/retrace_learn/supervision_*`: synthetic supervision and dev-selection
+  pools (`supervision_train_3000_en`, `supervision_dev_400_en`). These are for
+  ReTrace-Learn training/selection, not benchmark tests.
 - `data/retrace_learn/`: small method-track fixtures and manifests.
 - `docs/`: durable project, method, benchmark, and release documentation.
 - `references/`: lightweight reference registries and notes only.
 - `release/huggingface/ReTrace-Bench/`: exact Hugging Face dataset release
-  package. Current release exposes `test`, `validation`, `train`, and `dev`
-  splits mapped to the canonical source data under `data/`.
+  package. The v1.0 release exposes the `main`, `hard`, `realistic`, and
+  `calibration` splits mapped to the source data under `data/retrace_bench/`.
 
 ## Local-Only Directories
 
@@ -49,8 +50,8 @@ The following are intentionally ignored and should not be committed:
 
 For server training:
 
-- Keep committed training/export source data under `data/retrace_supervision/`
-  or generated from scripts into `outputs/`.
+- Keep committed training/export source data under
+  `data/retrace_learn/supervision_*` or generated from scripts into `outputs/`.
 - Write training runs to `outputs/local_training/` or a user-specified ignored
   run directory.
 - Write checkpoints/adapters to `checkpoints/`, `models/`, or `adapters/`.

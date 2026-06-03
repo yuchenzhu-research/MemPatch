@@ -18,18 +18,23 @@ Benchmark paper / benchmark track. Evaluation-only and independent of any
 training method: any memory-enabled agent (LLM-only, RAG, CRUD store,
 Mem0-style, or a trained policy) can be scored on it.
 
-Owns: benchmark data, scenario schema, scoring/metrics, baselines, the held-out
-test split, leakage checks, and benchmark-paper framing.
+Owns: benchmark data, scenario schema, scoring/metrics, baselines, the four
+v1.0 evaluation splits (`main`/`hard`/`realistic`/`calibration`), leakage
+checks, and benchmark-paper framing.
 
 Canonical locations:
 
 - `benchmark/retrace_bench/`
-- `data/retrace_bench/`
-- `data/retrace_supervision/`
+- `data/retrace_bench/` (v1.0 splits `main_3000_en`, `hard_300_en`,
+  `realistic_100_en`, `calibration_80_en`)
 - `docs/retrace_bench/`
-- benchmark-related scripts (`scripts/generate_retrace_data_splits.py`,
-  `scripts/check_retrace_split_leakage.py`, `scripts/run_retrace_bench_*.py`,
+- benchmark-related scripts (`scripts/generate_retrace_main_3000.py`,
+  `scripts/generate_retrace_hard_300.py`, `scripts/run_retrace_bench_*.py`,
   `scripts/validate_retrace_bench_dataset.py`) and `tests/retrace_bench/`.
+
+Learning-only supervision/selection pools live under
+`data/retrace_learn/supervision_*` and are owned by the ReTrace-Learn track,
+not the benchmark.
 
 ## Active track 2 — ReTrace-Learn (method track)
 

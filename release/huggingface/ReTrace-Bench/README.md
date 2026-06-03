@@ -12,62 +12,72 @@ tags:
 - llm-agents
 - benchmark
 - memory-revision
-- long-term-memory
+- long-context
 - reliability
+- evaluation
 configs:
 - config_name: default
   data_files:
-  - split: test
-    path: benchmark/test_800_templateheldout_en/scenarios.jsonl
-  - split: validation
-    path: calibration/sample_80_hard_en/scenarios.jsonl
-  - split: train
-    path: supervision/train_3000_en/scenarios.jsonl
-  - split: dev
-    path: supervision/dev_400_en/scenarios.jsonl
+  - split: main
+    path: main/main_3000_en.jsonl
+  - split: hard
+    path: hard/hard_300_en.jsonl
+  - split: realistic
+    path: realistic/realistic_100_en.jsonl
+  - split: calibration
+    path: calibration/calibration_80_en.jsonl
 ---
 
 # ReTrace-Bench
 
-ReTrace-Bench evaluates agent memory revision reliability in multi-agent and agentic workflows. It tests whether systems can correctly process new evidence to update, block, release, reaffirm, or reject memory states without introducing stale, out-of-scope, or policy-invalid memory.
+ReTrace-Bench v1.0.0 evaluates **agent memory revision
+reliability**: whether a system can process new evidence to update, block,
+release, reaffirm, or reject memory states without introducing stale,
+out-of-scope, or policy-invalid memory. It is not merely a final-answer
+benchmark — coarse decision accuracy can overestimate memory reliability, so the
+benchmark also scores memory-state tracking, evidence grounding, and failure
+diagnosis.
 
-## IMPORTANT Notice
+## 1. Dataset Summary
 
-- **benchmark/test_800_templateheldout_en** is the canonical, paper-facing held-out benchmark split.
-- **Do not train, prompt-tune, policy-optimize, or select checkpoints on `benchmark/test_800_templateheldout_en`.**
-- `calibration/sample_80_hard_en` is a small calibration/quickstart/smoke split designed for debugging and pipeline verification. It is exposed to the Hugging Face viewer as the `validation` split **for viewer compatibility only** — it is **not** a model-selection / checkpoint-selection validation set and must not be used to tune or select systems.
-- `supervision/train_3000_en` and `supervision/dev_400_en` are synthetic supervision/selection pools for learning-based revision proposers. They are **NOT** benchmark tests and may contain `training_targets`.
-- The old prototype/diagnostic split `test_800_en` is excluded from this public release package.
+Four paper-facing splits, all English, controlled or realistic-style synthetic,
+constructed with a leakage-audited (de-actionalized) procedure: authoritative
+records never contain a decision-action phrase, so the correct revision decision
+must be recovered by reasoning over described state rather than string matching.
 
-## Repository & Official Evaluator
+## 2. Split Overview
 
-- **GitHub repository:** https://github.com/yuchenzhu-research/ReTrace
-- **Benchmark version:** `0.1.0` (commit `cdcf6624d6b5bbed0eb681b9cc5ee10e9584609a`)
+| split | size | role |
+|-------|------|------|
+| `main` | 3000 | controlled benchmark main split |
+| `hard` | 300 | long-context and multi-evidence stress split |
+| `realistic` | 100 | realistic-style workflow split, annotation pending |
+| `calibration` | 80 | smoke/quickstart only |
 
-ReTrace-Bench ships an official scorer that runs no model and needs no API keys.
-Clone the repository, then score a JSONL predictions file against a split:
+## 3. Task Definition
 
-```bash
-PYTHONPATH=. python scripts/evaluate_retrace_bench_predictions.py \
-  --data data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl \
-  --predictions path/to/predictions.jsonl \
-  --out-metrics outputs/retrace_bench/my_model.metrics.json \
-  --out-scored outputs/retrace_bench/my_model.scored.jsonl \
-  --print-table
-```
+Each scenario presents an initial memory set and a chronological event trace.
+The system must decide how memory should be revised and answer four task views:
+black-box answer, memory-state classification, evidence retrieval, and failure
+diagnosis.
 
-See `examples/retrace_bench/` in the repository for a runnable example and the
-Python API (`benchmark.retrace_bench.api`).
+## 4. Scenario Schema
 
-## Prediction Schema
+Source-of-truth scenarios are nested JSON objects with `scenario_id`, `split`,
+`domain`, `primary_failure_mode`, `difficulty`, `workflow_context`,
+`public_input` (`initial_memory`, `event_trace`), `tasks`, `hidden_gold`, and
+`metadata`. So the Hugging Face viewer can render every column, nested fields are published as
+JSON string columns (`public_input_json`, `tasks_json`, `hidden_gold_json`,
+`metadata_json`, `secondary_failure_modes_json`); parse them with
+`json.loads(...)`.
 
-One JSON object per line, matched to scenarios by `scenario_id`. Both the
-canonical nested `response` form and a flat form (response fields at top level)
-are accepted:
+## 5. Prediction Schema
+
+One JSON object per line, matched to scenarios by `scenario_id`:
 
 ```json
 {
-  "scenario_id": "rb-hard-en-00001",
+  "scenario_id": "<scenario id>",
   "response": {
     "answer": "<free-text answer>",
     "decision": "use_current_memory",
@@ -78,74 +88,64 @@ are accepted:
 }
 ```
 
-- `decision`: one of the five revision-decision labels (`use_current_memory`,
-  `escalate`, `ask_clarification`, `refuse_due_to_policy`, `mark_unresolved`).
-- `memory_state`: `memory_id -> status`; each status is one of `current`,
-  `outdated`, `blocked`, `unresolved`, `out_of_scope`, `deleted`,
-  `should_not_store`, `restored`.
+- `decision`: one of `use_current_memory`, `escalate`, `ask_clarification`,
+  `refuse_due_to_policy`, `mark_unresolved`.
+- `memory_state`: `memory_id -> status` (`current`, `outdated`, `blocked`,
+  `unresolved`, `out_of_scope`, `deleted`, `should_not_store`, `restored`).
 - `evidence_event_ids`: `event_id` values from `public_input.event_trace`.
 - `failure_diagnosis`: one of the eleven failure-mode labels.
-- `answer`: free text.
 
-## Current Dataset Scale
+## 6. Official Evaluator
 
-- **benchmark/test_800_templateheldout_en**: 800 scenarios
-- **calibration/sample_80_hard_en**: 80 scenarios
-- **supervision/train_3000_en**: 3000 scenarios (contains SFT training targets)
-- **supervision/dev_400_en**: 400 scenarios
-- **Total packaged scenarios**: 4280 scenarios
+ReTrace-Bench ships an official scorer that runs no model and needs no API keys.
+Clone the repository at https://github.com/yuchenzhu-research/ReTrace, then score a predictions file:
 
-## Scenario Task Views
+```bash
+PYTHONPATH=. python scripts/evaluate_retrace_bench_predictions.py \
+  --data data/retrace_bench/main_3000_en/scenarios.jsonl \
+  --predictions path/to/predictions.jsonl \
+  --out-metrics outputs/retrace_bench/my_model.metrics.json \
+  --out-scored outputs/retrace_bench/my_model.scored.jsonl \
+  --print-table
+```
 
-Each scenario evaluates an agent memory state through four distinct task views:
+See `examples/retrace_bench/` for a runnable example and the Python API
+(`benchmark.retrace_bench.api`).
 
-1. **`black_box_task`**: Evaluate end-to-end question answering utilizing revised memory state.
-2. **`memory_state_task`**: Predict final eligibility statuses of all tracked beliefs.
-3. **`evidence_retrieval_task`**: Identify evidence items that active memory changes are grounded upon.
-4. **`diagnostic_task`**: Detect and classify memory-revision failures or conflicts.
+## 7. Metrics
 
-For Hugging Face dataset viewer compatibility, nested scenario structures are
-published as JSON string columns:
+Primary metrics: `decision_macro_f1`, `non_answer_decision_accuracy`,
+`memory_state_accuracy`, `evidence_f1`, `failure_diagnosis_accuracy`,
+`stale_reuse_rate`.
 
-- `secondary_failure_modes_json`
-- `public_input_json`
-- `tasks_json`
-- `hidden_gold_json`
-- `metadata_json`
-- `training_targets_json`
+## 8. Benchmark Hygiene / Leakage Audit
 
-Parse these columns with `json.loads(...)` to recover the canonical nested
-objects. The source-of-truth local files under `data/` keep the native nested
-JSONL schema.
+Every split passes a decision-word leakage audit: no verified/trusted
+(authoritative) record contains a decision-action phrase tied to one of the five
+gold decisions. Scenario, memory, and event IDs are disjoint across splits, and
+there is no universal cross-scope distractor shortcut.
 
-## Primary Metrics
+## 9. Annotation Status
 
-Benchmark evaluations report the following primary metrics:
+- `main`, `hard`, `calibration`: `controlled_synthetic`, synthetic gold.
+- `realistic`: `realistic_style_synthetic`, **`annotation_status = pending`**.
+  Its `hidden_gold` fields are intentionally empty; human annotation will be
+  added later via `annotations/realistic_100_template.jsonl`. No human validation
+  is claimed and no public-source provenance is claimed.
 
-- `decision_macro_f1`
-- `non_answer_decision_accuracy`
-- `memory_state_accuracy`
-- `evidence_f1`
-- `failure_diagnosis_accuracy`
-- `stale_reuse_rate`
+## 10. Intended Use
 
-## Quality Diagnostics for `test_800_templateheldout_en`
+`main` is for primary benchmark results; `hard` for long-context / multi-evidence
+stress; `realistic` for realistic workflow texture once annotated. `calibration`
+is a smoke/quickstart split only: **it is not a model-selection / checkpoint-selection validation set and must not be used to tune or select systems**, and it must not be used for headline claims.
 
-The held-out test split is designed with strict template-independent validation guarantees:
-- Includes scenarios across **all 8 domains** and **all 11 failure modes**.
-- **Template lookup coverage**: `0.000`
-- **Template lookup decision accuracy**: `0.291`
-- **Template lookup macro-F1**: `0.090`
-- **Train/dev template signature overlap with candidate test**: `0.00%`
+## 11. Limitations
 
-## Baseline Caveat
+`main` / `hard` / `calibration` gold is synthetic. `realistic` is unannotated in
+this release. The legacy pre-v1.0 layout is not part of this release and is
+recoverable only from the Git tag `legacy-retrace-bench-pre-v1.0`.
 
-Please note that the **oracle** row documented in baseline results represents a diagnostic verification path for replaying typed state/evidence/diagnosis structures through the deterministic ReTrace-Engine. It is **not** a deployable memory baseline and should not be treated as a black-box decision upper bound.
-
-## Citation
-
-If you use ReTrace-Bench, please cite it. A BibTeX entry will be finalized on
-publication; until then please use the following placeholder:
+## 12. Citation
 
 ```bibtex
 @misc{retrace_bench,
@@ -153,10 +153,12 @@ publication; until then please use the following placeholder:
   author       = {ReTrace-Bench Authors},
   year         = {2026},
   howpublished = {\url{https://github.com/yuchenzhu-research/ReTrace}},
-  note         = {Benchmark version 0.1.0, commit cdcf6624d6b5bbed0eb681b9cc5ee10e9584609a}
+  note         = {Benchmark version 1.0.0, commit 95b14f86a58fda15fc0e8d468d965932d76f1e89}
 }
 ```
 
-## License
+## 13. License
 
-This dataset is distributed under the [Creative Commons Attribution 4.0 International (CC BY 4.0)](LICENSE) license.
+Distributed under the [Creative Commons Attribution 4.0 International (CC BY 4.0)](LICENSE) license.
+
+*Total packaged scenarios: 3480.*

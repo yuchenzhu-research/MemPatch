@@ -26,9 +26,10 @@ The authoritative code, data, and docs stay in their existing locations:
   `benchmark/retrace_bench/`
 - Public scoring API: `benchmark/retrace_bench/api.py`
 - Official evaluator CLI: `scripts/evaluate_retrace_bench_predictions.py`
-- Canonical test split: `data/retrace_bench/test_800_templateheldout_en/`
-- Calibration / quickstart split: `data/retrace_bench/sample_80_hard_en/`
-- Supervision pools: `data/retrace_supervision/{train_3000_en,dev_400_en}/`
+- ReTrace-Bench v1.0 splits (public names `main` / `hard` / `realistic` /
+  `calibration`): `data/retrace_bench/{main_3000_en,hard_300_en,realistic_100_en,calibration_80_en}/`
+- Supervision pools (ReTrace-Learn, not benchmark splits):
+  `data/retrace_learn/{supervision_train_3000_en,supervision_dev_400_en}/`
 - Benchmark docs: `docs/retrace_bench/`
 - Hugging Face release package + card: `release/huggingface/ReTrace-Bench/`
 - Example predictions + quickstart: `examples/retrace_bench/`
@@ -38,12 +39,11 @@ The authoritative code, data, and docs stay in their existing locations:
 
 - Benchmark write-up: `docs/retrace_bench/benchmark_paper.md`
 - Dataset design: `docs/retrace_bench/dataset_design.md`
-- Canonical baseline results:
-  `docs/retrace_bench/baseline_results_test_800_templateheldout_en.md`
 - Manual validation protocol and report:
   `docs/retrace_bench/manual_validation_protocol.md`,
   `docs/retrace_bench/manual_validation_report.md`
-- Leakage / template-heldout reports:
+- Historical (legacy pre-v1.0) pilot/leakage reports, kept for provenance only:
+  `docs/retrace_bench/baseline_results_test_800_templateheldout_en.md`,
   `docs/retrace_bench/template_lookup_test_800_templateheldout_en.md`,
   `docs/retrace_bench/template_signature_report.md`,
   `docs/retrace_bench/split_leakage_report.md`
@@ -53,16 +53,15 @@ The authoritative code, data, and docs stay in their existing locations:
 ```bash
 # Score an external prediction file (no model, no API key):
 PYTHONPATH=. python scripts/evaluate_retrace_bench_predictions.py \
-  --data data/retrace_bench/test_800_templateheldout_en/ \
+  --data data/retrace_bench/main_3000_en/ \
   --predictions <your_predictions.jsonl> \
   --out-metrics outputs/retrace_bench/your_model.metrics.json \
   --print-table
 
-# Built-in offline baseline / ablation suite on the canonical split:
+# Built-in offline baseline / ablation suite on the main split:
 PYTHONPATH=. python scripts/run_retrace_bench_ablation.py \
-  --data data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl \
-  --out-dir outputs/retrace_bench/ablation_test_800_templateheldout_offline \
-  --max-cases 800
+  --data data/retrace_bench/main_3000_en/scenarios.jsonl \
+  --out-dir outputs/retrace_bench/ablation_main_3000_offline
 ```
 
 Public artifact links live in the benchmark README and Hugging Face card; paper

@@ -1,5 +1,8 @@
 # ReTrace-Bench template-held-out — audit → v2 summary
 
+> **Legacy (pre-v1.0) document.** Describes a legacy pre-v1.0 split/pilot, recoverable from the Git tag `legacy-retrace-bench-pre-v1.0`. Retained for provenance only; it does **not** describe the ReTrace-Bench v1.0 splits (`main`/`hard`/`realistic`/`calibration`).
+
+
 One-page bridge between the v1 model-output audit and the v2 generator. Full
 evidence is in `docs/retrace_bench/templateheldout_v1_model_audit.md`; v2
 mechanics are in `docs/retrace_bench/templateheldout_v2_design.md`.
