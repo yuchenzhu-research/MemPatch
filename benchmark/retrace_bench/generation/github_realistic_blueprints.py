@@ -101,12 +101,11 @@ def build_github_realistic_scenario(
         if len(candidate_golds) < 2:
             candidate_golds = [anonymized_events[0]["event_id"], anonymized_events[min(1, len(anonymized_events)-1)]["event_id"]]
             
-        scenario["hidden_gold"]["minimal_evidence_event_ids"] = sorted(list(set(candidate_golds)))
-        scenario["hidden_gold"]["expected_evidence_event_ids"] = scenario["hidden_gold"]["minimal_evidence_event_ids"]
+        scenario["hidden_gold"]["expected_evidence_event_ids"] = sorted(list(set(candidate_golds)))
 
-    # Metadata and status overrides
-    scenario["annotation_status"] = "reviewed"
+    # Realistic gold is synthetic until manual review completes.
+    scenario["annotation_status"] = "synthetic_gold_unreviewed"
     if "metadata" in scenario:
-        scenario["metadata"]["annotation_status"] = "reviewed"
+        scenario["metadata"]["annotation_status"] = "synthetic_gold_unreviewed"
             
     return scenario

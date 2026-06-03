@@ -1,0 +1,76 @@
+{
+  "annotation_status": "synthetic_gold",
+  "avg_event_count": 7.0,
+  "avg_memory_count": 3.0,
+  "avg_required_evidence_count": 1.95,
+  "benchmark_release_name": "final_aaai",
+  "calibration_is_smoke_only_notice": "Calibration split is for sanity checks only.",
+  "difficulty": {
+    "L2": 10,
+    "L3": 10
+  },
+  "domains": {
+    "calendar_task_workflow": 3,
+    "customer_support_crm": 3,
+    "data_analysis_bi": 2,
+    "ecommerce_recommendation": 2,
+    "enterprise_multi_tool_workflow": 3,
+    "personal_assistant_preference": 2,
+    "research_knowledge_work": 2,
+    "software_engineering_agent": 3
+  },
+  "expected_decisions": {
+    "ask_clarification": 1,
+    "escalate": 0,
+    "mark_unresolved": 3,
+    "refuse_due_to_policy": 1,
+    "use_current_memory": 15
+  },
+  "failure_modes": {
+    "conflict_collapse": 2,
+    "failure_to_forget": 1,
+    "failure_to_release_or_restore": 1,
+    "memory_hallucination": 2,
+    "over_update": 2,
+    "policy_violation": 2,
+    "scope_leakage": 2,
+    "stale_memory_reuse": 2,
+    "under_update": 2,
+    "unnecessary_memory_write": 2,
+    "wrong_source_attribution": 2
+  },
+  "generation_commit": "final_release",
+  "intended_use": "AAAI ReTrace-Bench paper evaluation baseline reference",
+  "leakage_audit_summary": {
+    "clean": true,
+    "decision_word_phrases_checked": [
+      "ask for clarification",
+      "ask the requester to confirm",
+      "ask the requester to clarify",
+      "please confirm",
+      "mark unresolved",
+      "mark it unresolved",
+      "mark as unresolved",
+      "escalate",
+      "refuse",
+      "do not store",
+      "use current memory",
+      "use the current memory"
+    ],
+    "leak_phrase_counts": {},
+    "method": "exact decision-action phrase match over verified/trusted records",
+    "scanned_records": "authoritative (verified+trusted) event text only",
+    "scenarios_with_decision_word_leak": 0
+  },
+  "max_event_count": 7,
+  "max_memory_count": 3,
+  "not_for_training_notice": "Strictly evaluation-only. Never train ReTrace-Learn on this data.",
+  "random_seed": 2027,
+  "role": "Paper-facing final private_hidden benchmark split.",
+  "scenario_count": 20,
+  "schema_version": "retrace_bench_general_1",
+  "source_type": "controlled_synthetic",
+  "split": "private_hidden",
+  "training_targets": false,
+  "version": "1.0.0"
+}

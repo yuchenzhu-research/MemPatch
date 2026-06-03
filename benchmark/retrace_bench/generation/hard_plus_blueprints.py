@@ -4,7 +4,7 @@ from benchmark.retrace_bench.general_taxonomy import (
     DOMAINS,
     FAILURE_MODES,
     DECISIONS,
-    MEMORY_STATUSES,
+    normalize_memory_state,
 )
 from benchmark.retrace_bench.generation.evidence_dependency_graph import EvidenceDependencyGraph
 from benchmark.retrace_bench.generation.adversarial_distractors import (
@@ -324,7 +324,7 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
     # Incorporate distractors depending on difficulty
     if difficulty_level in ("L2", "L3", "L4"):
         # Version scope / authority distractor
-        dist_ev = generate_version_distractor(rng, 10, case_id, other_scope, frame, topic)
+        dist_ev = generate_version_distractor(rng, scenario_id, case_id, other_scope, frame, topic)
         event_trace.append(dist_ev)
         dag.add_event(dist_ev["event_id"])
         
@@ -339,14 +339,14 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
         
     if difficulty_level in ("L3", "L4"):
         # Add authority conflict distractor
-        auth_dist = generate_authority_distractor(rng, 11, case_id, scope, frame, topic)
+        auth_dist = generate_authority_distractor(rng, scenario_id, case_id, scope, frame, topic)
         event_trace.append(auth_dist)
         dag.add_event(auth_dist["event_id"])
 
     if difficulty_level == "L4":
         # Add rollback distractor and CI failure
-        roll_dist = generate_rollback_distractor(rng, 12, case_id, scope, frame)
-        ci_dist = generate_ci_distractor(rng, 13, case_id, scope, frame)
+        roll_dist = generate_rollback_distractor(rng, scenario_id, case_id, scope, frame)
+        ci_dist = generate_ci_distractor(rng, scenario_id, case_id, scope, frame)
         event_trace.extend([roll_dist, ci_dist])
         dag.add_event(roll_dist["event_id"])
         dag.add_event(ci_dist["event_id"])
@@ -458,14 +458,19 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
         },
         "hidden_gold": {
             "expected_decision": expected_decision,
-            "expected_answer": f"The configuration for {case_id} remains active and governed by verified stable rules. {state_desc}",
-            "memory_states": expected_states,
-            "minimal_evidence_event_ids": sorted(list(minimal_evidence)),
+            "expected_answer": (
+                f"The configuration for {case_id} ({artifact}) remains active and governed by "
+                f"verified stable rules. {state_desc}"
+            ),
+            "expected_memory_state": normalize_memory_state(expected_states),
+            "expected_evidence_event_ids": sorted(list(minimal_evidence)),
             "counterevidence_event_ids": sorted(list(counterevidence)),
-            "failure_diagnosis": expected_failure_diagnosis,
-            "wrong_answer_traps": wrong_answer_traps,
-            "answer_must_include": [case_id, artifact],
-            "answer_must_not_include": [other_scope] if pattern != "version_scope_leakage" else []
+            "expected_failure_diagnosis": expected_failure_diagnosis,
+            "stale_or_wrong_answers": wrong_answer_traps,
+            "rubric": {
+                "must_include": [case_id, artifact],
+                "must_not_include": [other_scope] if pattern != "version_scope_leakage" else [],
+            },
         },
         "validation_notes": {
             "solvable_from_visible_evidence": True,

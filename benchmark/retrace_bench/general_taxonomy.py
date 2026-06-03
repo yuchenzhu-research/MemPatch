@@ -61,6 +61,49 @@ MEMORY_STATUSES = (
     "restored",
 )
 
+# Legacy generator labels mapped to the single canonical MEMORY_STATUSES space.
+GENERATOR_MEMORY_STATUS_ALIASES = {
+    "authorized": "current",
+    "superseded": "outdated",
+    "rejected": "blocked",
+    "stale": "outdated",
+}
+
+
+def normalize_memory_status(status: str) -> str:
+    """Map legacy generator memory labels into canonical MEMORY_STATUSES."""
+    return GENERATOR_MEMORY_STATUS_ALIASES.get(status, status)
+
+
+def normalize_memory_state(state: dict[str, str] | None) -> dict[str, str]:
+    if not state:
+        return {}
+    return {mid: normalize_memory_status(s) for mid, s in state.items()}
+
+
+def canonical_hidden_gold_fields(gold: dict) -> dict:
+    """Read hidden_gold with backward-compatible legacy field fallbacks."""
+    return {
+        "expected_decision": gold.get("expected_decision"),
+        "expected_answer": gold.get("expected_answer"),
+        "expected_memory_state": normalize_memory_state(
+            gold.get("expected_memory_state") or gold.get("memory_states") or {}
+        ),
+        "expected_failure_diagnosis": gold.get("expected_failure_diagnosis")
+        or gold.get("failure_diagnosis"),
+        "expected_evidence_event_ids": list(
+            gold.get("expected_evidence_event_ids")
+            or gold.get("minimal_evidence_event_ids")
+            or []
+        ),
+        "counterevidence_event_ids": list(gold.get("counterevidence_event_ids") or []),
+        "rubric": gold.get("rubric") or {},
+        "decision_aliases": gold.get("decision_aliases"),
+        "stale_or_wrong_answers": gold.get("stale_or_wrong_answers")
+        or gold.get("wrong_answer_traps")
+        or [],
+    }
+
 TASK_TYPES = (
     "black_box_task",
     "memory_state_task",

@@ -99,12 +99,19 @@ def main() -> int:
         if split_name == "realistic":
             source_type = "github_realistic"
             
+        if split_name == "realistic":
+            annotation_status = "synthetic_gold_unreviewed"
+        elif split_name == "calibration":
+            annotation_status = "calibration_smoke_only"
+        else:
+            annotation_status = "synthetic_gold"
+
         manifest = build_manifest(
             scenarios,
             split=split_name,
             source_type=source_type,
-            annotation_status="reviewed" if split_name == "realistic" else "synthetic_gold",
-            role=f"Paper-facing final {split_name} benchmark split."
+            annotation_status=annotation_status,
+            role=f"Paper-facing final {split_name} benchmark split.",
         )
         
         # Inject additional metadata to fulfill AAAI requirements

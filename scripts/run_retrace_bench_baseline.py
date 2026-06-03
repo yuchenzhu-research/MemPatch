@@ -682,6 +682,7 @@ def main(argv: list[str] | None = None) -> int:
 
         # Write intermediate metrics.json dynamically on each step
         metrics_path = out.with_suffix(".metrics.json")
+        metrics_path.parent.mkdir(parents=True, exist_ok=True)
         aggregate = aggregate_metrics(scored)
         aggregate["baseline"] = args.baseline
         aggregate["group"] = baseline_group(args.baseline)
