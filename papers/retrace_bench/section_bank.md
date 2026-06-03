@@ -111,8 +111,8 @@ validation / test):
 - `calibration_80_en` (`calibration`, 80) — smoke / quickstart split only; never
   for model or checkpoint selection or headline claims.
 
-Supervision / selection pools (`data/retrace_learn/supervision_*`) are not
-benchmark test sets. The legacy pre-v1.0 layout is recoverable from the Git tag
+Supervision / selection pools (`data/retrace_learn/v1_0/`) are not
+benchmark test sets. Older pre-v1.0 supervision scaffolding is removed due to leakage and is recoverable only from Git history/tags. The legacy pre-v1.0 layout is recoverable from the Git tag
 `legacy-retrace-bench-pre-v1.0`.
 
 **Leakage audit.** Every split is de-actionalized and passes a decision-word

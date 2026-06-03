@@ -22,3 +22,4 @@ ReTrace
 - **`data/retrace_bench/`**: The four ReTrace-Bench v1.0 evaluation splits — `main_3000_en`, `hard_300_en`, `realistic_100_en`, `calibration_80_en`.
 - **`data/retrace_learn/v1_0/`**: Clean SFT training, validation, and DPA preference datasets used for training ReTrace-Learn policies (not benchmark tests).
 - **`release/huggingface/`**: Release-package snapshots generated from `data/`. It is not a repository source of truth.
+- **Trilogy Plan**: The high-level research plan should be documented in `RETRACE_AGENT_MEMORY_TRILOGY.md` (TODO: pending creation of the trilogy document).

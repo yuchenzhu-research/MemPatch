@@ -38,8 +38,8 @@ Full label spaces.
   - `realistic` (`realistic_100_en`) | 100 | realistic-style, annotation pending | no | yes
   - `calibration` (`calibration_80_en`) | 80 | smoke / quickstart only | no | yes
 - **Source:** `data/retrace_bench/*`,
-  `release/huggingface/ReTrace-Bench/README.md`. Supervision pools
-  (`data/retrace_learn/supervision_*`) are not benchmark splits.
+  `release/huggingface/ReTrace-Bench/README.md`. Supervision/training datasets
+  (`data/retrace_learn/v1_0/`) are not benchmark splits.
 - **Exists:** yes. **Missing:** confirm counts before final submission via
   `validate_retrace_bench_dataset.py`.
 

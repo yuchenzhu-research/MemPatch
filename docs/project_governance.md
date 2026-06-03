@@ -32,9 +32,9 @@ Canonical locations:
   `scripts/generate_retrace_hard_300.py`, `scripts/run_retrace_bench_*.py`,
   `scripts/validate_retrace_bench_dataset.py`) and `tests/retrace_bench/`.
 
-Learning-only supervision/selection pools live under
-`data/retrace_learn/supervision_*` and are owned by the ReTrace-Learn track,
-not the benchmark.
+Learning-only training/validation datasets live under
+`data/retrace_learn/v1_0/` and are owned by the ReTrace-Learn track,
+not the benchmark. Pre-v1 supervision scaffolding was removed from the active tree due to leakage issues and is recoverable only from Git history.
 
 ## Active track 2 — ReTrace-Learn (method track)
 

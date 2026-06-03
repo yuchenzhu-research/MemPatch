@@ -109,4 +109,4 @@
 * `docs/retrace_learn_pipeline.md`: ReTrace-Learn 核心管道逻辑文档。
 * `docs/retrace_bench/`: ReTrace-Bench 评测设计及协议说明。
 * `release/huggingface/ReTrace-Bench/`: Hugging Face dataset release package;
-  当前发布 `test` / `validation` / `train` / `dev` 四个 viewer-friendly split。
+  当前发布 `main` / `hard` / `realistic` / `calibration` 四个 viewer-friendly split。

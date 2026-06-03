@@ -30,8 +30,8 @@ Four paper-facing splits, published under public names `main` / `hard` /
   (80 scenarios) — smoke / quickstart only, not for model selection or headline
   claims.
 
-Supervision / selection pools (`data/retrace_learn/supervision_*`) are **not**
-part of the public benchmark release.
+Supervision / selection pools (`data/retrace_learn/v1_0/`) are **not**
+part of the public benchmark release. (Older pre-v1.0 supervision scaffolding was removed from the active tree due to leakage).
 
 ## Fields
 
