@@ -116,8 +116,8 @@ Four paper-facing splits, public names `main` / `hard` / `realistic` /
   claims.
 
 Supervision / selection pools for learning-based systems live outside the
-benchmark tree under `data/retrace_learn/supervision_*` and are **not** benchmark
-test sets. The legacy pre-v1.0 layout is recoverable from the Git tag
+benchmark tree under `data/retrace_learn/v1_0/` and are **not** benchmark
+test sets. Pre-v1 supervision scaffolding was removed from the active tree due to leakage issues and is recoverable only from Git history. The legacy pre-v1.0 layout is recoverable from the Git tag
 `legacy-retrace-bench-pre-v1.0`.
 
 ## 4. Metrics
