@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000101",
+  "model": "deepseek-ai/DeepSeek-V4-Pro",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300100 remains on the default claim record configuration (stable v1) with a connection pool limit of 20, as the maintainer's verified clarification overrides the user's unverified assertion and no verified release approval has been provided.\",\n  \"memory_state\": {\n    \"m-rt-hard-000101-target\": \"current\",\n    \"m-rt-hard-000101-condition\": \"current\",\n    \"m-rt-hard-000101-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000101-2\"\n  ],\n  \"failure_diagnosis\": \"wrong_source_attribution\"\n}"
+}

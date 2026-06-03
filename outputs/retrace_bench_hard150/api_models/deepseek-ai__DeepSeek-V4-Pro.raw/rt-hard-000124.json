@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000124",
+  "model": "deepseek-ai/DeepSeek-V4-Pro",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300123 remains on its default schedule rule configuration from stable v1. The strict validation introduced in v2.0.0 was reverted in v2.0.1, so no authorized update has been applied.\",\n  \"memory_state\": {\n    \"m-rt-hard-000124-target\": \"current\",\n    \"m-rt-hard-000124-condition\": \"current\",\n    \"m-rt-hard-000124-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000124-1\",\n    \"e-rt-hard-000124-2\",\n    \"e-rt-hard-000124-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+}

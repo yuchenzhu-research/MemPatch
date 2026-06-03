@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000085",
+  "model": "deepseek-ai/DeepSeek-V4-Pro",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300084 remains on default claim record configuration on stable v1. The security patch was backported only to legacy branch v1.2, and production branch v2.0 does not need or receive it. No verified release approval for a configuration change has been recorded.\",\n  \"memory_state\": {\n    \"m-rt-hard-000085-target\": \"current\",\n    \"m-rt-hard-000085-condition\": \"current\",\n    \"m-rt-hard-000085-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000085-1\",\n    \"e-rt-hard-000085-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+}
