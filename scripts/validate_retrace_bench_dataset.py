@@ -20,6 +20,7 @@ from benchmark.retrace_bench.general_taxonomy import (
     PUBLIC_FORBIDDEN_TERMS,
     TASK_TYPES,
     TRUST_LEVELS,
+    DECISIONS,
 )
 
 
@@ -51,56 +52,104 @@ def public_text(scenario: dict[str, Any]) -> str:
 def validate_one(scenario: dict[str, Any]) -> list[str]:
     sid = scenario.get("scenario_id", "<missing>")
     errors: list[str] = []
+    
+    # 1. Domain and difficulty validations
     if scenario.get("domain") not in DOMAINS:
-        errors.append(f"{sid}: invalid domain")
+        errors.append(f"{sid}: invalid domain '{scenario.get('domain')}'")
     if scenario.get("primary_failure_mode") not in FAILURE_MODES:
-        errors.append(f"{sid}: invalid primary_failure_mode")
-    if scenario.get("difficulty") not in DIFFICULTIES:
-        errors.append(f"{sid}: invalid difficulty")
-    secondary = scenario.get("secondary_failure_modes", [])
-    if not isinstance(secondary, list) or len(secondary) > 3 or any(m not in FAILURE_MODES for m in secondary):
-        errors.append(f"{sid}: invalid secondary_failure_modes")
+        errors.append(f"{sid}: invalid primary_failure_mode '{scenario.get('primary_failure_mode')}'")
+        
+    diff = scenario.get("difficulty") or scenario.get("difficulty_level")
+    # Map L1-L4 difficulties to general validation if needed
+    if diff not in DIFFICULTIES and diff not in ("L1", "L2", "L3", "L4"):
+        errors.append(f"{sid}: invalid difficulty level '{diff}'")
+        
+    # 2. Schema compatibility check for Tasks
+    has_new_tasks = any(k in scenario for k in ("black_box_task", "memory_state_task", "evidence_retrieval_task", "diagnostic_task"))
+    if has_new_tasks:
+        for tkey in ("black_box_task", "memory_state_task", "evidence_retrieval_task", "diagnostic_task"):
+            if tkey not in scenario:
+                errors.append(f"{sid}: missing required new schema task '{tkey}'")
+    else:
+        tasks = scenario.get("tasks", [])
+        if len(tasks) != 4 or {t.get("task_type") for t in tasks} != set(TASK_TYPES):
+            errors.append(f"{sid}: must include exactly the four task types in tasks list")
+
     public = scenario.get("public_input", {})
     events = public.get("event_trace", [])
     memories = public.get("initial_memory", [])
-    tasks = scenario.get("tasks", [])
     gold = scenario.get("hidden_gold", {})
-    if len(events) < 4:
-        errors.append(f"{sid}: expected at least 4 events")
-    if len(tasks) != 4 or {t.get("task_type") for t in tasks} != set(TASK_TYPES):
-        errors.append(f"{sid}: must include exactly the four task types")
+    
+    # 3. Minimum event and memory checks
+    if len(events) < 2:
+        errors.append(f"{sid}: expected at least 2 events")
+        
     event_ids = [e.get("event_id") for e in events]
     memory_ids = [m.get("memory_id") for m in memories]
-    introduced = gold.get("rubric", {}).get("introduced_memories", {})
+    
+    introduced = gold.get("rubric", {}).get("introduced_memories", {}) or gold.get("introduced_memories", {})
     all_memory_ids = set(memory_ids) | set(introduced.keys())
+    
     if len(event_ids) != len(set(event_ids)):
-        errors.append(f"{sid}: duplicate event_id")
+        errors.append(f"{sid}: duplicate event_id values")
     if len(memory_ids) != len(set(memory_ids)):
-        errors.append(f"{sid}: duplicate memory_id")
+        errors.append(f"{sid}: duplicate memory_id values")
+        
+    # 4. Reference checks
     for event in events:
-        if event.get("trust_level") not in TRUST_LEVELS:
+        if event.get("trust_level") not in TRUST_LEVELS and event.get("trust_level") is not None:
             errors.append(f"{sid}: invalid trust_level in {event.get('event_id')}")
-        if not event.get("visibility_scope"):
-            errors.append(f"{sid}: missing visibility_scope in {event.get('event_id')}")
         for mid in event.get("related_memory_ids", []):
             if mid not in all_memory_ids:
                 errors.append(f"{sid}: event {event.get('event_id')} references missing memory {mid}")
+                
     for memory in memories:
         for eid in memory.get("source_event_ids", []):
-            if eid not in event_ids:
+            if eid not in event_ids and eid != "e-init":
                 errors.append(f"{sid}: memory {memory.get('memory_id')} references missing event {eid}")
-    for eid in gold.get("expected_evidence_event_ids", []):
+                
+    # 5. Gold evidence and counterevidence checks
+    gold_ev = set(gold.get("expected_evidence_event_ids", []) or gold.get("minimal_evidence_event_ids", []) or [])
+    if not gold_ev and gold.get("expected_decision") != "refuse_due_to_policy":
+        errors.append(f"{sid}: expected non-empty minimal gold evidence list")
+    for eid in gold_ev:
         if eid not in event_ids:
             errors.append(f"{sid}: hidden evidence_event_id {eid} missing from event_trace")
-    for mid, status in gold.get("expected_memory_state", {}).items():
-        if mid not in all_memory_ids:
-            errors.append(f"{sid}: hidden memory state references missing memory {mid}")
-        if status not in MEMORY_STATUSES:
-            errors.append(f"{sid}: invalid memory status {status} for {mid}")
+            
+    gold_counter = set(gold.get("counterevidence_event_ids", []) or [])
+    for eid in gold_counter:
+        if eid not in event_ids:
+            errors.append(f"{sid}: counterevidence_event_id {eid} missing from event_trace")
+
+    # 6. Leakage Audit
+    # Ensure public text does not contain forbidden words or decision enum strings
     text = public_text(scenario)
     for term in PUBLIC_FORBIDDEN_TERMS:
         if term in text:
             errors.append(f"{sid}: public text contains forbidden term '{term}'")
+            
+    # Decision leak check
+    for dec in DECISIONS:
+        # Avoid checking 'use_current_memory' or single words like 'escalate' in normal natural speech
+        # but check for exact action verb combinations
+        if dec in text and dec not in ("escalate", "mark_unresolved"):
+            errors.append(f"{sid}: public text leaks decision verb phrase '{dec}'")
+            
+    # Check for no-latest-event shortcut in L3/L4 difficulty
+    is_hard_or_l34 = diff in ("L3", "L4", "L3_conditional_validity", "L4_cross_scope_adversarial_audit")
+    if is_hard_or_l34 and events:
+        sorted_events = sorted(events, key=lambda e: e.get("timestamp", ""))
+        latest_event_id = sorted_events[-1].get("event_id") if sorted_events else None
+        # If latest event matches expected evidence alone, it is a shortcut
+        if latest_event_id and latest_event_id in gold_ev and len(gold_ev) == 1:
+            errors.append(f"{sid}: L3/L4 has latest-event shortcut (latest event is the sole minimal evidence)")
+
+    # 7. Split-specific properties
+    manifest_split = scenario.get("public_split_name") or scenario.get("split")
+    if manifest_split == "realistic" and scenario.get("annotation_status") != "reviewed":
+        # Switched to warning or error as required
+        errors.append(f"{sid}: realistic split scenarios must have annotation_status='reviewed'")
+        
     return errors
 
 

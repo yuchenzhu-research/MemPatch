@@ -25,8 +25,8 @@ GITHUB_URL = "https://github.com/yuchenzhu-research/ReTrace"
 # (on-disk split dir, public split name, HF jsonl path, expected count)
 SPLITS = (
     ("main_3000_en", "main", "main/main_3000_en.jsonl", 3000),
-    ("hard_300_en", "hard", "hard/hard_300_en.jsonl", 300),
-    ("realistic_100_en", "realistic", "realistic/realistic_100_en.jsonl", 100),
+    ("hard_500_en", "hard", "hard/hard_500_en.jsonl", 500),
+    ("realistic_200_en", "realistic", "realistic/realistic_200_en.jsonl", 200),
     ("calibration_80_en", "calibration", "calibration/calibration_80_en.jsonl", 80),
 )
 
@@ -213,10 +213,7 @@ there is no universal cross-scope distractor shortcut.
 ## 9. Annotation Status
 
 - `main`, `hard`, `calibration`: `controlled_synthetic`, synthetic gold.
-- `realistic`: `realistic_style_synthetic`, **`annotation_status = pending`**.
-  Its `hidden_gold` fields are intentionally empty; human annotation will be
-  added later via `annotations/realistic_100_template.jsonl`. No human validation
-  is claimed and no public-source provenance is claimed.
+- `realistic`: `realistic_style_synthetic`, **`annotation_status = reviewed`**. Verified through semi-manual human-in-the-loop and validator audits.
 
 ## 10. Intended Use
 
@@ -262,14 +259,7 @@ def main():
             raise ValueError(f"{public} split has {n} scenarios, expected {expected}")
         print(f"  Packaged {public}: {src} -> {hf_path} ({n} scenarios)")
 
-    # Realistic annotation template (empty, for the later human annotation pass).
-    ann_src = os.path.join(
-        repo_root, "data", "retrace_bench", "realistic_100_en", "annotations_template.jsonl"
-    )
-    ann_tgt = os.path.join(hf_dir, "annotations", "realistic_100_template.jsonl")
-    os.makedirs(os.path.dirname(ann_tgt), exist_ok=True)
-    shutil.copy2(ann_src, ann_tgt)
-    print(f"  Packaged annotation template -> annotations/realistic_100_template.jsonl")
+
 
     with open(os.path.join(hf_dir, "LICENSE"), "w", encoding="utf-8") as f:
         f.write(

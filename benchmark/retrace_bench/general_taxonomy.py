@@ -32,6 +32,24 @@ DIFFICULTIES = (
     "L4_cross_scope_adversarial_audit",
 )
 
+PATTERNS = (
+    "merged_but_unreleased",
+    "closed_as_duplicate_not_fixed",
+    "docs_ahead_of_code",
+    "release_then_revert",
+    "version_scope_leakage",
+    "branch_scope_leakage",
+    "authority_conflict",
+    "ci_failed_after_claim",
+    "security_policy_override",
+    "backport_only_fix",
+    "maintainer_correction_over_user_claim",
+    "stale_comment_after_new_release",
+    "label_state_mismatch",
+    "multi_memory_coupling",
+    "negative_evidence_required",
+)
+
 MEMORY_STATUSES = (
     "current",
     "outdated",

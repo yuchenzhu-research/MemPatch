@@ -1,13 +1,15 @@
 {
   "annotation_status": "synthetic_gold",
-  "avg_event_count": 7.965,
-  "avg_memory_count": 3.424,
-  "avg_required_evidence_count": 1.0,
+  "avg_event_count": 7.0,
+  "avg_memory_count": 2.75,
+  "avg_required_evidence_count": 0.0,
+  "benchmark_release_name": "final_aaai",
+  "calibration_is_smoke_only_notice": "Calibration split is for sanity checks only.",
   "difficulty": {
-    "L1_single_hop_update": 750,
-    "L2_multi_hop_with_distractor": 750,
-    "L3_conditional_validity": 750,
-    "L4_cross_scope_adversarial_audit": 750
+    "L1": 750,
+    "L2": 750,
+    "L3": 750,
+    "L4": 750
   },
   "domains": {
     "calendar_task_workflow": 375,
@@ -20,11 +22,11 @@
     "software_engineering_agent": 375
   },
   "expected_decisions": {
-    "ask_clarification": 704,
-    "escalate": 522,
-    "mark_unresolved": 614,
-    "refuse_due_to_policy": 296,
-    "use_current_memory": 864
+    "ask_clarification": 200,
+    "escalate": 0,
+    "mark_unresolved": 400,
+    "refuse_due_to_policy": 200,
+    "use_current_memory": 2200
   },
   "failure_modes": {
     "conflict_collapse": 273,
@@ -39,6 +41,8 @@
     "unnecessary_memory_write": 272,
     "wrong_source_attribution": 273
   },
+  "generation_commit": "final_release",
+  "intended_use": "AAAI ReTrace-Bench paper evaluation baseline reference",
   "leakage_audit_summary": {
     "clean": true,
     "decision_word_phrases_checked": [
@@ -60,9 +64,11 @@
     "scanned_records": "authoritative (verified+trusted) event text only",
     "scenarios_with_decision_word_leak": 0
   },
-  "max_event_count": 10,
-  "max_memory_count": 5,
-  "role": "Primary controlled benchmark split (main benchmark results).",
+  "max_event_count": 7,
+  "max_memory_count": 3,
+  "not_for_training_notice": "Strictly evaluation-only. Never train ReTrace-Learn on this data.",
+  "random_seed": 2027,
+  "role": "Paper-facing final main benchmark split.",
   "scenario_count": 3000,
   "schema_version": "retrace_bench_general_1",
   "source_type": "controlled_synthetic",

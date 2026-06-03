@@ -195,10 +195,17 @@ def retrieve_all(scenario: dict[str, Any]) -> dict[str, Any]:
 
 
 def _scenario_tokens(scenario: dict[str, Any]) -> set[str]:
+    tasks_prompts = []
+    for t in scenario.get("tasks", []):
+        tasks_prompts.append(t.get("prompt", ""))
+    for key in ("black_box_task", "memory_state_task", "evidence_retrieval_task", "diagnostic_task"):
+        if key in scenario and isinstance(scenario[key], dict):
+            tasks_prompts.append(scenario[key].get("prompt", ""))
+            
     text = " ".join(
         [
             scenario.get("workflow_context", ""),
-            " ".join(t.get("prompt", "") for t in scenario.get("tasks", [])),
+            " ".join(tasks_prompts),
         ]
     ).lower()
     return {tok.strip(".,;:!?()[]{}\"'") for tok in text.split() if len(tok.strip(".,;:!?()[]{}\"'")) >= 3}
@@ -374,10 +381,13 @@ def retrace_oracle_engine(scenario: dict[str, Any]) -> dict[str, Any]:
                 verifier="retrace_oracle_engine",
             )
         )
+    query = scenario.get("tasks", [{}])[0].get("prompt", "")
+    if not query and "black_box_task" in scenario:
+        query = scenario["black_box_task"].get("prompt", "")
     view = SharedCandidateView(
         instance_id=scenario["scenario_id"],
         query_id=f"q-{scenario['scenario_id']}",
-        query=scenario["tasks"][0]["prompt"],
+        query=query,
         evidence_context=evidence_nodes,
         new_evidence=evidence_by_id[evidence_id],
         candidate_beliefs=candidate_beliefs,
