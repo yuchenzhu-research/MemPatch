@@ -1,0 +1,249 @@
+{
+  "artifacts": [
+    {
+      "bytes": 310161,
+      "description": "Hard50 evaluation scenarios (50 rows)",
+      "download_url": "https://raw.githubusercontent.com/yuchenzhu-research/ReTrace/benchmark/data/retrace_bench_hard50/hard_50_en/scenarios.jsonl",
+      "github_url": "https://github.com/yuchenzhu-research/ReTrace/blob/benchmark/data/retrace_bench_hard50/hard_50_en/scenarios.jsonl",
+      "kind": "jsonl",
+      "path": "data/retrace_bench_hard50/hard_50_en/scenarios.jsonl"
+    },
+    {
+      "bytes": 2299,
+      "description": "Hard50 split manifest",
+      "download_url": "https://raw.githubusercontent.com/yuchenzhu-research/ReTrace/benchmark/data/retrace_bench_hard50/hard_50_en/manifest.json",
+      "github_url": "https://github.com/yuchenzhu-research/ReTrace/blob/benchmark/data/retrace_bench_hard50/hard_50_en/manifest.json",
+      "kind": "json",
+      "path": "data/retrace_bench_hard50/hard_50_en/manifest.json"
+    },
+    {
+      "bytes": 215,
+      "description": "Hard50 split README",
+      "download_url": "https://raw.githubusercontent.com/yuchenzhu-research/ReTrace/benchmark/data/retrace_bench_hard50/hard_50_en/README.md",
+      "github_url": "https://github.com/yuchenzhu-research/ReTrace/blob/benchmark/data/retrace_bench_hard50/hard_50_en/README.md",
+      "kind": "markdown",
+      "path": "data/retrace_bench_hard50/hard_50_en/README.md"
+    },
+    {
+      "bytes": 1970,
+      "description": "Gold-oracle sanity metrics",
+      "download_url": "https://raw.githubusercontent.com/yuchenzhu-research/ReTrace/benchmark/outputs/retrace_bench_hard50/gold_oracle.metrics.json",
+      "github_url": "https://github.com/yuchenzhu-research/ReTrace/blob/benchmark/outputs/retrace_bench_hard50/gold_oracle.metrics.json",
+      "kind": "json",
+      "path": "outputs/retrace_bench_hard50/gold_oracle.metrics.json"
+    },
+    {
+      "bytes": 4699,
+      "description": "Cross-method headline metrics summary",
+      "download_url": "https://raw.githubusercontent.com/yuchenzhu-research/ReTrace/benchmark/outputs/retrace_bench_hard50/summary.metrics.json",
+      "github_url": "https://github.com/yuchenzhu-research/ReTrace/blob/benchmark/outputs/retrace_bench_hard50/summary.metrics.json",
+      "kind": "json",
+      "path": "outputs/retrace_bench_hard50/summary.metrics.json"
+    },
+    {
+      "bytes": 1566,
+      "description": "Human-readable metrics table",
+      "download_url": "https://raw.githubusercontent.com/yuchenzhu-research/ReTrace/benchmark/outputs/retrace_bench_hard50/summary.md",
+      "github_url": "https://github.com/yuchenzhu-research/ReTrace/blob/benchmark/outputs/retrace_bench_hard50/summary.md",
+      "kind": "markdown",
+      "path": "outputs/retrace_bench_hard50/summary.md"
+    },
+    {
+      "bytes": 19076,
+      "description": "10-case manual inspection sample",
+      "download_url": "https://raw.githubusercontent.com/yuchenzhu-research/ReTrace/benchmark/outputs/retrace_bench_hard50/manual_inspection_10.md",
+      "github_url": "https://github.com/yuchenzhu-research/ReTrace/blob/benchmark/outputs/retrace_bench_hard50/manual_inspection_10.md",
+      "kind": "markdown",
+      "path": "outputs/retrace_bench_hard50/manual_inspection_10.md"
+    },
+    {
+      "bytes": 81411,
+      "description": "latest_only baseline predictions",
+      "download_url": "https://raw.githubusercontent.com/yuchenzhu-research/ReTrace/benchmark/outputs/retrace_bench_hard50/latest_only.predictions.jsonl",
+      "github_url": "https://github.com/yuchenzhu-research/ReTrace/blob/benchmark/outputs/retrace_bench_hard50/latest_only.predictions.jsonl",
+      "kind": "jsonl",
+      "path": "outputs/retrace_bench_hard50/latest_only.predictions.jsonl"
+    },
+    {
+      "bytes": 9079,
+      "description": "latest_only baseline aggregate metrics",
+      "download_url": "https://raw.githubusercontent.com/yuchenzhu-research/ReTrace/benchmark/outputs/retrace_bench_hard50/latest_only.predictions.metrics.json",
+      "github_url": "https://github.com/yuchenzhu-research/ReTrace/blob/benchmark/outputs/retrace_bench_hard50/latest_only.predictions.metrics.json",
+      "kind": "json",
+      "path": "outputs/retrace_bench_hard50/latest_only.predictions.metrics.json"
+    },
+    {
+      "bytes": 120426,
+      "description": "retrieve_all baseline predictions",
+      "download_url": "https://raw.githubusercontent.com/yuchenzhu-research/ReTrace/benchmark/outputs/retrace_bench_hard50/retrieve_all.predictions.jsonl",
+      "github_url": "https://github.com/yuchenzhu-research/ReTrace/blob/benchmark/outputs/retrace_bench_hard50/retrieve_all.predictions.jsonl",
+      "kind": "jsonl",
+      "path": "outputs/retrace_bench_hard50/retrieve_all.predictions.jsonl"
+    },
+    {
+      "bytes": 9508,
+      "description": "retrieve_all baseline aggregate metrics",
+      "download_url": "https://raw.githubusercontent.com/yuchenzhu-research/ReTrace/benchmark/outputs/retrace_bench_hard50/retrieve_all.predictions.metrics.json",
+      "github_url": "https://github.com/yuchenzhu-research/ReTrace/blob/benchmark/outputs/retrace_bench_hard50/retrieve_all.predictions.metrics.json",
+      "kind": "json",
+      "path": "outputs/retrace_bench_hard50/retrieve_all.predictions.metrics.json"
+    },
+    {
+      "bytes": 86060,
+      "description": "Pro/moonshotai/Kimi-K2.6 predictions",
+      "download_url": "https://raw.githubusercontent.com/yuchenzhu-research/ReTrace/benchmark/outputs/retrace_bench_hard50/api_models/Pro__moonshotai__Kimi-K2.6.predictions.jsonl",
+      "github_url": "https://github.com/yuchenzhu-research/ReTrace/blob/benchmark/outputs/retrace_bench_hard50/api_models/Pro__moonshotai__Kimi-K2.6.predictions.jsonl",
+      "kind": "jsonl",
+      "path": "outputs/retrace_bench_hard50/api_models/Pro__moonshotai__Kimi-K2.6.predictions.jsonl"
+    },
+    {
+      "bytes": 5418,
+      "description": "Pro/moonshotai/Kimi-K2.6 aggregate metrics",
+      "download_url": "https://raw.githubusercontent.com/yuchenzhu-research/ReTrace/benchmark/outputs/retrace_bench_hard50/api_models/Pro__moonshotai__Kimi-K2.6.predictions.metrics.json",
+      "github_url": "https://github.com/yuchenzhu-research/ReTrace/blob/benchmark/outputs/retrace_bench_hard50/api_models/Pro__moonshotai__Kimi-K2.6.predictions.metrics.json",
+      "kind": "json",
+      "path": "outputs/retrace_bench_hard50/api_models/Pro__moonshotai__Kimi-K2.6.predictions.metrics.json"
+    },
+    {
+      "bytes": 81917,
+      "description": "Pro/zai-org/GLM-5.1 predictions",
+      "download_url": "https://raw.githubusercontent.com/yuchenzhu-research/ReTrace/benchmark/outputs/retrace_bench_hard50/api_models/Pro__zai-org__GLM-5.1.predictions.jsonl",
+      "github_url": "https://github.com/yuchenzhu-research/ReTrace/blob/benchmark/outputs/retrace_bench_hard50/api_models/Pro__zai-org__GLM-5.1.predictions.jsonl",
+      "kind": "jsonl",
+      "path": "outputs/retrace_bench_hard50/api_models/Pro__zai-org__GLM-5.1.predictions.jsonl"
+    },
+    {
+      "bytes": 5472,
+      "description": "Pro/zai-org/GLM-5.1 aggregate metrics",
+      "download_url": "https://raw.githubusercontent.com/yuchenzhu-research/ReTrace/benchmark/outputs/retrace_bench_hard50/api_models/Pro__zai-org__GLM-5.1.predictions.metrics.json",
+      "github_url": "https://github.com/yuchenzhu-research/ReTrace/blob/benchmark/outputs/retrace_bench_hard50/api_models/Pro__zai-org__GLM-5.1.predictions.metrics.json",
+      "kind": "json",
+      "path": "outputs/retrace_bench_hard50/api_models/Pro__zai-org__GLM-5.1.predictions.metrics.json"
+    },
+    {
+      "bytes": 83366,
+      "description": "deepseek-ai/DeepSeek-V4-Pro predictions",
+      "download_url": "https://raw.githubusercontent.com/yuchenzhu-research/ReTrace/benchmark/outputs/retrace_bench_hard50/api_models/deepseek-ai__DeepSeek-V4-Pro.predictions.jsonl",
+      "github_url": "https://github.com/yuchenzhu-research/ReTrace/blob/benchmark/outputs/retrace_bench_hard50/api_models/deepseek-ai__DeepSeek-V4-Pro.predictions.jsonl",
+      "kind": "jsonl",
+      "path": "outputs/retrace_bench_hard50/api_models/deepseek-ai__DeepSeek-V4-Pro.predictions.jsonl"
+    },
+    {
+      "bytes": 5350,
+      "description": "deepseek-ai/DeepSeek-V4-Pro aggregate metrics",
+      "download_url": "https://raw.githubusercontent.com/yuchenzhu-research/ReTrace/benchmark/outputs/retrace_bench_hard50/api_models/deepseek-ai__DeepSeek-V4-Pro.predictions.metrics.json",
+      "github_url": "https://github.com/yuchenzhu-research/ReTrace/blob/benchmark/outputs/retrace_bench_hard50/api_models/deepseek-ai__DeepSeek-V4-Pro.predictions.metrics.json",
+      "kind": "json",
+      "path": "outputs/retrace_bench_hard50/api_models/deepseek-ai__DeepSeek-V4-Pro.predictions.metrics.json"
+    }
+  ],
+  "branch": "benchmark",
+  "dataset": "hard_50_en (controlled synthetic, L3/L4 only, n=50, seed=2027)",
+  "headline_summary": {
+    "DeepSeek-V4-Pro": {
+      "answer_state_consistency": 0.48,
+      "black_box_decision_accuracy": 0.74,
+      "counterevidence_recall": 0.68,
+      "decision_macro_f1": 0.33676470588235297,
+      "evidence_f1": 0.9013333333333332,
+      "evidence_precision": 0.85,
+      "failure_diagnosis_accuracy": 0.16,
+      "format_failure_rate": 0.0,
+      "joint_revision_success": 0.26,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "memory_state_accuracy": 0.8,
+      "minimal_evidence_exact_match": 0.68,
+      "non_answer_decision_accuracy": 0.07692307692307693,
+      "overcitation_rate": 0.15,
+      "stale_reuse_rate": 0.0
+    },
+    "GLM-5.1": {
+      "answer_state_consistency": 0.38,
+      "black_box_decision_accuracy": 0.72,
+      "counterevidence_recall": 0.68,
+      "decision_macro_f1": 0.4642857142857143,
+      "evidence_f1": 0.7913333333333331,
+      "evidence_precision": 0.7683333333333333,
+      "failure_diagnosis_accuracy": 0.1,
+      "format_failure_rate": 0.04,
+      "joint_revision_success": 0.18,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "memory_state_accuracy": 0.7666666666666668,
+      "minimal_evidence_exact_match": 0.46,
+      "non_answer_decision_accuracy": 0.23076923076923078,
+      "overcitation_rate": 0.19166666666666668,
+      "stale_reuse_rate": 0.0
+    },
+    "Kimi-K2.6": {
+      "answer_state_consistency": 0.6,
+      "black_box_decision_accuracy": 0.78,
+      "counterevidence_recall": 0.68,
+      "decision_macro_f1": 0.4176470588235294,
+      "evidence_f1": 0.505142857142857,
+      "evidence_precision": 0.38433333333333336,
+      "failure_diagnosis_accuracy": 0.14,
+      "format_failure_rate": 0.0,
+      "joint_revision_success": 0.04,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "memory_state_accuracy": 0.8466666666666667,
+      "minimal_evidence_exact_match": 0.04,
+      "non_answer_decision_accuracy": 0.15384615384615385,
+      "overcitation_rate": 0.6156666666666666,
+      "stale_reuse_rate": 0.0
+    },
+    "gold_oracle": {
+      "answer_state_consistency": 1.0,
+      "black_box_decision_accuracy": 1.0,
+      "counterevidence_recall": 0.36,
+      "decision_macro_f1": 1.0,
+      "evidence_f1": 1.0,
+      "evidence_precision": 1.0,
+      "failure_diagnosis_accuracy": 1.0,
+      "format_failure_rate": 0.0,
+      "joint_revision_success": 1.0,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "memory_state_accuracy": 1.0,
+      "minimal_evidence_exact_match": 1.0,
+      "non_answer_decision_accuracy": 1.0,
+      "overcitation_rate": 0.0,
+      "stale_reuse_rate": 0.0
+    },
+    "latest_only": {
+      "answer_state_consistency": 0.0,
+      "black_box_decision_accuracy": 0.74,
+      "counterevidence_recall": 0.36,
+      "decision_macro_f1": 0.21264367816091953,
+      "evidence_f1": 0.0,
+      "evidence_precision": 0.0,
+      "failure_diagnosis_accuracy": 0.1,
+      "format_failure_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "latest_event_shortcut_failure_rate": 0.26,
+      "memory_state_accuracy": 0.5133333333333334,
+      "minimal_evidence_exact_match": 0.0,
+      "non_answer_decision_accuracy": 0.0,
+      "overcitation_rate": 1.0,
+      "stale_reuse_rate": 0.0
+    },
+    "retrieve_all": {
+      "answer_state_consistency": 0.0,
+      "black_box_decision_accuracy": 0.74,
+      "counterevidence_recall": 0.94,
+      "decision_macro_f1": 0.21264367816091953,
+      "evidence_f1": 0.4528571428571428,
+      "evidence_precision": 0.3053333333333333,
+      "failure_diagnosis_accuracy": 0.1,
+      "format_failure_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "latest_event_shortcut_failure_rate": 0.26,
+      "memory_state_accuracy": 0.5133333333333334,
+      "minimal_evidence_exact_match": 0.0,
+      "non_answer_decision_accuracy": 0.0,
+      "overcitation_rate": 0.6946666666666665,
+      "stale_reuse_rate": 0.0
+    }
+  },
+  "recommendation": "continue_final_hardening",
+  "repository": "https://github.com/yuchenzhu-research/ReTrace",
+  "title": "ReTrace-Bench Hard50 Mini Evaluation Artifacts"
+}

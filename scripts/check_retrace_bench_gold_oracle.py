@@ -54,6 +54,7 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", required=True)
     parser.add_argument("--tolerance", type=float, default=1e-9)
+    parser.add_argument("--out", default=None, help="Optional path to write metrics JSON report")
     args = parser.parse_args(argv)
 
     rows = read_jsonl(Path(args.data))
@@ -93,7 +94,12 @@ def main(argv: list[str] | None = None) -> int:
         "pass": not failures,
         "failures": failures,
     }
-    print(json.dumps(report, indent=2, sort_keys=True))
+    payload = json.dumps(report, indent=2, sort_keys=True)
+    print(payload)
+    if args.out:
+        out_path = Path(args.out)
+        out_path.parent.mkdir(parents=True, exist_ok=True)
+        out_path.write_text(payload + "\n", encoding="utf-8")
     return 0 if not failures else 1
 
 

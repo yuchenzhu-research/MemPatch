@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000029",
+  "model": "Pro/zai-org/GLM-5.1",
+  "raw_response": "{\n  \"decision\": \"mark_unresolved\",\n  \"answer\": \"The final authorized status of CASE-300028 is unresolved. A verified maintainer merged the async and timeout migrations (e-rt-hard-000029-2), but the condition rule requires verified release approval for any update, which has not been provided. The untrusted claim of resolution (e-rt-hard-000029-distractor-auth) is invalid.\",\n  \"memory_state\": {\n    \"m-rt-hard-000029-target\": \"outdated\",\n    \"m-rt-hard-000029-condition\": \"current\",\n    \"m-rt-hard-000029-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000029-2\",\n    \"e-rt-hard-000029-distractor-auth\"\n  ],\n  \"failure_diagnosis\": \"wrong_source_attribution\"\n}"
+}

@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000010",
+  "model": "Pro/zai-org/GLM-5.1",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300009 is updated with the security patch backported to the stable legacy branch v1.2; production branch v2.0 does not need or receive the patch.\",\n  \"memory_state\": {\n    \"m-rt-hard-000010-target\": \"current\",\n    \"m-rt-hard-000010-condition\": \"current\",\n    \"m-rt-hard-000010-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000010-1\",\n    \"e-rt-hard-000010-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+}

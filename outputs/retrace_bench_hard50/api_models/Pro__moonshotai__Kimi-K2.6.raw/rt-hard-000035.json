@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000035",
+  "model": "Pro/moonshotai/Kimi-K2.6",
+  "raw_response": "{\"decision\":\"use_current_memory\",\"answer\":\"CASE-300034 retains default case route configuration on stable v1; no verified update has been applied.\",\"memory_state\":{\"m-rt-hard-000035-target\":\"current\",\"m-rt-hard-000035-condition\":\"current\",\"m-rt-hard-000035-distractor\":\"out_of_scope\"},\"evidence_event_ids\":[\"e-rt-hard-000035-3\",\"e-rt-hard-000035-distractor-ver\",\"e-rt-hard-000035-distractor-auth\"],\"failure_diagnosis\":\"scope_leakage\"}"
+}

@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000001",
+  "model": "Pro/moonshotai/Kimi-K2.6",
+  "raw_response": "{\"decision\":\"use_current_memory\",\"answer\":\"CASE-300000 remains on default deployment gate configuration on stable v1; YAML support is not authorized for stable release.\",\"memory_state\":{\"m-rt-hard-000001-target\":\"current\",\"m-rt-hard-000001-condition\":\"current\",\"m-rt-hard-000001-distractor\":\"out_of_scope\"},\"evidence_event_ids\":[\"e-rt-hard-000001-1\",\"e-rt-hard-000001-2\",\"e-rt-hard-000001-3\",\"e-rt-hard-000001-distractor-ver\",\"e-rt-hard-000001-distractor-auth\"],\"failure_diagnosis\":\"scope_leakage\"}"
+}

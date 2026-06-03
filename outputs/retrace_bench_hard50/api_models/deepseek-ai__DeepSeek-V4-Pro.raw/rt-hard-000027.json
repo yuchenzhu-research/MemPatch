@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000027",
+  "model": "deepseek-ai/DeepSeek-V4-Pro",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300026 uses default case route configuration on stable v1. The retry limit comment (e-rt-hard-000027-1) is a user comment, not a verified release, and the release v3.0 (e-rt-hard-000027-2) updates a default retry limit but does not explicitly change the case route configuration for CASE-300026. The condition rule (m-rt-hard-000027-condition) requires verified release approval for any update, and no such release event for CASE-300026's route is present.\",\n  \"memory_state\": {\n    \"m-rt-hard-000027-target\": \"current\",\n    \"m-rt-hard-000027-condition\": \"current\",\n    \"m-rt-hard-000027-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000027-1\",\n    \"e-rt-hard-000027-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+}

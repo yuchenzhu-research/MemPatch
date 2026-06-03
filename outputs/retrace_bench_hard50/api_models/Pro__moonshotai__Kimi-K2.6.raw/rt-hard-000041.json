@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000041",
+  "model": "Pro/moonshotai/Kimi-K2.6",
+  "raw_response": "{\"decision\":\"use_current_memory\",\"answer\":\"CASE-300040 retains default deployment gate configuration on stable v1; no verified update has been applied in workspace-stable. The pool limit remains 20 per maintainer clarification.\",\"memory_state\":{\"m-rt-hard-000041-target\":\"current\",\"m-rt-hard-000041-condition\":\"current\",\"m-rt-hard-000041-distractor\":\"out_of_scope\"},\"evidence_event_ids\":[\"e-rt-hard-000041-1\",\"e-rt-hard-000041-2\",\"e-rt-hard-000041-distractor-ver\",\"e-rt-hard-000041-distractor-auth\"],\"failure_diagnosis\":\"wrong_source_attribution\"}"
+}

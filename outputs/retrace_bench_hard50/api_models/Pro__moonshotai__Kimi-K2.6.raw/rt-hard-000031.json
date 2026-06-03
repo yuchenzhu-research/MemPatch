@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000031",
+  "model": "Pro/moonshotai/Kimi-K2.6",
+  "raw_response": "{\"decision\":\"use_current_memory\",\"answer\":\"CASE-300030 remains on default shopping rule configuration on stable v1; YAML support is not yet authorized for stable release.\",\"memory_state\":{\"m-rt-hard-000031-target\":\"current\",\"m-rt-hard-000031-condition\":\"current\",\"m-rt-hard-000031-distractor\":\"out_of_scope\"},\"evidence_event_ids\":[\"e-rt-hard-000031-1\",\"e-rt-hard-000031-2\",\"e-rt-hard-000031-3\"],\"failure_diagnosis\":\"scope_leakage\"}"
+}
