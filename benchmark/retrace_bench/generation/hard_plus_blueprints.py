@@ -17,6 +17,41 @@ from benchmark.retrace_bench.generation.adversarial_distractors import (
     generate_ci_distractor,
 )
 
+def neutral_expected_answer(
+    *,
+    case_id: str,
+    artifact: str,
+    scope: str,
+    source: str,
+    expected_decision: str,
+) -> str:
+    """Gold answer text without pattern or failure-mode label leakage."""
+    if expected_decision == "mark_unresolved":
+        return (
+            f"The authorized status of {case_id} is unresolved; the {artifact} "
+            f"cannot be confirmed as current until conflicting records on {scope} are reconciled."
+        )
+    if expected_decision == "ask_clarification":
+        return (
+            f"Evidence about {case_id} is incomplete; clarify the {artifact} "
+            f"status on {scope} before treating any update as authorized."
+        )
+    if expected_decision == "escalate":
+        return (
+            f"The {artifact} change for {case_id} needs escalation because "
+            f"the verified {source} record on {scope} does not support a safe automatic update."
+        )
+    if expected_decision == "refuse_due_to_policy":
+        return (
+            f"The requested update to {case_id} is blocked by policy; "
+            f"the existing {artifact} on {scope} must not be altered."
+        )
+    return (
+        f"The verified {source} confirms the current {artifact} settings for "
+        f"{case_id} on {scope} align with the stable authorized configuration."
+    )
+
+
 DOMAIN_FRAMES = {
     "software_engineering_agent": {
         "owner": "release engineer", "item": "pull request", "artifact": "deployment gate",
@@ -373,9 +408,14 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
         if "timestamp" not in ev:
             ev["timestamp"] = f"2027-01-01T09:{idx_ev:02d}:00Z"
         
-    # Public texts and wrong answer traps
-    state_desc = f"{pattern.replace('_', ' ')} ({failure_mode}): {case_id} state verified by logs."
     wrong_answer_traps = build_wrong_answer_traps(pattern, case_id, other_scope)
+    expected_answer = neutral_expected_answer(
+        case_id=case_id,
+        artifact=artifact,
+        scope=scope,
+        source=source,
+        expected_decision=expected_decision,
+    )
     
     # Required Scenario V2 structure mapping to system requirements
     metadata = {
@@ -451,10 +491,7 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
         },
         "hidden_gold": {
             "expected_decision": expected_decision,
-            "expected_answer": (
-                f"The configuration for {case_id} ({artifact}) remains active and governed by "
-                f"verified stable rules. {state_desc}"
-            ),
+            "expected_answer": expected_answer,
             "expected_memory_state": normalize_memory_state(expected_states),
             "expected_evidence_event_ids": sorted(list(minimal_evidence)),
             "counterevidence_event_ids": sorted(list(counterevidence)),

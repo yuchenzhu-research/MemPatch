@@ -1,5 +1,5 @@
 {
   "scenario_id": "rt-hard-000011",
   "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300010 remains on default case route configuration on stable v1. No verified release approval has been provided, so the condition rule blocks any update.\",\n  \"memory_state\": {\n    \"m-rt-hard-000011-target\": \"current\",\n    \"m-rt-hard-000011-condition\": \"current\",\n    \"m-rt-hard-000011-distractor\": \"current\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000011-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300010 remains on the default case route configuration on stable v1. No verified release approval has been provided, so the prior state is still authorized.\",\n  \"memory_state\": {\n    \"m-rt-hard-000011-target\": \"current\",\n    \"m-rt-hard-000011-condition\": \"current\",\n    \"m-rt-hard-000011-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000011-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
 }

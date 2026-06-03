@@ -39,3 +39,13 @@ def test_security_policy_pattern_forces_policy_violation():
     binding = resolve_pattern_binding("security_policy_override", 0)
     assert binding.failure_mode == "policy_violation"
     assert binding.expected_decision == "refuse_due_to_policy"
+
+
+def test_expected_answer_does_not_leak_pattern_or_failure_labels():
+    for index in range(30):
+        sc = build_deterministic_scenario(index, "hard", 2027)
+        answer = sc["hidden_gold"]["expected_answer"].lower()
+        pattern = sc["pattern"]
+        failure = sc["hidden_gold"]["expected_failure_diagnosis"]
+        assert pattern.replace("_", " ") not in answer.replace("_", " ")
+        assert failure.replace("_", " ") not in answer.replace("_", " ")

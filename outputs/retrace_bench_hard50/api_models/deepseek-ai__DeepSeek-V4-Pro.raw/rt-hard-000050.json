@@ -1,5 +1,5 @@
 {
   "scenario_id": "rt-hard-000050",
   "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300049 uses default handoff route configuration on stable v1. No verified release approval has been recorded, so the prior state remains the authorized status.\",\n  \"memory_state\": {\n    \"m-rt-hard-000050-target\": \"current\",\n    \"m-rt-hard-000050-condition\": \"current\",\n    \"m-rt-hard-000050-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000050-1\",\n    \"e-rt-hard-000050-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300049 uses default handoff route configuration on stable v1. No verified release approval has been applied.\",\n  \"memory_state\": {\n    \"m-rt-hard-000050-target\": \"current\",\n    \"m-rt-hard-000050-condition\": \"current\",\n    \"m-rt-hard-000050-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000050-1\",\n    \"e-rt-hard-000050-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
 }
