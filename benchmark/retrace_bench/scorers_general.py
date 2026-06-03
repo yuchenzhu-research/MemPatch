@@ -23,6 +23,14 @@ HEADLINE_METRICS = (
     "evidence_f1",
     "failure_diagnosis_accuracy",
     "stale_reuse_rate",
+    "joint_revision_success",
+    "minimal_evidence_exact_match",
+    "evidence_precision",
+    "overcitation_rate",
+    "counterevidence_recall",
+    "answer_state_consistency",
+    "scope_authority_accuracy",
+    "latest_event_shortcut_failure_rate",
 )
 
 # Auxiliary / diagnostic raw signals. Reported for completeness but not as the
@@ -245,6 +253,60 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
         or stale_anchor_hit
     )
 
+    decision_ok = decision_matches(predicted_decision, expected_decision, decision_aliases)
+    memory_ok = (state_correct / state_total) >= 1.0
+    key_fact_ok = key_fact_matches(answer, expected_answer, rubric)
+
+    pred_ev = set(response.get("evidence_event_ids", []) or [])
+    gold_ev = set(gold.get("expected_evidence_event_ids", []) or gold.get("minimal_evidence_event_ids", []) or [])
+    
+    if not gold_ev and not pred_ev:
+        evidence_precision = 1.0
+    elif not pred_ev:
+        evidence_precision = 0.0
+    else:
+        evidence_precision = len(pred_ev & gold_ev) / len(pred_ev)
+
+    overcitation_rate = len(pred_ev - gold_ev) / len(pred_ev) if pred_ev else 0.0
+
+    gold_counter = set(gold.get("counterevidence_event_ids", []) or [])
+    if not gold_counter:
+        counterevidence_recall = 1.0
+    elif not pred_ev:
+        counterevidence_recall = 0.0
+    else:
+        counterevidence_recall = len(pred_ev & gold_counter) / len(gold_counter)
+
+    answer_state_consistency = float(decision_ok and key_fact_ok and memory_ok)
+    evidence_f1 = _f1(response.get("evidence_event_ids", []), list(gold_ev))
+
+    joint_revision_success = float(
+        decision_ok
+        and memory_ok
+        and evidence_f1 >= 1.0
+        and answer_state_consistency >= 1.0
+        and float(stale_reuse) == 0.0
+    )
+
+    meta = scenario.get("metadata", {}) or {}
+    is_scope_auth = (
+        meta.get("authority_conflict", False)
+        or meta.get("scope_collision", False)
+        or meta.get("version_or_release_chain", False)
+        or meta.get("branch_scope_conflict", False)
+        or scenario.get("primary_failure_mode") in {"scope_leakage", "wrong_source_attribution", "policy_violation"}
+    )
+    scope_authority_accuracy = float(decision_ok) if is_scope_auth else 1.0
+
+    events = scenario.get("public_input", {}).get("event_trace", [])
+    sorted_events = sorted(events, key=lambda e: e.get("timestamp", ""))
+    latest_event_id = sorted_events[-1].get("event_id") if sorted_events else None
+    
+    is_shortcut_candidate = False
+    if latest_event_id and latest_event_id not in gold_ev:
+        is_shortcut_candidate = (not decision_ok) and (latest_event_id in pred_ev)
+    latest_event_shortcut_failure_rate = float(is_shortcut_candidate)
+
     metrics = {
         # Per-example raw signals. Paper-facing headline decision metrics
         # (decision_macro_f1, non_answer_decision_accuracy, ...) are computed in
@@ -252,13 +314,22 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
         # that black_box_decision_accuracy is an auxiliary raw signal, not the
         # headline decision metric, because it is dominated by the majority
         # use_current_memory class.
-        "black_box_decision_accuracy": float(decision_matches(predicted_decision, expected_decision, decision_aliases)),
+        "black_box_decision_accuracy": float(decision_ok),
         "memory_state_accuracy": state_correct / state_total,
-        "evidence_f1": _f1(response.get("evidence_event_ids", []), gold.get("expected_evidence_event_ids", [])),
+        "evidence_f1": evidence_f1,
         "failure_diagnosis_accuracy": float(expected_diag == predicted_diag),
         "stale_reuse_rate": float(stale_reuse),
+        # New AAAI headline metrics
+        "joint_revision_success": joint_revision_success,
+        "minimal_evidence_exact_match": float(pred_ev == gold_ev),
+        "evidence_precision": evidence_precision,
+        "overcitation_rate": overcitation_rate,
+        "counterevidence_recall": counterevidence_recall,
+        "answer_state_consistency": answer_state_consistency,
+        "scope_authority_accuracy": scope_authority_accuracy,
+        "latest_event_shortcut_failure_rate": latest_event_shortcut_failure_rate,
         # Secondary / diagnostic metrics (not headline).
-        "answer_key_fact_accuracy": float(key_fact_matches(answer, expected_answer, rubric)),
+        "answer_key_fact_accuracy": float(key_fact_ok),
         # Exact text is retained only as a diagnostic; it is too strict for
         # open-ended language and should not be a headline metric.
         "answer_exact_match": float(answer_exact_match(answer, expected_answer)),
