@@ -9,6 +9,7 @@ from benchmark.retrace_bench.general_taxonomy import (
     DECISIONS,
     FAILURE_MODES,
     NON_ANSWER_DECISIONS,
+    canonical_hidden_gold_fields,
 )
 
 
@@ -217,26 +218,27 @@ def _f1(predicted: list[str], expected: list[str]) -> float:
 
 
 def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> dict[str, float]:
-    gold = scenario["hidden_gold"]
+    gold_raw = scenario["hidden_gold"]
+    gold = canonical_hidden_gold_fields(gold_raw)
     response = prediction.get("response", prediction)
-    expected_state = gold.get("expected_memory_state", {})
+    expected_state = gold["expected_memory_state"]
     predicted_state = response.get("memory_state", response.get("expected_memory_state", {})) or {}
     state_total = len(expected_state) or 1
     state_correct = sum(1 for mid, status in expected_state.items() if predicted_state.get(mid) == status)
-    expected_decision = gold.get("expected_decision")
+    expected_decision = gold["expected_decision"]
     predicted_decision = response.get("decision", response.get("expected_decision"))
-    expected_diag = gold.get("expected_failure_diagnosis")
+    expected_diag = gold["expected_failure_diagnosis"]
     predicted_diag = normalize_failure_mode(response.get("failure_diagnosis", response.get("expected_failure_diagnosis")))
 
-    rubric = gold.get("rubric", {}) or {}
+    rubric = gold["rubric"]
     answer = response.get("answer")
-    expected_answer = gold.get("expected_answer")
+    expected_answer = gold["expected_answer"]
     decision_aliases = gold.get("decision_aliases") or rubric.get("decision_aliases") or scenario.get("decision_aliases")
 
     # Optional adversarial anchors (gold first, then rubric). Absent in the
     # current sample but consumed when datasets provide them.
     def _anchors(key: str) -> list[Any]:
-        return list(gold.get(key) or rubric.get(key) or [])
+        return list(gold_raw.get(key) or rubric.get(key) or [])
 
     stale_anchors = _anchors("stale_anchors")
     scope_anchors = _anchors("scope_leakage_anchors")
@@ -249,7 +251,7 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
     forbidden_fact_hits = sum(1 for phrase in must_not_include if _overlap_hit(answer, [phrase]))
 
     stale_reuse = (
-        _is_stale_reuse(answer, gold.get("stale_or_wrong_answers", []), expected_answer=expected_answer)
+        _is_stale_reuse(answer, gold["stale_or_wrong_answers"], expected_answer=expected_answer)
         or stale_anchor_hit
     )
 
@@ -258,7 +260,7 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
     key_fact_ok = key_fact_matches(answer, expected_answer, rubric)
 
     pred_ev = set(response.get("evidence_event_ids", []) or [])
-    gold_ev = set(gold.get("expected_evidence_event_ids", []) or gold.get("minimal_evidence_event_ids", []) or [])
+    gold_ev = set(gold["expected_evidence_event_ids"])
     
     if not gold_ev and not pred_ev:
         evidence_precision = 1.0
@@ -269,7 +271,7 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
 
     overcitation_rate = len(pred_ev - gold_ev) / len(pred_ev) if pred_ev else 0.0
 
-    gold_counter = set(gold.get("counterevidence_event_ids", []) or [])
+    gold_counter = set(gold["counterevidence_event_ids"])
     if not gold_counter:
         counterevidence_recall = 1.0
     elif not pred_ev:

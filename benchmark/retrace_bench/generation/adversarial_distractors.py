@@ -2,12 +2,11 @@ import random
 from typing import Any, Dict, List
 
 
-def generate_version_distractor(rng: random.Random, idx: int, case_id: str, other_scope: str, frame: Dict[str, Any], topic: str) -> Dict[str, Any]:
+def generate_version_distractor(rng: random.Random, scenario_id: str, case_id: str, other_scope: str, frame: Dict[str, Any], topic: str) -> Dict[str, Any]:
     artifact = frame["artifact"]
     # Generates a distractor event that is true for another scope/version but not the current stable one.
     return {
-        "event_id": f"e-distractor-ver-{idx}",
-        "timestamp_order": idx,
+        "event_id": f"e-{scenario_id}-distractor-ver",
         "actor_role": "user",
         "trust_level": "trusted",
         "visibility_scope": other_scope,
@@ -17,11 +16,10 @@ def generate_version_distractor(rng: random.Random, idx: int, case_id: str, othe
     }
 
 
-def generate_authority_distractor(rng: random.Random, idx: int, case_id: str, scope: str, frame: Dict[str, Any], topic: str) -> Dict[str, Any]:
+def generate_authority_distractor(rng: random.Random, scenario_id: str, case_id: str, scope: str, frame: Dict[str, Any], topic: str) -> Dict[str, Any]:
     # Generates an untrusted claim that conflicts with verified sources
     return {
-        "event_id": f"e-distractor-auth-{idx}",
-        "timestamp_order": idx,
+        "event_id": f"e-{scenario_id}-distractor-auth",
         "actor_role": "user",
         "trust_level": "untrusted",
         "visibility_scope": scope,
@@ -31,11 +29,10 @@ def generate_authority_distractor(rng: random.Random, idx: int, case_id: str, sc
     }
 
 
-def generate_rollback_distractor(rng: random.Random, idx: int, case_id: str, scope: str, frame: Dict[str, Any]) -> Dict[str, Any]:
+def generate_rollback_distractor(rng: random.Random, scenario_id: str, case_id: str, scope: str, frame: Dict[str, Any]) -> Dict[str, Any]:
     artifact = frame["artifact"]
     return {
-        "event_id": f"e-distractor-rollback-{idx}",
-        "timestamp_order": idx,
+        "event_id": f"e-{scenario_id}-distractor-rollback",
         "actor_role": "reviewer",
         "trust_level": "trusted",
         "visibility_scope": scope,
@@ -45,10 +42,9 @@ def generate_rollback_distractor(rng: random.Random, idx: int, case_id: str, sco
     }
 
 
-def generate_ci_distractor(rng: random.Random, idx: int, case_id: str, scope: str, frame: Dict[str, Any]) -> Dict[str, Any]:
+def generate_ci_distractor(rng: random.Random, scenario_id: str, case_id: str, scope: str, frame: Dict[str, Any]) -> Dict[str, Any]:
     return {
-        "event_id": f"e-distractor-ci-{idx}",
-        "timestamp_order": idx,
+        "event_id": f"e-{scenario_id}-distractor-ci",
         "actor_role": "ci",
         "trust_level": "verified",
         "visibility_scope": scope,
