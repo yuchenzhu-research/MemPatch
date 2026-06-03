@@ -1,7 +1,8 @@
 # ReTrace Data Layout
 
 This directory organizes the ReTrace-Bench v1.0 evaluation splits and the
-ReTrace-Learn supervision pools.
+ReTrace-Learn method-track datasets (existing internal dev data under `v1/` and
+the future clean training corpus under `v1_0/`).
 
 ## Structure
 
@@ -17,8 +18,11 @@ audit; benchmark rows carry no training targets.
 The legacy pre-v1.0 layout is recoverable from the Git tag
 `legacy-retrace-bench-pre-v1.0`.
 
-### `data/retrace_learn/v1_0/`
-Clean training and validation datasets for the ReTrace-Learn method track. These will be generated natively from hidden graph, raw dialogue, and DPA outcome pipelines:
+### `data/retrace_learn/v1_0/` (future clean training/validation corpus)
+Clean training and validation datasets for the ReTrace-Learn method track. This
+directory is the **future home** for the large-scale corpus and does not exist
+yet — these will be generated natively from hidden graph, raw dialogue, and DPA
+outcome pipelines (the large-scale generator is not implemented in v1):
 - **`graph_sft_train/`**: Clean SFT training cases for learned Graph Extractor.
 - **`graph_sft_dev/`**: Clean validation cases for learned Graph Extractor.
 - **`proposer_sft_train/`**: Clean SFT training cases for learned Typed Proposer.
@@ -27,4 +31,15 @@ Clean training and validation datasets for the ReTrace-Learn method track. These
 - **`dpa_preference_dev/`**: Clean SFT/DPO preference data for validation.
 
 Pre-v1 supervision scaffolding (`supervision_train_3000_en`, `supervision_dev_400_en`) is leaky and has been removed from the active mainline tree. It remains recoverable from Git history and legacy tags.
+
+### `data/retrace_learn/v1/` (existing internal dev / diagnostic data)
+Small internal development and diagnostic datasets that already exist in the
+tree (distinct from the future `v1_0/` training corpus above). They are
+referenced by method configs and tests, not by the benchmark:
+- **`boundary_audit/`**: method-side boundary/leakage audit rows
+  (e.g. `boundary_audit_dev.jsonl`, used as exemplars by some method configs).
+- **`internal_dev/`**: controlled A/B and ambiguity-scope diagnostic cases.
+
+This is method-track development material only; it is **not** a ReTrace-Bench
+split and is **not** the large-scale `v1_0/` training corpus.
 

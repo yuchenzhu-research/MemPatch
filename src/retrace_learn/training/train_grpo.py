@@ -84,8 +84,22 @@ def make_reward_fn():
     return reward_fn
 
 
-def train(config_path: str | Path) -> None:  # pragma: no cover - requires GPU/deps
+def train(
+    config_path: str | Path,
+    *,
+    smoke: bool = False,
+) -> None:  # pragma: no cover - requires GPU/deps
     config = load_config(config_path)
+    # GRPO is a future/optional online extension (not part of the v1 three-stage
+    # method). The prompt set + reward registry are derived entirely from the
+    # smoke synthetic episodes, so refuse to run it as a "real" training job
+    # unless the smoke sanity path is explicitly requested.
+    if not smoke:
+        raise RuntimeError(
+            "train_grpo is a future/optional online RL extension and currently only "
+            "has a smoke prompt/reward registry. Pass --smoke to run the sanity loop. "
+            "Real online GRPO data wiring is not implemented in v1."
+        )
     dataset_rows = build_grpo_dataset()
     try:
         from datasets import Dataset
@@ -120,6 +134,11 @@ def train(config_path: str | Path) -> None:  # pragma: no cover - requires GPU/d
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--config", default=None)
+    parser.add_argument(
+        "--smoke",
+        action="store_true",
+        help="run the smoke GRPO sanity loop (the only supported GRPO data path in v1)",
+    )
     parser.add_argument("--dry-run", action="store_true")
     args = parser.parse_args(argv)
     if args.dry_run or args.config is None:
@@ -134,7 +153,7 @@ def main(argv: list[str] | None = None) -> int:
             r = reward_fn([row["prompt"]], [gold_completion], example_id=[row["example_id"]])
             print(f"  {row['example_id']:16s} gold-completion reward={r[0]:+.3f}")
         return 0
-    train(args.config)
+    train(args.config, smoke=args.smoke)
     return 0
 
 
