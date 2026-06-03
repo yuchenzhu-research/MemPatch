@@ -1,4 +1,0 @@
-reference_root: reference/Memora
-output_dir: outputs/memora
-top_k: 10
-method: retrace_full

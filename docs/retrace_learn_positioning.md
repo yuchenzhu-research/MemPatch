@@ -37,7 +37,7 @@ introduces no latent memory or hidden-state consolidation.
 - STALE/CUPMem is an **external validation / baseline** pathway, not the
   definition of the method. External bridge code must not redefine the primary
   method identity or the main evaluation data model. STALE adapters/runners stay
-  strictly inside `experiments/` (now `experiments/archive/`).
+  strictly inside `experiments/` (with older baseline adapters removed to the Git history).
 - Do not turn the repo into a generic orchestration framework, RAG system, or a
   Mem0/Graphiti clone; do not implement agent debate/voting; do not duplicate
   the `authorize(...)` kernel; do not change DPA semantics absent a demonstrated

@@ -21,7 +21,8 @@ contamination risk profiles:
   gold memory states.
 - **Risk**: Distribution shift — our typed action vocabulary may not map cleanly
   to external benchmarks designed for different memory models.
-- **Mitigation**: The STALE adapter (`experiments/stale_adapter.py`) translates
+- **Mitigation**: The STALE adapter (previously `experiments/archive/stale_adapter.py`, removed during
+  post-v1.0 cleanup; recoverable from Git history) translates
   between external gold fields and our typed vocabulary. The adapter never feeds
   gold fields into method inputs; it only consumes them at scoring boundaries.
 

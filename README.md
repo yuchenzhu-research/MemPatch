@@ -282,12 +282,7 @@ external validation/baseline pathway, not the definition of the method.
 
 ## Legacy / archived paths
 
-`experiments/archive/` holds preserved-but-non-canonical research code
-(historical action ablations, composition studies, E4 STALE/CUPMem external
-validation, and older comparison/diagnostic runners). It is **not** imported by
-`src/retracemem/` and is **not** a paper-facing command — see
-`experiments/archive/README.md`. If those experiments are needed for final paper
-numbers, reimplement them through the shared evaluation pipeline.
+Legacy and archived research code (historical action ablations, composition studies, E4 STALE/CUPMem external validation, and older comparison/diagnostic runners) has been removed from the active tree to maintain a clean research artifact. These files remain fully recoverable from Git history.
 
 ---
 

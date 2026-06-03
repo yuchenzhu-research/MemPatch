@@ -104,4 +104,4 @@ python3 scripts/export_stagec_data.py
 - **E4: External Validation on STALE / CUPMem**
   Show that ReTrace-Learn is effective on external stale-memory benchmarks using structural mapping.
 
-Historical implementations of the action-ablation and composition studies, and the STALE/CUPMem external validation, are archived under `experiments/archive/`; if needed for final paper numbers they should be reimplemented through the shared pipeline.
+Historical implementations of the action-ablation and composition studies, and the STALE/CUPMem external validation, were removed from the active tree during post-v1.0 cleanup (recoverable from Git history); if needed for final paper numbers they should be reimplemented through the shared pipeline.

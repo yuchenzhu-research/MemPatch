@@ -1,4 +1,0 @@
-reference_root: reference/STALE
-output_dir: outputs/stale
-top_k: 10
-method: retrace_full
