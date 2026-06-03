@@ -17,12 +17,14 @@ audit; benchmark rows carry no training targets.
 The legacy pre-v1.0 layout is recoverable from the Git tag
 `legacy-retrace-bench-pre-v1.0`.
 
-### `data/retrace_learn/supervision_*`
-Synthetic supervision / selection pools for the ReTrace-Learn method track.
-They are **not** benchmark test sets and may contain training targets.
-- **`supervision_train_3000_en`**: Supervision/selection pool (3000 scenarios).
-- **`supervision_dev_400_en`**: Dev/selection pool (400 scenarios).
+### `data/retrace_learn/v1_0/`
+Clean training and validation datasets for the ReTrace-Learn method track. These will be generated natively from hidden graph, raw dialogue, and DPA outcome pipelines:
+- **`graph_sft_train/`**: Clean SFT training cases for learned Graph Extractor.
+- **`graph_sft_dev/`**: Clean validation cases for learned Graph Extractor.
+- **`proposer_sft_train/`**: Clean SFT training cases for learned Typed Proposer.
+- **`proposer_sft_dev/`**: Clean validation cases for learned Typed Proposer.
+- **`dpa_preference_train/`**: Clean SFT/DPO preference data for training.
+- **`dpa_preference_dev/`**: Clean SFT/DPO preference data for validation.
 
-### `data/retrace_learn/`
-Legacy/internal ReTrace-Learn method data (e.g. `v1/internal_dev` and `v1/boundary_audit`).
-- Kept strictly for internal/legacy training diagnostics. Do not use for scoring external baselines.
+Pre-v1 supervision scaffolding (`supervision_train_3000_en`, `supervision_dev_400_en`) is leaky and has been removed from the active mainline tree. It remains recoverable from Git history and legacy tags.
+

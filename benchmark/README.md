@@ -30,9 +30,8 @@ Four paper-facing splits, published under public names `main` / `hard` /
 | `realistic` | `data/retrace_bench/realistic_100_en/` | 100 | Realistic-style workflow split. **`annotation_status = pending`**; gold not yet annotated. |
 | `calibration` | `data/retrace_bench/calibration_80_en/` | 80 | Smoke / quickstart only. **Not for model selection or headline claims.** |
 
-Learning-only supervision pools live outside the benchmark tree under
-`data/retrace_learn/supervision_train_3000_en/` and
-`data/retrace_learn/supervision_dev_400_en/`; they are **not** benchmark splits.
+Clean method training/validation datasets live outside the benchmark tree under
+`data/retrace_learn/v1_0/`; they are **not** benchmark splits.
 The legacy pre-v1.0 layout is recoverable from the Git tag
 `legacy-retrace-bench-pre-v1.0`.
 
