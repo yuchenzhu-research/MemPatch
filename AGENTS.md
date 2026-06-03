@@ -20,7 +20,7 @@ Legacy planning documents and old raw source-material files are no longer active
 
 ReTrace is an umbrella project governed as **two active research tracks** (see `docs/project_governance.md`):
 
-1. **ReTrace-Bench** — benchmark track. Evaluation-only; owns benchmark data, schema, scoring, baselines, held-out test split, and leakage checks. Locations: `benchmark/retrace_bench/`, `data/retrace_bench/`, `data/retrace_supervision/`, `docs/retrace_bench/`, benchmark scripts/tests.
+1. **ReTrace-Bench** — benchmark track. Evaluation-only; owns benchmark data, schema, scoring, baselines, the four v1.0 evaluation splits (`main`/`hard`/`realistic`/`calibration`), and leakage checks. Locations: `benchmark/retrace_bench/`, `data/retrace_bench/`, `docs/retrace_bench/`, benchmark scripts/tests. Learning-only supervision pools live under `data/retrace_learn/supervision_*`.
 2. **ReTrace-Learn** — method track. Owns the pipeline Graph Extractor -> Typed Revision Proposer -> Authorization Court. Locations: `src/retrace_learn/`, `src/retracemem/`, method scripts/docs.
 
 **ReTrace-Engine** is the implementation name for the deterministic Authorization Court **inside ReTrace-Learn** — it is not a standalone paper, a standalone top-level track, or a third module.

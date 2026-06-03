@@ -1,0 +1,72 @@
+{
+  "annotation_status": "synthetic_gold",
+  "avg_event_count": 7.965,
+  "avg_memory_count": 3.424,
+  "avg_required_evidence_count": 1.0,
+  "difficulty": {
+    "L1_single_hop_update": 750,
+    "L2_multi_hop_with_distractor": 750,
+    "L3_conditional_validity": 750,
+    "L4_cross_scope_adversarial_audit": 750
+  },
+  "domains": {
+    "calendar_task_workflow": 375,
+    "customer_support_crm": 375,
+    "data_analysis_bi": 375,
+    "ecommerce_recommendation": 375,
+    "enterprise_multi_tool_workflow": 375,
+    "personal_assistant_preference": 375,
+    "research_knowledge_work": 375,
+    "software_engineering_agent": 375
+  },
+  "expected_decisions": {
+    "ask_clarification": 704,
+    "escalate": 522,
+    "mark_unresolved": 614,
+    "refuse_due_to_policy": 296,
+    "use_current_memory": 864
+  },
+  "failure_modes": {
+    "conflict_collapse": 273,
+    "failure_to_forget": 272,
+    "failure_to_release_or_restore": 272,
+    "memory_hallucination": 273,
+    "over_update": 273,
+    "policy_violation": 273,
+    "scope_leakage": 273,
+    "stale_memory_reuse": 273,
+    "under_update": 273,
+    "unnecessary_memory_write": 272,
+    "wrong_source_attribution": 273
+  },
+  "leakage_audit_summary": {
+    "clean": true,
+    "decision_word_phrases_checked": [
+      "ask for clarification",
+      "ask the requester to confirm",
+      "ask the requester to clarify",
+      "please confirm",
+      "mark unresolved",
+      "mark it unresolved",
+      "mark as unresolved",
+      "escalate",
+      "refuse",
+      "do not store",
+      "use current memory",
+      "use the current memory"
+    ],
+    "leak_phrase_counts": {},
+    "method": "exact decision-action phrase match over verified/trusted records",
+    "scanned_records": "authoritative (verified+trusted) event text only",
+    "scenarios_with_decision_word_leak": 0
+  },
+  "max_event_count": 10,
+  "max_memory_count": 5,
+  "role": "Primary controlled benchmark split (main benchmark results).",
+  "scenario_count": 3000,
+  "schema_version": "retrace_bench_general_1",
+  "source_type": "controlled_synthetic",
+  "split": "main",
+  "training_targets": false,
+  "version": "1.0.0"
+}

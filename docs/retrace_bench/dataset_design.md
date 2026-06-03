@@ -5,25 +5,33 @@ agentic workflows. It is method-neutral: scenarios are not specific to
 ReTrace-Learn, DPA, RAG, CRUD stores, Mem0-style systems, or any single model
 family.
 
-## Splits
+## Splits (ReTrace-Bench v1.0)
 
-- `data/retrace_bench/test_800_templateheldout_en/` - **canonical paper-facing
-  held-out test split** (800 scenarios). All headline numbers come from here.
-- `data/retrace_bench/test_800_en/` - 800 scenario **prototype/diagnostic split
-  only**; retained for comparison and must **not** be used for paper headline
-  numbers.
-- `data/retrace_bench/sample_80_hard_en/` - 80 scenario
-  **calibration / quickstart / smoke** split for quick inspection and pipeline
-  verification. On Hugging Face it may be exposed as the `validation` split for
-  dataset-viewer compatibility only; this is **not** a model-selection /
-  checkpoint-selection validation set.
-- `data/retrace_bench/sample_20_v2/` - tiny v2 schema smoke fixture.
-- `data/retrace_supervision/train_3000_en/` and
-  `data/retrace_supervision/dev_400_en/` - synthetic **supervision / selection
-  pools** for learning-based systems (e.g. future ReTrace-Learn work); they are
-  **not** benchmark test sets.
+Four paper-facing splits, public names `main` / `hard` / `realistic` /
+`calibration` (never train / dev / validation / test):
 
-Each split stores `scenarios.jsonl` plus a small `manifest.json`.
+- `data/retrace_bench/main_3000_en/` (`main`, 3000) - **controlled benchmark
+  main split**. All headline numbers come from here.
+- `data/retrace_bench/hard_300_en/` (`hard`, 300) - rule-defined long-context /
+  multi-evidence / multi-memory **stress split** (20–100 events, ≥5 memories,
+  ≥2 evidence events per case).
+- `data/retrace_bench/realistic_100_en/` (`realistic`, 100) - realistic-style
+  workflow split; `source_type = realistic_style_synthetic`,
+  `annotation_status = pending` (gold not yet annotated; template in
+  `annotations_template.jsonl`). No human validation or public-source
+  provenance is claimed.
+- `data/retrace_bench/calibration_80_en/` (`calibration`, 80) - **smoke /
+  quickstart** split only; **not** for model selection, checkpoint selection,
+  tuning, or headline claims.
+
+Supervision / selection pools for learning-based systems live outside the
+benchmark tree under `data/retrace_learn/supervision_train_3000_en/` and
+`data/retrace_learn/supervision_dev_400_en/`; they are **not** benchmark test
+sets. The legacy pre-v1.0 layout is recoverable from the Git tag
+`legacy-retrace-bench-pre-v1.0`.
+
+Each split stores `scenarios.jsonl` plus a small `manifest.json` and a
+`README.md` (the realistic split also ships `annotations_template.jsonl`).
 
 ## Generation Model
 
@@ -64,8 +72,8 @@ actions.
 ## Manual Validation
 
 Beyond the automated validators, a recommended manual validation protocol
-covers a stratified 8-domain × 11-failure-mode sample of the canonical
-held-out split. See [`manual_validation_protocol.md`](manual_validation_protocol.md)
+covers a stratified 8-domain × 11-failure-mode sample of the `main` split. See
+[`manual_validation_protocol.md`](manual_validation_protocol.md)
 for the procedure and [`manual_validation_sample_88.md`](manual_validation_sample_88.md)
 for the enumerated sample / report template. The manual protocol is documented
 as planned/recommended and is not claimed as a completed human study until the

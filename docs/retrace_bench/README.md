@@ -11,10 +11,15 @@ CRUD store, Mem0-style, or a trained policy) can be scored on it.
   — why existing long-context / long-term-dialogue / stale-memory / general-agent
   benchmarks do not directly measure shared memory revision reliability, and how
   ReTrace-Bench fills that gap.
-- **Headline baseline results (`sample_80_hard_en`):**
-  [`baseline_results_sample_80_hard_en.md`](baseline_results_sample_80_hard_en.md).
 - **Dataset design / card:** [`dataset_design.md`](dataset_design.md),
   [`dataset_card_hf.md`](dataset_card_hf.md).
+- **Historical pilot baselines (legacy pre-v1.0 splits, kept for provenance):**
+  [`baseline_results_sample_80_hard_en.md`](baseline_results_sample_80_hard_en.md).
+
+ReTrace-Bench v1.0 ships four paper-facing splits under public names `main` /
+`hard` / `realistic` / `calibration` (`data/retrace_bench/main_3000_en`,
+`hard_300_en`, `realistic_100_en`, `calibration_80_en`). The legacy pre-v1.0
+layout is recoverable from the Git tag `legacy-retrace-bench-pre-v1.0`.
 
 ## Conceptual Framing & Boundary
 
@@ -44,19 +49,20 @@ The benchmark is structured across:
 
 ---
 
-## CLI Usage (v2)
+## CLI Usage
 
 ### 1. Validate Data
 ```bash
-PYTHONPATH=. python scripts/validate_retrace_bench_v2.py --data data/retrace_bench/sample_20_v2
+PYTHONPATH=. python scripts/validate_retrace_bench_dataset.py \
+  --data data/retrace_bench/main_3000_en/scenarios.jsonl
 ```
 
 ### 2. Run Baselines
 ```bash
-PYTHONPATH=. python scripts/run_retrace_bench_v2_baseline.py \
-  --data data/retrace_bench/sample_20_v2 \
-  --baseline latest_only_v2 \
-  --out outputs/retrace_bench_v2/latest_only_sample20.jsonl
+PYTHONPATH=. python scripts/run_retrace_bench_baseline.py \
+  --data data/retrace_bench/calibration_80_en/scenarios.jsonl \
+  --baseline latest_only \
+  --out outputs/retrace_bench/latest_only_calibration.jsonl
 ```
 
 ---

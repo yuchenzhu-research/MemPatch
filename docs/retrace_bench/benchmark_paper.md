@@ -90,25 +90,35 @@ complementary to existing memory benchmarks:
    `must_not_include` rubrics so a "retrieve-everything" answer that stuffs the
    gold string into unrelated text does not score well; stale reuse is detected
    even when the stale answer is *paraphrased*.
-5. **Artifact validation.** The canonical test split passes deterministic
-   validators and a focused project-author manual pass over an 88-cell
-   stratified sample; this is a release-readiness check, not a formal
-   multi-annotator annotation study.
+5. **Artifact validation.** Every split passes deterministic validators and a
+   decision-word leakage audit (no authoritative record contains a decision
+   phrase tied to one of the five gold decisions). This is a release-readiness
+   check; the `realistic` split is **not** yet human-annotated.
 
-### Split roles
+### Split roles (ReTrace-Bench v1.0)
 
-- **`test_800_templateheldout_en`** is the canonical paper-facing held-out test
-  split (800 scenarios, all 8 domains and all 11 failure modes, template-held
-  out from train/dev). All headline numbers come from this split.
-- **`test_800_en`** is a prototype/diagnostic split only and must **not** be
-  used for paper headline numbers.
-- **`sample_80_hard_en`** is a calibration / quickstart / smoke split for quick
-  inspection and pipeline verification. On Hugging Face it may be exposed as the
-  `validation` split for dataset-viewer compatibility only; it is **not** a
-  model-selection / checkpoint-selection validation set.
-- **`train_3000_en`** and **`dev_400_en`** (under `data/retrace_supervision/`)
-  are supervision / selection pools for learning-based systems and are **not**
-  benchmark test sets.
+Four paper-facing splits, public names `main` / `hard` / `realistic` /
+`calibration` (never train / dev / validation / test):
+
+- **`main_3000_en`** (`main`, 3000) is the controlled benchmark main split with
+  broad coverage across domains, failure modes, decisions, and memory states.
+  All headline numbers come from this split.
+- **`hard_300_en`** (`hard`, 300) is the rule-defined long-context /
+  multi-evidence / multi-memory stress split (20–100 events, ≥5 memories, ≥2
+  evidence events per case), used to show structured memory-revision pressure
+  beyond coarse decision accuracy.
+- **`realistic_100_en`** (`realistic`, 100) is a realistic-style workflow split.
+  It is `realistic_style_synthetic` with `annotation_status = pending`; gold is
+  not yet annotated and no human validation or public-source provenance is
+  claimed.
+- **`calibration_80_en`** (`calibration`, 80) is a smoke / quickstart split
+  only — **not** for model selection, checkpoint selection, tuning, or headline
+  claims.
+
+Supervision / selection pools for learning-based systems live outside the
+benchmark tree under `data/retrace_learn/supervision_*` and are **not** benchmark
+test sets. The legacy pre-v1.0 layout is recoverable from the Git tag
+`legacy-retrace-bench-pre-v1.0`.
 
 ## 4. Metrics
 
@@ -166,6 +176,8 @@ presented alongside the deployable baselines as if it were a competing system.
 The runner enforces this: the oracle is grouped under
 `is_oracle=true` / `group="oracle"`, separate from the deployable baselines.
 
-See `baseline_results_test_800_templateheldout_en.md` for current paper-facing
-numbers on the canonical held-out split, and `baseline_results_sample_80_hard_en.md`
-for the calibration/quickstart split.
+Headline baselines for the v1.0 `main` / `hard` / `realistic` splits require a
+full model-suite rerun and are not yet committed. The historical pilot result
+files `baseline_results_test_800_templateheldout_en.md` and
+`baseline_results_sample_80_hard_en.md` describe legacy pre-v1.0 splits and are
+retained only for provenance.

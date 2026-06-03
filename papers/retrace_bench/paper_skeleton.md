@@ -79,12 +79,15 @@ baselines and a gold-replay oracle consistency reference.
 - Sanity (`latest_only`, `retrieve_all`); retrieval/memory (`rag_lexical`,
   `crud_memory`, `mem0_style`, `heuristic_memory_state`); gold-replay oracle
   consistency reference (`retrace_oracle_engine`).
-- Source: `section_bank.md#6-baselines`,
-  `docs/retrace_bench/baseline_results_test_800_templateheldout_en.md`.
+- Source: `section_bank.md#6-baselines`; v1.0 baselines to be regenerated on
+  `main_3000_en` (legacy
+  `docs/retrace_bench/baseline_results_test_800_templateheldout_en.md` retained
+  for provenance only).
 
 ## 7 Results
 
-- Main table on canonical `test_800_templateheldout_en`.
+- Main table on the `main` split (`main_3000_en`); stress results on `hard`
+  (`hard_300_en`).
 - Gap between best deployable baseline and oracle consistency reference.
 - Source: `table_plan.md` Table 4.
 

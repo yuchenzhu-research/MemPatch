@@ -10,7 +10,7 @@ Typical usage::
         load_scenarios, load_predictions, evaluate_predictions,
     )
 
-    scenarios = load_scenarios("data/retrace_bench/test_800_templateheldout_en")
+    scenarios = load_scenarios("data/retrace_bench/main_3000_en")
     predictions = load_predictions("my_model.predictions.jsonl")
     result = evaluate_predictions(scenarios, predictions, strict=True)
     print(result["headline_metrics"])

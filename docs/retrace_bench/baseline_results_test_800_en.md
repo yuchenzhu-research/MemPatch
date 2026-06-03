@@ -1,5 +1,8 @@
 # Offline Baseline Results — `test_800_en` Prototype/Diagnostic Split
 
+> **Legacy (pre-v1.0) document.** Describes a legacy pre-v1.0 split/pilot, recoverable from the Git tag `legacy-retrace-bench-pre-v1.0`. Retained for provenance only; it does **not** describe the ReTrace-Bench v1.0 splits (`main`/`hard`/`realistic`/`calibration`).
+
+
 Prototype/diagnostic split:
 `data/retrace_bench/test_800_en/scenarios.jsonl` (800 scenarios, all 8 domains
 + 11 failure modes). This split is retained for historical comparison only and

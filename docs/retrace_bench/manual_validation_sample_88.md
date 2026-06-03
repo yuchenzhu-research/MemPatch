@@ -1,5 +1,8 @@
 # Manual Validation Sample (88 cells)
 
+> **Legacy (pre-v1.0) document.** Describes a legacy pre-v1.0 split/pilot, recoverable from the Git tag `legacy-retrace-bench-pre-v1.0`. Retained for provenance only; it does **not** describe the ReTrace-Bench v1.0 splits (`main`/`hard`/`realistic`/`calibration`).
+
+
 Status: **completed focused artifact validation pass.** This table is the
 reviewed 88-cell stratified sample of the canonical paper-facing split
 `data/retrace_bench/test_800_templateheldout_en/`, one scenario per

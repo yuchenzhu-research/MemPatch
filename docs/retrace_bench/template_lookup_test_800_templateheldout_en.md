@@ -1,5 +1,8 @@
 # Template Lookup Diagnostic
 
+> **Legacy (pre-v1.0) document.** Describes a legacy pre-v1.0 split/pilot, recoverable from the Git tag `legacy-retrace-bench-pre-v1.0`. Retained for provenance only; it does **not** describe the ReTrace-Bench v1.0 splits (`main`/`hard`/`realistic`/`calibration`).
+
+
 This is a diagnostic shortcut baseline, not a deployable memory baseline. It predicts from de-identified template signatures learned from the training split.
 
 | metric | value |

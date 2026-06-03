@@ -10,7 +10,7 @@ now.
 - **Purpose:** show the anatomy of one scenario: `public_input.event_trace` (with
   trust levels / visibility scopes / timestamps) and `initial_memory`, plus the
   hidden gold kept separate from model inputs.
-- **Input:** a single representative scenario from `sample_80_hard_en`.
+- **Input:** a single representative scenario from `hard_300_en` (`hard` split).
 - **Producible now:** yes (hand-drawn schematic from one scenario JSON).
 
 ## Figure 2 — Four task views over one scenario
@@ -35,7 +35,8 @@ now.
 - **Purpose:** show 2–4 contrasting failure modes (e.g. `stale_memory_reuse` vs.
   `over_update` vs. `scope_leakage`) with the correct decision and a typical
   wrong answer.
-- **Input:** selected scenarios spanning failure modes from `sample_80_hard_en`.
+- **Input:** selected scenarios spanning failure modes from `main_3000_en` /
+  `hard_300_en`.
 - **Producible now:** yes (curated examples).
 
 ## Figure 5 — Baseline performance (bar / radar)
@@ -43,8 +44,8 @@ now.
 - **Purpose:** visualize the headline-metric gap between deployable baselines and
   the oracle consistency reference; emphasize collapse on non-answer decisions
   and evidence F1.
-- **Input:** Table 4 numbers
-  (`docs/retrace_bench/baseline_results_test_800_templateheldout_en.md`).
-- **Producible now:** yes from existing offline numbers; refresh after adding a
-  real LLM baseline. Keep the oracle visually separated/annotated as
-  non-deployable.
+- **Input:** Table 4 numbers from a v1.0 offline baseline run on `main_3000_en`
+  (regenerate with `scripts/run_retrace_bench_ablation.py`).
+- **Producible now:** only after the v1.0 baselines are regenerated on `main`;
+  refresh after adding a real LLM baseline. Keep the oracle visually
+  separated/annotated as non-deployable.

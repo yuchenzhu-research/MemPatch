@@ -1,10 +1,12 @@
 # ReTrace-Bench Manual Validation Protocol
 
-Status: **completed focused artifact validation pass.** This document specifies
-the manual validation checks used for the canonical paper-facing held-out split
-`data/retrace_bench/test_800_templateheldout_en/`. A project-author manual pass
-over the 88-cell stratified sample has been completed; see
-[`manual_validation_report.md`](manual_validation_report.md).
+Status: **reusable protocol; the recorded pass is legacy (pre-v1.0).** This
+document specifies the manual validation checks. The completed project-author
+pass it references was over the legacy `test_800_templateheldout_en` split
+(recoverable from the Git tag `legacy-retrace-bench-pre-v1.0`); see
+[`manual_validation_report.md`](manual_validation_report.md). The same protocol
+should be re-run on the ReTrace-Bench v1.0 `main` split — the v1.0 splits have
+**not** yet been manually validated.
 
 This is a focused artifact validation pass, not a formal human-subject study,
 large-scale annotation effort, multi-annotator review, or inter-annotator

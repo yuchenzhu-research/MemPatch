@@ -1,5 +1,8 @@
 # ReTrace-Bench `test_800_templateheldout_en` (v1) — model-output design audit
 
+> **Legacy (pre-v1.0) document.** Describes a legacy pre-v1.0 split/pilot, recoverable from the Git tag `legacy-retrace-bench-pre-v1.0`. Retained for provenance only; it does **not** describe the ReTrace-Bench v1.0 splits (`main`/`hard`/`realistic`/`calibration`).
+
+
 **Status:** audit / design review. **Scope:** the template-heldout v1 split
 (`data/retrace_bench/test_800_templateheldout_en/`, renderer `templateheldout_v1`)
 evaluated against two API baseline outputs (first 200 scenarios each):

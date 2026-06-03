@@ -18,17 +18,23 @@ taxonomy, schema, scorers, validators, baselines, providers, and the public
 scoring API. It is the **ReTrace-Bench** track and is independent of the
 ReTrace-Learn method track.
 
-## Official splits
+## Official splits (ReTrace-Bench v1.0)
 
-| HF split | On-disk path | Role |
-| --- | --- | --- |
-| `test` | `data/retrace_bench/test_800_templateheldout_en/` | Canonical, paper-facing held-out benchmark. **Do not train/tune/select on it.** |
-| `validation` | `data/retrace_bench/sample_80_hard_en/` | Calibration/quickstart (80 hard scenarios). HF `validation` is **viewer compatibility only** — not model/checkpoint selection. |
-| `train` | `data/retrace_supervision/train_3000_en/` | Supervision pool for learning-based proposers; may contain `training_targets`. Not a test. |
-| `dev` | `data/retrace_supervision/dev_400_en/` | Selection pool. Not a test. |
+Four paper-facing splits, published under public names `main` / `hard` /
+`realistic` / `calibration` (never train / dev / validation / test):
 
-The old `data/retrace_bench/test_800_en/` is a prototype/diagnostic split and is
-excluded from the public release.
+| HF split | On-disk path | Size | Role |
+| --- | --- | --- | --- |
+| `main` | `data/retrace_bench/main_3000_en/` | 3000 | Controlled benchmark main split; primary headline results. |
+| `hard` | `data/retrace_bench/hard_300_en/` | 300 | Long-context / multi-evidence / multi-memory stress split. |
+| `realistic` | `data/retrace_bench/realistic_100_en/` | 100 | Realistic-style workflow split. **`annotation_status = pending`**; gold not yet annotated. |
+| `calibration` | `data/retrace_bench/calibration_80_en/` | 80 | Smoke / quickstart only. **Not for model selection or headline claims.** |
+
+Learning-only supervision pools live outside the benchmark tree under
+`data/retrace_learn/supervision_train_3000_en/` and
+`data/retrace_learn/supervision_dev_400_en/`; they are **not** benchmark splits.
+The legacy pre-v1.0 layout is recoverable from the Git tag
+`legacy-retrace-bench-pre-v1.0`.
 
 ## Install / setup
 
@@ -50,7 +56,7 @@ From local JSONL (source of truth):
 ```python
 from benchmark.retrace_bench.api import load_scenarios
 
-scenarios = load_scenarios("data/retrace_bench/test_800_templateheldout_en")
+scenarios = load_scenarios("data/retrace_bench/main_3000_en")
 # or point directly at a scenarios.jsonl file
 ```
 
@@ -60,21 +66,22 @@ From Hugging Face (`Sylvan-Vale-Moon/ReTrace-Bench`):
 import json
 from datasets import load_dataset
 
-ds = load_dataset("Sylvan-Vale-Moon/ReTrace-Bench")  # test / validation / train / dev
-row = ds["test"][0]
+ds = load_dataset("Sylvan-Vale-Moon/ReTrace-Bench")  # main / hard / realistic / calibration
+row = ds["main"][0]
 hidden_gold = json.loads(row["hidden_gold_json"])  # nested fields are JSON string columns
 ```
 
 The HF viewer publishes nested structures as JSON string columns
 (`public_input_json`, `tasks_json`, `hidden_gold_json`, `metadata_json`,
-`secondary_failure_modes_json`, `training_targets_json`); parse them with
-`json.loads(...)`. The local `data/` files keep the native nested JSONL schema.
+`secondary_failure_modes_json`); parse them with `json.loads(...)`. Benchmark
+rows carry no `training_targets`. The local `data/` files keep the native nested
+JSONL schema.
 
 ## Validate a split
 
 ```bash
 PYTHONPATH=. python scripts/validate_retrace_bench_dataset.py \
-  --data data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl
+  --data data/retrace_bench/main_3000_en/scenarios.jsonl
 ```
 
 ## Run built-in baselines
@@ -85,7 +92,7 @@ Offline baselines need no API keys (`latest_only`, `retrieve_all`,
 
 ```bash
 PYTHONPATH=. python scripts/run_retrace_bench_baseline.py \
-  --data data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl \
+  --data data/retrace_bench/main_3000_en/scenarios.jsonl \
   --baseline latest_only \
   --out outputs/retrace_bench/latest_only.jsonl
 ```
@@ -94,7 +101,7 @@ The full offline matrix:
 
 ```bash
 PYTHONPATH=. python scripts/run_retrace_bench_ablation.py \
-  --data data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl \
+  --data data/retrace_bench/main_3000_en/scenarios.jsonl \
   --out-dir outputs/retrace_bench/ablation \
   --resume
 ```
@@ -110,7 +117,7 @@ JSONL predictions file against a split:
 
 ```bash
 PYTHONPATH=. python scripts/evaluate_retrace_bench_predictions.py \
-  --data data/retrace_bench/test_800_templateheldout_en/scenarios.jsonl \
+  --data data/retrace_bench/main_3000_en/scenarios.jsonl \
   --predictions path/to/predictions.jsonl \
   --out-metrics outputs/retrace_bench/my_model.metrics.json \
   --out-scored outputs/retrace_bench/my_model.scored.jsonl \
@@ -129,7 +136,7 @@ from benchmark.retrace_bench.api import (
     HEADLINE_METRICS, AUXILIARY_METRICS,
 )
 
-scenarios = load_scenarios("data/retrace_bench/test_800_templateheldout_en")
+scenarios = load_scenarios("data/retrace_bench/main_3000_en")
 predictions = load_predictions("my_model.predictions.jsonl")
 result = evaluate_predictions(scenarios, predictions, strict=True)
 
@@ -164,7 +171,8 @@ prompt-based systems as if it were one.
 ## More
 
 - Benchmark paper draft: [`docs/retrace_bench/benchmark_paper.md`](../docs/retrace_bench/benchmark_paper.md)
-- Baselines on the canonical split: [`docs/retrace_bench/baseline_results_test_800_templateheldout_en.md`](../docs/retrace_bench/baseline_results_test_800_templateheldout_en.md)
+- Historical pilot baselines (legacy pre-v1.0 splits, kept for provenance):
+  [`docs/retrace_bench/baseline_results_test_800_templateheldout_en.md`](../docs/retrace_bench/baseline_results_test_800_templateheldout_en.md)
 - Manual validation protocol and report:
   [`protocol`](../docs/retrace_bench/manual_validation_protocol.md),
   [`report`](../docs/retrace_bench/manual_validation_report.md)
