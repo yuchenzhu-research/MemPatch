@@ -1,5 +1,7 @@
 # Template-heldout v2 — pilot baseline results (v1 vs v2)
 
+> **Legacy (pre-v1.0) document.** Describes a legacy pre-v1.0 split/pilot, recoverable from the Git tag `legacy-retrace-bench-pre-v1.0`. Retained for provenance only; it does **not** describe the ReTrace-Bench v1.0 splits (`main`/`hard`/`realistic`/`calibration`), and the raw output dumps it references were removed from the current branch.
+
 Empirical validation of the v2 hardening fixes, using first-100 API baselines on
 **both** splits with the **same three models**. The v1 and v2 first-100 share an
 identical gold decision distribution (`use_current_memory` 31, `ask_clarification`
@@ -91,8 +93,10 @@ on the cued v2 split, all three models, `llm_json_answerer`,
 `--max-tokens 768 --disable-thinking`, SiliconFlow. Gold decision distribution
 over the 800 cases: `use_current_memory` 233, `ask_clarification` 187,
 `mark_unresolved` 163, `escalate` 138, `refuse_due_to_policy` 79. Diagnosis gold
-is ~balanced (72–73 per mode across all 11 modes). Raw predictions and
-`*.metrics.json` are committed under `outputs/retrace_bench/pilot_v2/`.
+is ~balanced (72–73 per mode across all 11 modes). The raw predictions and
+`*.metrics.json` were committed under `outputs/retrace_bench/pilot_v2/` at the
+time of this pilot; they have since been removed from the current branch and are
+recoverable from the Git tag `legacy-retrace-bench-pre-v1.0`.
 
 ### Headline (full 800, cued v2)
 
