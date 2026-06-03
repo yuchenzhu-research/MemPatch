@@ -77,3 +77,5 @@ outputs/**/.DS_Store
 /outputs/multiagent_*.jsonl
 /outputs/multiagent_*.json
 /outputs/stale_cupmem_*.json
+# Official ReTrace-Bench v1.0 model-suite outputs are intentionally trackable.
+!outputs/retrace_bench/v1_0/**
