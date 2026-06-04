@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-from collections import Counter
 from typing import Any
 
 from benchmark.retrace_bench.general_taxonomy import (
@@ -415,14 +414,16 @@ def canonicalize_decision(val: Any, expected_decision: Any, aliases: Any = None)
 
 
 def aggregate_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
-    totals: Counter[str] = Counter()
+    totals: dict[str, float] = {}
     count = 0
     for row in rows:
         for key, value in row.get("metrics", {}).items():
-            totals[key] += float(value)
+            totals[key] = totals.get(key, 0.0) + float(value)
         count += 1
 
-    metrics_dict = {key: value / count for key, value in sorted(totals.items())} if count else {}
+    metrics_dict: dict[str, Any] = (
+        {key: value / count for key, value in sorted(totals.items())} if count else {}
+    )
 
     valid_rows = [r for r in rows if r.get("expected_decision") is not None]
 
@@ -430,8 +431,8 @@ def aggregate_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
     decision_balanced_accuracy = 0.0
     non_answer_decision_accuracy = 0.0
     use_current_memory_accuracy = 0.0
-    per_decision_counts = {}
-    per_decision_accuracy = {}
+    per_decision_counts: dict[str, int] = {}
+    per_decision_accuracy: dict[str, float] = {}
 
     if valid_rows:
         exp_list = []
@@ -492,7 +493,7 @@ def aggregate_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
     metrics_dict["per_decision_accuracy"] = per_decision_accuracy
 
     observed_modes = sorted(list(set(r.get("primary_failure_mode") for r in rows if r.get("primary_failure_mode") is not None)))
-    per_failure_mode = {}
+    per_failure_mode: dict[str, dict[str, Any]] = {}
     for mode in observed_modes:
         mode_rows = [r for r in rows if r.get("primary_failure_mode") == mode]
         per_failure_mode[mode] = {
@@ -505,7 +506,7 @@ def aggregate_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
         }
 
     observed_domains = sorted(list(set(r.get("domain") for r in rows if r.get("domain") is not None)))
-    per_domain = {}
+    per_domain: dict[str, dict[str, Any]] = {}
     for domain in observed_domains:
         domain_rows = [r for r in rows if r.get("domain") == domain]
         per_domain[domain] = {

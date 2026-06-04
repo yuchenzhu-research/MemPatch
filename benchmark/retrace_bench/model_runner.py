@@ -82,7 +82,7 @@ def format_duration(seconds: float) -> str:
     seconds = max(0.0, seconds)
     if seconds < 60:
         return f"{seconds:.1f}s"
-    total = int(round(seconds))
+    total = round(seconds)
     minutes, sec = divmod(total, 60)
     if minutes < 60:
         return f"{minutes}m{sec:02d}s"
@@ -265,7 +265,7 @@ def call_openai_chat(
         request_kwargs["response_format"] = {"type": "json_object"}
     if disable_thinking:
         request_kwargs["extra_body"] = {"enable_thinking": False}
-    result = client.chat.completions.create(**request_kwargs)
+    result: Any = client.chat.completions.create(**request_kwargs)
     return result.choices[0].message.content or ""
 
 
@@ -293,7 +293,13 @@ def call_anthropic(
         system="Return only JSON that matches the requested schema.",
         messages=[{"role": "user", "content": prompt}],
     )
-    parts = [block.text for block in result.content if getattr(block, "type", None) == "text"]
+    parts = [
+        text
+        for block in result.content
+        if getattr(block, "type", None) == "text"
+        for text in [getattr(block, "text", None)]
+        if isinstance(text, str)
+    ]
     return "\n".join(parts)
 
 
