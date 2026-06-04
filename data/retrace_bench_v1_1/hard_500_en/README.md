@@ -1,8 +1,0 @@
-# ReTrace-Bench `hard_500_en` (Final release)
-
-Public Split Name: **`hard`**
-Count: 500
-Role: Paper-facing final hard benchmark split.
-
-## CONTAMINATION WARNING
-Do NOT use this evaluation dataset for training models.
