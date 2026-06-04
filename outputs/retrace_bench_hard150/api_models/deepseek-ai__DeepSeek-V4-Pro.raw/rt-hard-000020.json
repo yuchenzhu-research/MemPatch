@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000020",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300019 uses default schedule rule configuration on stable v1. XML export remains fully supported on v1 stable per maintainer confirmation.\",\n  \"memory_state\": {\n    \"m-rt-hard-000020-target\": \"current\",\n    \"m-rt-hard-000020-condition\": \"current\",\n    \"m-rt-hard-000020-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000020-1\",\n    \"e-rt-hard-000020-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000044",
-  "model": "Pro/zai-org/GLM-5.1",
-  "raw_response": "{\n  \"decision\": \"mark_unresolved\",\n  \"answer\": \"The final authorized status of CASE-300043 is unresolved. A maintainer merged the async and timeout migrations (e-2), but the condition rule requires verified release approval, which has not been provided. A proposed rollback (e-5) further conflicts with the merge, leaving the stable value undetermined.\",\n  \"memory_state\": {\n    \"m-rt-hard-000044-target\": \"unresolved\",\n    \"m-rt-hard-000044-condition\": \"current\",\n    \"m-rt-hard-000044-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000044-2\",\n    \"e-rt-hard-000044-distractor-rollback\"\n  ],\n  \"failure_diagnosis\": \"conflict_collapse\"\n}"
-}

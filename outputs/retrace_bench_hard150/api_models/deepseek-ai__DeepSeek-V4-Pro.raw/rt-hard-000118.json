@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000118",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300117 remains on default preference rule configuration on stable v1; no verified release approval has been recorded.\",\n  \"memory_state\": {\n    \"m-rt-hard-000118-target\": \"current\",\n    \"m-rt-hard-000118-condition\": \"current\",\n    \"m-rt-hard-000118-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000118-1\",\n    \"e-rt-hard-000118-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000032",
-  "model": "Pro/zai-org/GLM-5.1",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300031 remains on default metric definition configuration on stable v1, with the SSO timeout issue tracked under the open master Issue #98 (needs-investigation, priority-high).\",\n  \"memory_state\": {\n    \"m-rt-hard-000032-target\": \"current\",\n    \"m-rt-hard-000032-condition\": \"current\",\n    \"m-rt-hard-000032-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000032-2\",\n    \"e-rt-hard-000032-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000042",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300041 uses default handoff route configuration on stable v1. No verified release approval has been applied in workspace-stable.\",\n  \"memory_state\": {\n    \"m-rt-hard-000042-target\": \"current\",\n    \"m-rt-hard-000042-condition\": \"current\",\n    \"m-rt-hard-000042-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000042-1\",\n    \"e-rt-hard-000042-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

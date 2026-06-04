@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000025",
-  "model": "Pro/moonshotai/Kimi-K2.6",
-  "raw_response": "{\"decision\":\"use_current_memory\",\"answer\":\"CASE-300024 on stable remains with default deployment gate configuration; the security patch was backported only to legacy v1.2, and production v2.0 does not need or receive it. No verified update to CASE-300024's deployment gate has occurred in workspace-stable.\",\"memory_state\":{\"m-rt-hard-000025-target\":\"current\",\"m-rt-hard-000025-condition\":\"current\",\"m-rt-hard-000025-distractor\":\"out_of_scope\"},\"evidence_event_ids\":[\"e-rt-hard-000025-1\",\"e-rt-hard-000025-2\",\"e-rt-hard-000025-distractor-ver\",\"e-rt-hard-000025-distractor-auth\"],\"failure_diagnosis\":\"scope_leakage\"}"
-}

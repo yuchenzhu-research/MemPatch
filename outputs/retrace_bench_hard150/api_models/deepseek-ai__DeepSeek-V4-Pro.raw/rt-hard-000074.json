@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000074",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300073 remains on default handoff route configuration (stable v1) with no authorized update applied, because no verified release approval event exists in workspace-stable.\",\n  \"memory_state\": {\n    \"m-rt-hard-000074-target\": \"current\",\n    \"m-rt-hard-000074-condition\": \"current\",\n    \"m-rt-hard-000074-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000074-1\",\n    \"e-rt-hard-000074-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

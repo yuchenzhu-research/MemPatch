@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000020",
-  "model": "Pro/moonshotai/Kimi-K2.6",
-  "raw_response": "{\"decision\":\"use_current_memory\",\"answer\":\"CASE-300019 retains default schedule rule configuration on stable v1; no verified update has been applied. XML exporter remains required for production reports on v1.\",\"memory_state\":{\"m-rt-hard-000020-target\":\"current\",\"m-rt-hard-000020-condition\":\"current\",\"m-rt-hard-000020-distractor\":\"out_of_scope\"},\"evidence_event_ids\":[\"e-rt-hard-000020-1\",\"e-rt-hard-000020-3\",\"e-rt-hard-000020-distractor-ver\",\"e-rt-hard-000020-distractor-auth\"],\"failure_diagnosis\":\"scope_leakage\"}"
-}

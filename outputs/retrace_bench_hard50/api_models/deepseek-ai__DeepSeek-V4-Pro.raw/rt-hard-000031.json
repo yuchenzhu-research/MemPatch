@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000031",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300030 remains on default shopping rule configuration on stable v1.4.0; the YAML feature from PR #101 is not authorized for stable because Release v1.4.0 does not include it.\",\n  \"memory_state\": {\n    \"m-rt-hard-000031-target\": \"current\",\n    \"m-rt-hard-000031-condition\": \"current\",\n    \"m-rt-hard-000031-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000031-1\",\n    \"e-rt-hard-000031-2\",\n    \"e-rt-hard-000031-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

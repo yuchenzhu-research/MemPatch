@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000048",
-  "model": "Pro/zai-org/GLM-5.1",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"The final authorized status of CASE-300047 is that it uses the default metric definition configuration on stable v1, as the batch delete implementation remains unmerged and the docs were merged by mistake.\",\n  \"memory_state\": {\n    \"m-rt-hard-000048-target\": \"current\",\n    \"m-rt-hard-000048-condition\": \"current\",\n    \"m-rt-hard-000048-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000048-2\",\n    \"e-rt-hard-000048-3\"\n  ],\n  \"failure_diagnosis\": \"stale_memory_reuse\"\n}"
-}

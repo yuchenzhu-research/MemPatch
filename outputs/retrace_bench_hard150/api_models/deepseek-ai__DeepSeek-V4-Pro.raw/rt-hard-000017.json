@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000017",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300016 remains on default deployment gate configuration (stable v1). Issue #200 was closed as duplicate of master Issue #98, which is still open with needs-investigation and priority-high. No verified release approval has been recorded, so the condition rule blocks any update.\",\n  \"memory_state\": {\n    \"m-rt-hard-000017-target\": \"current\",\n    \"m-rt-hard-000017-condition\": \"current\",\n    \"m-rt-hard-000017-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000017-1\",\n    \"e-rt-hard-000017-2\",\n    \"e-rt-hard-000017-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

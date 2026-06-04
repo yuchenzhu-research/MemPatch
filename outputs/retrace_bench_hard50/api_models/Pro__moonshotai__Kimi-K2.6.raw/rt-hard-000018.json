@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000018",
-  "model": "Pro/moonshotai/Kimi-K2.6",
-  "raw_response": "{\"decision\":\"use_current_memory\",\"answer\":\"CASE-300017 remains on default handoff route configuration on stable v1; no verified update has been authorized. The docs claiming batch delete support were merged by mistake ahead of unmerged, failing code.\",\"memory_state\":{\"m-rt-hard-000018-target\":\"current\",\"m-rt-hard-000018-condition\":\"current\",\"m-rt-hard-000018-distractor\":\"out_of_scope\"},\"evidence_event_ids\":[\"e-rt-hard-000018-1\",\"e-rt-hard-000018-2\",\"e-rt-hard-000018-3\",\"e-rt-hard-000018-distractor-ver\"],\"failure_diagnosis\":\"stale_memory_reuse\"}"
-}
