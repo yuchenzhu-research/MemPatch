@@ -11,7 +11,8 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from benchmark.retrace_bench.general_taxonomy import DIFFICULTIES, DOMAINS, FAILURE_MODES
+from benchmark.retrace_bench.general_taxonomy import DIFFICULTIES, DOMAINS, FAILURE_MODES, PATTERNS
+from benchmark.retrace_bench.generation.pattern_spec import resolve_pattern_binding
 
 
 STATUS_BY_MODE = {
@@ -49,7 +50,12 @@ def choose_difficulty(index: int) -> str:
 
 def blueprint(index: int, rng: random.Random) -> dict:
     domain = DOMAINS[index % len(DOMAINS)]
-    primary = FAILURE_MODES[(index // len(DOMAINS)) % len(FAILURE_MODES)]
+    # Bind every blueprint to a canonical workflow pattern so the rendered
+    # scenario passes ``validate_pattern_semantics``: the pattern determines the
+    # allowed (failure_mode, expected_decision) pair via ``resolve_pattern_binding``.
+    pattern = PATTERNS[index % len(PATTERNS)]
+    binding = resolve_pattern_binding(pattern, index)
+    primary = binding.failure_mode
     secondary_pool = [m for m in FAILURE_MODES if m != primary]
     secondary_count = index % 4
     secondaries = rng.sample(secondary_pool, secondary_count)
@@ -80,12 +86,12 @@ def blueprint(index: int, rng: random.Random) -> dict:
     evidence_event = f"e-{scenario_id}-04"
     if verified_over_trusted:
         evidence_event = f"e-{scenario_id}-05"
-    expected_decision = NON_ANSWER_BY_MODE.get(primary) if non_answer else "use_current_memory"
-    if non_answer and not expected_decision:
-        expected_decision = ("ask_clarification", "escalate", "mark_unresolved")[index % 3]
+    expected_decision = binding.expected_decision
+    non_answer = non_answer or binding.non_answer_behavior or expected_decision != "use_current_memory"
     return {
         "schema_version": "retrace_bench_general_blueprint_1",
         "scenario_id": scenario_id,
+        "pattern": pattern,
         "domain": domain,
         "primary_failure_mode": primary,
         "secondary_failure_modes": secondaries,

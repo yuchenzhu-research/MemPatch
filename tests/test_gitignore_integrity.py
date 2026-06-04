@@ -34,11 +34,17 @@ def test_gitignore_sensitive_artifacts_not_committed():
         "data/fixtures/",
         "experiments/multiagent/local_training/data/",
         "data/retrace_learn/v1/boundary_audit/",
-        # ReTrace-Bench v1.0 paper-facing splits.
-        "data/retrace_bench/main_3000_en/",
-        "data/retrace_bench/hard_300_en/",
-        "data/retrace_bench/realistic_100_en/",
-        "data/retrace_bench/calibration_80_en/",
+        # Canonical ReTrace-Bench (internal "v1.1") public paper-facing splits.
+        # private_hidden scenarios are intentionally NOT committed.
+        "data/retrace_bench_v1_1/main_3000_en/",
+        "data/retrace_bench_v1_1/hard_500_en/",
+        "data/retrace_bench_v1_1/realistic_200_en/",
+        "data/retrace_bench_v1_1/calibration_80_en/",
+        # Legacy v1.0 + development split package (kept for provenance).
+        "data_legacy/retrace_bench_v1_0/",
+        "data_legacy/retrace_bench_dev_artifacts/",
+        # Gold-free + gold annotation packets (gold mirrors already-public splits).
+        "annotation_packets/retrace_bench_v1_1/",
         "release/huggingface/ReTrace-Bench/",
         "examples/retrace_bench/",
         "outputs/",
