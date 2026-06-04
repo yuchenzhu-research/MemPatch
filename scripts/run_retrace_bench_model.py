@@ -57,6 +57,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--temperature", type=float, default=0.0)
     parser.add_argument("--timeout", type=float, default=120.0)
     parser.add_argument(
+        "--max-tokens",
+        type=int,
+        default=768,
+        help="Maximum completion tokens for provider calls",
+    )
+    parser.add_argument(
         "--sleep-seconds",
         type=float,
         default=0.0,
@@ -79,6 +85,7 @@ def main(argv: list[str] | None = None) -> int:
             base_url=args.base_url,
             temperature=args.temperature,
             timeout=args.timeout,
+            max_tokens=args.max_tokens,
             sleep_seconds=args.sleep_seconds,
             continue_on_error=args.continue_on_error,
         )

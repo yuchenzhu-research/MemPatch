@@ -12,14 +12,12 @@ import os
 import re
 import sys
 import time
-from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from benchmark.retrace_bench.api import load_scenarios
 from benchmark.retrace_bench.general_taxonomy import (
     DECISIONS,
-    FAILURE_MODE_DEFINITIONS,
     FAILURE_MODES,
     MEMORY_STATUSES,
 )
@@ -60,6 +58,8 @@ REQUIRED_RESPONSE_FIELDS = (
     "failure_diagnosis",
 )
 
+BAR_LENGTH = 32
+
 
 def _load_dotenv_if_available() -> None:
     try:
@@ -89,26 +89,46 @@ def format_duration(seconds: float) -> str:
     return f"{hours}h{minutes:02d}m"
 
 
+def _collect_memory_ids(public_view: dict[str, Any]) -> list[str]:
+    public_input = public_view.get("public_input", {})
+    memory_ids = [
+        m["memory_id"]
+        for m in public_input.get("initial_memory", [])
+        if isinstance(m, dict) and m.get("memory_id")
+    ]
+    for event in public_input.get("event_trace", []):
+        if not isinstance(event, dict):
+            continue
+        for memory_id in event.get("related_memory_ids", []) or []:
+            if memory_id not in memory_ids:
+                memory_ids.append(memory_id)
+    return memory_ids
+
+
+def _arrow(run_index: int) -> str:
+    return "=" * min(max(run_index, 1), BAR_LENGTH) + ">"
+
+
 def build_prompt(public_view: dict[str, Any]) -> str:
     """Build the model prompt from a sanitized, model-visible scenario view."""
-    payload = json.dumps(public_view, ensure_ascii=False, indent=2, sort_keys=True)
-    failure_defs = json.dumps(FAILURE_MODE_DEFINITIONS, ensure_ascii=False, indent=2, sort_keys=True)
-    return (
-        "You are running ReTrace-Bench. Read the scenario and return ONLY valid JSON.\n"
-        "Do not include markdown, explanations, or extra keys.\n\n"
-        "Required JSON schema:\n"
-        "{\n"
-        '  "answer": "string answer to the black-box task",\n'
-        f'  "decision": "one of {list(DECISIONS)}",\n'
-        f'  "memory_state": {{"memory_id": "one of {list(MEMORY_STATUSES)}"}},\n'
-        '  "evidence_event_ids": ["event_id", "..."],\n'
-        f'  "failure_diagnosis": "one of {list(FAILURE_MODES)}"\n'
-        "}\n\n"
-        "Failure diagnosis definitions:\n"
-        f"{failure_defs}\n\n"
-        "Scenario:\n"
-        f"{payload}"
-    )
+    memory_ids = _collect_memory_ids(public_view)
+    payload = {
+        "instruction": (
+            "Answer as strict JSON only. Do not use Markdown fences. "
+            "Use only the visible scenario content. Do not use external knowledge. "
+            "Use exact enum strings. Do not invent memory IDs or event IDs. "
+            "Cite only minimal supporting event IDs."
+        ),
+        "required_output_schema": {
+            "answer": "short final answer/action text",
+            "decision": list(DECISIONS),
+            "memory_state": {mid: list(MEMORY_STATUSES) for mid in memory_ids},
+            "evidence_event_ids": "minimal list of event_id strings from public_input.event_trace",
+            "failure_diagnosis": list(FAILURE_MODES),
+        },
+        **public_view,
+    }
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
 
 
 def extract_json_object(text: str) -> dict[str, Any]:
@@ -162,6 +182,7 @@ def call_openai_chat(
     base_url: str | None = None,
     temperature: float = 0.0,
     timeout: float = 120.0,
+    max_tokens: int = 768,
 ) -> str:
     try:
         from openai import OpenAI
@@ -179,6 +200,7 @@ def call_openai_chat(
         model=model,
         messages=_chat_messages(prompt),
         temperature=temperature,
+        max_tokens=max_tokens,
     )
     return result.choices[0].message.content or ""
 
@@ -190,6 +212,7 @@ def call_anthropic(
     api_key_env: str,
     temperature: float = 0.0,
     timeout: float = 120.0,
+    max_tokens: int = 768,
 ) -> str:
     try:
         from anthropic import Anthropic
@@ -199,7 +222,7 @@ def call_anthropic(
     client = Anthropic(api_key=_api_key(api_key_env), timeout=timeout)
     result = client.messages.create(
         model=model,
-        max_tokens=2048,
+        max_tokens=max_tokens,
         temperature=temperature,
         system="Return only JSON that matches the requested schema.",
         messages=[{"role": "user", "content": prompt}],
@@ -214,6 +237,7 @@ def call_google(
     prompt: str,
     api_key_env: str,
     temperature: float = 0.0,
+    max_tokens: int = 768,
 ) -> str:
     try:
         from google import genai
@@ -227,6 +251,7 @@ def call_google(
         contents=prompt,
         config=types.GenerateContentConfig(
             temperature=temperature,
+            max_output_tokens=max_tokens,
             response_mime_type="application/json",
         ),
     )
@@ -242,6 +267,7 @@ def call_model(
     base_url: str | None = None,
     temperature: float = 0.0,
     timeout: float = 120.0,
+    max_tokens: int = 768,
 ) -> str:
     provider = provider.lower()
     if provider not in PROVIDERS:
@@ -260,6 +286,7 @@ def call_model(
             api_key_env=resolved_env,
             temperature=temperature,
             timeout=timeout,
+            max_tokens=max_tokens,
         )
     if provider in {"openai_compatible", "siliconflow", "deepseek", "minimax"}:
         resolved_base_url = base_url or DEFAULT_BASE_URLS.get(provider)
@@ -272,6 +299,7 @@ def call_model(
             base_url=resolved_base_url,
             temperature=temperature,
             timeout=timeout,
+            max_tokens=max_tokens,
         )
     if provider in {"google", "gemini"}:
         return call_google(
@@ -279,6 +307,7 @@ def call_model(
             prompt=prompt,
             api_key_env=resolved_env,
             temperature=temperature,
+            max_tokens=max_tokens,
         )
     if provider == "anthropic":
         return call_anthropic(
@@ -287,6 +316,7 @@ def call_model(
             api_key_env=resolved_env,
             temperature=temperature,
             timeout=timeout,
+            max_tokens=max_tokens,
         )
     raise AssertionError(f"unhandled provider: {provider}")
 
@@ -321,6 +351,7 @@ def run_model_predictions(
     base_url: str | None = None,
     temperature: float = 0.0,
     timeout: float = 120.0,
+    max_tokens: int = 768,
     sleep_seconds: float = 0.0,
     continue_on_error: bool = False,
 ) -> int:
@@ -343,35 +374,23 @@ def run_model_predictions(
     mode = "a" if resume else "w"
     written = 0
     errors = 0
-    successful_case_seconds = 0.0
     skipped_existing = dataset_total - len(remaining)
     start = time.monotonic()
-    start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    print("ReTrace-Bench model runner", flush=True)
-    print(f"data={data}", flush=True)
-    print(f"provider={provider}", flush=True)
-    print(f"model={model}", flush=True)
-    print(f"out_predictions={out_path}", flush=True)
-    print(f"resume={resume}", flush=True)
-    print(f"dataset_total={dataset_total}", flush=True)
-    print(f"completed_existing={completed_existing}", flush=True)
-    print(f"max_new_cases={max_cases if max_cases is not None else 'all'}", flush=True)
-    print(f"planned_new_cases={planned_new_cases}", flush=True)
-    print(f"start_time={start_time}", flush=True)
+    print(
+        f"ReTrace-Bench model runner | total={dataset_total} | resume={resume} | "
+        f"completed={completed_existing} | skipped={skipped_existing} | "
+        f"planned={planned_new_cases} | max_new={max_cases if max_cases is not None else 'all'}",
+        flush=True,
+    )
 
     with out_path.open(mode, encoding="utf-8") as f:
         for run_index, (dataset_index, scenario) in enumerate(planned, start=1):
             scenario_id = str(scenario["scenario_id"])
             case_start = time.monotonic()
-            elapsed = time.monotonic() - start
-            progress = (
-                f"[run {run_index}/{planned_new_cases} | dataset {dataset_index}/{dataset_total} | "
-                f"written {written} | errors {errors} | skipped {skipped_existing} | "
-                f"elapsed {format_duration(elapsed)}]"
-            )
             print(
-                f"{progress} calling provider={provider} model={model} scenario_id={scenario_id}",
+                f"{_arrow(run_index)} {run_index}/{planned_new_cases} "
+                f"case=0.0s total={format_duration(time.monotonic() - start)}",
                 flush=True,
             )
             try:
@@ -385,6 +404,7 @@ def run_model_predictions(
                     base_url=base_url,
                     temperature=temperature,
                     timeout=timeout,
+                    max_tokens=max_tokens,
                 )
                 response = canonical_response(extract_json_object(text))
                 row = {"scenario_id": scenario_id, "response": response}
@@ -393,14 +413,10 @@ def run_model_predictions(
                 written += 1
                 total_elapsed = time.monotonic() - start
                 case_elapsed = time.monotonic() - case_start
-                successful_case_seconds += case_elapsed
-                remaining_planned = planned_new_cases - run_index
-                avg_case_time = successful_case_seconds / written
-                eta = format_duration(avg_case_time * remaining_planned)
                 print(
-                    f"[run {run_index}/{planned_new_cases} | dataset {dataset_index}/{dataset_total}] "
-                    f"wrote scenario_id={scenario_id} case_elapsed={case_elapsed:.1f}s "
-                    f"total_elapsed={format_duration(total_elapsed)} eta={eta}",
+                    f"{_arrow(run_index)} {run_index}/{planned_new_cases} "
+                    f"dataset={dataset_index}/{dataset_total} written={written} errors={errors} "
+                    f"case={case_elapsed:.1f}s total={format_duration(total_elapsed)}",
                     flush=True,
                 )
                 if sleep_seconds > 0:
@@ -410,20 +426,18 @@ def run_model_predictions(
                 total_elapsed = time.monotonic() - start
                 case_elapsed = time.monotonic() - case_start
                 print(
-                    f"[run {run_index}/{planned_new_cases} | dataset {dataset_index}/{dataset_total}] "
-                    f"error scenario_id={scenario_id} case_elapsed={case_elapsed:.1f}s "
-                    f"total_elapsed={format_duration(total_elapsed)} error={exc}",
+                    f"{_arrow(run_index)} {run_index}/{planned_new_cases} "
+                    f"dataset={dataset_index}/{dataset_total} error case={case_elapsed:.1f}s "
+                    f"total={format_duration(total_elapsed)} {exc}",
                     file=sys.stderr,
                     flush=True,
                 )
                 if not continue_on_error:
                     raise
 
-    print("finished", flush=True)
-    print(f"planned_new_cases={planned_new_cases}", flush=True)
-    print(f"written={written}", flush=True)
-    print(f"errors={errors}", flush=True)
-    print(f"skipped_existing={skipped_existing}", flush=True)
-    print(f"total_elapsed={format_duration(time.monotonic() - start)}", flush=True)
-    print(f"output={out_path}", flush=True)
+    print(
+        f"finished | planned={planned_new_cases} | written={written} | errors={errors} | "
+        f"skipped={skipped_existing} | total={format_duration(time.monotonic() - start)} | output={out_path}",
+        flush=True,
+    )
     return written
