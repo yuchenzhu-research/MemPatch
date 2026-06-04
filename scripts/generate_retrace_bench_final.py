@@ -103,7 +103,9 @@ def main() -> int:
                 sc = build_github_realistic_scenario(i, seed_obj, split_name, args.seed)
             else:
                 # Use deterministic builder for others
-                sc = build_deterministic_scenario(i, split_name, args.seed)
+                sc = build_deterministic_scenario(
+                    i, split_name, args.seed, split_count=count
+                )
             
             scenarios.append(sc)
             

@@ -2,10 +2,11 @@
 
 from __future__ import annotations
 
+import random
 from dataclasses import dataclass
 from typing import Any
 
-from benchmark.retrace_bench.general_taxonomy import FAILURE_MODES, PATTERNS
+from benchmark.retrace_bench.general_taxonomy import DECISIONS, FAILURE_MODES, PATTERNS
 
 
 @dataclass(frozen=True)
@@ -146,8 +147,8 @@ PATTERN_SPEC: dict[str, dict[str, Any]] = {
     },
     "negative_evidence_required": {
         "canonical_failure_mode": "under_update",
-        "allowed_failure_modes": ("under_update", "stale_memory_reuse"),
-        "expected_decisions": ("use_current_memory",),
+        "allowed_failure_modes": ("under_update", "stale_memory_reuse", "conflict_collapse"),
+        "expected_decisions": ("use_current_memory", "mark_unresolved"),
         "evidence_roles": ("open_issue", "counterevidence_hold", "negative_evidence_no_merge"),
         "memory_state_transitions": ("current",),
         "trap_type": "treat_open_pr_as_merged",
@@ -238,7 +239,102 @@ def infer_pattern(scenario: dict[str, Any]) -> str | None:
     return None
 
 
-def resolve_pattern_binding(pattern: str, index: int) -> PatternBinding:
+HARD_DECISION_TARGET_FRACTIONS: dict[str, float] = {
+    "use_current_memory": 0.50,
+    "mark_unresolved": 0.20,
+    "ask_clarification": 0.12,
+    "refuse_due_to_policy": 0.10,
+    "escalate": 0.08,
+}
+
+HARD_USE_CURRENT_PATTERNS: tuple[str, ...] = (
+    "merged_but_unreleased",
+    "docs_ahead_of_code",
+    "release_then_revert",
+    "version_scope_leakage",
+    "branch_scope_leakage",
+    "backport_only_fix",
+    "maintainer_correction_over_user_claim",
+    "stale_comment_after_new_release",
+    "label_state_mismatch",
+    "multi_memory_coupling",
+)
+
+_HARD_PLAN_CACHE: dict[tuple[int, int], list[tuple[str, str]]] = {}
+
+
+def target_hard_decision_counts(count: int) -> dict[str, int]:
+    """Round target fractions to integer counts that sum exactly to ``count``."""
+    raw = {decision: int(round(count * HARD_DECISION_TARGET_FRACTIONS[decision])) for decision in DECISIONS}
+    delta = count - sum(raw.values())
+    raw["use_current_memory"] = max(0, raw["use_current_memory"] + delta)
+    if sum(raw.values()) != count:
+        raise ValueError(f"decision count plan does not sum to {count}: {raw}")
+    use_share = raw["use_current_memory"] / count
+    if use_share > 0.55:
+        raise ValueError(f"use_current_memory share {use_share:.3f} exceeds 55% cap")
+    return raw
+
+
+def build_hard_pattern_decision_plan(count: int, seed: int) -> list[tuple[str, str]]:
+    """Deterministic (pattern, expected_decision) schedule for hard splits."""
+    targets = target_hard_decision_counts(count)
+    slots: list[tuple[str, str]] = []
+
+    slots.extend(
+        [("security_policy_override", "refuse_due_to_policy")] * targets["refuse_due_to_policy"]
+    )
+
+    mark_n = targets["mark_unresolved"]
+    closed_n = min(10, mark_n)
+    ci_mark_n = min(10, max(0, mark_n - closed_n))
+    remaining_mark = mark_n - closed_n - ci_mark_n
+    auth_n = remaining_mark // 2
+    neg_n = remaining_mark - auth_n
+    slots.extend([("closed_as_duplicate_not_fixed", "mark_unresolved")] * closed_n)
+    slots.extend([("ci_failed_after_claim", "mark_unresolved")] * ci_mark_n)
+    slots.extend([("authority_conflict", "mark_unresolved")] * auth_n)
+    slots.extend([("negative_evidence_required", "mark_unresolved")] * neg_n)
+
+    slots.extend(
+        [("ci_failed_after_claim", "ask_clarification")] * targets["ask_clarification"]
+    )
+    slots.extend([("ci_failed_after_claim", "escalate")] * targets["escalate"])
+
+    ucm_n = targets["use_current_memory"]
+    base, rem = divmod(ucm_n, len(HARD_USE_CURRENT_PATTERNS))
+    for idx, pattern in enumerate(HARD_USE_CURRENT_PATTERNS):
+        slots.extend([(pattern, "use_current_memory")] * (base + (1 if idx < rem else 0)))
+
+    if len(slots) != count:
+        raise ValueError(f"hard plan length {len(slots)} != count {count}")
+
+    rng = random.Random(seed + 77177)
+    rng.shuffle(slots)
+    return slots
+
+
+def get_hard_plan_entry(index: int, count: int, seed: int) -> tuple[str, str]:
+    key = (count, seed)
+    if key not in _HARD_PLAN_CACHE:
+        _HARD_PLAN_CACHE[key] = build_hard_pattern_decision_plan(count, seed)
+    return _HARD_PLAN_CACHE[key][index]
+
+
+def hard_decision_distribution(count: int, seed: int) -> dict[str, int]:
+    plan = build_hard_pattern_decision_plan(count, seed)
+    dist: dict[str, int] = {d: 0 for d in DECISIONS}
+    for _pattern, decision in plan:
+        dist[decision] += 1
+    return dist
+
+
+def resolve_pattern_binding(
+    pattern: str,
+    index: int,
+    *,
+    forced_decision: str | None = None,
+) -> PatternBinding:
     if pattern not in PATTERN_SPEC:
         raise ValueError(f"unknown pattern: {pattern}")
     spec = PATTERN_SPEC[pattern]
@@ -246,7 +342,15 @@ def resolve_pattern_binding(pattern: str, index: int) -> PatternBinding:
     failure_mode = allowed_failures[index % len(allowed_failures)]
 
     decisions = spec["expected_decisions"]
-    expected_decision = decisions[index % len(decisions)]
+    if forced_decision is not None:
+        if forced_decision not in decisions:
+            raise ValueError(
+                f"pattern {pattern} does not allow forced decision {forced_decision!r}; "
+                f"allowed {decisions}"
+            )
+        expected_decision = forced_decision
+    else:
+        expected_decision = decisions[index % len(decisions)]
 
     if pattern == "authority_conflict":
         if expected_decision == "use_current_memory":
@@ -259,6 +363,9 @@ def resolve_pattern_binding(pattern: str, index: int) -> PatternBinding:
             failure_mode = "under_update"
         else:
             failure_mode = "conflict_collapse"
+
+    if pattern == "negative_evidence_required" and expected_decision == "mark_unresolved":
+        failure_mode = "conflict_collapse"
 
     return PatternBinding(
         pattern=pattern,

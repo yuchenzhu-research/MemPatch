@@ -7,6 +7,7 @@ from benchmark.retrace_bench.general_taxonomy import (
 )
 from benchmark.retrace_bench.generation.pattern_spec import (
     build_wrong_answer_traps,
+    get_hard_plan_entry,
     resolve_pattern_binding,
 )
 from benchmark.retrace_bench.generation.evidence_dependency_graph import EvidenceDependencyGraph
@@ -88,13 +89,23 @@ DOMAIN_FRAMES = {
 }
 
 
-def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict[str, Any]:
+def build_deterministic_scenario(
+    index: int,
+    split_name: str,
+    seed: int,
+    *,
+    split_count: int | None = None,
+) -> Dict[str, Any]:
     rng = random.Random(seed + index * 101)
     
     # Stratified selection: pattern first, then derive labels from PATTERN_SPEC.
     domain = DOMAINS[index % len(DOMAINS)]
-    pattern = PATTERNS[index % len(PATTERNS)]
-    binding = resolve_pattern_binding(pattern, index)
+    if split_name == "hard" and split_count is not None:
+        pattern, forced_decision = get_hard_plan_entry(index, split_count, seed)
+        binding = resolve_pattern_binding(pattern, index, forced_decision=forced_decision)
+    else:
+        pattern = PATTERNS[index % len(PATTERNS)]
+        binding = resolve_pattern_binding(pattern, index)
     failure_mode = binding.failure_mode
     expected_decision = binding.expected_decision
     
@@ -347,6 +358,8 @@ def build_deterministic_scenario(index: int, split_name: str, seed: int) -> Dict
             expected_states[m_condition] = "superseded"
     elif pattern == "stale_comment_after_new_release" and failure_mode == "under_update":
         expected_states[m_target] = "superseded"
+    elif pattern == "negative_evidence_required" and expected_decision == "mark_unresolved":
+        expected_states[m_target] = "unresolved"
 
     # Incorporate distractors depending on difficulty
     if difficulty_level in ("L2", "L3", "L4"):

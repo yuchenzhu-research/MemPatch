@@ -15,6 +15,11 @@ import json
 import os
 import re
 import shutil
+import sys
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+
+from benchmark.retrace_bench.public_view import sanitize_public_input
 
 SCENARIO_JSONL_NAME = "scenarios.jsonl"
 
@@ -55,7 +60,9 @@ def to_viewer_row(scenario):
         "difficulty": scenario["difficulty"],
         "workflow_context": scenario["workflow_context"],
         "public_input_json": json.dumps(
-            scenario.get("public_input", {}), ensure_ascii=False, sort_keys=True
+            sanitize_public_input(scenario.get("public_input", {})),
+            ensure_ascii=False,
+            sort_keys=True,
         ),
         "tasks_json": json.dumps(scenario.get("tasks", []), ensure_ascii=False, sort_keys=True),
         "hidden_gold_json": json.dumps(

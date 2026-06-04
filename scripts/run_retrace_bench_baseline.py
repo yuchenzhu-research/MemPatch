@@ -28,6 +28,7 @@ from benchmark.retrace_bench.general_taxonomy import (
     MEMORY_STATUSES,
     NON_ANSWER_DECISIONS,
 )
+from benchmark.retrace_bench.public_view import public_scenario_view
 from benchmark.retrace_bench.llm_providers import get_provider
 from benchmark.retrace_bench.scorers_general import aggregate_metrics, score_prediction
 from retracemem.authorization import EvidenceProposalBatch, authorize
@@ -493,6 +494,7 @@ def llm_json_answerer(
         for memory_id in event.get("related_memory_ids", []):
             if memory_id not in memory_ids:
                 memory_ids.append(memory_id)
+    visible = public_scenario_view(scenario)
     prompt = {
         "instruction": (
             "Answer as strict JSON only. Do not use Markdown. "
@@ -511,9 +513,7 @@ def llm_json_answerer(
             "failure_diagnosis": "exactly one enum string from: " + ", ".join(FAILURE_MODES),
         },
         "failure_mode_definitions": dict(FAILURE_MODE_DEFINITIONS),
-        "workflow_context": scenario["workflow_context"],
-        "public_input": scenario["public_input"],
-        "tasks": scenario["tasks"],
+        **visible,
     }
     kwargs = {"temperature": 0}
     kwargs.update(generation_kwargs or {})
