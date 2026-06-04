@@ -74,26 +74,7 @@ data/retrace_bench_v1_1/private_hidden_200_en/
 # Annotation packets (public, gold-free demo packets only — see below).
 !annotation_packets/retrace_bench_v1_1/**
 
-# outputs/ is intentionally TRACKED (benchmark prediction dumps + metrics are
-# committed for reproducibility/sharing). This allowlist overrides the global
-# *.jsonl ignore above so prediction JSONL under outputs/ is committed too.
-# Only machine-local noise inside outputs/ stays ignored.
-!outputs/**
-outputs/**/.DS_Store
-# Local ReTrace-Learn / method scratch outputs that land at the outputs/ root.
-# These are NOT part of the ReTrace-Bench release (benchmark dumps live under
-# outputs/retrace_bench/). Ignore only the root-level files, not the subtree.
-/outputs/fc_*.jsonl
-/outputs/fc_*.json
-/outputs/multiagent_*.jsonl
-/outputs/multiagent_*.json
-/outputs/stale_cupmem_*.json
-# Official ReTrace-Bench v1.0 model-suite outputs are intentionally trackable.
-!outputs/retrace_bench/v1_0/**
-# v1.1 offline-baseline per-scenario PREDICTION dumps are large (~43MB) and
-# deterministically regenerable via scripts/run_retrace_bench_baseline.py. Keep
-# the small *.metrics.json results committed, but not the bulky prediction JSONL.
-outputs/retrace_bench_v1_1/baselines/*.jsonl
+outputs/
 
 # Secrets / credentials / tokens — never commit any of these.
 .env.*
@@ -114,22 +95,3 @@ hf_token*
 .cache/huggingface/
 huggingface/
 hf_home/
-
-# Raw API response dumps are raw logs, not release artifacts. They remain in git
-# history + locally, but are not tracked going forward. See
-# docs/retrace_bench/repository_simplification_report.md.
-outputs/**/*.raw/
-
-# Superseded dev/smoke/API output trees (pre-v1.1 hard50/hard150/Gemini partial/
-# SiliconFlow runs, candidate runs, temporary smoke). Untracked + ignored; kept
-# in history and on disk. Canonical outputs live under outputs/retrace_bench/
-# (v1.0 suite) and outputs/retrace_bench_v1_1/ (v1.1 metrics).
-outputs/retrace_bench_hard50/
-outputs/retrace_bench_hard150/
-outputs/retrace_bench_gemini_hard150/
-outputs/retrace_bench_siliconflow_hard150/
-outputs/retrace_bench_siliconflow_hard150_balanced/
-outputs/retrace_bench_siliconflow_hard150_smoke/
-outputs/retrace_bench_siliconflow_hard500_candidate/
-outputs/retrace_bench_hard500_candidate/
-outputs/retrace_bench_smoke/
