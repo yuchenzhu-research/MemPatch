@@ -52,7 +52,6 @@ runs/
 !tests/**/*.jsonl
 !data/retrace_learn/v1/boundary_audit/**
 # HF release bundle: ship manifests/checksums/cards; keep full JSONL local-only.
-!release/huggingface/ReTrace-Bench/**
 !hf_release/retrace_bench_v1_1/**/manifest.json
 !hf_release/retrace_bench_v1_1/**/checksums.json
 outputs/
