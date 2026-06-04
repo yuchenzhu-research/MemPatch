@@ -37,6 +37,48 @@ predictions = load_predictions("path/to/predictions.jsonl")
 result = evaluate_predictions(scenarios, predictions, strict=True)
 ```
 
+## Run a Model and Evaluate Locally
+
+```bash
+git clone https://github.com/yuchenzhu-research/ReTrace.git
+cd ReTrace
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -e ".[dev,llm]"
+```
+
+Download the ReTrace-Bench dataset from Hugging Face:
+`Sylvan-Vale-Moon/ReTrace-Bench`.
+
+Create local API-key configuration:
+
+```bash
+cp .env.example .env
+```
+
+Fill in the provider key and run a model:
+
+```bash
+python scripts/run_retrace_bench_model.py \
+  --data local/ReTrace-Bench/calibration/scenarios.jsonl \
+  --provider siliconflow \
+  --model deepseek-ai/DeepSeek-V3 \
+  --out-predictions local/predictions/siliconflow_calibration.jsonl \
+  --max-cases 10 \
+  --resume
+```
+
+Score the generated predictions with the official model-agnostic evaluator:
+
+```bash
+PYTHONPATH=. python scripts/evaluate_retrace_bench_predictions.py \
+  --data local/ReTrace-Bench/calibration/scenarios.jsonl \
+  --predictions local/predictions/siliconflow_calibration.jsonl \
+  --out-metrics local/results/siliconflow_calibration.metrics.json \
+  --out-scored local/results/siliconflow_calibration.scored.jsonl \
+  --print-table
+```
+
 ## Verification
 
 ```bash
