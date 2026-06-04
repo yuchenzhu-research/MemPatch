@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000043",
-  "model": "Pro/zai-org/GLM-5.1",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"The final authorized status of CASE-300042 is that it uses the default case route configuration on stable v1, as no verified release approval was provided to authorize any update.\",\n  \"memory_state\": {\n    \"m-rt-hard-000043-target\": \"current\",\n    \"m-rt-hard-000043-condition\": \"current\",\n    \"m-rt-hard-000043-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000043-1\",\n    \"e-rt-hard-000043-2\",\n    \"e-rt-hard-000043-distractor-ver\",\n    \"e-rt-hard-000043-distractor-auth\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

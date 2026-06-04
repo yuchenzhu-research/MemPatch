@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000049",
-  "model": "Pro/zai-org/GLM-5.1",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300048 uses default deployment gate configuration set to opt-in on stable v2.0.1, with strict schema validation reverted.\",\n  \"memory_state\": {\n    \"m-rt-hard-000049-target\": \"outdated\",\n    \"m-rt-hard-000049-condition\": \"current\",\n    \"m-rt-hard-000049-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000049-2\",\n    \"e-rt-hard-000049-3\"\n  ],\n  \"failure_diagnosis\": \"stale_memory_reuse\"\n}"
-}

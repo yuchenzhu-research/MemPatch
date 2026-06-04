@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000049",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300048 uses default deployment gate configuration on stable v1. The strict validation introduced in v2.0.0 was reverted in v2.0.1, returning the default config to opt-in. No verified release approval has updated the CASE-300048 configuration.\",\n  \"memory_state\": {\n    \"m-rt-hard-000049-target\": \"current\",\n    \"m-rt-hard-000049-condition\": \"current\",\n    \"m-rt-hard-000049-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000049-1\",\n    \"e-rt-hard-000049-2\",\n    \"e-rt-hard-000049-3\"\n  ],\n  \"failure_diagnosis\": \"stale_memory_reuse\"\n}"
-}

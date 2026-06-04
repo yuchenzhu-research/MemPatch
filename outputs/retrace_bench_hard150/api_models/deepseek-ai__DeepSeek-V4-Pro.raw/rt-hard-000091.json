@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000091",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300090 remains on the default case route configuration on stable v1. The YAML feature PR was merged in workspace-beta, but the stable release v1.4.0 does not include it, and no verified release approval has been recorded.\",\n  \"memory_state\": {\n    \"m-rt-hard-000091-target\": \"current\",\n    \"m-rt-hard-000091-condition\": \"current\",\n    \"m-rt-hard-000091-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000091-1\",\n    \"e-rt-hard-000091-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

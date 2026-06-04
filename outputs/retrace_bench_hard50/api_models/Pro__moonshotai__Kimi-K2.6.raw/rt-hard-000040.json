@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000040",
-  "model": "Pro/moonshotai/Kimi-K2.6",
-  "raw_response": "{\"decision\":\"use_current_memory\",\"answer\":\"CASE-300039 remains on default metric definition configuration on stable v1; no verified release approval has been applied to update it.\",\"memory_state\":{\"m-rt-hard-000040-target\":\"current\",\"m-rt-hard-000040-condition\":\"current\",\"m-rt-hard-000040-distractor\":\"out_of_scope\"},\"evidence_event_ids\":[\"e-rt-hard-000040-1\",\"e-rt-hard-000040-2\",\"e-rt-hard-000040-distractor-auth\",\"e-rt-hard-000040-distractor-ver\"],\"failure_diagnosis\":\"scope_leakage\"}"
-}

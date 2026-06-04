@@ -11,24 +11,58 @@ credible.
 > fabricate inter-annotator agreement. If no real humans have annotated yet, the
 > status is "protocol prepared; human annotation pending".
 
-## Two validation levels
+## Four validation levels
 
-### Level 1 — Quick author audit (internal)
+These four levels are **distinct** and must never be conflated. Only Level 1 is
+complete today. Levels 2–4 require real humans and are **pending**.
+
+### Level 1 — Automatic validation (complete)
+- **What:** schema validation, gold-leakage checks, evidence/event **ID
+  grounding**, **cross-split disjointness** audits, and **gold-oracle replay**
+  (feeding hidden gold back as a perfect prediction yields core metrics = 1.0).
+- **Coverage:** the **full** benchmark (all public splits).
+- **Tooling:** `scripts/validate_retrace_bench_dataset.py`,
+  `scripts/check_retrace_split_leakage.py`,
+  `scripts/check_retrace_bench_gold_oracle.py`.
+- **What it does *not* establish:** human-judged label quality. Automatic checks
+  prove internal consistency, not that humans agree with the gold. They are
+  necessary but not sufficient.
+
+### Level 2 — Author / expert audit (internal; not independent)
 - **Packet:** `annotation_packets/retrace_bench_v1_1/quick_audit_50_*`
-- **Size:** 50 examples, stratified across splits, all 15 patterns, and
+- **Size:** ~50 examples, stratified across splits, all 15 patterns, and
   non-answer decisions.
-- **Purpose:** fast internal quality signal during development.
-- **Limitation:** **not** sufficient to claim full human validation in the paper.
+- **Who:** the dataset author and/or advisor. This is an **expert sanity check**,
+  **not** independent validation.
+- **Purpose:** fast internal quality signal; catch confusing items / gold bugs.
+- **Limitation:** because the annotators are the authors, this **may not** be
+  reported as independent human validation in the paper. If only the user and an
+  advisor annotate, label the result an **author/expert audit**.
 
-### Level 2 — Paper-grade human validation
+### Level 3 — Independent human validation (paper-grade)
 - **Packet:** `annotation_packets/retrace_bench_v1_1/paper_validation_200_*`
-- **Size:** 200 examples (current packet: ≥90 hard, ≥40 non-answer, all 5
+- **Size:** **150–200** examples (current packet: ≥90 hard, ≥40 non-answer, all 5
   decisions, all 15 patterns, 8 domains, L1–L4 with L3/L4 emphasis).
-- **Annotators:** **at least 2 independent real humans**, preferably including
-  someone who is not the dataset author.
+- **Annotators:** **at least two real human annotators**, **preferably
+  non-authors** (e.g. CS/ML graduate students or practitioners not involved in
+  building the dataset). For credibility we **recommend recruiting at least one
+  or two non-author annotators**; an author-only pass is Level 2, not Level 3.
 - **Adjudication:** a third pass resolves disagreements; record adjudicated
   labels separately.
-- **Reported:** inter-annotator agreement (IAA) and human upper-bound metrics.
+- **Reported:** inter-annotator agreement (IAA) — and **only** on real human
+  annotations.
+
+### Level 4 — Human upper bound (optional)
+- **What:** an optional, typically **smaller** subset on which humans solve the
+  **full** task (decision + memory state + minimal evidence + failure diagnosis)
+  end-to-end, scored with the official scorer.
+- **Purpose:** establishes a human reference ceiling to contextualize model
+  scores; it is **not** a substitute for Level 3 and is reported separately.
+
+### Suggested paper sentence
+
+> We report automatic validation on the full benchmark and reserve independent
+> human validation on a stratified subset as a paper-grade quality check.
 
 ## Sampling strategy (paper-grade)
 

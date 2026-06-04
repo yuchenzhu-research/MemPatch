@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000079",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300078 remains on default shopping rule configuration under stable v1. The strict validation introduced in v2.0.0 was reverted in v2.0.1, so no verified release approval has changed the stable status.\",\n  \"memory_state\": {\n    \"m-rt-hard-000079-target\": \"current\",\n    \"m-rt-hard-000079-condition\": \"current\",\n    \"m-rt-hard-000079-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000079-1\",\n    \"e-rt-hard-000079-2\",\n    \"e-rt-hard-000079-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

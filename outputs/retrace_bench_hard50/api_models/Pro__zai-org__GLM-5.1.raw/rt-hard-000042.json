@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000042",
-  "model": "Pro/zai-org/GLM-5.1",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300041 is updated to stable v3.0 with a default retry limit of 5, pending verified release approval.\",\n  \"memory_state\": {\n    \"m-rt-hard-000042-target\": \"outdated\",\n    \"m-rt-hard-000042-condition\": \"current\",\n    \"m-rt-hard-000042-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000042-1\",\n    \"e-rt-hard-000042-2\"\n  ],\n  \"failure_diagnosis\": \"under_update\"\n}"
-}

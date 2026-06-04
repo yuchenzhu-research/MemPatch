@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000121",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300120 remains on default deployment gate configuration per stable v1.4.0 release notes, which exclude the YAML feature. No verified release approval has been recorded in workspace-stable.\",\n  \"memory_state\": {\n    \"m-rt-hard-000121-target\": \"current\",\n    \"m-rt-hard-000121-condition\": \"current\",\n    \"m-rt-hard-000121-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000121-1\",\n    \"e-rt-hard-000121-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

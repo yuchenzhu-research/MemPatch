@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000069",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300068 uses default claim record configuration on stable v1. No verified release approval has been provided, so the prior state remains the authorized status.\",\n  \"memory_state\": {\n    \"m-rt-hard-000069-target\": \"current\",\n    \"m-rt-hard-000069-condition\": \"current\",\n    \"m-rt-hard-000069-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000069-1\",\n    \"e-rt-hard-000069-2\"\n  ],\n  \"failure_diagnosis\": \"policy_violation\"\n}"
-}

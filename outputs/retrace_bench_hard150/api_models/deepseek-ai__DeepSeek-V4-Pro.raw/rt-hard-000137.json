@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000137",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300136 uses default deployment gate configuration on stable v1. Issue #200 (SSO timeout) was closed as duplicate of master Issue #98, which remains open with needs-investigation and priority-high. No verified release approval has been recorded, so the condition rule requiring verified release approval for any update remains in effect.\",\n  \"memory_state\": {\n    \"m-rt-hard-000137-target\": \"current\",\n    \"m-rt-hard-000137-condition\": \"current\",\n    \"m-rt-hard-000137-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000137-1\",\n    \"e-rt-hard-000137-2\",\n    \"e-rt-hard-000137-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

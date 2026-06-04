@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000131",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300130 uses default case route configuration on stable v1. No verified release approval has been recorded, so the prior state remains authorized.\",\n  \"memory_state\": {\n    \"m-rt-hard-000131-target\": \"current\",\n    \"m-rt-hard-000131-condition\": \"current\",\n    \"m-rt-hard-000131-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000131-1\",\n    \"e-rt-hard-000131-2\",\n    \"e-rt-hard-000131-distractor-ver\",\n    \"e-rt-hard-000131-distractor-auth\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

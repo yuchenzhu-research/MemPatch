@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000016",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300015 remains on the default metric definition configuration per stable v1. The YAML feature from PR #101 is not authorized for stable because Release v1.4.0 does not include it, and the condition rule requires verified release approval.\",\n  \"memory_state\": {\n    \"m-rt-hard-000016-target\": \"current\",\n    \"m-rt-hard-000016-condition\": \"current\",\n    \"m-rt-hard-000016-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000016-1\",\n    \"e-rt-hard-000016-2\",\n    \"e-rt-hard-000016-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

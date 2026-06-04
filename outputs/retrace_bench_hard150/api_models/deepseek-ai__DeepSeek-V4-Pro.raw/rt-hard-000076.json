@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000076",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300075 remains on default schedule rule configuration on stable v1.4.0; the YAML feature from PR #101 is not included in the stable release.\",\n  \"memory_state\": {\n    \"m-rt-hard-000076-target\": \"current\",\n    \"m-rt-hard-000076-condition\": \"current\",\n    \"m-rt-hard-000076-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000076-1\",\n    \"e-rt-hard-000076-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}
