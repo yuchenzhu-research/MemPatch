@@ -96,7 +96,6 @@ Full label spaces.
 - **A2 Leakage checks:** v1.0 decision-word leakage audit (no authoritative
   record contains a decision phrase); cross-split ID/text disjointness. Source:
   `benchmark/retrace_bench/generation/release_manifest.py`,
-  per-split `manifest.json` (`leakage_audit_summary`). Legacy
-  template-signature reports retained for provenance only. Exists: yes.
+  per-split `manifest.json` (`leakage_audit_summary`). Exists: yes.
 - **A3 Oracle consistency:** oracle headline metrics + the memory-state 0.968
   ceiling explanation. Source: baseline-results doc. Exists: yes.
