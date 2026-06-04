@@ -12,7 +12,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from benchmark.retrace_bench.scorers_general import aggregate_metrics, score_prediction
+from benchmark.retrace_bench.public_view import public_scenario_view
 from scripts.gemini_api import call_gemini_generate, redact_secrets, require_api_key, resolve_model
 from scripts.run_retrace_bench_baseline import (
     _parse_llm_json_response,
@@ -94,6 +94,7 @@ def collect_tasks(scenario: dict[str, Any]) -> dict[str, Any]:
 
 def build_prompt(scenario: dict[str, Any]) -> str:
     memory_ids = collect_memory_ids(scenario)
+    visible = public_scenario_view(scenario)
     payload = {
         "instruction": (
             "Answer as strict JSON only. Do not use Markdown fences. "
@@ -112,12 +113,7 @@ def build_prompt(scenario: dict[str, Any]) -> str:
             "evidence_event_ids": "minimal list of event_id strings from public_input.event_trace",
             "failure_diagnosis": list(ALLOWED_FAILURE_DIAGNOSIS),
         },
-        "scenario_id": scenario["scenario_id"],
-        "domain": scenario.get("domain"),
-        "difficulty": scenario.get("difficulty") or scenario.get("difficulty_level"),
-        "workflow_context": scenario.get("workflow_context", ""),
-        "public_input": scenario.get("public_input", {}),
-        "tasks": collect_tasks(scenario),
+        **visible,
     }
     return json.dumps(payload, ensure_ascii=False)
 

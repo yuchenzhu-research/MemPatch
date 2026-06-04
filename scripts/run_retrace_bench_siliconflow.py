@@ -16,6 +16,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from benchmark.retrace_bench.general_taxonomy import canonical_hidden_gold_fields
+from benchmark.retrace_bench.public_view import public_scenario_view
 from benchmark.retrace_bench.scorers_general import aggregate_metrics, score_prediction
 from scripts.run_retrace_bench_baseline import (
     _parse_llm_json_response,
@@ -59,6 +60,12 @@ ALLOWED_MEMORY_STATUSES = (
     "deleted",
     "should_not_store",
     "restored",
+)
+
+SILICONFLOW_DEFAULT_MODELS = (
+    "Pro/moonshotai/Kimi-K2.6",
+    "Pro/zai-org/GLM-5.1",
+    "deepseek-ai/DeepSeek-V4-Pro",
 )
 
 ALLOWED_FAILURE_DIAGNOSIS = (
@@ -134,25 +141,6 @@ def load_api_key_from_env_file(env_file: Path) -> str:
 
 def redact_key(text: str, api_key: str) -> str:
     return text.replace(api_key, "[REDACTED]") if api_key else text
-
-
-def collect_tasks(scenario: dict[str, Any]) -> dict[str, Any]:
-    tasks: dict[str, Any] = {}
-    for key in ("black_box_task", "memory_state_task", "evidence_retrieval_task", "diagnostic_task"):
-        if key in scenario:
-            tasks[key] = scenario[key]
-    return tasks
-
-
-def public_scenario_view(scenario: dict[str, Any]) -> dict[str, Any]:
-    return {
-        "scenario_id": scenario["scenario_id"],
-        "domain": scenario.get("domain"),
-        "difficulty": scenario.get("difficulty") or scenario.get("difficulty_level"),
-        "workflow_context": scenario.get("workflow_context", ""),
-        "public_input": scenario.get("public_input", {}),
-        **collect_tasks(scenario),
-    }
 
 
 def build_prompt(scenario: dict[str, Any]) -> str:
@@ -607,7 +595,11 @@ def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Run SiliconFlow models on ReTrace-Bench.")
     parser.add_argument("--data", required=True)
     parser.add_argument("--out-dir", required=True)
-    parser.add_argument("--models", required=True, help="Comma-separated model ids")
+    parser.add_argument(
+        "--models",
+        default=",".join(SILICONFLOW_DEFAULT_MODELS),
+        help="Comma-separated model ids (default: gated pilot trio)",
+    )
     parser.add_argument("--base-url", default="https://api.siliconflow.cn/v1")
     parser.add_argument("--env-file", default=".env")
     parser.add_argument("--temperature", type=float, default=0.0)
@@ -645,7 +637,9 @@ def main(argv: list[str] | None = None) -> int:
     out_dir.mkdir(parents=True, exist_ok=True)
     models = [m.strip() for m in args.models.split(",") if m.strip()]
 
-    legacy_path = Path("outputs/retrace_bench_hard150/api_models/deepseek-ai__DeepSeek-V4-Pro.predictions.metrics.json")
+    legacy_path = Path(
+        "outputs/retrace_bench_siliconflow_hard150/DeepSeek-V4-Pro.metrics.json"
+    )
     legacy_deepseek = None
     if legacy_path.exists():
         leg = json.loads(legacy_path.read_text(encoding="utf-8"))

@@ -24,6 +24,7 @@ from benchmark.retrace_bench.general_taxonomy import (
     FAILURE_MODES,
     MEMORY_STATUSES,
 )
+from benchmark.retrace_bench.public_view import public_scenario_view
 from benchmark.retrace_bench.scorers_general import aggregate_metrics, score_prediction
 from scripts.run_retrace_bench_baseline import (
     _parse_llm_json_response,
@@ -86,13 +87,7 @@ def collect_memory_ids(scenario: dict[str, Any]) -> list[str]:
 
 def build_prompt(scenario: dict[str, Any]) -> str:
     memory_ids = collect_memory_ids(scenario)
-    tasks: dict[str, Any] = {}
-    for key in ("black_box_task", "memory_state_task", "evidence_retrieval_task", "diagnostic_task"):
-        if key in scenario:
-            tasks[key] = scenario[key]
-    if not tasks and scenario.get("tasks"):
-        tasks["tasks"] = scenario["tasks"]
-
+    visible = public_scenario_view(scenario)
     payload = {
         "instruction": (
             "Answer as strict JSON only. Do not use Markdown fences. "
@@ -109,10 +104,17 @@ def build_prompt(scenario: dict[str, Any]) -> str:
             "failure_diagnosis": list(FAILURE_MODES),
         },
         "failure_mode_definitions": dict(FAILURE_MODE_DEFINITIONS),
-        "workflow_context": scenario.get("workflow_context", ""),
-        "public_input": scenario.get("public_input", {}),
-        "tasks": tasks,
+        **visible,
     }
+    if "tasks" not in payload:
+        tasks: dict[str, Any] = {}
+        for key in ("black_box_task", "memory_state_task", "evidence_retrieval_task", "diagnostic_task"):
+            if key in scenario:
+                tasks[key] = scenario[key]
+        if not tasks and scenario.get("tasks"):
+            payload["tasks"] = scenario["tasks"]
+        elif tasks:
+            payload.update(tasks)
     return json.dumps(payload, ensure_ascii=False)
 
 
