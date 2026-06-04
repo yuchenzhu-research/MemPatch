@@ -30,8 +30,9 @@ Four paper-facing splits, published under public names `main` / `hard` /
   (80 scenarios) — smoke / quickstart only, not for model selection or headline
   claims.
 
-Supervision / selection pools (`data/retrace_learn/v1_0/`) are **not**
-part of the public benchmark release. (Older pre-v1.0 supervision scaffolding was removed from the active tree due to leakage).
+ReTrace-Learn (the method track) uses ReTrace-Bench-derived scenario data with
+declared split roles and is **not** part of the public benchmark release. (Older
+pre-v1.0 supervision scaffolding is recoverable only from Git history.)
 
 ## Fields
 

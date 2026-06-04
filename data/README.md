@@ -1,8 +1,9 @@
 # ReTrace Data Layout
 
 This directory organizes the ReTrace-Bench v1.0 evaluation splits and the
-ReTrace-Learn method-track datasets (existing internal dev data under `v1/` and
-the future clean training corpus under `v1_0/`).
+ReTrace-Learn method-track data. ReTrace-Learn uses ReTrace-Bench-derived
+scenario data with declared split roles rather than a separate corpus; the
+benchmark track stays method-neutral as an evaluation artifact.
 
 ## Structure
 
@@ -18,19 +19,15 @@ audit; benchmark rows carry no training targets.
 The legacy pre-v1.0 layout is recoverable from the Git tag
 `legacy-retrace-bench-pre-v1.0`.
 
-### `data/retrace_learn/v1_0/` (future clean training/validation corpus)
-Clean training and validation datasets for the ReTrace-Learn method track. This
-directory is the **future home** for the large-scale corpus and does not exist
-yet — these will be generated natively from hidden graph, raw dialogue, and DPA
-outcome pipelines (the large-scale generator is not implemented in v1):
-- **`graph_sft_train/`**: Clean SFT training cases for learned Graph Extractor.
-- **`graph_sft_dev/`**: Clean validation cases for learned Graph Extractor.
-- **`proposer_sft_train/`**: Clean SFT training cases for learned Typed Proposer.
-- **`proposer_sft_dev/`**: Clean validation cases for learned Typed Proposer.
-- **`dpa_preference_train/`**: Clean SFT/DPO preference data for training.
-- **`dpa_preference_dev/`**: Clean SFT/DPO preference data for validation.
-
-Pre-v1 supervision scaffolding (`supervision_train_3000_en`, `supervision_dev_400_en`) is leaky and has been removed from the active mainline tree. It remains recoverable from Git history and legacy tags.
+### `data/retrace_learn/v1_0/` (legacy/internal method-track path)
+`data/retrace_learn/v1_0/` is a legacy/internal path for method-track training
+and validation exports. It is **not** the current canonical data policy: the
+method track consumes ReTrace-Bench-derived scenarios with declared split roles,
+so method training/validation data is organized from the benchmark scenario
+family rather than a separate large-scale corpus. Split roles must be explicit;
+do not claim leakage-free held-out evaluation if the same gold labels are used
+for training. Older pre-v1.0 supervision scaffolding is recoverable only from
+Git history and legacy tags.
 
 ### `data/retrace_learn/v1/` (existing internal dev / diagnostic data)
 Small internal development and diagnostic datasets that already exist in the

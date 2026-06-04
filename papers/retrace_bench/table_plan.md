@@ -38,8 +38,9 @@ Full label spaces.
   - `realistic` (`realistic_100_en`) | 100 | realistic-style, annotation pending | no | yes
   - `calibration` (`calibration_80_en`) | 80 | smoke / quickstart only | no | yes
 - **Source:** `data/retrace_bench/*`,
-  `release/huggingface/ReTrace-Bench/README.md`. Supervision/training datasets
-  (`data/retrace_learn/v1_0/`) are not benchmark splits.
+  `release/huggingface/ReTrace-Bench/README.md`. ReTrace-Learn method-track data
+  (`data/retrace_learn/`) reuses ReTrace-Bench-derived scenarios with declared
+  split roles.
 - **Exists:** yes. **Missing:** confirm counts before final submission via
   `validate_retrace_bench_dataset.py`.
 

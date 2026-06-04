@@ -115,9 +115,11 @@ Four paper-facing splits, public names `main` / `hard` / `realistic` /
   only — **not** for model selection, checkpoint selection, tuning, or headline
   claims.
 
-Supervision / selection pools for learning-based systems live outside the
-benchmark tree under `data/retrace_learn/v1_0/` and are **not** benchmark
-test sets. Pre-v1 supervision scaffolding was removed from the active tree due to leakage issues and is recoverable only from Git history. The legacy pre-v1.0 layout is recoverable from the Git tag
+ReTrace-Learn (the method track) uses ReTrace-Bench-derived scenario data with
+declared split roles; the same scenario family may be consumed for proposal
+learning and evaluation. Split roles are explicit, and leakage-free held-out
+evaluation is not claimed where the same gold labels are used for training. The
+legacy pre-v1.0 layout is recoverable from the Git tag
 `legacy-retrace-bench-pre-v1.0`.
 
 ## 4. Metrics

@@ -30,8 +30,11 @@ Four paper-facing splits, published under public names `main` / `hard` /
 | `realistic` | `data/retrace_bench/realistic_100_en/` | 100 | Realistic-style workflow split. **`annotation_status = pending`**; gold not yet annotated. |
 | `calibration` | `data/retrace_bench/calibration_80_en/` | 80 | Smoke / quickstart only. **Not for model selection or headline claims.** |
 
-Clean method training/validation datasets live outside the benchmark tree under
-`data/retrace_learn/v1_0/`; they are **not** benchmark splits.
+ReTrace-Learn (the method track) uses ReTrace-Bench-derived scenario data with
+declared split roles under `data/retrace_learn/`. The benchmark track remains
+method-neutral as an evaluation artifact; split roles must be explicit, and
+leakage-free held-out evaluation is not claimed where the same gold labels are
+used for training.
 The legacy pre-v1.0 layout is recoverable from the Git tag
 `legacy-retrace-bench-pre-v1.0`.
 

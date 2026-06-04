@@ -111,8 +111,11 @@ validation / test):
 - `calibration_80_en` (`calibration`, 80) — smoke / quickstart split only; never
   for model or checkpoint selection or headline claims.
 
-Supervision / selection pools (`data/retrace_learn/v1_0/`) are not
-benchmark test sets. Older pre-v1.0 supervision scaffolding is removed due to leakage and is recoverable only from Git history/tags. The legacy pre-v1.0 layout is recoverable from the Git tag
+ReTrace-Learn (the method track) uses ReTrace-Bench-derived scenario data with
+declared split roles; the same scenario family may be consumed for proposal
+learning and evaluation. Split roles are explicit, and leakage-free held-out
+evaluation is not claimed where the same gold labels are used for training. The
+legacy pre-v1.0 layout is recoverable from the Git tag
 `legacy-retrace-bench-pre-v1.0`.
 
 **Leakage audit.** Every split is de-actionalized and passes a decision-word

@@ -28,8 +28,9 @@ The authoritative code, data, and docs stay in their existing locations:
 - Official evaluator CLI: `scripts/evaluate_retrace_bench_predictions.py`
 - ReTrace-Bench v1.0 splits (public names `main` / `hard` / `realistic` /
   `calibration`): `data/retrace_bench/{main_3000_en,hard_300_en,realistic_100_en,calibration_80_en}/`
-- Clean training/validation datasets (ReTrace-Learn, not benchmark splits):
-  `data/retrace_learn/v1_0/` (older pre-v1.0 supervision scaffolding is removed due to leakage)
+- ReTrace-Learn method-track data (ReTrace-Bench-derived scenarios with declared
+  split roles): `data/retrace_learn/` (older pre-v1.0 supervision scaffolding is
+  recoverable only from Git history)
 - Benchmark docs: `docs/retrace_bench/`
 - Hugging Face release package + card: `release/huggingface/ReTrace-Bench/`
 - Example predictions + quickstart: `examples/retrace_bench/`

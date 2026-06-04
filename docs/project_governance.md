@@ -32,9 +32,13 @@ Canonical locations:
   `scripts/generate_retrace_hard_300.py`, `scripts/run_retrace_bench_*.py`,
   `scripts/validate_retrace_bench_dataset.py`) and `tests/retrace_bench/`.
 
-Learning-only training/validation datasets live under
-`data/retrace_learn/v1_0/` and are owned by the ReTrace-Learn track,
-not the benchmark. Pre-v1 supervision scaffolding was removed from the active tree due to leakage issues and is recoverable only from Git history.
+ReTrace-Learn (the method track) uses ReTrace-Bench-derived scenario data with
+declared split roles, organized under `data/retrace_learn/`. The benchmark track
+remains method-neutral as an evaluation artifact, while the method track may
+consume the same scenario family for proposal learning and evaluation. Split
+roles must be explicit; do not claim leakage-free held-out evaluation if the same
+gold labels are used for training. Older pre-v1.0 supervision scaffolding is
+recoverable only from Git history.
 
 ## Active track 2 — ReTrace-Learn (method track)
 

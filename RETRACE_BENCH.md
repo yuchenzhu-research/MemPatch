@@ -23,7 +23,7 @@ The legacy pre-v1.0 layout is recoverable from the Git tag
 
 - Benchmark package: `benchmark/retrace_bench/`
 - Benchmark data: `data/retrace_bench/`
-- ReTrace-Learn training/validation datasets: `data/retrace_learn/v1_0/`
+- ReTrace-Learn method-track data (ReTrace-Bench-derived scenarios with declared split roles): `data/retrace_learn/`
 - Benchmark docs/results: `docs/retrace_bench/`
 - Paper workspace: `papers/retrace_bench/`
 - Hugging Face release snapshot: `release/huggingface/ReTrace-Bench/`

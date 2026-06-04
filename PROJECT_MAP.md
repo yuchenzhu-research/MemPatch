@@ -11,7 +11,7 @@ ReTrace
 └── ReTrace-Learn
     ├── src/retrace_learn/             # learned stages (Graph Builder, Proposal Policy) + runtime wrappers
     ├── src/retracemem/                # ReTrace-Engine: authorize(...) / RevisionGate / DPA
-    └── data/retrace_learn/            # training/validation datasets (under v1_0/)
+    └── data/retrace_learn/            # method-track data (ReTrace-Bench-derived, declared split roles)
 ```
 
 ## ReTrace-Learn v1: three paper-facing stages
@@ -49,7 +49,7 @@ Rules for analysis scripts:
 - **`src/retrace_learn/`**: The learned method layer. Owns the Graph Builder and Proposal Policy models, datasets, SFT, and DPA-guided training logic.
 - **`src/retracemem/`**: The deterministic ReTrace-Engine. Runs `authorize(...)`, `RevisionGate`, and `DPA` (verifier only — not learned).
 - **`benchmark/retrace_bench/`**: Evaluation-only code, metrics, baseline scoring logic.
-- **`data/retrace_bench/`**: The four ReTrace-Bench v1.0 **evaluation-only** splits — `main_3000_en`, `hard_300_en`, `realistic_100_en`, `calibration_80_en`. Never used as ReTrace-Learn training data.
-- **`data/retrace_learn/v1_0/`**: Where future clean SFT/validation/DPA-preference datasets for training ReTrace-Learn policies should live (not benchmark tests). The current `src/retrace_learn/data/build_synthetic_raw_dialogue.py` is a smoke/sanity generator only, not this large-scale corpus.
+- **`data/retrace_bench/`**: The four ReTrace-Bench v1.0 **evaluation-only** splits — `main_3000_en`, `hard_300_en`, `realistic_100_en`, `calibration_80_en`. The benchmark track stays method-neutral as an evaluation artifact.
+- **`data/retrace_learn/`**: Method-track data for training ReTrace-Learn policies. ReTrace-Learn uses ReTrace-Bench-derived scenario data with declared split roles rather than a separate corpus; split roles must be explicit, and leakage-free held-out evaluation is not claimed where the same gold labels are used for training. `data/retrace_learn/v1_0/` is a legacy/internal path, not the current canonical data policy.
 - **`release/huggingface/`**: Release-package snapshots generated from `data/`. It is not a repository source of truth.
 - **Trilogy Plan**: The high-level research plan should be documented in `RETRACE_AGENT_MEMORY_TRILOGY.md` (TODO: pending creation of the trilogy document).

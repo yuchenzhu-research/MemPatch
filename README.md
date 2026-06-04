@@ -8,14 +8,16 @@ multi-agent/agentic workflows. It is governed as **two active research tracks**
    agent memory revision reliability; it does **not** depend on any training
    method. Owns benchmark data, schema, scoring, baselines, the four v1.0
    evaluation splits, and leakage checks (`benchmark/retrace_bench/`,
-   `data/retrace_bench/`, `docs/retrace_bench/`). Clean training and validation
-   datasets for the method track reside under `data/retrace_learn/v1_0/`.
+   `data/retrace_bench/`, `docs/retrace_bench/`). The benchmark track stays
+   method-neutral as an evaluation artifact.
 2. **ReTrace-Learn** — the method track. A trainable framework that turns
    shared-memory revision authorization into a verifiable learning problem:
    models learn to extract graphs and propose structured revision actions, and a
    deterministic **Authorization Court** (implemented by **ReTrace-Engine**,
    `authorize(...)`) provides execution, evaluation, audit traces, and training
-   feedback (`src/retrace_learn/`, `src/retracemem/`).
+   feedback (`src/retrace_learn/`, `src/retracemem/`). ReTrace-Learn uses
+   ReTrace-Bench-derived scenario data with declared split roles
+   (`data/retrace_learn/`) rather than a separate corpus.
 
 > **ReTrace-Engine** is the implementation name for the deterministic
 > Authorization Court **inside ReTrace-Learn**. It is not a standalone paper or a
