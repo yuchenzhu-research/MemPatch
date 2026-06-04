@@ -8,7 +8,7 @@ ReTrace contains two active code surfaces:
 Benchmark data is distributed through Hugging Face:
 `Sylvan-Vale-Moon/ReTrace-Bench`.
 
-The local repository intentionally does not track generated reports, paper drafts, examples, fixtures, output dumps, or local benchmark-data copies.
+The local repository intentionally does not track generated reports, paper drafts, sample files, run dumps, or local benchmark-data copies.
 
 ## Setup
 

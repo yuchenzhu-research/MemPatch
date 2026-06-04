@@ -4,7 +4,7 @@ This is the first file every coding model must read before editing this reposito
 
 ## Current State
 
-Dynamic branch, HEAD, smoke, and validation status live only in `README.md`. This file contains stable agent instructions, not volatile run status.
+Dynamic branch, HEAD, and validation status live only in `README.md`. This file contains stable agent instructions, not volatile run status.
 
 ## Canonical Reading Order
 
@@ -88,11 +88,11 @@ A Stage C live policy may see conditions and pre-existing REQUIRES anchors
 because they are method-visible candidate structure, but may never see
 typed gold revision targets or evaluator final statuses.
 
-Only human-approved reviewed examples may be used for live smoke or training export.
+Only human-approved reviewed cases may be used for live training export.
 
-No development-candidate episode may be promoted for smoke or training until a human review decision has been recorded. All live Stage C actions must explicitly cite the visible new evidence that grounds the proposed revision.
+No development-candidate episode may be promoted for training until a human review decision has been recorded. All live Stage C actions must explicitly cite the visible new evidence that grounds the proposed revision.
 
-Approval for prompt smoke or training must be derived from an explicit human decision record tied to an immutable review-pack manifest hash. Scripts must not automatically promote pending examples to approved.
+Approval for prompt training must be derived from an explicit human decision record tied to an immutable review-pack manifest hash. Scripts must not automatically promote pending cases to approved.
 
 ## One-Function Public API Boundary
 
@@ -149,7 +149,7 @@ To ensure absolute clean methodology and avoid test-set leakage:
 - do not duplicate the `authorize(...)` kernel;
 - do not change DPA semantics without a demonstrated deterministic bug;
 - do not leak STALE gold fields into method inputs;
-- do not use official scored examples for prompt tuning.
+- do not use official scored cases for prompt tuning.
 - do not turn this codebase into generic RAG, Mem0 clone, or Graphiti clone.
 
 ## Test and Clean-Worktree Rules
@@ -165,7 +165,7 @@ To ensure absolute clean methodology and avoid test-set leakage:
 - Do not commit external clones, `artifacts/`, `analysis/`, caches,
   local environments, generated artifacts, benchmark downloads, model
   checkpoints/weights, or API keys.
-- `outputs/` is ignored and must not be committed. Benchmark prediction dumps,
+- Generated run directories must not be committed. Benchmark prediction dumps,
   generated reports, run logs, and diagnostics are local/generated artifacts.
 - After running scripts, tests, builds, or imports, proactively look for and
   remove local cache/generated directories before committing. At minimum check

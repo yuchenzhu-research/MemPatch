@@ -326,7 +326,7 @@ class DefeatPathAuthorizationAlgorithm:
 
         Format: ``trace::<belief>::<time>::<ev>::<query>`` with ``-`` as a
         placeholder for absent components. The same inputs always produce
-        the same trace id, which keeps cassette-style fixtures stable.
+        the same trace id, which keeps cassette-style test data stable.
         """
         return "trace::{b}::{t}::{e}::{q}".format(
             b=belief_id,

@@ -10,8 +10,8 @@ Example::
     PYTHONPATH=. python scripts/evaluate_retrace_bench_predictions.py \
         --data data/retrace_bench/main_3000_en/scenarios.jsonl \
         --predictions path/to/predictions.jsonl \
-        --out-metrics outputs/retrace_bench/my_model.metrics.json \
-        --out-scored outputs/retrace_bench/my_model.scored.jsonl \
+        --out-metrics local/retrace_bench/my_model.metrics.json \
+        --out-scored local/retrace_bench/my_model.scored.jsonl \
         --print-table
 """
 

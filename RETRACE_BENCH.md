@@ -8,7 +8,7 @@ Keep in GitHub:
 - `hf_release/retrace_bench_v1_1/`: latest Hugging Face release metadata/package snapshot.
 - `tests/retrace_bench/`: minimal tests for the surviving evaluator/API surface.
 
-Do not keep local generated reports, paper drafts, examples, fixtures, output dumps, annotation packets, or duplicate benchmark-data copies.
+Do not keep local generated reports, paper drafts, sample files, run dumps, annotation packets, or duplicate benchmark-data copies.
 
 Official public data lives on Hugging Face:
 `Sylvan-Vale-Moon/ReTrace-Bench`.

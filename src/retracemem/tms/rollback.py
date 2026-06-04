@@ -28,7 +28,7 @@ class RollbackDiagnostics:
       Recovery (RAR) and Unsafe Reactivation (URR_react), defined in
       terms of eligibility (``AuthorizationStatus.AUTHORIZED``). Ground
       truth is keyed by cutoff evidence id and then belief id, the same
-      shape used by the development boundary-audit fixtures.
+      shape used by the development boundary-audit test data.
 
     All three metrics use only typed-graph state; no legacy flat-relation
     logic is consulted, and no mock ledger is ever fabricated.
