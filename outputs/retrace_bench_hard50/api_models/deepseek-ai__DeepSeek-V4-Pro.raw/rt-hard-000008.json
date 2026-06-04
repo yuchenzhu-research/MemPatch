@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000008",
+  "model": "deepseek-ai/DeepSeek-V4-Pro",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300007 remains on the default metric definition configuration on stable v1. No verified release approval has been granted, and the CI pipeline for the performance hotfix failed, so the prior state is unchanged.\",\n  \"memory_state\": {\n    \"m-rt-hard-000008-target\": \"current\",\n    \"m-rt-hard-000008-condition\": \"current\",\n    \"m-rt-hard-000008-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000008-1\",\n    \"e-rt-hard-000008-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+}

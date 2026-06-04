@@ -1,14 +1,19 @@
-"""Regression tests for the ReTrace-Bench v1.0 paper-facing split package.
+"""Regression tests for the canonical ReTrace-Bench (internal "v1.1") split package.
 
-These guard the v1.0 release structure so it cannot silently regress: the four
-canonical splits (``main`` / ``hard`` / ``realistic`` / ``calibration``), their
-counts, cross-split disjointness, schema, the hard-split structural rules, the
-de-actionalization (decision-word leakage) guarantee on authoritative records,
-and the realistic split's pending annotation status.
+These guard the canonical release structure under ``data/retrace_bench_v1_1/`` so
+it cannot silently regress: the four public splits
+(``main`` / ``hard`` / ``realistic`` / ``calibration``) plus the optional private
+``private_hidden`` split, their counts, cross-split disjointness, the general
+schema, the validator (schema + leakage + pattern-semantic) gate, the hard-split
+distribution rules, and the realistic split's unreviewed synthetic-gold status.
+
+The legacy v1.0 layout is intentionally not exercised here; it lives under
+``data_legacy/retrace_bench_v1_0/`` and is recoverable from Git history.
 """
 
 from __future__ import annotations
 
+import collections
 import json
 from pathlib import Path
 
@@ -19,29 +24,51 @@ from benchmark.retrace_bench.general_taxonomy import (
     DOMAINS,
     FAILURE_MODES,
     MEMORY_STATUSES,
-    TASK_TYPES,
+    PATTERNS,
 )
-from benchmark.retrace_bench.generation.release_manifest import (
-    BENCHMARK_VERSION,
-    scenario_leaks_decision_word,
-)
+from benchmark.retrace_bench.generation.pattern_spec import infer_pattern
+from benchmark.retrace_bench.generation.release_manifest import BENCHMARK_VERSION
+from scripts.validate_retrace_bench_dataset import validate_dataset
 
 REPO = Path(__file__).resolve().parents[2]
-BENCH = REPO / "data" / "retrace_bench"
+BENCH = REPO / "data" / "retrace_bench_v1_1"
 
 # (split dir, public split name, expected count)
-SPLITS = (
+PUBLIC_SPLITS = (
     ("main_3000_en", "main", 3000),
-    ("hard_300_en", "hard", 300),
-    ("realistic_100_en", "realistic", 100),
+    ("hard_500_en", "hard", 500),
+    ("realistic_200_en", "realistic", 200),
     ("calibration_80_en", "calibration", 80),
 )
+PRIVATE_SPLITS = (("private_hidden_200_en", "private_hidden", 200),)
+ALL_SPLITS = PUBLIC_SPLITS + PRIVATE_SPLITS
 
-REQUIRED_TASK_TYPES = set(TASK_TYPES)
+# General-schema required fields (v1.1). The legacy v1.0 ``tasks`` / ``split`` /
+# ``secondary_failure_modes`` fields are deliberately *not* required here.
 REQUIRED_FIELDS = {
-    "scenario_id", "split", "domain", "primary_failure_mode",
-    "secondary_failure_modes", "difficulty", "workflow_context",
-    "public_input", "tasks", "hidden_gold", "metadata",
+    "scenario_id",
+    "public_split_name",
+    "domain",
+    "primary_failure_mode",
+    "workflow_context",
+    "public_input",
+    "hidden_gold",
+    "metadata",
+}
+REQUIRED_TASK_KEYS = (
+    "black_box_task",
+    "memory_state_task",
+    "evidence_retrieval_task",
+    "diagnostic_task",
+)
+
+# Approximate hard-split decision targets (Part 3 spec).
+HARD_DECISION_RANGES = {
+    "use_current_memory": (0.45, 0.55),
+    "mark_unresolved": (0.15, 0.25),
+    "ask_clarification": (0.10, 0.15),
+    "refuse_due_to_policy": (0.08, 0.12),
+    "escalate": (0.05, 0.10),
 }
 
 
@@ -52,12 +79,30 @@ def _load(dir_name: str) -> list[dict]:
 
 @pytest.fixture(scope="module")
 def splits() -> dict[str, list[dict]]:
-    return {public: _load(dir_name) for dir_name, public, _ in SPLITS}
+    """Load every canonical split whose ``scenarios.jsonl`` is present.
+
+    The public splits must always be present. ``private_hidden`` scenarios are
+    intentionally not committed to GitHub, so they are loaded only when available
+    (e.g. locally after generation) and otherwise quietly skipped.
+    """
+    loaded: dict[str, list[dict]] = {}
+    for dir_name, public, _ in ALL_SPLITS:
+        path = BENCH / dir_name / "scenarios.jsonl"
+        if path.exists():
+            loaded[public] = _load(dir_name)
+        elif public != "private_hidden":
+            pytest.skip(f"required public split not present in checkout: {dir_name}")
+    return loaded
 
 
 def test_split_files_exist():
-    for dir_name, _, _ in SPLITS:
+    # Public splits are committed and must always be present. ``private_hidden``
+    # is intentionally not committed to GitHub, so it is only checked when
+    # present locally (e.g. right after generation).
+    for dir_name, public, _ in ALL_SPLITS:
         base = BENCH / dir_name
+        if public == "private_hidden" and not base.exists():
+            continue
         assert (base / "scenarios.jsonl").exists(), f"missing scenarios for {dir_name}"
         assert (base / "manifest.json").exists(), f"missing manifest for {dir_name}"
         assert (base / "README.md").exists(), f"missing README for {dir_name}"
@@ -65,27 +110,52 @@ def test_split_files_exist():
 
 def test_only_canonical_splits_present():
     present = {p.name for p in BENCH.iterdir() if p.is_dir()}
-    assert present == {dir_name for dir_name, _, _ in SPLITS}, present
+    canonical = {dir_name for dir_name, _, _ in ALL_SPLITS}
+    public_dirs = {dir_name for dir_name, public, _ in ALL_SPLITS if public != "private_hidden"}
+    # No unexpected directories, and every public split is present. The private
+    # split may or may not be present depending on the checkout.
+    assert present <= canonical, f"unexpected split dirs: {present - canonical}"
+    assert public_dirs <= present, f"missing public split dirs: {public_dirs - present}"
 
 
 def test_split_counts(splits):
-    for dir_name, public, expected in SPLITS:
+    for dir_name, public, expected in ALL_SPLITS:
+        if public not in splits:
+            continue
         assert len(splits[public]) == expected, f"{public} size {len(splits[public])} != {expected}"
 
 
 def test_public_split_label_matches(splits):
-    for _, public, _ in SPLITS:
-        assert all(r.get("split") == public for r in splits[public])
+    for _, public, _ in ALL_SPLITS:
+        if public not in splits:
+            continue
+        assert all(r.get("public_split_name") == public for r in splits[public])
 
 
 def test_manifests_use_public_split_names_and_version():
     forbidden = {"train", "dev", "validation", "test"}
-    for dir_name, public, expected in SPLITS:
-        manifest = json.loads((BENCH / dir_name / "manifest.json").read_text(encoding="utf-8"))
+    for dir_name, public, expected in ALL_SPLITS:
+        manifest_path = BENCH / dir_name / "manifest.json"
+        if public == "private_hidden" and not manifest_path.exists():
+            continue
+        manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
         assert manifest["split"] == public
         assert manifest["split"] not in forbidden
         assert manifest["version"] == BENCHMARK_VERSION
         assert manifest["scenario_count"] == expected
+
+
+def test_validator_passes_with_no_errors(splits):
+    """The official validator must report zero *errors* for every canonical split.
+
+    Realistic is unreviewed synthetic gold, so warnings there are acceptable.
+    """
+    for dir_name, public, _ in ALL_SPLITS:
+        if public not in splits:
+            continue
+        data_path = BENCH / dir_name / "scenarios.jsonl"
+        report = validate_dataset(splits[public], data_path=data_path)
+        assert report["errors"] == [], f"{public}: {report['errors'][:5]}"
 
 
 def test_scenario_ids_unique_across_all_splits(splits):
@@ -118,8 +188,8 @@ def test_all_rows_parse_and_have_required_fields(splits):
             assert REQUIRED_FIELDS <= set(r), f"{public} {r['scenario_id']} missing {REQUIRED_FIELDS - set(r)}"
             assert r["domain"] in DOMAINS
             assert r["primary_failure_mode"] in FAILURE_MODES
-            task_types = {t["task_type"] for t in r["tasks"]}
-            assert task_types == REQUIRED_TASK_TYPES, f"{public} {r['scenario_id']} task types {task_types}"
+            for tkey in REQUIRED_TASK_KEYS:
+                assert tkey in r, f"{public} {r['scenario_id']} missing task view {tkey}"
 
 
 def test_no_training_targets_in_benchmark_rows(splits):
@@ -141,7 +211,7 @@ def test_expected_decisions_and_diagnoses_are_valid_enums(splits):
         for r in rows:
             decision = r["hidden_gold"].get("expected_decision", "")
             diagnosis = r["hidden_gold"].get("expected_failure_diagnosis", "")
-            if decision:  # realistic split is pending annotation (empty gold)
+            if decision:
                 assert decision in DECISIONS, f"{public} {r['scenario_id']} decision {decision}"
             if diagnosis:
                 assert diagnosis in FAILURE_MODES, f"{public} {r['scenario_id']} diagnosis {diagnosis}"
@@ -149,75 +219,47 @@ def test_expected_decisions_and_diagnoses_are_valid_enums(splits):
                 assert status in MEMORY_STATUSES, f"{public} {r['scenario_id']} status {status}"
 
 
-def test_no_decision_word_leakage_in_authoritative_records(splits):
-    for public, rows in splits.items():
-        leaks = {r["scenario_id"]: hits for r in rows if (hits := scenario_leaks_decision_word(r))}
-        assert not leaks, f"{public} has decision-word leakage: {dict(list(leaks.items())[:3])}"
+# ---- hard-split distribution rules (Part 3 spec) ------------------------
 
-
-# ---- hard-split structural rules ----------------------------------------
-
-def test_hard_event_counts_within_20_100(splits):
+def test_hard_is_l3_l4_only(splits):
     for r in splits["hard"]:
-        n = len(r["public_input"]["event_trace"])
-        assert 20 <= n <= 100, f"{r['scenario_id']} has {n} events"
+        diff = r.get("difficulty") or r.get("difficulty_level")
+        assert diff in ("L3", "L4"), f"{r['scenario_id']} difficulty {diff}"
 
 
-def test_hard_has_at_least_five_memories(splits):
-    for r in splits["hard"]:
-        assert len(r["public_input"]["initial_memory"]) >= 5, r["scenario_id"]
+def test_hard_covers_all_fifteen_patterns(splits):
+    seen = {infer_pattern(r) for r in splits["hard"]}
+    assert set(PATTERNS) <= seen, f"missing patterns: {set(PATTERNS) - seen}"
 
 
-def test_hard_has_at_least_two_evidence_events(splits):
-    for r in splits["hard"]:
-        assert len(r["hidden_gold"]["expected_evidence_event_ids"]) >= 2, r["scenario_id"]
+def test_hard_no_single_pattern_dominates(splits):
+    rows = splits["hard"]
+    counts = collections.Counter(infer_pattern(r) for r in rows)
+    n = len(rows)
+    for pattern, c in counts.items():
+        assert c / n <= 0.25 + 1e-9, f"pattern {pattern} share {c / n:.3f} exceeds 25%"
 
 
-def test_hard_satisfies_at_least_three_hard_criteria(splits):
-    for r in splits["hard"]:
-        assert r["metadata"]["hard_criteria_satisfied"] >= 3, r["scenario_id"]
+def test_hard_decision_distribution_in_target_ranges(splits):
+    rows = splits["hard"]
+    n = len(rows)
+    counts = collections.Counter(r["hidden_gold"]["expected_decision"] for r in rows)
+    for decision, (lo, hi) in HARD_DECISION_RANGES.items():
+        share = counts[decision] / n
+        assert lo - 1e-9 <= share <= hi + 1e-9, f"{decision} share {share:.3f} outside [{lo}, {hi}]"
 
 
-def test_hard_length_mix():
-    counts = [len(r["public_input"]["event_trace"]) for r in _load("hard_300_en")]
-    short = sum(1 for c in counts if c <= 35)
-    medium = sum(1 for c in counts if 36 <= c <= 60)
-    long = sum(1 for c in counts if c >= 61)
-    assert (short, medium, long) == (100, 120, 80), (short, medium, long)
+def test_hard_average_evidence_above_one(splits):
+    rows = splits["hard"]
+    ev = [len(r["hidden_gold"]["expected_evidence_event_ids"]) for r in rows]
+    assert sum(ev) / len(ev) > 1.0, sum(ev) / len(ev)
 
 
 # ---- realistic-split annotation status ----------------------------------
 
-def test_realistic_annotation_pending_and_no_gold(splits):
+def test_realistic_is_unreviewed_synthetic_gold(splits):
     for r in splits["realistic"]:
-        assert r["metadata"]["annotation_status"] == "pending", r["scenario_id"]
-        assert r["metadata"]["source_type"] == "realistic_style_synthetic"
-        gold = r["hidden_gold"]
-        assert not gold.get("expected_decision")
-        assert not gold.get("expected_memory_state")
-        assert not gold.get("expected_evidence_event_ids")
-
-
-def test_realistic_category_mix():
-    rows = _load("realistic_100_en")
-    counts: dict[str, int] = {}
-    for r in rows:
-        counts[r["domain"]] = counts.get(r["domain"], 0) + 1
-    assert counts == {
-        "software_engineering_agent": 40,
-        "customer_support_crm": 20,
-        "research_knowledge_work": 15,
-        "calendar_task_workflow": 15,
-        "enterprise_multi_tool_workflow": 10,
-    }, counts
-
-
-def test_realistic_annotations_template_one_row_per_scenario():
-    rows = _load("realistic_100_en")
-    template_path = BENCH / "realistic_100_en" / "annotations_template.jsonl"
-    template = [json.loads(line) for line in template_path.read_text(encoding="utf-8").splitlines() if line.strip()]
-    assert len(template) == len(rows)
-    template_ids = {t["scenario_id"] for t in template}
-    assert template_ids == {r["scenario_id"] for r in rows}
-    for t in template:
-        assert t["expected_decision"] == "" and t["evidence_event_ids"] == []
+        status = r.get("annotation_status") or r.get("metadata", {}).get("annotation_status")
+        assert status == "synthetic_gold_unreviewed", f"{r['scenario_id']} annotation_status={status!r}"
+        # Realistic must NEVER be auto-marked reviewed.
+        assert status != "reviewed"

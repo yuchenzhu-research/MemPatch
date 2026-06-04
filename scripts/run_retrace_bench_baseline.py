@@ -28,6 +28,7 @@ from benchmark.retrace_bench.general_taxonomy import (
     MEMORY_STATUSES,
     NON_ANSWER_DECISIONS,
 )
+from benchmark.retrace_bench.public_view import public_scenario_view
 from benchmark.retrace_bench.llm_providers import get_provider
 from benchmark.retrace_bench.scorers_general import aggregate_metrics, score_prediction
 from retracemem.authorization import EvidenceProposalBatch, authorize
@@ -195,10 +196,17 @@ def retrieve_all(scenario: dict[str, Any]) -> dict[str, Any]:
 
 
 def _scenario_tokens(scenario: dict[str, Any]) -> set[str]:
+    tasks_prompts = []
+    for t in scenario.get("tasks", []):
+        tasks_prompts.append(t.get("prompt", ""))
+    for key in ("black_box_task", "memory_state_task", "evidence_retrieval_task", "diagnostic_task"):
+        if key in scenario and isinstance(scenario[key], dict):
+            tasks_prompts.append(scenario[key].get("prompt", ""))
+            
     text = " ".join(
         [
             scenario.get("workflow_context", ""),
-            " ".join(t.get("prompt", "") for t in scenario.get("tasks", [])),
+            " ".join(tasks_prompts),
         ]
     ).lower()
     return {tok.strip(".,;:!?()[]{}\"'") for tok in text.split() if len(tok.strip(".,;:!?()[]{}\"'")) >= 3}
@@ -374,10 +382,13 @@ def retrace_oracle_engine(scenario: dict[str, Any]) -> dict[str, Any]:
                 verifier="retrace_oracle_engine",
             )
         )
+    query = scenario.get("tasks", [{}])[0].get("prompt", "")
+    if not query and "black_box_task" in scenario:
+        query = scenario["black_box_task"].get("prompt", "")
     view = SharedCandidateView(
         instance_id=scenario["scenario_id"],
         query_id=f"q-{scenario['scenario_id']}",
-        query=scenario["tasks"][0]["prompt"],
+        query=query,
         evidence_context=evidence_nodes,
         new_evidence=evidence_by_id[evidence_id],
         candidate_beliefs=candidate_beliefs,
@@ -483,6 +494,7 @@ def llm_json_answerer(
         for memory_id in event.get("related_memory_ids", []):
             if memory_id not in memory_ids:
                 memory_ids.append(memory_id)
+    visible = public_scenario_view(scenario)
     prompt = {
         "instruction": (
             "Answer as strict JSON only. Do not use Markdown. "
@@ -501,9 +513,7 @@ def llm_json_answerer(
             "failure_diagnosis": "exactly one enum string from: " + ", ".join(FAILURE_MODES),
         },
         "failure_mode_definitions": dict(FAILURE_MODE_DEFINITIONS),
-        "workflow_context": scenario["workflow_context"],
-        "public_input": scenario["public_input"],
-        "tasks": scenario["tasks"],
+        **visible,
     }
     kwargs = {"temperature": 0}
     kwargs.update(generation_kwargs or {})
@@ -672,6 +682,7 @@ def main(argv: list[str] | None = None) -> int:
 
         # Write intermediate metrics.json dynamically on each step
         metrics_path = out.with_suffix(".metrics.json")
+        metrics_path.parent.mkdir(parents=True, exist_ok=True)
         aggregate = aggregate_metrics(scored)
         aggregate["baseline"] = args.baseline
         aggregate["group"] = baseline_group(args.baseline)

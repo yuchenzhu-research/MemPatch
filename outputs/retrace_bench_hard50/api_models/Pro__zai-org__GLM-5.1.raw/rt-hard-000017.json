@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000017",
+  "model": "Pro/zai-org/GLM-5.1",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300016 remains on default deployment gate configuration on stable v1; the SSO timeout error is tracked under open master Issue #98 (needs-investigation, priority-high) and no verified stable update has been applied.\",\n  \"memory_state\": {\n    \"m-rt-hard-000017-target\": \"current\",\n    \"m-rt-hard-000017-condition\": \"current\",\n    \"m-rt-hard-000017-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000017-1\",\n    \"e-rt-hard-000017-2\",\n    \"e-rt-hard-000017-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+}

@@ -1,0 +1,62 @@
+{
+  "all_metrics": {
+    "answer_exact_match": 1.0,
+    "answer_key_fact_accuracy": 1.0,
+    "answer_state_consistency": 1.0,
+    "black_box_decision_accuracy": 1.0,
+    "conflict_collapse_rate": 0.2,
+    "counterevidence_recall": 0.3333333333333333,
+    "decision_balanced_accuracy": 1.0,
+    "decision_macro_f1": 1.0,
+    "evidence_f1": 1.0,
+    "evidence_precision": 1.0,
+    "failure_diagnosis_accuracy": 1.0,
+    "failure_to_forget_rate": 0.0,
+    "failure_to_release_or_restore_rate": 0.03333333333333333,
+    "forbidden_fact_hits": 0.0,
+    "format_failure_rate": 0.0,
+    "joint_revision_success": 1.0,
+    "latest_event_shortcut_failure_rate": 0.0,
+    "memory_hallucination_rate": 0.0,
+    "memory_state_accuracy": 1.0,
+    "minimal_evidence_exact_match": 1.0,
+    "non_answer_decision_accuracy": 1.0,
+    "over_update_rate": 0.1,
+    "overcitation_rate": 0.0,
+    "per_decision_accuracy": {
+      "mark_unresolved": 1.0,
+      "refuse_due_to_policy": 1.0,
+      "use_current_memory": 1.0
+    },
+    "per_decision_counts": {
+      "mark_unresolved": 600,
+      "refuse_due_to_policy": 200,
+      "use_current_memory": 2200
+    },
+    "policy_violation_anchor_hit_rate": 0.0,
+    "policy_violation_rate": 0.06666666666666667,
+    "scope_authority_accuracy": 1.0,
+    "scope_leakage_anchor_hit_rate": 0.0,
+    "scope_leakage_rate": 0.16666666666666666,
+    "stale_anchor_hit_rate": 0.0,
+    "stale_memory_reuse_rate": 0.23333333333333334,
+    "stale_reuse_rate": 0.0,
+    "under_update_rate": 0.06666666666666667,
+    "unnecessary_memory_write_rate": 0.0,
+    "use_current_memory_accuracy": 1.0,
+    "wrong_source_attribution_rate": 0.13333333333333333
+  },
+  "count": 3000,
+  "failures": [],
+  "gold_oracle_metrics": {
+    "black_box_decision_accuracy": 1.0,
+    "decision_macro_f1": 1.0,
+    "evidence_f1": 1.0,
+    "failure_diagnosis_accuracy": 1.0,
+    "joint_revision_success": 1.0,
+    "memory_state_accuracy": 1.0,
+    "minimal_evidence_exact_match": 1.0,
+    "stale_reuse_rate": 0.0
+  },
+  "pass": true
+}

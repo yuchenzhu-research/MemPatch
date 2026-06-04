@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000115",
+  "model": "deepseek-ai/DeepSeek-V4-Pro",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300114 remains on default case route configuration on stable v1. The security patch was backported only to legacy v1.2, and v2.0 does not need it. No verified release approval has updated the case route.\",\n  \"memory_state\": {\n    \"m-rt-hard-000115-target\": \"current\",\n    \"m-rt-hard-000115-condition\": \"current\",\n    \"m-rt-hard-000115-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000115-1\",\n    \"e-rt-hard-000115-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+}

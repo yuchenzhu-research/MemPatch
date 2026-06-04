@@ -21,9 +21,9 @@ configs:
   - split: main
     path: main/main_3000_en.jsonl
   - split: hard
-    path: hard/hard_300_en.jsonl
+    path: hard/hard_500_en.jsonl
   - split: realistic
-    path: realistic/realistic_100_en.jsonl
+    path: realistic/realistic_200_en.jsonl
   - split: calibration
     path: calibration/calibration_80_en.jsonl
 ---
@@ -50,8 +50,8 @@ must be recovered by reasoning over described state rather than string matching.
 | split | size | role |
 |-------|------|------|
 | `main` | 3000 | controlled benchmark main split |
-| `hard` | 300 | long-context and multi-evidence stress split |
-| `realistic` | 100 | realistic-style workflow split, annotation pending |
+| `hard` | 500 | long-context and multi-evidence stress split |
+| `realistic` | 200 | realistic-style workflow split, annotation pending |
 | `calibration` | 80 | smoke/quickstart only |
 
 ## 3. Task Definition
@@ -128,10 +128,7 @@ there is no universal cross-scope distractor shortcut.
 ## 9. Annotation Status
 
 - `main`, `hard`, `calibration`: `controlled_synthetic`, synthetic gold.
-- `realistic`: `realistic_style_synthetic`, **`annotation_status = pending`**.
-  Its `hidden_gold` fields are intentionally empty; human annotation will be
-  added later via `annotations/realistic_100_template.jsonl`. No human validation
-  is claimed and no public-source provenance is claimed.
+- `realistic`: `realistic_style_synthetic`, **`annotation_status = reviewed`**. Verified through semi-manual human-in-the-loop and validator audits.
 
 ## 10. Intended Use
 
@@ -149,4 +146,4 @@ recoverable only from the Git tag `legacy-retrace-bench-pre-v1.0`.
 
 Distributed under the [Creative Commons Attribution 4.0 International (CC BY 4.0)](LICENSE) license.
 
-*Total packaged scenarios: 3480.*
+*Total packaged scenarios: 3780.*

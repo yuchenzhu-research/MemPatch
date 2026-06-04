@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000112",
+  "model": "deepseek-ai/DeepSeek-V4-Pro",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300111 uses default metric definition configuration on stable v1. No verified release approval has been recorded, so the prior state remains the authorized status.\",\n  \"memory_state\": {\n    \"m-rt-hard-000112-target\": \"current\",\n    \"m-rt-hard-000112-condition\": \"current\",\n    \"m-rt-hard-000112-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000112-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+}

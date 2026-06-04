@@ -1,0 +1,76 @@
+{
+  "annotation_status": "synthetic_gold",
+  "avg_event_count": 7.0,
+  "avg_memory_count": 3.0,
+  "avg_required_evidence_count": 0.0,
+  "benchmark_release_name": "final_aaai",
+  "calibration_is_smoke_only_notice": "Calibration split is for sanity checks only.",
+  "difficulty": {
+    "L2": 40,
+    "L3": 40
+  },
+  "domains": {
+    "calendar_task_workflow": 10,
+    "customer_support_crm": 10,
+    "data_analysis_bi": 10,
+    "ecommerce_recommendation": 10,
+    "enterprise_multi_tool_workflow": 10,
+    "personal_assistant_preference": 10,
+    "research_knowledge_work": 10,
+    "software_engineering_agent": 10
+  },
+  "expected_decisions": {
+    "ask_clarification": 5,
+    "escalate": 0,
+    "mark_unresolved": 11,
+    "refuse_due_to_policy": 5,
+    "use_current_memory": 59
+  },
+  "failure_modes": {
+    "conflict_collapse": 7,
+    "failure_to_forget": 7,
+    "failure_to_release_or_restore": 7,
+    "memory_hallucination": 7,
+    "over_update": 8,
+    "policy_violation": 7,
+    "scope_leakage": 7,
+    "stale_memory_reuse": 8,
+    "under_update": 8,
+    "unnecessary_memory_write": 7,
+    "wrong_source_attribution": 7
+  },
+  "generation_commit": "final_release",
+  "intended_use": "AAAI ReTrace-Bench paper evaluation baseline reference",
+  "leakage_audit_summary": {
+    "clean": true,
+    "decision_word_phrases_checked": [
+      "ask for clarification",
+      "ask the requester to confirm",
+      "ask the requester to clarify",
+      "please confirm",
+      "mark unresolved",
+      "mark it unresolved",
+      "mark as unresolved",
+      "escalate",
+      "refuse",
+      "do not store",
+      "use current memory",
+      "use the current memory"
+    ],
+    "leak_phrase_counts": {},
+    "method": "exact decision-action phrase match over verified/trusted records",
+    "scanned_records": "authoritative (verified+trusted) event text only",
+    "scenarios_with_decision_word_leak": 0
+  },
+  "max_event_count": 7,
+  "max_memory_count": 3,
+  "not_for_training_notice": "Strictly evaluation-only. Never train ReTrace-Learn on this data.",
+  "random_seed": 2027,
+  "role": "Paper-facing final calibration benchmark split.",
+  "scenario_count": 80,
+  "schema_version": "retrace_bench_general_1",
+  "source_type": "controlled_synthetic",
+  "split": "calibration",
+  "training_targets": false,
+  "version": "1.0.0"
+}

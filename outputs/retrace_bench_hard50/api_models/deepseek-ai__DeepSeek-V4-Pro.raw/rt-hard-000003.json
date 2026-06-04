@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000003",
+  "model": "deepseek-ai/DeepSeek-V4-Pro",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300002 remains on default case route configuration v1 in workspace-stable. The docs update was merged by mistake, the code PR is unmerged with failing tests, and no verified release approval has been granted.\",\n  \"memory_state\": {\n    \"m-rt-hard-000003-target\": \"current\",\n    \"m-rt-hard-000003-condition\": \"current\",\n    \"m-rt-hard-000003-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000003-1\",\n    \"e-rt-hard-000003-2\",\n    \"e-rt-hard-000003-3\"\n  ],\n  \"failure_diagnosis\": \"stale_memory_reuse\"\n}"
+}

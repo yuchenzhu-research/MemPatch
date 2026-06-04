@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000117",
+  "model": "deepseek-ai/DeepSeek-V4-Pro",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300116 remains on default claim record configuration per stable v1; the release v3.0 update to retry limit 5 does not apply because no verified release approval for CASE-300116 is present.\",\n  \"memory_state\": {\n    \"m-rt-hard-000117-target\": \"current\",\n    \"m-rt-hard-000117-condition\": \"current\",\n    \"m-rt-hard-000117-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000117-1\",\n    \"e-rt-hard-000117-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+}

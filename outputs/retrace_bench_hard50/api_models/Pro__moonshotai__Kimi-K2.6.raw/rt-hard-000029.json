@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000029",
+  "model": "Pro/moonshotai/Kimi-K2.6",
+  "raw_response": "{\"decision\":\"use_current_memory\",\"answer\":\"CASE-300028 remains on default claim record configuration v1 in workspace-stable; no verified update has been authorized or applied.\",\"memory_state\":{\"m-rt-hard-000029-target\":\"current\",\"m-rt-hard-000029-condition\":\"current\",\"m-rt-hard-000029-distractor\":\"out_of_scope\"},\"evidence_event_ids\":[\"e-rt-hard-000029-1\",\"e-rt-hard-000029-distractor-ver\",\"e-rt-hard-000029-distractor-auth\"],\"failure_diagnosis\":\"scope_leakage\"}"
+}

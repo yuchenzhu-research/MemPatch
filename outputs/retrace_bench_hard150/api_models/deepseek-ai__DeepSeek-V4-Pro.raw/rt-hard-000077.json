@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000077",
+  "model": "deepseek-ai/DeepSeek-V4-Pro",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300076 uses default claim record configuration on stable v1. Issue #200 (SSO timeout) was closed as duplicate of master Issue #98, which remains open with needs-investigation and priority-high. No verified release approval has been recorded, so the condition rule still requires it.\",\n  \"memory_state\": {\n    \"m-rt-hard-000077-target\": \"current\",\n    \"m-rt-hard-000077-condition\": \"current\",\n    \"m-rt-hard-000077-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000077-1\",\n    \"e-rt-hard-000077-2\",\n    \"e-rt-hard-000077-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+}

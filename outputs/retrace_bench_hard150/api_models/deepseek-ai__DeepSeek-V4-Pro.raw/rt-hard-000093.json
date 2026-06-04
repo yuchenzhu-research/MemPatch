@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000093",
+  "model": "deepseek-ai/DeepSeek-V4-Pro",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300092 remains on default claim record configuration (stable v1). The docs update was merged prematurely, the implementing PR is unmerged with failing tests, and no verified release approval has been recorded.\",\n  \"memory_state\": {\n    \"m-rt-hard-000093-target\": \"current\",\n    \"m-rt-hard-000093-condition\": \"current\",\n    \"m-rt-hard-000093-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000093-1\",\n    \"e-rt-hard-000093-2\",\n    \"e-rt-hard-000093-3\"\n  ],\n  \"failure_diagnosis\": \"stale_memory_reuse\"\n}"
+}

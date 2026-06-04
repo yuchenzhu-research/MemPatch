@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000018",
+  "model": "deepseek-ai/DeepSeek-V4-Pro",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300017 uses default handoff route configuration on stable v1. The docs update claiming batch delete support was merged prematurely; the code PR is unmerged with failing tests, and no verified release approval has been granted.\",\n  \"memory_state\": {\n    \"m-rt-hard-000018-target\": \"current\",\n    \"m-rt-hard-000018-condition\": \"current\",\n    \"m-rt-hard-000018-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000018-1\",\n    \"e-rt-hard-000018-2\",\n    \"e-rt-hard-000018-3\"\n  ],\n  \"failure_diagnosis\": \"stale_memory_reuse\"\n}"
+}

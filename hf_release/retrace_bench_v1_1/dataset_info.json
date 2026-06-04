@@ -1,0 +1,24 @@
+{
+  "dataset_name": "ReTrace-Bench",
+  "license": "cc-by-4.0",
+  "splits": {
+    "calibration": {
+      "data_file": "calibration/scenarios.jsonl",
+      "num_examples": 80
+    },
+    "hard": {
+      "data_file": "hard/scenarios.jsonl",
+      "num_examples": 500
+    },
+    "main": {
+      "data_file": "main/scenarios.jsonl",
+      "num_examples": 3000
+    },
+    "realistic": {
+      "data_file": "realistic/scenarios.jsonl",
+      "num_examples": 200
+    }
+  },
+  "total_public_examples": 3780,
+  "version": "1.1.0"
+}

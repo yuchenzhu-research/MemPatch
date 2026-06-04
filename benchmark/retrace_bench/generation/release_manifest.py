@@ -78,7 +78,12 @@ def leakage_audit(rows: Iterable[dict[str, Any]]) -> dict[str, Any]:
 
 
 def _evidence_count(row: dict[str, Any]) -> int:
-    return len(row.get("hidden_gold", {}).get("expected_evidence_event_ids", []))
+    gold = row.get("hidden_gold", {})
+    return len(
+        gold.get("expected_evidence_event_ids")
+        or gold.get("minimal_evidence_event_ids")
+        or []
+    )
 
 
 def _event_count(row: dict[str, Any]) -> int:

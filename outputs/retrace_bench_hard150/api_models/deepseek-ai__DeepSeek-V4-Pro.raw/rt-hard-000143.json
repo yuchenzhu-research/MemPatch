@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000143",
+  "model": "deepseek-ai/DeepSeek-V4-Pro",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300142 remains on default shopping rule configuration on stable v1; no verified release approval has been granted, and the CI hotfix check failed.\",\n  \"memory_state\": {\n    \"m-rt-hard-000143-target\": \"current\",\n    \"m-rt-hard-000143-condition\": \"current\",\n    \"m-rt-hard-000143-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000143-1\",\n    \"e-rt-hard-000143-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+}

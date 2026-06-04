@@ -1,0 +1,793 @@
+[
+  {
+    "scenario_id": "rt-hard-000001",
+    "response": {
+      "decision": "use_current_memory",
+      "answer": "CASE-300000 remains on the default deployment gate configuration on stable v1 because the YAML feature was not included in the verified release v1.4.0.",
+      "memory_state": {
+        "m-rt-hard-000001-target": "current",
+        "m-rt-hard-000001-condition": "current",
+        "m-rt-hard-000001-distractor": "current"
+      },
+      "evidence_event_ids": [
+        "e-rt-hard-000001-3"
+      ],
+      "failure_diagnosis": "unnecessary_memory_write"
+    },
+    "metrics": {
+      "black_box_decision_accuracy": 1.0,
+      "memory_state_accuracy": 0.6666666666666666,
+      "evidence_f1": 0.6666666666666666,
+      "failure_diagnosis_accuracy": 0.0,
+      "stale_reuse_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "minimal_evidence_exact_match": 0.0,
+      "evidence_precision": 1.0,
+      "overcitation_rate": 0.0,
+      "counterevidence_recall": 0.0,
+      "answer_state_consistency": 0.0,
+      "scope_authority_accuracy": 1.0,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "answer_key_fact_accuracy": 1.0,
+      "answer_exact_match": 0.0,
+      "stale_memory_reuse_rate": 0.0,
+      "under_update_rate": 0.0,
+      "over_update_rate": 0.0,
+      "conflict_collapse_rate": 0.0,
+      "scope_leakage_rate": 0.0,
+      "policy_violation_rate": 0.0,
+      "wrong_source_attribution_rate": 0.0,
+      "memory_hallucination_rate": 0.0,
+      "unnecessary_memory_write_rate": 0.0,
+      "failure_to_forget_rate": 0.0,
+      "failure_to_release_or_restore_rate": 0.0,
+      "format_failure_rate": 0.0,
+      "stale_anchor_hit_rate": 0.0,
+      "scope_leakage_anchor_hit_rate": 0.0,
+      "policy_violation_anchor_hit_rate": 0.0,
+      "forbidden_fact_hits": 0.0
+    }
+  },
+  {
+    "scenario_id": "rt-hard-000002",
+    "response": {
+      "decision": "use_current_memory",
+      "answer": "CASE-300001 remains on the default handoff route configuration on stable v1, as no verified release approval has authorized an update.",
+      "memory_state": {
+        "m-rt-hard-000002-target": "current",
+        "m-rt-hard-000002-condition": "current",
+        "m-rt-hard-000002-distractor": "current"
+      },
+      "evidence_event_ids": [
+        "e-rt-hard-000002-1",
+        "e-rt-hard-000002-2",
+        "e-rt-hard-000002-3"
+      ],
+      "failure_diagnosis": "scope_leakage"
+    },
+    "metrics": {
+      "black_box_decision_accuracy": 0.0,
+      "memory_state_accuracy": 0.3333333333333333,
+      "evidence_f1": 1.0,
+      "failure_diagnosis_accuracy": 0.0,
+      "stale_reuse_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "minimal_evidence_exact_match": 1.0,
+      "evidence_precision": 1.0,
+      "overcitation_rate": 0.0,
+      "counterevidence_recall": 1.0,
+      "answer_state_consistency": 0.0,
+      "scope_authority_accuracy": 1.0,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "answer_key_fact_accuracy": 1.0,
+      "answer_exact_match": 0.0,
+      "stale_memory_reuse_rate": 0.0,
+      "under_update_rate": 0.0,
+      "over_update_rate": 0.0,
+      "conflict_collapse_rate": 0.0,
+      "scope_leakage_rate": 1.0,
+      "policy_violation_rate": 0.0,
+      "wrong_source_attribution_rate": 0.0,
+      "memory_hallucination_rate": 0.0,
+      "unnecessary_memory_write_rate": 0.0,
+      "failure_to_forget_rate": 0.0,
+      "failure_to_release_or_restore_rate": 0.0,
+      "format_failure_rate": 0.0,
+      "stale_anchor_hit_rate": 0.0,
+      "scope_leakage_anchor_hit_rate": 0.0,
+      "policy_violation_anchor_hit_rate": 0.0,
+      "forbidden_fact_hits": 0.0
+    }
+  },
+  {
+    "scenario_id": "rt-hard-000003",
+    "response": {
+      "decision": "use_current_memory",
+      "answer": "CASE-300002 remains on the default case route configuration on stable v1. The documentation update was merged prematurely by mistake, and the implementing code PR #300 remains unmerged with failing tests.",
+      "memory_state": {
+        "m-rt-hard-000003-target": "current",
+        "m-rt-hard-000003-condition": "current",
+        "m-rt-hard-000003-distractor": "current"
+      },
+      "evidence_event_ids": [
+        "e-rt-hard-000003-2",
+        "e-rt-hard-000003-3"
+      ],
+      "failure_diagnosis": "policy_violation"
+    },
+    "metrics": {
+      "black_box_decision_accuracy": 1.0,
+      "memory_state_accuracy": 0.6666666666666666,
+      "evidence_f1": 0.8,
+      "failure_diagnosis_accuracy": 0.0,
+      "stale_reuse_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "minimal_evidence_exact_match": 0.0,
+      "evidence_precision": 1.0,
+      "overcitation_rate": 0.0,
+      "counterevidence_recall": 1.0,
+      "answer_state_consistency": 0.0,
+      "scope_authority_accuracy": 1.0,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "answer_key_fact_accuracy": 1.0,
+      "answer_exact_match": 0.0,
+      "stale_memory_reuse_rate": 0.0,
+      "under_update_rate": 0.0,
+      "over_update_rate": 0.0,
+      "conflict_collapse_rate": 0.0,
+      "scope_leakage_rate": 0.0,
+      "policy_violation_rate": 1.0,
+      "wrong_source_attribution_rate": 0.0,
+      "memory_hallucination_rate": 0.0,
+      "unnecessary_memory_write_rate": 0.0,
+      "failure_to_forget_rate": 0.0,
+      "failure_to_release_or_restore_rate": 0.0,
+      "format_failure_rate": 0.0,
+      "stale_anchor_hit_rate": 0.0,
+      "scope_leakage_anchor_hit_rate": 0.0,
+      "policy_violation_anchor_hit_rate": 0.0,
+      "forbidden_fact_hits": 0.0
+    }
+  },
+  {
+    "scenario_id": "rt-hard-000004",
+    "response": {
+      "decision": "use_current_memory",
+      "answer": "CASE-300003 remains on the default schedule rule configuration on stable v1, as no verified release approval has updated its configuration in the workspace-stable scope.",
+      "memory_state": {
+        "m-rt-hard-000004-target": "current",
+        "m-rt-hard-000004-condition": "current",
+        "m-rt-hard-000004-distractor": "current"
+      },
+      "evidence_event_ids": [
+        "e-rt-hard-000004-1",
+        "e-rt-hard-000004-3"
+      ],
+      "failure_diagnosis": null
+    },
+    "metrics": {
+      "black_box_decision_accuracy": 1.0,
+      "memory_state_accuracy": 0.3333333333333333,
+      "evidence_f1": 0.8,
+      "failure_diagnosis_accuracy": 0.0,
+      "stale_reuse_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "minimal_evidence_exact_match": 0.0,
+      "evidence_precision": 1.0,
+      "overcitation_rate": 0.0,
+      "counterevidence_recall": 1.0,
+      "answer_state_consistency": 0.0,
+      "scope_authority_accuracy": 1.0,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "answer_key_fact_accuracy": 1.0,
+      "answer_exact_match": 0.0,
+      "stale_memory_reuse_rate": 0.0,
+      "under_update_rate": 0.0,
+      "over_update_rate": 0.0,
+      "conflict_collapse_rate": 0.0,
+      "scope_leakage_rate": 0.0,
+      "policy_violation_rate": 0.0,
+      "wrong_source_attribution_rate": 0.0,
+      "memory_hallucination_rate": 0.0,
+      "unnecessary_memory_write_rate": 0.0,
+      "failure_to_forget_rate": 0.0,
+      "failure_to_release_or_restore_rate": 0.0,
+      "format_failure_rate": 0.0,
+      "stale_anchor_hit_rate": 0.0,
+      "scope_leakage_anchor_hit_rate": 0.0,
+      "policy_violation_anchor_hit_rate": 0.0,
+      "forbidden_fact_hits": 0.0
+    }
+  },
+  {
+    "scenario_id": "rt-hard-000005",
+    "response": {
+      "decision": "use_current_memory",
+      "answer": "CASE-300004 remains on the default claim record configuration on stable v1. The update mentioned by the unverified user lacks the required verified release approval, and the maintainer confirmed that v1 stable remains fully supported with its current configuration.",
+      "memory_state": {
+        "m-rt-hard-000005-target": "current",
+        "m-rt-hard-000005-condition": "current",
+        "m-rt-hard-000005-distractor": "current"
+      },
+      "evidence_event_ids": [
+        "e-rt-hard-000005-3",
+        "e-rt-hard-000005-distractor-auth"
+      ],
+      "failure_diagnosis": null
+    },
+    "metrics": {
+      "black_box_decision_accuracy": 1.0,
+      "memory_state_accuracy": 0.6666666666666666,
+      "evidence_f1": 0.5,
+      "failure_diagnosis_accuracy": 0.0,
+      "stale_reuse_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "minimal_evidence_exact_match": 0.0,
+      "evidence_precision": 0.5,
+      "overcitation_rate": 0.5,
+      "counterevidence_recall": 0.0,
+      "answer_state_consistency": 0.0,
+      "scope_authority_accuracy": 1.0,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "answer_key_fact_accuracy": 1.0,
+      "answer_exact_match": 0.0,
+      "stale_memory_reuse_rate": 0.0,
+      "under_update_rate": 0.0,
+      "over_update_rate": 0.0,
+      "conflict_collapse_rate": 0.0,
+      "scope_leakage_rate": 0.0,
+      "policy_violation_rate": 0.0,
+      "wrong_source_attribution_rate": 0.0,
+      "memory_hallucination_rate": 0.0,
+      "unnecessary_memory_write_rate": 0.0,
+      "failure_to_forget_rate": 0.0,
+      "failure_to_release_or_restore_rate": 0.0,
+      "format_failure_rate": 0.0,
+      "stale_anchor_hit_rate": 0.0,
+      "scope_leakage_anchor_hit_rate": 0.0,
+      "policy_violation_anchor_hit_rate": 0.0,
+      "forbidden_fact_hits": 0.0
+    }
+  },
+  {
+    "scenario_id": "rt-hard-000006",
+    "response": {
+      "decision": "use_current_memory",
+      "answer": "According to stable rules, CASE-300005 remains on the default preference rule configuration on stable v1, as no verified release approval has been granted for any updates.",
+      "memory_state": {
+        "m-rt-hard-000006-target": "current",
+        "m-rt-hard-000006-condition": "current",
+        "m-rt-hard-000006-distractor": "current"
+      },
+      "evidence_event_ids": [],
+      "failure_diagnosis": null
+    },
+    "metrics": {
+      "black_box_decision_accuracy": 1.0,
+      "memory_state_accuracy": 0.6666666666666666,
+      "evidence_f1": 0.0,
+      "failure_diagnosis_accuracy": 0.0,
+      "stale_reuse_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "minimal_evidence_exact_match": 0.0,
+      "evidence_precision": 0.0,
+      "overcitation_rate": 0.0,
+      "counterevidence_recall": 0.0,
+      "answer_state_consistency": 0.0,
+      "scope_authority_accuracy": 1.0,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "answer_key_fact_accuracy": 1.0,
+      "answer_exact_match": 0.0,
+      "stale_memory_reuse_rate": 0.0,
+      "under_update_rate": 0.0,
+      "over_update_rate": 0.0,
+      "conflict_collapse_rate": 0.0,
+      "scope_leakage_rate": 0.0,
+      "policy_violation_rate": 0.0,
+      "wrong_source_attribution_rate": 0.0,
+      "memory_hallucination_rate": 0.0,
+      "unnecessary_memory_write_rate": 0.0,
+      "failure_to_forget_rate": 0.0,
+      "failure_to_release_or_restore_rate": 0.0,
+      "format_failure_rate": 0.0,
+      "stale_anchor_hit_rate": 0.0,
+      "scope_leakage_anchor_hit_rate": 0.0,
+      "policy_violation_anchor_hit_rate": 0.0,
+      "forbidden_fact_hits": 0.0
+    }
+  },
+  {
+    "scenario_id": "rt-hard-000007",
+    "response": {
+      "decision": "use_current_memory",
+      "answer": "CASE-300006 remains on the default shopping rule configuration on stable v1, as no verified release approval has been granted for any updates in the stable workspace.",
+      "memory_state": {
+        "m-rt-hard-000007-target": "current",
+        "m-rt-hard-000007-condition": "current",
+        "m-rt-hard-000007-distractor": "current"
+      },
+      "evidence_event_ids": [
+        "e-rt-hard-000007-distractor-auth"
+      ],
+      "failure_diagnosis": "wrong_source_attribution"
+    },
+    "metrics": {
+      "black_box_decision_accuracy": 0.0,
+      "memory_state_accuracy": 0.3333333333333333,
+      "evidence_f1": 0.0,
+      "failure_diagnosis_accuracy": 0.0,
+      "stale_reuse_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "minimal_evidence_exact_match": 0.0,
+      "evidence_precision": 0.0,
+      "overcitation_rate": 1.0,
+      "counterevidence_recall": 0.0,
+      "answer_state_consistency": 0.0,
+      "scope_authority_accuracy": 1.0,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "answer_key_fact_accuracy": 1.0,
+      "answer_exact_match": 0.0,
+      "stale_memory_reuse_rate": 0.0,
+      "under_update_rate": 0.0,
+      "over_update_rate": 0.0,
+      "conflict_collapse_rate": 0.0,
+      "scope_leakage_rate": 0.0,
+      "policy_violation_rate": 0.0,
+      "wrong_source_attribution_rate": 0.0,
+      "memory_hallucination_rate": 0.0,
+      "unnecessary_memory_write_rate": 0.0,
+      "failure_to_forget_rate": 0.0,
+      "failure_to_release_or_restore_rate": 0.0,
+      "format_failure_rate": 0.0,
+      "stale_anchor_hit_rate": 0.0,
+      "scope_leakage_anchor_hit_rate": 0.0,
+      "policy_violation_anchor_hit_rate": 0.0,
+      "forbidden_fact_hits": 0.0
+    }
+  },
+  {
+    "scenario_id": "rt-hard-000008",
+    "response": {
+      "decision": "use_current_memory",
+      "answer": "CASE-300007 remains on the default metric definition configuration on stable v1. Although a performance hotfix was merged, its CI pipeline check failed during compilation, meaning no verified release approval was completed for the stable workspace.",
+      "memory_state": {
+        "m-rt-hard-000008-target": "current",
+        "m-rt-hard-000008-condition": "current",
+        "m-rt-hard-000008-distractor": "current"
+      },
+      "evidence_event_ids": [
+        "e-rt-hard-000008-1",
+        "e-rt-hard-000008-2"
+      ],
+      "failure_diagnosis": null
+    },
+    "metrics": {
+      "black_box_decision_accuracy": 0.0,
+      "memory_state_accuracy": 0.3333333333333333,
+      "evidence_f1": 1.0,
+      "failure_diagnosis_accuracy": 0.0,
+      "stale_reuse_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "minimal_evidence_exact_match": 1.0,
+      "evidence_precision": 1.0,
+      "overcitation_rate": 0.0,
+      "counterevidence_recall": 1.0,
+      "answer_state_consistency": 0.0,
+      "scope_authority_accuracy": 1.0,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "answer_key_fact_accuracy": 1.0,
+      "answer_exact_match": 0.0,
+      "stale_memory_reuse_rate": 0.0,
+      "under_update_rate": 0.0,
+      "over_update_rate": 0.0,
+      "conflict_collapse_rate": 0.0,
+      "scope_leakage_rate": 0.0,
+      "policy_violation_rate": 0.0,
+      "wrong_source_attribution_rate": 0.0,
+      "memory_hallucination_rate": 0.0,
+      "unnecessary_memory_write_rate": 0.0,
+      "failure_to_forget_rate": 0.0,
+      "failure_to_release_or_restore_rate": 0.0,
+      "format_failure_rate": 0.0,
+      "stale_anchor_hit_rate": 0.0,
+      "scope_leakage_anchor_hit_rate": 0.0,
+      "policy_violation_anchor_hit_rate": 0.0,
+      "forbidden_fact_hits": 0.0
+    }
+  },
+  {
+    "scenario_id": "rt-hard-000009",
+    "response": {
+      "decision": "use_current_memory",
+      "answer": "CASE-300008 remains on the default deployment gate configuration on stable v1. The update in workspace-beta does not apply to workspace-stable, and the update claim in workspace-stable was made by an untrusted user without verified release approval.",
+      "memory_state": {
+        "m-rt-hard-000009-target": "current",
+        "m-rt-hard-000009-condition": "current",
+        "m-rt-hard-000009-distractor": "current"
+      },
+      "evidence_event_ids": [
+        "e-rt-hard-000009-distractor-ver",
+        "e-rt-hard-000009-distractor-auth"
+      ],
+      "failure_diagnosis": "wrong_source_attribution"
+    },
+    "metrics": {
+      "black_box_decision_accuracy": 0.0,
+      "memory_state_accuracy": 0.3333333333333333,
+      "evidence_f1": 0.0,
+      "failure_diagnosis_accuracy": 0.0,
+      "stale_reuse_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "minimal_evidence_exact_match": 0.0,
+      "evidence_precision": 0.0,
+      "overcitation_rate": 1.0,
+      "counterevidence_recall": 0.0,
+      "answer_state_consistency": 0.0,
+      "scope_authority_accuracy": 0.0,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "answer_key_fact_accuracy": 0.0,
+      "answer_exact_match": 0.0,
+      "stale_memory_reuse_rate": 0.0,
+      "under_update_rate": 0.0,
+      "over_update_rate": 0.0,
+      "conflict_collapse_rate": 0.0,
+      "scope_leakage_rate": 0.0,
+      "policy_violation_rate": 0.0,
+      "wrong_source_attribution_rate": 0.0,
+      "memory_hallucination_rate": 0.0,
+      "unnecessary_memory_write_rate": 0.0,
+      "failure_to_forget_rate": 0.0,
+      "failure_to_release_or_restore_rate": 0.0,
+      "format_failure_rate": 0.0,
+      "stale_anchor_hit_rate": 0.0,
+      "scope_leakage_anchor_hit_rate": 0.0,
+      "policy_violation_anchor_hit_rate": 0.0,
+      "forbidden_fact_hits": 1.0
+    }
+  },
+  {
+    "scenario_id": "rt-hard-000010",
+    "response": {
+      "decision": "use_current_memory",
+      "answer": "CASE-300009 remains on the default handoff route configuration on stable v1, with the security patch backported only to stable legacy branch v1.2, while production branch v2.0 does not receive the patch.",
+      "memory_state": {
+        "m-rt-hard-000010-target": "current",
+        "m-rt-hard-000010-condition": "current",
+        "m-rt-hard-000010-distractor": "current"
+      },
+      "evidence_event_ids": [
+        "e-rt-hard-000010-1",
+        "e-rt-hard-000010-2"
+      ],
+      "failure_diagnosis": "unnecessary_memory_write"
+    },
+    "metrics": {
+      "black_box_decision_accuracy": 1.0,
+      "memory_state_accuracy": 0.6666666666666666,
+      "evidence_f1": 1.0,
+      "failure_diagnosis_accuracy": 0.0,
+      "stale_reuse_rate": 1.0,
+      "joint_revision_success": 0.0,
+      "minimal_evidence_exact_match": 1.0,
+      "evidence_precision": 1.0,
+      "overcitation_rate": 0.0,
+      "counterevidence_recall": 1.0,
+      "answer_state_consistency": 0.0,
+      "scope_authority_accuracy": 1.0,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "answer_key_fact_accuracy": 1.0,
+      "answer_exact_match": 0.0,
+      "stale_memory_reuse_rate": 0.0,
+      "under_update_rate": 0.0,
+      "over_update_rate": 0.0,
+      "conflict_collapse_rate": 0.0,
+      "scope_leakage_rate": 0.0,
+      "policy_violation_rate": 0.0,
+      "wrong_source_attribution_rate": 0.0,
+      "memory_hallucination_rate": 0.0,
+      "unnecessary_memory_write_rate": 0.0,
+      "failure_to_forget_rate": 0.0,
+      "failure_to_release_or_restore_rate": 0.0,
+      "format_failure_rate": 0.0,
+      "stale_anchor_hit_rate": 0.0,
+      "scope_leakage_anchor_hit_rate": 0.0,
+      "policy_violation_anchor_hit_rate": 0.0,
+      "forbidden_fact_hits": 0.0
+    }
+  },
+  {
+    "scenario_id": "rt-hard-000011",
+    "response": {
+      "decision": "use_current_memory",
+      "answer": "According to stable rules, CASE-300010 remains on the default case route configuration on stable v1. The update in workspace-beta is out of scope for the stable workspace, and the update mentioned in the stable chat was posted by an unverified user without the required verified release approval.",
+      "memory_state": {
+        "m-rt-hard-000011-target": "current",
+        "m-rt-hard-000011-condition": "current",
+        "m-rt-hard-000011-distractor": "out_of_scope"
+      },
+      "evidence_event_ids": [
+        "e-rt-hard-000011-distractor-ver",
+        "e-rt-hard-000011-distractor-auth"
+      ],
+      "failure_diagnosis": "wrong_source_attribution"
+    },
+    "metrics": {
+      "black_box_decision_accuracy": 1.0,
+      "memory_state_accuracy": 1.0,
+      "evidence_f1": 0.0,
+      "failure_diagnosis_accuracy": 0.0,
+      "stale_reuse_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "minimal_evidence_exact_match": 0.0,
+      "evidence_precision": 0.0,
+      "overcitation_rate": 1.0,
+      "counterevidence_recall": 0.0,
+      "answer_state_consistency": 0.0,
+      "scope_authority_accuracy": 1.0,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "answer_key_fact_accuracy": 0.0,
+      "answer_exact_match": 0.0,
+      "stale_memory_reuse_rate": 0.0,
+      "under_update_rate": 0.0,
+      "over_update_rate": 0.0,
+      "conflict_collapse_rate": 0.0,
+      "scope_leakage_rate": 0.0,
+      "policy_violation_rate": 0.0,
+      "wrong_source_attribution_rate": 0.0,
+      "memory_hallucination_rate": 0.0,
+      "unnecessary_memory_write_rate": 0.0,
+      "failure_to_forget_rate": 0.0,
+      "failure_to_release_or_restore_rate": 0.0,
+      "format_failure_rate": 0.0,
+      "stale_anchor_hit_rate": 0.0,
+      "scope_leakage_anchor_hit_rate": 0.0,
+      "policy_violation_anchor_hit_rate": 0.0,
+      "forbidden_fact_hits": 1.0
+    }
+  },
+  {
+    "scenario_id": "rt-hard-000012",
+    "response": {
+      "decision": "use_current_memory",
+      "answer": "CASE-300011 remains on the default schedule rule configuration on stable v1, as no verified release approval has been issued for any update to it in the stable workspace.",
+      "memory_state": {
+        "m-rt-hard-000012-target": "current",
+        "m-rt-hard-000012-condition": "current",
+        "m-rt-hard-000012-distractor": "current"
+      },
+      "evidence_event_ids": [
+        "e-rt-hard-000012-2"
+      ],
+      "failure_diagnosis": "wrong_source_attribution"
+    },
+    "metrics": {
+      "black_box_decision_accuracy": 1.0,
+      "memory_state_accuracy": 0.3333333333333333,
+      "evidence_f1": 1.0,
+      "failure_diagnosis_accuracy": 0.0,
+      "stale_reuse_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "minimal_evidence_exact_match": 1.0,
+      "evidence_precision": 1.0,
+      "overcitation_rate": 0.0,
+      "counterevidence_recall": 0.0,
+      "answer_state_consistency": 0.0,
+      "scope_authority_accuracy": 1.0,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "answer_key_fact_accuracy": 1.0,
+      "answer_exact_match": 0.0,
+      "stale_memory_reuse_rate": 0.0,
+      "under_update_rate": 0.0,
+      "over_update_rate": 0.0,
+      "conflict_collapse_rate": 0.0,
+      "scope_leakage_rate": 0.0,
+      "policy_violation_rate": 0.0,
+      "wrong_source_attribution_rate": 0.0,
+      "memory_hallucination_rate": 0.0,
+      "unnecessary_memory_write_rate": 0.0,
+      "failure_to_forget_rate": 0.0,
+      "failure_to_release_or_restore_rate": 0.0,
+      "format_failure_rate": 0.0,
+      "stale_anchor_hit_rate": 0.0,
+      "scope_leakage_anchor_hit_rate": 0.0,
+      "policy_violation_anchor_hit_rate": 0.0,
+      "forbidden_fact_hits": 0.0
+    }
+  },
+  {
+    "scenario_id": "rt-hard-000013",
+    "response": {
+      "decision": "use_current_memory",
+      "answer": "CASE-300012 remains on the default claim record configuration on stable v1, as the update in workspace-beta does not apply to workspace-stable and the update claim in stable was from an unverified source.",
+      "memory_state": {
+        "m-rt-hard-000013-target": "current",
+        "m-rt-hard-000013-condition": "current",
+        "m-rt-hard-000013-distractor": "current"
+      },
+      "evidence_event_ids": [
+        "e-rt-hard-000013-distractor-auth",
+        "e-rt-hard-000013-distractor-ver"
+      ],
+      "failure_diagnosis": "wrong_source_attribution"
+    },
+    "metrics": {
+      "black_box_decision_accuracy": 1.0,
+      "memory_state_accuracy": 0.6666666666666666,
+      "evidence_f1": 0.0,
+      "failure_diagnosis_accuracy": 0.0,
+      "stale_reuse_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "minimal_evidence_exact_match": 0.0,
+      "evidence_precision": 0.0,
+      "overcitation_rate": 1.0,
+      "counterevidence_recall": 0.0,
+      "answer_state_consistency": 0.0,
+      "scope_authority_accuracy": 1.0,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "answer_key_fact_accuracy": 0.0,
+      "answer_exact_match": 0.0,
+      "stale_memory_reuse_rate": 0.0,
+      "under_update_rate": 0.0,
+      "over_update_rate": 0.0,
+      "conflict_collapse_rate": 0.0,
+      "scope_leakage_rate": 0.0,
+      "policy_violation_rate": 0.0,
+      "wrong_source_attribution_rate": 0.0,
+      "memory_hallucination_rate": 0.0,
+      "unnecessary_memory_write_rate": 0.0,
+      "failure_to_forget_rate": 0.0,
+      "failure_to_release_or_restore_rate": 0.0,
+      "format_failure_rate": 0.0,
+      "stale_anchor_hit_rate": 0.0,
+      "scope_leakage_anchor_hit_rate": 0.0,
+      "policy_violation_anchor_hit_rate": 0.0,
+      "forbidden_fact_hits": 1.0
+    }
+  },
+  {
+    "scenario_id": "rt-hard-000014",
+    "response": {
+      "decision": "use_current_memory",
+      "answer": "According to stable rules, CASE-300013 remains on the default preference rule configuration on stable v1. No verified release approval has been granted for any updates in the stable workspace, meaning the prior state remains active and unchanged.",
+      "memory_state": {
+        "m-rt-hard-000014-target": "current",
+        "m-rt-hard-000014-condition": "current",
+        "m-rt-hard-000014-distractor": "out_of_scope"
+      },
+      "evidence_event_ids": [],
+      "failure_diagnosis": "scope_leakage"
+    },
+    "metrics": {
+      "black_box_decision_accuracy": 1.0,
+      "memory_state_accuracy": 0.3333333333333333,
+      "evidence_f1": 0.0,
+      "failure_diagnosis_accuracy": 0.0,
+      "stale_reuse_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "minimal_evidence_exact_match": 0.0,
+      "evidence_precision": 0.0,
+      "overcitation_rate": 0.0,
+      "counterevidence_recall": 0.0,
+      "answer_state_consistency": 0.0,
+      "scope_authority_accuracy": 1.0,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "answer_key_fact_accuracy": 1.0,
+      "answer_exact_match": 0.0,
+      "stale_memory_reuse_rate": 0.0,
+      "under_update_rate": 0.0,
+      "over_update_rate": 0.0,
+      "conflict_collapse_rate": 0.0,
+      "scope_leakage_rate": 1.0,
+      "policy_violation_rate": 0.0,
+      "wrong_source_attribution_rate": 0.0,
+      "memory_hallucination_rate": 0.0,
+      "unnecessary_memory_write_rate": 0.0,
+      "failure_to_forget_rate": 0.0,
+      "failure_to_release_or_restore_rate": 0.0,
+      "format_failure_rate": 0.0,
+      "stale_anchor_hit_rate": 0.0,
+      "scope_leakage_anchor_hit_rate": 0.0,
+      "policy_violation_anchor_hit_rate": 0.0,
+      "forbidden_fact_hits": 0.0
+    }
+  },
+  {
+    "scenario_id": "rt-hard-000015",
+    "response": {
+      "decision": "use_current_memory",
+      "answer": "CASE-300014 remains on the default shopping rule configuration on stable v1, as no verified release approval has been granted for any updates in workspace-stable.",
+      "memory_state": {
+        "m-rt-hard-000015-target": "current",
+        "m-rt-hard-000015-condition": "current",
+        "m-rt-hard-000015-distractor": "current"
+      },
+      "evidence_event_ids": [
+        "e-rt-hard-000015-distractor-ver",
+        "e-rt-hard-000015-distractor-auth"
+      ],
+      "failure_diagnosis": "wrong_source_attribution"
+    },
+    "metrics": {
+      "black_box_decision_accuracy": 1.0,
+      "memory_state_accuracy": 0.6666666666666666,
+      "evidence_f1": 0.0,
+      "failure_diagnosis_accuracy": 0.0,
+      "stale_reuse_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "minimal_evidence_exact_match": 0.0,
+      "evidence_precision": 0.0,
+      "overcitation_rate": 1.0,
+      "counterevidence_recall": 0.0,
+      "answer_state_consistency": 0.0,
+      "scope_authority_accuracy": 1.0,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "answer_key_fact_accuracy": 1.0,
+      "answer_exact_match": 0.0,
+      "stale_memory_reuse_rate": 0.0,
+      "under_update_rate": 0.0,
+      "over_update_rate": 0.0,
+      "conflict_collapse_rate": 0.0,
+      "scope_leakage_rate": 0.0,
+      "policy_violation_rate": 0.0,
+      "wrong_source_attribution_rate": 0.0,
+      "memory_hallucination_rate": 0.0,
+      "unnecessary_memory_write_rate": 0.0,
+      "failure_to_forget_rate": 0.0,
+      "failure_to_release_or_restore_rate": 0.0,
+      "format_failure_rate": 0.0,
+      "stale_anchor_hit_rate": 0.0,
+      "scope_leakage_anchor_hit_rate": 0.0,
+      "policy_violation_anchor_hit_rate": 0.0,
+      "forbidden_fact_hits": 0.0
+    }
+  },
+  {
+    "scenario_id": "rt-hard-000016",
+    "response": {
+      "decision": "use_current_memory",
+      "answer": "CASE-300015 continues to use the default metric definition configuration on stable v1, as the YAML support update has not been approved in a verified release.",
+      "memory_state": {
+        "m-rt-hard-000016-target": "current",
+        "m-rt-hard-000016-condition": "current",
+        "m-rt-hard-000016-distractor": "current"
+      },
+      "evidence_event_ids": [
+        "e-rt-hard-000016-3"
+      ],
+      "failure_diagnosis": null
+    },
+    "metrics": {
+      "black_box_decision_accuracy": 1.0,
+      "memory_state_accuracy": 0.6666666666666666,
+      "evidence_f1": 0.6666666666666666,
+      "failure_diagnosis_accuracy": 0.0,
+      "stale_reuse_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "minimal_evidence_exact_match": 0.0,
+      "evidence_precision": 1.0,
+      "overcitation_rate": 0.0,
+      "counterevidence_recall": 0.0,
+      "answer_state_consistency": 0.0,
+      "scope_authority_accuracy": 1.0,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "answer_key_fact_accuracy": 1.0,
+      "answer_exact_match": 0.0,
+      "stale_memory_reuse_rate": 0.0,
+      "under_update_rate": 0.0,
+      "over_update_rate": 0.0,
+      "conflict_collapse_rate": 0.0,
+      "scope_leakage_rate": 0.0,
+      "policy_violation_rate": 0.0,
+      "wrong_source_attribution_rate": 0.0,
+      "memory_hallucination_rate": 0.0,
+      "unnecessary_memory_write_rate": 0.0,
+      "failure_to_forget_rate": 0.0,
+      "failure_to_release_or_restore_rate": 0.0,
+      "format_failure_rate": 0.0,
+      "stale_anchor_hit_rate": 0.0,
+      "scope_leakage_anchor_hit_rate": 0.0,
+      "policy_violation_anchor_hit_rate": 0.0,
+      "forbidden_fact_hits": 0.0
+    }
+  }
+]

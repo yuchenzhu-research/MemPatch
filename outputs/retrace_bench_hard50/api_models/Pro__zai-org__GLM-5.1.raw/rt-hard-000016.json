@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000016",
+  "model": "Pro/zai-org/GLM-5.1",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300015 remains on default metric definition configuration on stable v1; the YAML feature is not yet authorized for stable release.\",\n  \"memory_state\": {\n    \"m-rt-hard-000016-target\": \"current\",\n    \"m-rt-hard-000016-condition\": \"current\",\n    \"m-rt-hard-000016-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000016-2\",\n    \"e-rt-hard-000016-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+}

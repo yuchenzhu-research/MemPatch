@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000022",
+  "model": "deepseek-ai/DeepSeek-V4-Pro",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300021 remains on default preference rule configuration on stable v1; no verified release approval has been granted, and the CVE-999 vulnerability is still active per security audit.\",\n  \"memory_state\": {\n    \"m-rt-hard-000022-target\": \"current\",\n    \"m-rt-hard-000022-condition\": \"current\",\n    \"m-rt-hard-000022-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000022-1\",\n    \"e-rt-hard-000022-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
+}

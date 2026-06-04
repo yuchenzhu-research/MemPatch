@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000026",
+  "model": "Pro/zai-org/GLM-5.1",
+  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"The final authorized status for CASE-300025 is that the database connection pool limit is 20, as maintained to prevent server exhaustion, and any update requires verified release approval.\",\n  \"memory_state\": {\n    \"m-rt-hard-000026-target\": \"outdated\",\n    \"m-rt-hard-000026-condition\": \"current\",\n    \"m-rt-hard-000026-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000026-2\"\n  ],\n  \"failure_diagnosis\": \"stale_memory_reuse\"\n}"
+}

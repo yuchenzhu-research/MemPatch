@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000016",
+  "model": "Pro/moonshotai/Kimi-K2.6",
+  "raw_response": "{\"decision\":\"use_current_memory\",\"answer\":\"CASE-300015 remains on default metric definition configuration on stable v1; no YAML support, no authorized update to stable.\",\"memory_state\":{\"m-rt-hard-000016-target\":\"current\",\"m-rt-hard-000016-condition\":\"current\",\"m-rt-hard-000016-distractor\":\"out_of_scope\"},\"evidence_event_ids\":[\"e-rt-hard-000016-1\",\"e-rt-hard-000016-2\",\"e-rt-hard-000016-3\",\"e-rt-hard-000016-distractor-ver\",\"e-rt-hard-000016-distractor-auth\"],\"failure_diagnosis\":\"scope_leakage\"}"
+}

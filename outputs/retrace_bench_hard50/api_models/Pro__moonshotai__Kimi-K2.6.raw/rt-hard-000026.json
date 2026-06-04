@@ -1,0 +1,5 @@
+{
+  "scenario_id": "rt-hard-000026",
+  "model": "Pro/moonshotai/Kimi-K2.6",
+  "raw_response": "{\"decision\":\"use_current_memory\",\"answer\":\"CASE-300025 retains default handoff route configuration on stable v1; no verified update to pool limit or handoff route was authorized. The condition requiring verified release approval was not satisfied by any verified event.\",\"memory_state\":{\"m-rt-hard-000026-target\":\"current\",\"m-rt-hard-000026-condition\":\"current\",\"m-rt-hard-000026-distractor\":\"out_of_scope\"},\"evidence_event_ids\":[\"e-rt-hard-000026-1\",\"e-rt-hard-000026-2\",\"e-rt-hard-000026-distractor-ver\",\"e-rt-hard-000026-distractor-auth\",\"e-rt-hard-000026-distractor-rollback\",\"e-rt-hard-000026-distractor-ci\"],\"failure_diagnosis\":\"stale_memory_reuse\"}"
+}
