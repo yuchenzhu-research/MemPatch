@@ -80,6 +80,22 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default="compact",
         help="Prompt style; compact is the current and default mode",
     )
+    parser.add_argument(
+        "--json-mode",
+        action="store_true",
+        help="Request OpenAI-compatible JSON object mode when supported",
+    )
+    parser.add_argument(
+        "--disable-thinking",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="For OpenAI-compatible reasoning models, request enable_thinking=false (default: true)",
+    )
+    parser.add_argument(
+        "--print-prompt-stats",
+        action="store_true",
+        help="Print first planned prompt character count and exit without API calls",
+    )
     return parser.parse_args(argv)
 
 
@@ -102,6 +118,9 @@ def main(argv: list[str] | None = None) -> int:
             continue_on_error=args.continue_on_error,
             progress_interval=args.progress_interval,
             prompt_mode=args.prompt_mode,
+            json_mode=args.json_mode,
+            disable_thinking=args.disable_thinking,
+            print_prompt_stats=args.print_prompt_stats,
         )
     except Exception as exc:
         print(f"error: {exc}", file=sys.stderr)

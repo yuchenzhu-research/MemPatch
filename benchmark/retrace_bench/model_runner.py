@@ -240,6 +240,8 @@ def call_openai_chat(
     temperature: float = 0.0,
     timeout: float = 120.0,
     max_tokens: int = 1024,
+    json_mode: bool = False,
+    disable_thinking: bool = False,
 ) -> str:
     try:
         from openai import OpenAI
@@ -253,12 +255,17 @@ def call_openai_chat(
     if base_url:
         client_kwargs["base_url"] = base_url
     client = OpenAI(**client_kwargs)
-    result = client.chat.completions.create(
-        model=model,
-        messages=_chat_messages(prompt),
-        temperature=temperature,
-        max_tokens=max_tokens,
-    )
+    request_kwargs: dict[str, Any] = {
+        "model": model,
+        "messages": [{"role": "user", "content": prompt}],
+        "temperature": temperature,
+        "max_tokens": max_tokens,
+    }
+    if json_mode:
+        request_kwargs["response_format"] = {"type": "json_object"}
+    if disable_thinking:
+        request_kwargs["extra_body"] = {"enable_thinking": False}
+    result = client.chat.completions.create(**request_kwargs)
     return result.choices[0].message.content or ""
 
 
@@ -270,6 +277,8 @@ def call_anthropic(
     temperature: float = 0.0,
     timeout: float = 120.0,
     max_tokens: int = 1024,
+    json_mode: bool = False,
+    disable_thinking: bool = False,
 ) -> str:
     try:
         from anthropic import Anthropic
@@ -295,6 +304,8 @@ def call_google(
     api_key_env: str,
     temperature: float = 0.0,
     max_tokens: int = 1024,
+    json_mode: bool = False,
+    disable_thinking: bool = False,
 ) -> str:
     try:
         from google import genai
@@ -325,6 +336,8 @@ def call_model(
     temperature: float = 0.0,
     timeout: float = 120.0,
     max_tokens: int = 1024,
+    json_mode: bool = False,
+    disable_thinking: bool = False,
 ) -> str:
     provider = provider.lower()
     if provider not in PROVIDERS:
@@ -344,6 +357,8 @@ def call_model(
             temperature=temperature,
             timeout=timeout,
             max_tokens=max_tokens,
+            json_mode=json_mode,
+            disable_thinking=False,
         )
     if provider in {"openai_compatible", "siliconflow", "deepseek", "minimax"}:
         resolved_base_url = base_url or DEFAULT_BASE_URLS.get(provider)
@@ -357,6 +372,8 @@ def call_model(
             temperature=temperature,
             timeout=timeout,
             max_tokens=max_tokens,
+            json_mode=json_mode,
+            disable_thinking=disable_thinking,
         )
     if provider in {"google", "gemini"}:
         return call_google(
@@ -365,6 +382,8 @@ def call_model(
             api_key_env=resolved_env,
             temperature=temperature,
             max_tokens=max_tokens,
+            json_mode=json_mode,
+            disable_thinking=disable_thinking,
         )
     if provider == "anthropic":
         return call_anthropic(
@@ -374,6 +393,8 @@ def call_model(
             temperature=temperature,
             timeout=timeout,
             max_tokens=max_tokens,
+            json_mode=json_mode,
+            disable_thinking=disable_thinking,
         )
     raise AssertionError(f"unhandled provider: {provider}")
 
@@ -413,6 +434,9 @@ def run_model_predictions(
     continue_on_error: bool = False,
     progress_interval: int = 1,
     prompt_mode: str = "compact",
+    json_mode: bool = False,
+    disable_thinking: bool = True,
+    print_prompt_stats: bool = False,
 ) -> int:
     """Run a provider over scenarios and write canonical prediction JSONL rows."""
     if prompt_mode != "compact":
@@ -432,6 +456,16 @@ def run_model_predictions(
     ]
     planned_new_cases = min(max_cases, len(remaining)) if max_cases is not None else len(remaining)
     planned = remaining[:planned_new_cases]
+    if print_prompt_stats:
+        if planned:
+            _idx, first = planned[0]
+            prompt = build_prompt(public_scenario_view(first))
+            print(f"prompt_chars={len(prompt)}", flush=True)
+            print(f"scenario_id={first['scenario_id']}", flush=True)
+        else:
+            print("prompt_chars=0", flush=True)
+            print("scenario_id=", flush=True)
+        return 0
     mode = "a" if resume else "w"
     written = 0
     errors = 0
@@ -480,6 +514,8 @@ def run_model_predictions(
                     temperature=temperature,
                     timeout=timeout,
                     max_tokens=max_tokens,
+                    json_mode=json_mode,
+                    disable_thinking=disable_thinking,
                 )
                 response = canonical_response(extract_json_object(text))
                 row = {"scenario_id": scenario_id, "response": response}
