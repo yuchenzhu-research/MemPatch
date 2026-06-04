@@ -182,7 +182,7 @@ def call_openai_chat(
     base_url: str | None = None,
     temperature: float = 0.0,
     timeout: float = 120.0,
-    max_tokens: int = 768,
+    max_tokens: int = 1024,
 ) -> str:
     try:
         from openai import OpenAI
@@ -212,7 +212,7 @@ def call_anthropic(
     api_key_env: str,
     temperature: float = 0.0,
     timeout: float = 120.0,
-    max_tokens: int = 768,
+    max_tokens: int = 1024,
 ) -> str:
     try:
         from anthropic import Anthropic
@@ -237,7 +237,7 @@ def call_google(
     prompt: str,
     api_key_env: str,
     temperature: float = 0.0,
-    max_tokens: int = 768,
+    max_tokens: int = 1024,
 ) -> str:
     try:
         from google import genai
@@ -267,7 +267,7 @@ def call_model(
     base_url: str | None = None,
     temperature: float = 0.0,
     timeout: float = 120.0,
-    max_tokens: int = 768,
+    max_tokens: int = 1024,
 ) -> str:
     provider = provider.lower()
     if provider not in PROVIDERS:
@@ -351,7 +351,7 @@ def run_model_predictions(
     base_url: str | None = None,
     temperature: float = 0.0,
     timeout: float = 120.0,
-    max_tokens: int = 768,
+    max_tokens: int = 1024,
     sleep_seconds: float = 0.0,
     continue_on_error: bool = False,
 ) -> int:

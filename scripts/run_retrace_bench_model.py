@@ -59,7 +59,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--max-tokens",
         type=int,
-        default=768,
+        default=1024,
         help="Maximum completion tokens for provider calls",
     )
     parser.add_argument(
