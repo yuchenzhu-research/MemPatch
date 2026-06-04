@@ -1,0 +1,43 @@
+{
+  "count": 2,
+  "dataset": "data/retrace_bench_hard150/hard_150_en/scenarios.jsonl",
+  "distributions": {
+    "difficulty": {
+      "L3": 1,
+      "L4": 1
+    },
+    "expected_decision": {
+      "mark_unresolved": 1,
+      "use_current_memory": 1
+    },
+    "pattern": {
+      "closed_as_duplicate_not_fixed": 1,
+      "merged_but_unreleased": 1
+    }
+  },
+  "models": {
+    "DeepSeek-V4-Pro": {
+      "answer_state_consistency": 0.0,
+      "black_box_decision_accuracy": 0.5,
+      "counterevidence_recall": 0.5,
+      "decision_macro_f1": 0.3333333333333333,
+      "evidence_f1": 1.0,
+      "evidence_precision": 1.0,
+      "failure_diagnosis_accuracy": 0.0,
+      "format_failure_rate": 0.0,
+      "joint_revision_success": 0.0,
+      "latest_event_shortcut_failure_rate": 0.0,
+      "memory_state_accuracy": 0.8333333333333333,
+      "minimal_evidence_exact_match": 1.0,
+      "non_answer_decision_accuracy": 0.0,
+      "overcitation_rate": 0.0,
+      "stale_reuse_rate": 0.0
+    }
+  },
+  "ranking_by_joint_revision_success": [
+    {
+      "joint_revision_success": 0.0,
+      "model": "DeepSeek-V4-Pro"
+    }
+  ]
+}
