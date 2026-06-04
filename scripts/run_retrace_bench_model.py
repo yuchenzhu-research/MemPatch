@@ -68,6 +68,18 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=0.0,
         help="Optional delay between provider calls",
     )
+    parser.add_argument(
+        "--progress-interval",
+        type=int,
+        default=1,
+        help="Show dynamic arrow progress every N planned cases",
+    )
+    parser.add_argument(
+        "--prompt-mode",
+        choices=("compact",),
+        default="compact",
+        help="Prompt style; compact is the current and default mode",
+    )
     return parser.parse_args(argv)
 
 
@@ -88,6 +100,8 @@ def main(argv: list[str] | None = None) -> int:
             max_tokens=args.max_tokens,
             sleep_seconds=args.sleep_seconds,
             continue_on_error=args.continue_on_error,
+            progress_interval=args.progress_interval,
+            prompt_mode=args.prompt_mode,
         )
     except Exception as exc:
         print(f"error: {exc}", file=sys.stderr)

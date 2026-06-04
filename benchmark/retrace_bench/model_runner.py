@@ -11,6 +11,7 @@ import json
 import os
 import re
 import sys
+import threading
 import time
 from pathlib import Path
 from typing import Any
@@ -107,6 +108,62 @@ def _collect_memory_ids(public_view: dict[str, Any]) -> list[str]:
 
 def _arrow(run_index: int) -> str:
     return "=" * min(max(run_index, 1), BAR_LENGTH) + ">"
+
+
+def _should_show_progress(run_index: int, planned_total: int, progress_interval: int) -> bool:
+    interval = max(progress_interval, 1)
+    return run_index == 1 or run_index == planned_total or run_index % interval == 0
+
+
+def _progress_wait(
+    *,
+    run_index: int,
+    planned_total: int,
+    dataset_index: int,
+    dataset_total: int,
+    done: threading.Event,
+    case_start: float,
+    run_start: float,
+) -> None:
+    pos = 0
+    direction = 1
+    while not done.wait(0.12):
+        cells = ["."] * BAR_LENGTH
+        cells[pos] = "="
+        cells[min(pos + 1, BAR_LENGTH - 1)] = ">"
+        print(
+            f"\r[{''.join(cells)}] {run_index}/{planned_total} "
+            f"dataset={dataset_index}/{dataset_total} "
+            f"case={time.monotonic() - case_start:.1f}s "
+            f"total={format_duration(time.monotonic() - run_start)}",
+            end="",
+            flush=True,
+        )
+        pos += direction
+        if pos >= BAR_LENGTH - 2 or pos <= 0:
+            direction *= -1
+
+
+def _progress_done(
+    *,
+    run_index: int,
+    planned_total: int,
+    dataset_index: int,
+    dataset_total: int,
+    written: int,
+    errors: int,
+    case_seconds: float,
+    total_seconds: float,
+) -> None:
+    filled = int(BAR_LENGTH * run_index / max(planned_total, 1))
+    rest = max(BAR_LENGTH - filled - 1, 0)
+    bar = "=" * filled + ">" + "." * rest
+    print(
+        f"\r[{bar}] {run_index}/{planned_total} dataset={dataset_index}/{dataset_total} "
+        f"written={written} errors={errors} case={case_seconds:.1f}s "
+        f"total={format_duration(total_seconds)}",
+        flush=True,
+    )
 
 
 def build_prompt(public_view: dict[str, Any]) -> str:
@@ -354,8 +411,12 @@ def run_model_predictions(
     max_tokens: int = 1024,
     sleep_seconds: float = 0.0,
     continue_on_error: bool = False,
+    progress_interval: int = 1,
+    prompt_mode: str = "compact",
 ) -> int:
     """Run a provider over scenarios and write canonical prediction JSONL rows."""
+    if prompt_mode != "compact":
+        raise ValueError("Only prompt_mode='compact' is supported.")
     _load_dotenv_if_available()
     scenarios = load_scenarios(data)
     out_path = Path(out_predictions)
@@ -388,11 +449,25 @@ def run_model_predictions(
         for run_index, (dataset_index, scenario) in enumerate(planned, start=1):
             scenario_id = str(scenario["scenario_id"])
             case_start = time.monotonic()
-            print(
-                f"{_arrow(run_index)} {run_index}/{planned_new_cases} "
-                f"case=0.0s total={format_duration(time.monotonic() - start)}",
-                flush=True,
-            )
+            show_progress = _should_show_progress(run_index, planned_new_cases, progress_interval)
+            spinner_done: threading.Event | None = None
+            spinner_thread: threading.Thread | None = None
+            if show_progress:
+                spinner_done = threading.Event()
+                spinner_thread = threading.Thread(
+                    target=_progress_wait,
+                    kwargs={
+                        "run_index": run_index,
+                        "planned_total": planned_new_cases,
+                        "dataset_index": dataset_index,
+                        "dataset_total": dataset_total,
+                        "done": spinner_done,
+                        "case_start": case_start,
+                        "run_start": start,
+                    },
+                    daemon=True,
+                )
+                spinner_thread.start()
             try:
                 view = public_scenario_view(scenario)
                 prompt = build_prompt(view)
@@ -413,27 +488,50 @@ def run_model_predictions(
                 written += 1
                 total_elapsed = time.monotonic() - start
                 case_elapsed = time.monotonic() - case_start
-                print(
-                    f"{_arrow(run_index)} {run_index}/{planned_new_cases} "
-                    f"dataset={dataset_index}/{dataset_total} written={written} errors={errors} "
-                    f"case={case_elapsed:.1f}s total={format_duration(total_elapsed)}",
-                    flush=True,
-                )
+                if show_progress:
+                    if spinner_done is not None:
+                        spinner_done.set()
+                    if spinner_thread is not None:
+                        spinner_thread.join()
+                    spinner_done = None
+                    spinner_thread = None
+                    _progress_done(
+                        run_index=run_index,
+                        planned_total=planned_new_cases,
+                        dataset_index=dataset_index,
+                        dataset_total=dataset_total,
+                        written=written,
+                        errors=errors,
+                        case_seconds=case_elapsed,
+                        total_seconds=total_elapsed,
+                    )
                 if sleep_seconds > 0:
                     time.sleep(sleep_seconds)
             except Exception as exc:
                 errors += 1
                 total_elapsed = time.monotonic() - start
                 case_elapsed = time.monotonic() - case_start
-                print(
-                    f"{_arrow(run_index)} {run_index}/{planned_new_cases} "
-                    f"dataset={dataset_index}/{dataset_total} error case={case_elapsed:.1f}s "
-                    f"total={format_duration(total_elapsed)} {exc}",
-                    file=sys.stderr,
-                    flush=True,
-                )
+                if show_progress:
+                    if spinner_done is not None:
+                        spinner_done.set()
+                    if spinner_thread is not None:
+                        spinner_thread.join()
+                    spinner_done = None
+                    spinner_thread = None
+                    print(
+                        f"\r{_arrow(run_index)} {run_index}/{planned_new_cases} "
+                        f"dataset={dataset_index}/{dataset_total} error case={case_elapsed:.1f}s "
+                        f"total={format_duration(total_elapsed)} {exc}",
+                        file=sys.stderr,
+                        flush=True,
+                    )
                 if not continue_on_error:
                     raise
+            finally:
+                if spinner_done is not None:
+                    spinner_done.set()
+                if spinner_thread is not None:
+                    spinner_thread.join()
 
     print(
         f"finished | planned={planned_new_cases} | written={written} | errors={errors} | "
