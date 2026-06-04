@@ -12,16 +12,15 @@ Read only these active authority documents before method work:
 
 1. `AGENTS.md`
 2. `README.md`
-3. `docs/project_governance.md` (canonical two-track project structure)
 
-Legacy planning documents and old raw source-material files are no longer active authority. Git history preserves them.
+Legacy planning documents, docs directories, paper drafts, generated reports, and old raw source-material files are no longer active authority. Git history preserves them.
 
 ## Active Research Tracks
 
-ReTrace is an umbrella project governed as **two active research tracks** (see `docs/project_governance.md`):
+ReTrace is an umbrella project governed as **two active research tracks**:
 
-1. **ReTrace-Bench** — benchmark track. Evaluation-only; owns benchmark data, schema, scoring, baselines, the four v1.0 evaluation splits (`main`/`hard`/`realistic`/`calibration`), and leakage checks. Locations: `benchmark/retrace_bench/`, `data/retrace_bench/`, `docs/retrace_bench/`, benchmark scripts/tests. The benchmark track stays method-neutral as an evaluation artifact.
-2. **ReTrace-Learn** — method track. ReTrace-Learn v1 has three paper-facing stages: **Graph Builder** -> **Proposal Policy** -> **DPA-guided RSFT/DPO** (only the first two are learned; stage 3 is a training protocol). Locations: `src/retrace_learn/`, `src/retracemem/`, method scripts/docs. ReTrace-Learn uses ReTrace-Bench-derived scenario data with declared split roles (`data/retrace_learn/`); split roles must be explicit, and leakage-free held-out evaluation is not claimed where the same gold labels are used for training.
+1. **ReTrace-Bench** — benchmark track. Evaluation-only; owns benchmark schema, scoring, evaluator API, release packaging, and leakage checks. Locations: `benchmark/retrace_bench/`, `hf_release/retrace_bench_v1_1/`, benchmark scripts/tests. The benchmark track stays method-neutral as an evaluation artifact. Public data lives on Hugging Face, not as a full local GitHub data copy.
+2. **ReTrace-Learn** — method track. ReTrace-Learn v1 has three paper-facing stages: **Graph Builder** -> **Proposal Policy** -> **DPA-guided RSFT/DPO** (only the first two are learned; stage 3 is a training protocol). Locations: `src/retrace_learn/`, `src/retracemem/`, method scripts/tests. ReTrace-Learn uses selected ReTrace-Bench-derived scenario data with declared split roles (`data/retrace_learn/`); split roles must be explicit, and leakage-free held-out evaluation is not claimed where the same gold labels are used for training.
 
 **ReTrace-Engine** (Parser + RevisionGate + DPA + Audit Trace, reached via `authorize(...)`) is the implementation name for the deterministic commit path **inside ReTrace-Learn** — it is an implementation detail of stages 2–3, not a standalone paper, a standalone top-level track, or a third paper-level module. DPA is a deterministic verifier and does not learn.
 
@@ -166,10 +165,8 @@ To ensure absolute clean methodology and avoid test-set leakage:
 - Do not commit external clones, `artifacts/`, `analysis/`, caches,
   local environments, generated artifacts, benchmark downloads, model
   checkpoints/weights, or API keys.
-- `outputs/` IS tracked: benchmark prediction dumps and `.metrics.json` under
-  `outputs/retrace_bench/` are committed so pilot/baseline results are
-  reproducible and shareable on GitHub. Still never commit API keys, caches, or
-  `.DS_Store` inside it.
+- `outputs/` is ignored and must not be committed. Benchmark prediction dumps,
+  generated reports, run logs, and diagnostics are local/generated artifacts.
 - After running scripts, tests, builds, or imports, proactively look for and
   remove local cache/generated directories before committing. At minimum check
   for `.pycache_compile/`, `.pytest_cache/`, `__pycache__/`, `*.pyc`,

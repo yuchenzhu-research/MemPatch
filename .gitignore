@@ -50,8 +50,6 @@ runs/
 # that directory is also used for local generated diagnostics/blueprints.
 *.jsonl
 !tests/**/*.jsonl
-!data/fixtures/**/*.jsonl
-!examples/**/*.jsonl
 !data/retrace_learn/v1/boundary_audit/**
 # Canonical ReTrace-Bench (internal "v1.1") public paper-facing splits.
 # main/hard/realistic/calibration are committed; private_hidden is NOT (private
@@ -71,9 +69,6 @@ data/retrace_bench_v1_1/private_hidden_200_en/
 !release/huggingface/ReTrace-Bench/**
 !hf_release/retrace_bench_v1_1/**/manifest.json
 !hf_release/retrace_bench_v1_1/**/checksums.json
-# Annotation packets (public, gold-free demo packets only — see below).
-!annotation_packets/retrace_bench_v1_1/**
-
 outputs/
 
 # Secrets / credentials / tokens — never commit any of these.
