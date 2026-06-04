@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000128",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300127 remains on default metric definition configuration on stable v1; no verified release approval has been granted, and no authoritative update has been applied in workspace-stable.\",\n  \"memory_state\": {\n    \"m-rt-hard-000128-target\": \"current\",\n    \"m-rt-hard-000128-condition\": \"current\",\n    \"m-rt-hard-000128-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000128-1\",\n    \"e-rt-hard-000128-2\",\n    \"e-rt-hard-000128-distractor-auth\",\n    \"e-rt-hard-000128-distractor-rollback\",\n    \"e-rt-hard-000128-distractor-ci\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

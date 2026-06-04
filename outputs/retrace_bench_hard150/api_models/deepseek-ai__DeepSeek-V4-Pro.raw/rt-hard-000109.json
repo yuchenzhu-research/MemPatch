@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000109",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300108 remains on its prior default claim record configuration from stable v1. The strict validation introduced in v2.0.0 was reverted in v2.0.1, returning the default config to opt-in, so no authorized update has been applied to CASE-300108.\",\n  \"memory_state\": {\n    \"m-rt-hard-000109-target\": \"current\",\n    \"m-rt-hard-000109-condition\": \"current\",\n    \"m-rt-hard-000109-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000109-1\",\n    \"e-rt-hard-000109-2\",\n    \"e-rt-hard-000109-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

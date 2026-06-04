@@ -1,11 +1,20 @@
 # ReTrace-Bench — Human Validation Status
 
-**Current status: `protocol prepared; human annotation pending`**
+**Current status: `automatic validation complete; human annotation pending`**
+
+Validation levels (see `human_validation_protocol.md`):
+- **Level 1 — Automatic validation:** **COMPLETE** on the full benchmark (schema,
+  leakage, ID grounding, cross-split disjointness, gold-oracle replay = 1.0).
+- **Level 2 — Author / expert audit:** **PENDING** (no audit recorded).
+- **Level 3 — Independent human validation:** **PENDING** (no real human
+  annotators have completed the 200-packet).
+- **Level 4 — Human upper bound:** **PENDING** (optional).
 
 No real human annotations have been collected in this cleanup pass. The full
 validation package (protocol, codebook, plan, packets, export + scoring scripts)
-is prepared and tested, but **no human has annotated the data yet**, so no human
-validation results may be cited.
+is prepared and tested, but **no human has annotated the data yet**, so **no
+human validation results, IAA, or human upper bound may be cited**. AI/LLM
+outputs have not been and must not be used as a substitute for human annotation.
 
 ## What exists now
 - Protocol: `human_validation_protocol.md`

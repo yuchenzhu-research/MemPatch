@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000037",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300036 remains on default claim record configuration on stable v1. No verified release approval has been provided, and the security auditor confirms CVE-999 is still active and unpatched.\",\n  \"memory_state\": {\n    \"m-rt-hard-000037-target\": \"current\",\n    \"m-rt-hard-000037-condition\": \"current\",\n    \"m-rt-hard-000037-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000037-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

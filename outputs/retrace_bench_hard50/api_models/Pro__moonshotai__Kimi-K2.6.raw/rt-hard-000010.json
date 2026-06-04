@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000010",
-  "model": "Pro/moonshotai/Kimi-K2.6",
-  "raw_response": "{\"decision\":\"use_current_memory\",\"answer\":\"CASE-300009 remains on default handoff route configuration on stable v1.2; no authorized update to CASE-300009 has occurred in workspace-stable. The security patch was backported only to legacy branch v1.2 (not changing handoff routes), and production branch v2.0 was explicitly excluded. No verified release approval event for CASE-300009 handoff route changes exists in workspace-stable.\",\"memory_state\":{\"m-rt-hard-000010-target\":\"current\",\"m-rt-hard-000010-condition\":\"current\",\"m-rt-hard-000010-distractor\":\"out_of_scope\"},\"evidence_event_ids\":[\"e-rt-hard-000010-1\",\"e-rt-hard-000010-2\"],\"failure_diagnosis\":\"scope_leakage\"}"
-}

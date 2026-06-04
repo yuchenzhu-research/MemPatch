@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000060",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300059 remains on default schedule rule configuration on stable v1. No verified release approval has been granted, and the PR is on hold.\",\n  \"memory_state\": {\n    \"m-rt-hard-000060-target\": \"current\",\n    \"m-rt-hard-000060-condition\": \"current\",\n    \"m-rt-hard-000060-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000060-1\",\n    \"e-rt-hard-000060-2\",\n    \"e-rt-hard-000060-3\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

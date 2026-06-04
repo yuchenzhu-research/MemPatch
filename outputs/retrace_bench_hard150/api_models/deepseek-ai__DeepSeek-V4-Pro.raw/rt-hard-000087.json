@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000087",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300086 uses default shopping rule configuration on stable v1. The release note (e-rt-hard-000087-2) updates the default retry limit to 5 but does not change the shopping rule configuration for CASE-300086. The distractor events are out of scope (workspace-beta) or untrusted.\",\n  \"memory_state\": {\n    \"m-rt-hard-000087-target\": \"current\",\n    \"m-rt-hard-000087-condition\": \"current\",\n    \"m-rt-hard-000087-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000087-1\",\n    \"e-rt-hard-000087-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

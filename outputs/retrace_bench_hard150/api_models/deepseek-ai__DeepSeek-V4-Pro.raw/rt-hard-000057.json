@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000057",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300056 retry limit is updated to 5 per Release v3.0, pending verified release approval per condition rule.\",\n  \"memory_state\": {\n    \"m-rt-hard-000057-target\": \"outdated\",\n    \"m-rt-hard-000057-condition\": \"current\",\n    \"m-rt-hard-000057-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000057-1\",\n    \"e-rt-hard-000057-2\"\n  ],\n  \"failure_diagnosis\": \"stale_memory_reuse\"\n}"
-}

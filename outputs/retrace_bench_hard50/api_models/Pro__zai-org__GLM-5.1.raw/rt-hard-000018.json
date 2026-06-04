@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000018",
-  "model": "Pro/zai-org/GLM-5.1",
-  "raw_response": "{\n  \"decision\": \"mark_unresolved\",\n  \"answer\": \"CASE-300017 remains on default handoff route configuration on stable v1; the batch delete update is unmerged and unauthorized for stable.\",\n  \"memory_state\": {\n    \"m-rt-hard-000018-target\": \"outdated\",\n    \"m-rt-hard-000018-condition\": \"current\",\n    \"m-rt-hard-000018-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000018-1\",\n    \"e-rt-hard-000018-2\",\n    \"e-rt-hard-000018-3\"\n  ],\n  \"failure_diagnosis\": \"stale_memory_reuse\"\n}"
-}

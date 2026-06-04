@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000013",
-  "model": "Pro/zai-org/GLM-5.1",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300012 remains using the default claim record configuration on stable v1, as no verified release approval was provided to authorize an update.\",\n  \"memory_state\": {\n    \"m-rt-hard-000013-target\": \"current\",\n    \"m-rt-hard-000013-condition\": \"current\",\n    \"m-rt-hard-000013-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000013-1\",\n    \"e-rt-hard-000013-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

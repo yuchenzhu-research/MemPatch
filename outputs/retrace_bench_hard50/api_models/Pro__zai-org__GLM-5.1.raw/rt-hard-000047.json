@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000047",
-  "model": "Pro/zai-org/GLM-5.1",
-  "raw_response": "{\n  \"black_box_task\": {\n    \"decision\": \"mark_unresolved\",\n    \"answer\": \"CASE-300046 remains on default shopping rule configuration (stable v1); the SSO timeout issue is tracked under open master Issue #98 (needs-investigation, priority-high), and no verified release approval has been issued to update the status.\"\n  },\n  \"memory_state_task\": {\n    \"m-rt-hard-000047-target\": \"unresolved\",\n    \"m-rt-hard-000047-condition\": \"current\",\n    \"m-rt-hard-000047-distractor\": \"out_of_scope\"\n  },\n  \"evidence_retrieval_task\": [\n    \"e-rt-hard-000047-1\",\n    \"e-rt-hard-000047-2\",\n    \"e-rt-hard-000047-3\"\n  ],\n  \"diagnostic_task\": {\n    \"failure_diagnosis\": \"scope_leakage\"\n  }\n}"
-}

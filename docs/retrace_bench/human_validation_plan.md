@@ -26,15 +26,20 @@ LLMs may assist with tooling only, never as an annotator.
    python scripts/export_human_annotation_packet.py
    ```
    Record the packet manifest hash; do not regenerate mid-study.
-2. **Pilot (Level 1).** One author annotates `quick_audit_50`; sanity-check the
-   sheet/codebook and fix any unclear items. This is an internal audit, not a
-   paper claim.
-3. **Independent annotation (Level 2).** Annotator A and Annotator B each fill
-   their own copy of `paper_validation_200_sheet.csv` from the public packet.
-4. **Scoring.** Lead runs `scripts/score_human_annotations.py` over both files.
-5. **Adjudication.** Disagreements (different decision/diagnosis, or low evidence
+2. **Author / expert audit (Level 2).** One author (and/or advisor) annotates
+   `quick_audit_50`; sanity-check the sheet/codebook and fix any unclear items.
+   This is an internal author/expert audit, **not** independent validation and
+   **not** a paper-grade human-validation claim. (Level 1, automatic validation,
+   is already complete — see `human_validation_protocol.md`.)
+3. **Independent human validation (Level 3).** Annotator A and Annotator B —
+   **at least two real humans, preferably non-authors** — each fill their own
+   copy of `paper_validation_200_sheet.csv` from the gold-free public packet.
+4. **Human upper bound (Level 4, optional).** Optionally, on a smaller subset,
+   humans solve the full task end-to-end to establish a human reference ceiling.
+5. **Scoring.** Lead runs `scripts/score_human_annotations.py` over both files.
+6. **Adjudication.** Disagreements (different decision/diagnosis, or low evidence
    F1) are reviewed; the adjudicator records resolved labels in a third file.
-6. **Reporting.** Re-run scoring including the adjudicated file; copy the results
+7. **Reporting.** Re-run scoring including the adjudicated file; copy the results
    into the paper and update `human_validation_status.md`.
 
 ## Acceptance targets (guidance, not gold-matching mandates)

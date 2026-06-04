@@ -94,3 +94,42 @@ outputs/**/.DS_Store
 # deterministically regenerable via scripts/run_retrace_bench_baseline.py. Keep
 # the small *.metrics.json results committed, but not the bulky prediction JSONL.
 outputs/retrace_bench_v1_1/baselines/*.jsonl
+
+# Secrets / credentials / tokens — never commit any of these.
+.env.*
+*.env
+.envrc
+secrets.*
+*.pem
+*_token
+*_token.txt
+*.token
+hf_token*
+.hf_token
+*_api_key*
+*.apikey
+
+# Local Hugging Face / model-hub caches.
+.huggingface/
+.cache/huggingface/
+huggingface/
+hf_home/
+
+# Raw API response dumps are raw logs, not release artifacts. They remain in git
+# history + locally, but are not tracked going forward. See
+# docs/retrace_bench/repository_simplification_report.md.
+outputs/**/*.raw/
+
+# Superseded dev/smoke/API output trees (pre-v1.1 hard50/hard150/Gemini partial/
+# SiliconFlow runs, candidate runs, temporary smoke). Untracked + ignored; kept
+# in history and on disk. Canonical outputs live under outputs/retrace_bench/
+# (v1.0 suite) and outputs/retrace_bench_v1_1/ (v1.1 metrics).
+outputs/retrace_bench_hard50/
+outputs/retrace_bench_hard150/
+outputs/retrace_bench_gemini_hard150/
+outputs/retrace_bench_siliconflow_hard150/
+outputs/retrace_bench_siliconflow_hard150_balanced/
+outputs/retrace_bench_siliconflow_hard150_smoke/
+outputs/retrace_bench_siliconflow_hard500_candidate/
+outputs/retrace_bench_hard500_candidate/
+outputs/retrace_bench_smoke/

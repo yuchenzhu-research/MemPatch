@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000130",
-  "model": "deepseek-ai/DeepSeek-V4-Pro",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300129 remains on default handoff route configuration on stable v1. The security patch was backported only to legacy branch v1.2, and production branch v2.0 does not need or receive it. No verified release approval has updated the CASE-300129 configuration in workspace-stable.\",\n  \"memory_state\": {\n    \"m-rt-hard-000130-target\": \"current\",\n    \"m-rt-hard-000130-condition\": \"current\",\n    \"m-rt-hard-000130-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000130-1\",\n    \"e-rt-hard-000130-2\"\n  ],\n  \"failure_diagnosis\": \"scope_leakage\"\n}"
-}

@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000042",
-  "model": "Pro/moonshotai/Kimi-K2.6",
-  "raw_response": "{\"decision\":\"use_current_memory\",\"answer\":\"CASE-300041 remains on stable v1 with default handoff route configuration; retry limit is 5 per v3.0 release. No verified release approval has been applied to update the handoff route.\",\"memory_state\":{\"m-rt-hard-000042-target\":\"current\",\"m-rt-hard-000042-condition\":\"current\",\"m-rt-hard-000042-distractor\":\"out_of_scope\"},\"evidence_event_ids\":[\"e-rt-hard-000042-1\",\"e-rt-hard-000042-2\",\"e-rt-hard-000042-distractor-ver\",\"e-rt-hard-000042-distractor-auth\",\"e-rt-hard-000042-distractor-rollback\"],\"failure_diagnosis\":\"scope_leakage\"}"
-}

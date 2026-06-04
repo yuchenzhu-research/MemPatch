@@ -1,5 +1,0 @@
-{
-  "scenario_id": "rt-hard-000045",
-  "model": "Pro/zai-org/GLM-5.1",
-  "raw_response": "{\n  \"decision\": \"use_current_memory\",\n  \"answer\": \"CASE-300044 remains on default claim record configuration on stable v1, as the update is on hold pending verified release approval.\",\n  \"memory_state\": {\n    \"m-rt-hard-000045-target\": \"blocked\",\n    \"m-rt-hard-000045-condition\": \"current\",\n    \"m-rt-hard-000045-distractor\": \"out_of_scope\"\n  },\n  \"evidence_event_ids\": [\n    \"e-rt-hard-000045-1\",\n    \"e-rt-hard-000045-2\",\n    \"e-rt-hard-000045-3\"\n  ],\n  \"failure_diagnosis\": \"under_update\"\n}"
-}
