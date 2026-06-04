@@ -109,7 +109,12 @@ def main(argv: list[str] | None = None) -> int:
     predictions = load_predictions(args.predictions)
 
     try:
-        result = evaluate_predictions(scenarios, predictions, strict=strict)
+        result = evaluate_predictions(
+            scenarios,
+            predictions,
+            strict=strict,
+            allow_missing=args.allow_missing,
+        )
     except ValueError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 1
@@ -130,6 +135,7 @@ def main(argv: list[str] | None = None) -> int:
             "all_metrics": result["all_metrics"],
             "warnings": result["warnings"],
             "errors": result["errors"],
+            "missing_prediction_count": result["missing_prediction_count"],
         }
         out_metrics.write_text(
             json.dumps(metrics_payload, indent=2, sort_keys=True), encoding="utf-8"

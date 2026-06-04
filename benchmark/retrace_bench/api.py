@@ -63,6 +63,18 @@ RESPONSE_FIELDS = (
 )
 
 
+def _normalize_response_object(response: dict[str, Any]) -> dict[str, Any]:
+    normalized = dict(response)
+    for key in ("decision", "failure_diagnosis"):
+        value = normalized.get(key)
+        if isinstance(value, (list, tuple)):
+            normalized[key] = value[0] if value else None
+    evidence = normalized.get("evidence_event_ids")
+    if isinstance(evidence, str):
+        normalized["evidence_event_ids"] = [evidence]
+    return normalized
+
+
 def _read_jsonl(path: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
     with path.open("r", encoding="utf-8") as f:
@@ -107,9 +119,11 @@ def normalize_prediction(row: dict[str, Any]) -> dict[str, Any]:
     scenario_id = row.get("scenario_id")
     raw_response = row.get("response")
     if isinstance(raw_response, dict):
-        response = dict(raw_response)
+        response = _normalize_response_object(raw_response)
     else:
-        response = {key: row[key] for key in RESPONSE_FIELDS if key in row}
+        response = _normalize_response_object(
+            {key: row[key] for key in RESPONSE_FIELDS if key in row}
+        )
     return {"scenario_id": scenario_id, "response": response}
 
 
@@ -208,6 +222,7 @@ def evaluate_predictions(
     predictions: list[dict[str, Any]],
     *,
     strict: bool = True,
+    allow_missing: bool = False,
 ) -> dict[str, Any]:
     """Score predictions against scenarios, matching by ``scenario_id``.
 
@@ -215,12 +230,15 @@ def evaluate_predictions(
     decision labels, memory-state labels, and evidence IDs. In ``strict`` mode a
     :class:`ValueError` is raised if any errors are found; otherwise problems are
     returned as ``warnings``/``errors`` and everything scorable is still scored.
+    Set ``allow_missing=True`` for partial local runs; missing predictions are
+    summarized instead of reported as per-scenario errors.
 
     Returns a dict with ``count``, ``headline_metrics``, ``auxiliary_metrics``,
     ``all_metrics``, ``warnings``, ``errors``, and ``scored_predictions``.
     """
     errors: list[str] = []
     warnings: list[str] = []
+    missing_predictions: list[Any] = []
 
     scenario_by_id: dict[Any, dict[str, Any]] = {}
     for scenario in scenarios:
@@ -249,7 +267,14 @@ def evaluate_predictions(
     # Missing predictions.
     for sid in scenario_by_id:
         if sid not in normalized_by_id:
-            errors.append(f"{sid}: missing prediction")
+            missing_predictions.append(sid)
+    if missing_predictions:
+        if allow_missing:
+            warnings.append(
+                f"{len(missing_predictions)} missing prediction(s) ignored because allow_missing=True"
+            )
+        else:
+            errors.extend(f"{sid}: missing prediction" for sid in missing_predictions)
 
     # Validate + build scorable rows.
     scored_rows: list[dict[str, Any]] = []
@@ -299,5 +324,6 @@ def evaluate_predictions(
         "all_metrics": aggregate["all_metrics"],
         "warnings": warnings,
         "errors": errors,
+        "missing_prediction_count": len(missing_predictions),
         "scored_predictions": scored_rows,
     }
