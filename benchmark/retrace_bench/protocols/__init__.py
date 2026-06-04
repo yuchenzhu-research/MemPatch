@@ -1,3 +1,0 @@
-from benchmark.retrace_bench.protocols.raw_protocol import RawProtocolInput, RawProtocolOutput
-from benchmark.retrace_bench.protocols.structured_protocol import StructuredProtocolInput, StructuredProtocolOutput
-from benchmark.retrace_bench.protocols.oracle_protocol import OracleProtocolInput, OracleProtocolOutput
