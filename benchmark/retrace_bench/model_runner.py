@@ -8,6 +8,7 @@ scorer in :mod:`benchmark.retrace_bench.api` can evaluate those files.
 from __future__ import annotations
 
 import json
+import importlib
 import os
 import re
 import sys
@@ -244,13 +245,14 @@ def call_openai_chat(
     disable_thinking: bool = False,
 ) -> str:
     try:
-        from openai import OpenAI
+        openai_module: Any = importlib.import_module("openai")
     except ImportError as exc:
         raise RuntimeError(
             "Missing dependency for OpenAI-compatible providers. "
             'Install with: pip install -e ".[llm]"'
         ) from exc
 
+    OpenAI = openai_module.OpenAI
     client_kwargs: dict[str, Any] = {"api_key": _api_key(api_key_env), "timeout": timeout}
     if base_url:
         client_kwargs["base_url"] = base_url
@@ -281,10 +283,11 @@ def call_anthropic(
     disable_thinking: bool = False,
 ) -> str:
     try:
-        from anthropic import Anthropic
+        anthropic_module: Any = importlib.import_module("anthropic")
     except ImportError as exc:
         raise RuntimeError('Missing dependency for Anthropic. Install with: pip install -e ".[llm]"') from exc
 
+    Anthropic = anthropic_module.Anthropic
     client = Anthropic(api_key=_api_key(api_key_env), timeout=timeout)
     result = client.messages.create(
         model=model,
@@ -314,8 +317,8 @@ def call_google(
     disable_thinking: bool = False,
 ) -> str:
     try:
-        from google import genai
-        from google.genai import types
+        genai: Any = importlib.import_module("google.genai")
+        genai_types: Any = importlib.import_module("google.genai.types")
     except ImportError as exc:
         raise RuntimeError('Missing dependency for Gemini. Install with: pip install -e ".[llm]"') from exc
 
@@ -323,7 +326,7 @@ def call_google(
     result = client.models.generate_content(
         model=model,
         contents=prompt,
-        config=types.GenerateContentConfig(
+        config=genai_types.GenerateContentConfig(
             temperature=temperature,
             max_output_tokens=max_tokens,
             response_mime_type="application/json",

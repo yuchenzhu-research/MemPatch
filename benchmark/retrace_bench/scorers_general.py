@@ -492,7 +492,14 @@ def aggregate_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
     metrics_dict["per_decision_counts"] = per_decision_counts
     metrics_dict["per_decision_accuracy"] = per_decision_accuracy
 
-    observed_modes = sorted(list(set(r.get("primary_failure_mode") for r in rows if r.get("primary_failure_mode") is not None)))
+    observed_modes = sorted(
+        {
+            mode
+            for r in rows
+            for mode in (r.get("primary_failure_mode"),)
+            if isinstance(mode, str)
+        }
+    )
     per_failure_mode: dict[str, dict[str, Any]] = {}
     for mode in observed_modes:
         mode_rows = [r for r in rows if r.get("primary_failure_mode") == mode]
@@ -505,7 +512,14 @@ def aggregate_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
             "stale_reuse_rate": sum(r.get("metrics", {}).get("stale_reuse_rate", 0.0) for r in mode_rows) / len(mode_rows),
         }
 
-    observed_domains = sorted(list(set(r.get("domain") for r in rows if r.get("domain") is not None)))
+    observed_domains = sorted(
+        {
+            domain
+            for r in rows
+            for domain in (r.get("domain"),)
+            if isinstance(domain, str)
+        }
+    )
     per_domain: dict[str, dict[str, Any]] = {}
     for domain in observed_domains:
         domain_rows = [r for r in rows if r.get("domain") == domain]

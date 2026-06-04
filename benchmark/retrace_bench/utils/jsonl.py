@@ -1,7 +1,7 @@
 import json
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
-from typing import Any, List, Union
+from typing import Any, List, Union, cast
 
 
 def read_jsonl(path: Union[str, Path]) -> List[dict]:
@@ -18,8 +18,8 @@ def write_jsonl(path: Union[str, Path], records: List[Any]) -> None:
     Path(path).parent.mkdir(parents=True, exist_ok=True)
     with Path(path).open("w", encoding="utf-8") as f:
         for r in records:
-            if is_dataclass(r):
-                data = asdict(r)
+            if is_dataclass(r) and not isinstance(r, type):
+                data = asdict(cast(Any, r))
             elif isinstance(r, dict):
                 data = r
             else:
