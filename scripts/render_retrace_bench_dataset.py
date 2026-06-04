@@ -76,7 +76,7 @@ def render_one(bp: dict, rng: random.Random) -> dict:
     elif bp["primary_failure_mode"] == "scope_leakage":
         current_text = f"Keep {bp['case_id']} limited to {bp['scope']}; the similar instruction in {bp['other_scope']} must not be used here."
     elif bp["primary_failure_mode"] == "conflict_collapse":
-        current_text = f"Treat {bp['case_id']} as unresolved until {owner} reconciles two verified but incompatible updates."
+        current_text = f"Treat {bp['case_id']} as unresolved pending {owner} reconciliation."
 
     initial_memory = [
         {
@@ -189,6 +189,7 @@ def render_one(bp: dict, rng: random.Random) -> dict:
         "metadata": {
             "schema_version": "retrace_bench_general_1",
             "renderer": "template",
+            "pattern": bp.get("pattern"),
             "blueprint_seed_marker": bp["seed_marker"],
             "has_distractor": bp["include_distractor"],
             "has_cross_scope_trap": bp["include_cross_scope_trap"],

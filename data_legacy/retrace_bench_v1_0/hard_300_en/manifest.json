@@ -1,0 +1,80 @@
+{
+  "annotation_status": "synthetic_gold",
+  "avg_event_count": 52.157,
+  "avg_memory_count": 6.0,
+  "avg_required_evidence_count": 2.453,
+  "difficulty": {
+    "L1_single_hop_update": 75,
+    "L2_multi_hop_with_distractor": 75,
+    "L3_conditional_validity": 75,
+    "L4_cross_scope_adversarial_audit": 75
+  },
+  "domains": {
+    "calendar_task_workflow": 38,
+    "customer_support_crm": 38,
+    "data_analysis_bi": 37,
+    "ecommerce_recommendation": 37,
+    "enterprise_multi_tool_workflow": 38,
+    "personal_assistant_preference": 37,
+    "research_knowledge_work": 37,
+    "software_engineering_agent": 38
+  },
+  "expected_decisions": {
+    "ask_clarification": 70,
+    "escalate": 51,
+    "mark_unresolved": 59,
+    "refuse_due_to_policy": 30,
+    "use_current_memory": 90
+  },
+  "failure_modes": {
+    "conflict_collapse": 27,
+    "failure_to_forget": 27,
+    "failure_to_release_or_restore": 27,
+    "memory_hallucination": 27,
+    "over_update": 28,
+    "policy_violation": 27,
+    "scope_leakage": 27,
+    "stale_memory_reuse": 28,
+    "under_update": 28,
+    "unnecessary_memory_write": 27,
+    "wrong_source_attribution": 27
+  },
+  "leakage_audit_summary": {
+    "clean": true,
+    "decision_word_phrases_checked": [
+      "ask for clarification",
+      "ask the requester to confirm",
+      "ask the requester to clarify",
+      "please confirm",
+      "mark unresolved",
+      "mark it unresolved",
+      "mark as unresolved",
+      "escalate",
+      "refuse",
+      "do not store",
+      "use current memory",
+      "use the current memory"
+    ],
+    "leak_phrase_counts": {},
+    "method": "exact decision-action phrase match over verified/trusted records",
+    "scanned_records": "authoritative (verified+trusted) event text only",
+    "scenarios_with_decision_word_leak": 0
+  },
+  "length_mix": {
+    "20_35": 100,
+    "40_60": 120,
+    "70_100": 80
+  },
+  "max_event_count": 100,
+  "max_memory_count": 6,
+  "min_event_count": 20,
+  "min_memory_count": 6,
+  "min_required_evidence_count": 2,
+  "role": "Rule-defined long-context / multi-evidence / multi-memory stress split.",
+  "scenario_count": 300,
+  "schema_version": "retrace_bench_general_1",
+  "source_type": "controlled_synthetic",
+  "split": "hard",
+  "training_targets": false,
+  "version": "1.0.0"
+}

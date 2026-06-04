@@ -13,13 +13,14 @@ import scripts.run_retrace_bench_ablation as ablation
 import scripts.run_retrace_bench_baseline as runner
 
 REPO = Path(__file__).resolve().parents[2]
-# Smoke/quickstart split is the cheapest valid v1.0 split to drive baseline tests.
-DATA = REPO / "data" / "retrace_bench" / "calibration_80_en" / "scenarios.jsonl"
+# Smoke/quickstart split is the cheapest valid canonical split to drive baseline tests.
+BENCH = REPO / "data" / "retrace_bench_v1_1"
+DATA = BENCH / "calibration_80_en" / "scenarios.jsonl"
 GENERAL_SPLITS = (
-    REPO / "data" / "retrace_bench" / "main_3000_en" / "scenarios.jsonl",
-    REPO / "data" / "retrace_bench" / "hard_300_en" / "scenarios.jsonl",
-    REPO / "data" / "retrace_bench" / "realistic_100_en" / "scenarios.jsonl",
-    REPO / "data" / "retrace_bench" / "calibration_80_en" / "scenarios.jsonl",
+    BENCH / "main_3000_en" / "scenarios.jsonl",
+    BENCH / "hard_500_en" / "scenarios.jsonl",
+    BENCH / "realistic_200_en" / "scenarios.jsonl",
+    BENCH / "calibration_80_en" / "scenarios.jsonl",
 )
 
 # Hidden-gold fields a deployable baseline must never read as a prediction.

@@ -53,15 +53,26 @@ runs/
 !data/fixtures/**/*.jsonl
 !examples/**/*.jsonl
 !data/retrace_learn/v1/boundary_audit/**
-# ReTrace-Bench v1.0 paper-facing splits (main/hard/realistic/calibration).
-!data/retrace_bench/main_3000_en/**
-!data/retrace_bench/hard_300_en/**
-!data/retrace_bench/hard_500_en/**
-!data/retrace_bench/realistic_100_en/**
-!data/retrace_bench/realistic_200_en/**
-!data/retrace_bench/calibration_80_en/**
-!data/retrace_bench/private_hidden_200_en/**
+# Canonical ReTrace-Bench (internal "v1.1") public paper-facing splits.
+# main/hard/realistic/calibration are committed; private_hidden is NOT (private
+# evaluation split — distributed only via the private HF bundle, never on GitHub).
+!data/retrace_bench_v1_1/main_3000_en/**
+!data/retrace_bench_v1_1/hard_500_en/**
+!data/retrace_bench_v1_1/realistic_200_en/**
+!data/retrace_bench_v1_1/calibration_80_en/**
+# private_hidden is a PRIVATE evaluation split: do NOT commit ANY of it to
+# GitHub (not the scenarios, manifest, or README). It is distributed only via a
+# private HF bundle / locally after generation.
+data/retrace_bench_v1_1/private_hidden_200_en/
+# Legacy v1.0 / development split package (manifests + already-tracked splits).
+!data_legacy/retrace_bench_v1_0/**
+!data_legacy/retrace_bench_dev_artifacts/**
+# HF release bundle: ship manifests/checksums/cards; keep full JSONL local-only.
 !release/huggingface/ReTrace-Bench/**
+!hf_release/retrace_bench_v1_1/**/manifest.json
+!hf_release/retrace_bench_v1_1/**/checksums.json
+# Annotation packets (public, gold-free demo packets only — see below).
+!annotation_packets/retrace_bench_v1_1/**
 
 # outputs/ is intentionally TRACKED (benchmark prediction dumps + metrics are
 # committed for reproducibility/sharing). This allowlist overrides the global
@@ -79,3 +90,7 @@ outputs/**/.DS_Store
 /outputs/stale_cupmem_*.json
 # Official ReTrace-Bench v1.0 model-suite outputs are intentionally trackable.
 !outputs/retrace_bench/v1_0/**
+# v1.1 offline-baseline per-scenario PREDICTION dumps are large (~43MB) and
+# deterministically regenerable via scripts/run_retrace_bench_baseline.py. Keep
+# the small *.metrics.json results committed, but not the bulky prediction JSONL.
+outputs/retrace_bench_v1_1/baselines/*.jsonl

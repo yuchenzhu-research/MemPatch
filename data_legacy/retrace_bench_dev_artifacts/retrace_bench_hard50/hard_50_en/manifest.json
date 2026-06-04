@@ -1,0 +1,73 @@
+{
+  "annotation_status": "synthetic_gold",
+  "avg_event_count": 7.0,
+  "avg_memory_count": 3.0,
+  "avg_required_evidence_count": 1.82,
+  "benchmark_release_name": "final_aaai",
+  "calibration_is_smoke_only_notice": "Calibration split is for sanity checks only.",
+  "difficulty": {
+    "L3": 25,
+    "L4": 25
+  },
+  "domains": {
+    "calendar_task_workflow": 6,
+    "customer_support_crm": 6,
+    "data_analysis_bi": 6,
+    "ecommerce_recommendation": 6,
+    "enterprise_multi_tool_workflow": 7,
+    "personal_assistant_preference": 6,
+    "research_knowledge_work": 6,
+    "software_engineering_agent": 7
+  },
+  "expected_decisions": {
+    "ask_clarification": 0,
+    "escalate": 0,
+    "mark_unresolved": 9,
+    "refuse_due_to_policy": 3,
+    "use_current_memory": 38
+  },
+  "failure_modes": {
+    "conflict_collapse": 7,
+    "failure_to_release_or_restore": 2,
+    "over_update": 5,
+    "policy_violation": 3,
+    "scope_leakage": 8,
+    "stale_memory_reuse": 14,
+    "under_update": 5,
+    "wrong_source_attribution": 6
+  },
+  "generation_commit": "final_release",
+  "intended_use": "AAAI ReTrace-Bench paper evaluation baseline reference",
+  "leakage_audit_summary": {
+    "clean": true,
+    "decision_word_phrases_checked": [
+      "ask for clarification",
+      "ask the requester to confirm",
+      "ask the requester to clarify",
+      "please confirm",
+      "mark unresolved",
+      "mark it unresolved",
+      "mark as unresolved",
+      "escalate",
+      "refuse",
+      "do not store",
+      "use current memory",
+      "use the current memory"
+    ],
+    "leak_phrase_counts": {},
+    "method": "exact decision-action phrase match over verified/trusted records",
+    "scanned_records": "authoritative (verified+trusted) event text only",
+    "scenarios_with_decision_word_leak": 0
+  },
+  "max_event_count": 7,
+  "max_memory_count": 3,
+  "not_for_training_notice": "Strictly evaluation-only. Never train ReTrace-Learn on this data.",
+  "random_seed": 2027,
+  "role": "Paper-facing final hard benchmark split.",
+  "scenario_count": 50,
+  "schema_version": "retrace_bench_general_1",
+  "source_type": "controlled_synthetic",
+  "split": "hard",
+  "training_targets": false,
+  "version": "1.0.0"
+}

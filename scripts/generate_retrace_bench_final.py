@@ -107,6 +107,13 @@ def main() -> int:
                     i, split_name, args.seed, split_count=count
                 )
             
+            # Realistic split is synthetic-gold and NEVER auto-reviewed: stamp a
+            # canonical annotation_status so the validator sees a standard value
+            # (real human review can only set "reviewed" via the scoring script).
+            if split_name == "realistic":
+                sc["annotation_status"] = "synthetic_gold_unreviewed"
+                sc.setdefault("metadata", {})["annotation_status"] = "synthetic_gold_unreviewed"
+
             scenarios.append(sc)
             
         # Shuffling to prevent any first-N bias and sorting by ID

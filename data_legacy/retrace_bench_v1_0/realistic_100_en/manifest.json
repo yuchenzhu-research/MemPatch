@@ -1,0 +1,79 @@
+{
+  "annotation_status": "pending",
+  "annotations_template": "annotations_template.jsonl",
+  "avg_event_count": 31.46,
+  "avg_memory_count": 5.5,
+  "avg_required_evidence_count": 0.0,
+  "category_counts": {
+    "calendar_task_workflow": 15,
+    "customer_support_crm": 20,
+    "enterprise_multi_tool_workflow": 10,
+    "research_knowledge_work": 15,
+    "software_engineering_agent": 40
+  },
+  "difficulty": {
+    "L1_single_hop_update": 25,
+    "L2_multi_hop_with_distractor": 25,
+    "L3_conditional_validity": 25,
+    "L4_cross_scope_adversarial_audit": 25
+  },
+  "domains": {
+    "calendar_task_workflow": 15,
+    "customer_support_crm": 20,
+    "enterprise_multi_tool_workflow": 10,
+    "research_knowledge_work": 15,
+    "software_engineering_agent": 40
+  },
+  "expected_decisions": {
+    "ask_clarification": 0,
+    "escalate": 0,
+    "mark_unresolved": 0,
+    "refuse_due_to_policy": 0,
+    "use_current_memory": 0
+  },
+  "failure_modes": {
+    "conflict_collapse": 9,
+    "failure_to_forget": 9,
+    "failure_to_release_or_restore": 9,
+    "memory_hallucination": 9,
+    "over_update": 9,
+    "policy_violation": 9,
+    "scope_leakage": 9,
+    "stale_memory_reuse": 10,
+    "under_update": 9,
+    "unnecessary_memory_write": 9,
+    "wrong_source_attribution": 9
+  },
+  "leakage_audit_summary": {
+    "clean": true,
+    "decision_word_phrases_checked": [
+      "ask for clarification",
+      "ask the requester to confirm",
+      "ask the requester to clarify",
+      "please confirm",
+      "mark unresolved",
+      "mark it unresolved",
+      "mark as unresolved",
+      "escalate",
+      "refuse",
+      "do not store",
+      "use current memory",
+      "use the current memory"
+    ],
+    "leak_phrase_counts": {},
+    "method": "exact decision-action phrase match over verified/trusted records",
+    "scanned_records": "authoritative (verified+trusted) event text only",
+    "scenarios_with_decision_word_leak": 0
+  },
+  "max_event_count": 50,
+  "max_memory_count": 8,
+  "min_event_count": 15,
+  "min_memory_count": 4,
+  "role": "Realistic-style workflow split; human annotation pending (no synthetic gold).",
+  "scenario_count": 100,
+  "schema_version": "retrace_bench_general_1",
+  "source_type": "realistic_style_synthetic",
+  "split": "realistic",
+  "training_targets": false,
+  "version": "1.0.0"
+}

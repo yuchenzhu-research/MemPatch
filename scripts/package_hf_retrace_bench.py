@@ -220,7 +220,11 @@ there is no universal cross-scope distractor shortcut.
 ## 9. Annotation Status
 
 - `main`, `hard`, `calibration`: `controlled_synthetic`, synthetic gold.
-- `realistic`: `realistic_style_synthetic`, **`annotation_status = reviewed`**. Verified through semi-manual human-in-the-loop and validator audits.
+- `realistic`: `realistic_style_synthetic`, **`annotation_status = pending`**
+  (synthetic gold, **not** human-reviewed). It is **never** auto-marked
+  `reviewed`; a `reviewed` status is only valid once real human annotators have
+  completed the validation protocol. No fabricated human annotation is included
+  in this release.
 
 ## 10. Intended Use
 
