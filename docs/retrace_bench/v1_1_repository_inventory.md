@@ -129,7 +129,7 @@ The hardened, balanced artifacts that define the v1.1 release candidate.
 | `data/retrace_bench/hard_500_en/` | yes (scenarios tracked) | Canonical `final_aaai` hard-500 split (allowlisted) — overlaps conceptually with the candidate dir; reconcile in cleanup |
 | `data/retrace_bench/main_3000_en/`, `realistic_200_en/`, `calibration_80_en/`, `private_hidden_200_en/`, `realistic_100_en/`, `hard_300_en/` | yes | Canonical final split family (validator schema drift noted in §0) |
 | `release/huggingface/ReTrace-Bench/**` | yes | HF release snapshot (main/hard500/realistic200/calibration80 jsonl) |
-| `docs/retrace_bench/dataset_card_hf.md`, `split_leakage_report.md`, `manual_validation_report.md`, `manual_validation_sample_88.md` | yes | Validation/leakage/dataset-card reports for the canonical family |
+| `docs/retrace_bench/dataset_card_hf.md` | yes | Dataset card for the canonical family (legacy pre-v1 diagnostic/validation reports removed from the active tree) |
 | `papers/retrace_bench/**`, `RETRACE_BENCH.md` | yes | Paper workspace + track entrypoint |
 
 ---
@@ -143,8 +143,7 @@ should become a legacy appendix. Recommend moving under a `legacy/` or
 | Path | Why legacy |
 | --- | --- |
 | `docs/retrace_bench/v1_0_gated_model_pilot.md`, `v1_0_sanity_model_pilot.md`, `v1_0_sanity_error_audit.md` | v1.0 gated pilot docs/results |
-| `docs/retrace_bench/templateheldout_v1_model_audit.md`, `templateheldout_v2_*.md`, `template_lookup_test_800_*.md`, `template_signature_report.md` | Pre-v1.1 template-heldout experiments |
-| `docs/retrace_bench/baseline_results_test_800_*.md`, `baseline_results_sample_80_hard_en.md`, `baseline_suite_v2.md` | Old baseline-suite results (pre-balanced) |
+| `docs/retrace_bench/baseline_suite_v2.md` | Baseline-suite spec (kept). Legacy pre-v1 template-heldout / baseline-result diagnostic reports were removed from the active tree (recoverable from Git history). |
 | `docs/retrace_bench/design.md`, `design_v2_industrial.md`, `final_hardening_plan.md`, `final_hardening_triage.md`, `benchmark_paper.md` | Development-history design/hardening docs (keep as appendix, not main narrative) |
 | `data/retrace_bench_hard150/hard_150_en/` (manifest+README only) | Old **pre-balanced** hard150 (superseded by `_balanced`) |
 | `data/retrace_bench_hard50/hard_50_en/` (manifest+README only) | hard50 mini split (superseded) |

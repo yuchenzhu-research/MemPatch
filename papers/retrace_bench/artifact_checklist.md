@@ -24,12 +24,10 @@ Status of the benchmark artifact track. `[x]` done, `[ ]` remaining.
 - [x] **Baseline reproduction commands.** `scripts/run_retrace_bench_baseline.py`
   and `scripts/run_retrace_bench_ablation.py` run against the v1.0 splits.
   Headline baselines on the v1.0 splits are **not yet regenerated** (see
-  Remaining work); legacy pre-v1.0 result docs are retained for provenance only.
+  Remaining work); legacy pre-v1 artifacts were removed from the active tree.
 - [ ] **Manual validation pass (v1.0).** No human validation has been performed
-  on the v1.0 splits yet. `manual_validation_protocol.md` and
-  `manual_validation_sample_88.md` describe the protocol; the prior
-  `manual_validation_report.md` pass was over a legacy pre-v1.0 split and does
-  **not** carry over.
+  on the v1.0 splits yet. `manual_validation_protocol.md` describes the protocol;
+  it must be run on the v1.0 splits.
 - [x] **Sample predictions.** `examples/retrace_bench/sample_predictions.jsonl`
   (complete `calibration_80_en` submission) + quickstart README.
 - [x] **Tests.** `tests/retrace_bench/test_public_api.py`,

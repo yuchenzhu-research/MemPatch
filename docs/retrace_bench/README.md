@@ -13,8 +13,9 @@ CRUD store, Mem0-style, or a trained policy) can be scored on it.
   ReTrace-Bench fills that gap.
 - **Dataset design / card:** [`dataset_design.md`](dataset_design.md),
   [`dataset_card_hf.md`](dataset_card_hf.md).
-- **Historical pilot baselines (legacy pre-v1.0 splits, kept for provenance):**
-  [`baseline_results_sample_80_hard_en.md`](baseline_results_sample_80_hard_en.md).
+
+Legacy pre-v1 artifacts were removed from the active tree; current results must
+be regenerated on v1.0 splits.
 
 ReTrace-Bench v1.0 ships four paper-facing splits under public names `main` /
 `hard` / `realistic` / `calibration` (`data/retrace_bench/main_3000_en`,

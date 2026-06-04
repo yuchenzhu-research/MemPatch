@@ -123,9 +123,8 @@ leakage audit: no authoritative/verified record contains a decision phrase tied
 to one of the five gold decisions, so the gold decision must be recovered by
 reasoning over state rather than string matching. The per-split `manifest.json`
 records a `leakage_audit_summary`; the audit logic lives in
-`benchmark/retrace_bench/generation/release_manifest.py`. Legacy
-template-signature reports (`template_signature_report.md`,
-`split_leakage_report.md`) are retained for provenance only.
+`benchmark/retrace_bench/generation/release_manifest.py`. Legacy pre-v1
+artifacts were removed from the active tree.
 
 *Source:* `docs/retrace_bench/generation_and_audit_protocol.md`,
 `docs/retrace_bench/contamination_policy.md`.
@@ -181,9 +180,8 @@ recency/retrieval heuristics collapse on non-answer decisions and evidence
 grounding even when they score reasonably on majority-class accuracy.
 
 *Source:*
-a v1.0 offline baseline run on `main_3000_en` (to be regenerated; the legacy
-`docs/retrace_bench/baseline_results_test_800_templateheldout_en.md` is retained
-for provenance only).
+a v1.0 offline baseline run on `main_3000_en` (to be regenerated; legacy pre-v1
+artifacts were removed from the active tree).
 
 ## 9 Related Work
 

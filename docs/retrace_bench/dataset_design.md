@@ -73,7 +73,6 @@ actions.
 Beyond the automated validators, a recommended manual validation protocol
 covers a stratified 8-domain × 11-failure-mode sample of the `main` split. See
 [`manual_validation_protocol.md`](manual_validation_protocol.md)
-for the procedure and [`manual_validation_sample_88.md`](manual_validation_sample_88.md)
-for the enumerated sample / report template. The manual protocol is documented
-as planned/recommended and is not claimed as a completed human study until the
-report template is filled in.
+for the procedure. The manual protocol is documented as planned/recommended and
+is not claimed as a completed human study. Legacy pre-v1 artifacts were removed
+from the active tree; current results must be regenerated on v1.0 splits.

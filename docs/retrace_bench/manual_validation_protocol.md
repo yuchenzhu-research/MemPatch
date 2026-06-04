@@ -1,11 +1,8 @@
 # ReTrace-Bench Manual Validation Protocol
 
-Status: **reusable protocol; the recorded pass is legacy (pre-v1.0).** This
-document specifies the manual validation checks. The completed project-author
-pass it references was over the legacy `test_800_templateheldout_en` split
-(recoverable from the Git tag `legacy-retrace-bench-pre-v1.0`); see
-[`manual_validation_report.md`](manual_validation_report.md). The same protocol
-should be re-run on the ReTrace-Bench v1.0 `main` split — the v1.0 splits have
+Status: **reusable protocol.** This document specifies the manual validation
+checks. Legacy pre-v1 artifacts were removed from the active tree; this protocol
+should be run on the ReTrace-Bench v1.0 `main` split — the v1.0 splits have
 **not** yet been manually validated.
 
 This is a focused artifact validation pass, not a formal human-subject study,
@@ -16,9 +13,7 @@ released split.
 ## 1. Sampling
 
 - Inspect a **stratified sample** covering all **8 domains × 11 failure modes**
-  (88 cells). One scenario per present cell is enumerated in
-  `manual_validation_sample_88.md`; all 88 cells are populated in the canonical
-  split.
+  (88 cells). Enumerate one scenario per present cell from the canonical split.
 - Optionally over-sample harder difficulty tiers (L3/L4) and the
   `failure_to_forget` / `failure_to_release_or_restore` / `policy_violation`
   modes, which exercise the less common memory states.

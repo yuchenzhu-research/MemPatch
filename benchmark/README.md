@@ -173,10 +173,9 @@ prompt-based systems as if it were one.
 ## More
 
 - Benchmark paper draft: [`docs/retrace_bench/benchmark_paper.md`](../docs/retrace_bench/benchmark_paper.md)
-- Historical pilot baselines (legacy pre-v1.0 splits, kept for provenance):
-  [`docs/retrace_bench/baseline_results_test_800_templateheldout_en.md`](../docs/retrace_bench/baseline_results_test_800_templateheldout_en.md)
-- Manual validation protocol and report:
-  [`protocol`](../docs/retrace_bench/manual_validation_protocol.md),
-  [`report`](../docs/retrace_bench/manual_validation_report.md)
+- Manual validation protocol:
+  [`manual_validation_protocol.md`](../docs/retrace_bench/manual_validation_protocol.md).
+  Legacy pre-v1 artifacts were removed from the active tree; current results must
+  be regenerated on v1.0 splits.
 - Hugging Face dataset card: [`release/huggingface/ReTrace-Bench/README.md`](../release/huggingface/ReTrace-Bench/README.md)
 - Benchmark-paper workspace: [`papers/retrace_bench/`](../papers/retrace_bench/README.md)

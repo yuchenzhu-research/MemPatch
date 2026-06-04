@@ -61,8 +61,7 @@ baselines and a gold-replay oracle consistency reference.
   distribution gates (`scripts/validate_retrace_bench_dataset.py`).
 - Splits and roles; template-heldout construction and leakage checks.
 - Source: `section_bank.md#4-data-construction`,
-  `docs/retrace_bench/generation_and_audit_protocol.md`,
-  `docs/retrace_bench/split_leakage_report.md`.
+  `docs/retrace_bench/generation_and_audit_protocol.md`.
 
 ## 5 Evaluation Protocol and Metrics
 
@@ -80,9 +79,7 @@ baselines and a gold-replay oracle consistency reference.
   `crud_memory`, `mem0_style`, `heuristic_memory_state`); gold-replay oracle
   consistency reference (`retrace_oracle_engine`).
 - Source: `section_bank.md#6-baselines`; v1.0 baselines to be regenerated on
-  `main_3000_en` (legacy
-  `docs/retrace_bench/baseline_results_test_800_templateheldout_en.md` retained
-  for provenance only).
+  `main_3000_en` (legacy pre-v1 artifacts were removed from the active tree).
 
 ## 7 Results
 

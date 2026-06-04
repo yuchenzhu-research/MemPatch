@@ -40,14 +40,11 @@ The authoritative code, data, and docs stay in their existing locations:
 
 - Benchmark write-up: `docs/retrace_bench/benchmark_paper.md`
 - Dataset design: `docs/retrace_bench/dataset_design.md`
-- Manual validation protocol and report:
-  `docs/retrace_bench/manual_validation_protocol.md`,
-  `docs/retrace_bench/manual_validation_report.md`
-- Historical (legacy pre-v1.0) pilot/leakage reports, kept for provenance only:
-  `docs/retrace_bench/baseline_results_test_800_templateheldout_en.md`,
-  `docs/retrace_bench/template_lookup_test_800_templateheldout_en.md`,
-  `docs/retrace_bench/template_signature_report.md`,
-  `docs/retrace_bench/split_leakage_report.md`
+- Manual validation protocol:
+  `docs/retrace_bench/manual_validation_protocol.md`
+
+Legacy pre-v1 artifacts were removed from the active tree; current results must
+be regenerated on v1.0 splits.
 
 ## Reproducing the headline numbers
 

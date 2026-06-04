@@ -179,7 +179,5 @@ The runner enforces this: the oracle is grouped under
 `is_oracle=true` / `group="oracle"`, separate from the deployable baselines.
 
 Headline baselines for the v1.0 `main` / `hard` / `realistic` splits require a
-full model-suite rerun and are not yet committed. The historical pilot result
-files `baseline_results_test_800_templateheldout_en.md` and
-`baseline_results_sample_80_hard_en.md` describe legacy pre-v1.0 splits and are
-retained only for provenance.
+full model-suite rerun and are not yet committed. Legacy pre-v1 artifacts were
+removed from the active tree; current results must be regenerated on v1.0 splits.
