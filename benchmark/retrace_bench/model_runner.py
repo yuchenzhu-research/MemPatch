@@ -10,7 +10,9 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 import time
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -72,6 +74,19 @@ def _api_key(env_name: str) -> str:
     if not value:
         raise RuntimeError(f"Missing API key: set {env_name} or pass --api-key-env.")
     return value
+
+
+def format_duration(seconds: float) -> str:
+    """Format elapsed seconds for live runner progress logs."""
+    seconds = max(0.0, seconds)
+    if seconds < 60:
+        return f"{seconds:.1f}s"
+    total = int(round(seconds))
+    minutes, sec = divmod(total, 60)
+    if minutes < 60:
+        return f"{minutes}m{sec:02d}s"
+    hours, minutes = divmod(minutes, 60)
+    return f"{hours}h{minutes:02d}m"
 
 
 def build_prompt(public_view: dict[str, Any]) -> str:
@@ -307,6 +322,7 @@ def run_model_predictions(
     temperature: float = 0.0,
     timeout: float = 120.0,
     sleep_seconds: float = 0.0,
+    continue_on_error: bool = False,
 ) -> int:
     """Run a provider over scenarios and write canonical prediction JSONL rows."""
     _load_dotenv_if_available()
@@ -315,35 +331,99 @@ def run_model_predictions(
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     completed = _completed_ids(out_path) if resume else set()
+    dataset_total = len(scenarios)
+    completed_existing = len(completed)
+    remaining = [
+        (index, scenario)
+        for index, scenario in enumerate(scenarios, start=1)
+        if str(scenario["scenario_id"]) not in completed
+    ]
+    planned_new_cases = min(max_cases, len(remaining)) if max_cases is not None else len(remaining)
+    planned = remaining[:planned_new_cases]
     mode = "a" if resume else "w"
     written = 0
-    attempted = 0
+    errors = 0
+    successful_case_seconds = 0.0
+    skipped_existing = dataset_total - len(remaining)
+    start = time.monotonic()
+    start_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    print("ReTrace-Bench model runner", flush=True)
+    print(f"data={data}", flush=True)
+    print(f"provider={provider}", flush=True)
+    print(f"model={model}", flush=True)
+    print(f"out_predictions={out_path}", flush=True)
+    print(f"resume={resume}", flush=True)
+    print(f"dataset_total={dataset_total}", flush=True)
+    print(f"completed_existing={completed_existing}", flush=True)
+    print(f"max_new_cases={max_cases if max_cases is not None else 'all'}", flush=True)
+    print(f"planned_new_cases={planned_new_cases}", flush=True)
+    print(f"start_time={start_time}", flush=True)
 
     with out_path.open(mode, encoding="utf-8") as f:
-        for scenario in scenarios:
+        for run_index, (dataset_index, scenario) in enumerate(planned, start=1):
             scenario_id = str(scenario["scenario_id"])
-            if scenario_id in completed:
-                continue
-            if max_cases is not None and attempted >= max_cases:
-                break
-            attempted += 1
-
-            view = public_scenario_view(scenario)
-            prompt = build_prompt(view)
-            text = call_model(
-                provider=provider,
-                model=model,
-                prompt=prompt,
-                api_key_env=api_key_env,
-                base_url=base_url,
-                temperature=temperature,
-                timeout=timeout,
+            case_start = time.monotonic()
+            elapsed = time.monotonic() - start
+            progress = (
+                f"[run {run_index}/{planned_new_cases} | dataset {dataset_index}/{dataset_total} | "
+                f"written {written} | errors {errors} | skipped {skipped_existing} | "
+                f"elapsed {format_duration(elapsed)}]"
             )
-            response = canonical_response(extract_json_object(text))
-            row = {"scenario_id": scenario_id, "response": response}
-            f.write(json.dumps(row, ensure_ascii=False) + "\n")
-            f.flush()
-            written += 1
-            if sleep_seconds > 0:
-                time.sleep(sleep_seconds)
+            print(
+                f"{progress} calling provider={provider} model={model} scenario_id={scenario_id}",
+                flush=True,
+            )
+            try:
+                view = public_scenario_view(scenario)
+                prompt = build_prompt(view)
+                text = call_model(
+                    provider=provider,
+                    model=model,
+                    prompt=prompt,
+                    api_key_env=api_key_env,
+                    base_url=base_url,
+                    temperature=temperature,
+                    timeout=timeout,
+                )
+                response = canonical_response(extract_json_object(text))
+                row = {"scenario_id": scenario_id, "response": response}
+                f.write(json.dumps(row, ensure_ascii=False) + "\n")
+                f.flush()
+                written += 1
+                total_elapsed = time.monotonic() - start
+                case_elapsed = time.monotonic() - case_start
+                successful_case_seconds += case_elapsed
+                remaining_planned = planned_new_cases - run_index
+                avg_case_time = successful_case_seconds / written
+                eta = format_duration(avg_case_time * remaining_planned)
+                print(
+                    f"[run {run_index}/{planned_new_cases} | dataset {dataset_index}/{dataset_total}] "
+                    f"wrote scenario_id={scenario_id} case_elapsed={case_elapsed:.1f}s "
+                    f"total_elapsed={format_duration(total_elapsed)} eta={eta}",
+                    flush=True,
+                )
+                if sleep_seconds > 0:
+                    time.sleep(sleep_seconds)
+            except Exception as exc:
+                errors += 1
+                total_elapsed = time.monotonic() - start
+                case_elapsed = time.monotonic() - case_start
+                print(
+                    f"[run {run_index}/{planned_new_cases} | dataset {dataset_index}/{dataset_total}] "
+                    f"error scenario_id={scenario_id} case_elapsed={case_elapsed:.1f}s "
+                    f"total_elapsed={format_duration(total_elapsed)} error={exc}",
+                    file=sys.stderr,
+                    flush=True,
+                )
+                if not continue_on_error:
+                    raise
+
+    print("finished", flush=True)
+    print(f"planned_new_cases={planned_new_cases}", flush=True)
+    print(f"written={written}", flush=True)
+    print(f"errors={errors}", flush=True)
+    print(f"skipped_existing={skipped_existing}", flush=True)
+    print(f"total_elapsed={format_duration(time.monotonic() - start)}", flush=True)
+    print(f"output={out_path}", flush=True)
     return written

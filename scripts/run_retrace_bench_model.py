@@ -40,6 +40,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Append and skip scenario_ids already present in --out-predictions",
     )
     parser.add_argument(
+        "--continue-on-error",
+        action="store_true",
+        help="Continue after provider or JSON-parse failures without writing malformed rows",
+    )
+    parser.add_argument(
         "--api-key-env",
         default=None,
         help="Override the environment variable used for the provider API key",
@@ -75,6 +80,7 @@ def main(argv: list[str] | None = None) -> int:
             temperature=args.temperature,
             timeout=args.timeout,
             sleep_seconds=args.sleep_seconds,
+            continue_on_error=args.continue_on_error,
         )
     except Exception as exc:
         print(f"error: {exc}", file=sys.stderr)
