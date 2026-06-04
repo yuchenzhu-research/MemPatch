@@ -82,6 +82,6 @@ PYTHONPATH=. python scripts/evaluate_retrace_bench_predictions.py \
 ## Verification
 
 ```bash
-env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q src benchmark tests
+env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q benchmark scripts src tests
 .venv/bin/python -m pytest -q
 ```

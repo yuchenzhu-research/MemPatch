@@ -169,7 +169,7 @@ To ensure absolute clean methodology and avoid test-set leakage:
   generated reports, run logs, and diagnostics are local/generated artifacts.
 - Before every commit, remove Python caches:
   ```bash
-  find . -type d -name "**pycache**" -prune -exec rm -rf {} +
+  find . -type d -name "__pycache__" -prune -exec rm -rf {} +
   find . -type f -name "*.pyc" -delete
   rm -rf .pytest_cache .pycache_compile
   ```

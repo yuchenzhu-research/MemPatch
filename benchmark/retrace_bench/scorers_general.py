@@ -78,9 +78,10 @@ def _toks(value: Any) -> set[str]:
 def normalize_failure_mode(value: Any) -> str:
     # Some models emit failure_diagnosis as a single-element list/tuple
     # (e.g. ["under_update"]) rather than a bare enum string. Unwrap it so the
-    # exact-match path below applies; strings are unaffected (backward compatible).
-    if isinstance(value, (list, tuple)):
-        value = value[0] if value else ""
+    # exact-match path below applies; strings and malformed multi-value objects
+    # are left as normalized text and treated as invalid by the API validator.
+    if isinstance(value, (list, tuple)) and len(value) == 1:
+        value = value[0]
     text = _norm(value)
     if text in FAILURE_MODES:
         return text
@@ -324,6 +325,9 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
         and float(stale_reuse) == 0.0
     )
 
+    # Exact full-structure success for answer-free ReTrace-Learn evaluations.
+    # This intentionally requires exact/minimal evidence coverage via F1 == 1.0;
+    # softer evidence behavior remains visible through evidence_f1/precision.
     structural_revision_success = float(
         decision_ok
         and memory_ok
@@ -530,4 +534,3 @@ def aggregate_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
         "per_failure_mode": per_failure_mode,
         "per_domain": per_domain,
     }
-

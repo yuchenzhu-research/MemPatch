@@ -69,7 +69,7 @@ def _normalize_response_object(response: dict[str, Any]) -> dict[str, Any]:
         value = normalized.get(key)
         if isinstance(value, (list, tuple)) and len(value) == 1:
             normalized[key] = value[0]
-    
+
     memory_state = normalized.get("memory_state")
     if isinstance(memory_state, dict):
         new_mem = {}
@@ -216,7 +216,7 @@ def _validate_response(
             unknown = []
             for eid in evidence:
                 if not is_hashable(eid) or eid not in event_ids:
-                    unknown.append(eid)
+                    unknown.append(repr(eid) if not is_hashable(eid) else eid)
             if unknown:
                 errors.append(
                     f"{scenario_id}: evidence_event_ids reference IDs not in event_trace: {unknown}"

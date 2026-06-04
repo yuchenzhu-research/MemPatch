@@ -6,6 +6,7 @@ import pytest
 
 from benchmark.retrace_bench.api import evaluate_predictions, load_predictions, load_scenarios
 from benchmark.retrace_bench.public_view import public_scenario_view
+from benchmark.retrace_bench.scorers_general import normalize_failure_mode
 
 
 def _scenario() -> dict:
@@ -91,8 +92,8 @@ def test_public_view_strips_internal_fields() -> None:
 
 def test_structure_only_prediction_success() -> None:
     scenario = _scenario()
-    # structure-only prediction: decision, memory_state, evidence_event_ids, failure_diagnosis correct.
-    # answer is absent/empty.
+    # Structure-only prediction: decision, memory_state, evidence_event_ids,
+    # failure_diagnosis correct; answer is absent.
     prediction = {
         "scenario_id": "s1",
         "response": {
@@ -104,17 +105,14 @@ def test_structure_only_prediction_success() -> None:
     }
 
     result = evaluate_predictions([scenario], [prediction], strict=True)
-    
+
     assert result["count"] == 1
-    # Assert joint_revision_success is 0 because answer is absent (key_fact_matches / answer_state_consistency is 0)
     assert result["headline_metrics"]["joint_revision_success"] == 0.0
-    # Assert structural_revision_success is 1.0 (fully correct structure-only prediction)
     assert result["headline_metrics"]["structural_revision_success"] == 1.0
 
 
-def test_prediction_normalization_and_validation_hardening() -> None:
+def test_one_element_list_prediction_normalization() -> None:
     scenario = _scenario()
-    # decision and memory_state values are one-element lists.
     prediction = {
         "scenario_id": "s1",
         "response": {
@@ -128,7 +126,9 @@ def test_prediction_normalization_and_validation_hardening() -> None:
     result = evaluate_predictions([scenario], [prediction], strict=True)
     assert result["headline_metrics"]["structural_revision_success"] == 1.0
 
-    # Test validator handles unhashable/invalid types gracefully under strict=False
+
+def test_unhashable_invalid_values_return_validation_errors() -> None:
+    scenario = _scenario()
     invalid_pred = {
         "scenario_id": "s1",
         "response": {
@@ -140,12 +140,15 @@ def test_prediction_normalization_and_validation_hardening() -> None:
     }
     result_invalid = evaluate_predictions([scenario], [invalid_pred], strict=False)
     assert len(result_invalid["errors"]) > 0
-    # verify that evaluation did not crash and returned scores (likely 0 for structural success)
     assert result_invalid["headline_metrics"]["structural_revision_success"] == 0.0
 
-    # Verify that strict=True raises ValueError (due to validation errors) rather than TypeError
     with pytest.raises(ValueError) as excinfo:
         evaluate_predictions([scenario], [invalid_pred], strict=True)
     assert "TypeError" not in str(excinfo.value)
     assert "invalid decision" in str(excinfo.value)
 
+
+def test_normalize_failure_mode_handles_unhashable_values() -> None:
+    assert normalize_failure_mode(["stale_memory_reuse"]) == "stale_memory_reuse"
+    assert normalize_failure_mode({"invalid": "dict"})
+    assert normalize_failure_mode([{"invalid": "dict"}])

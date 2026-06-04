@@ -23,7 +23,12 @@ llm = [
 ]
 
 [tool.setuptools.packages.find]
-where = ["src"]
+where = ["src", "."]
+include = ["retracemem*", "retrace_learn*", "benchmark*"]
+
+[tool.pyright]
+include = ["benchmark", "scripts", "src", "tests"]
+extraPaths = [".", "src"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
