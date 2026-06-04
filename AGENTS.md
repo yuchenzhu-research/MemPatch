@@ -20,7 +20,7 @@ Legacy planning documents, docs directories, paper drafts, generated reports, an
 ReTrace is an umbrella project governed as **two active research tracks**:
 
 1. **ReTrace-Bench** — benchmark track. Evaluation-only; owns benchmark schema, scoring, evaluator API, release packaging, and leakage checks. Locations: `benchmark/retrace_bench/`, `hf_release/retrace_bench_v1_1/`, benchmark scripts/tests. The benchmark track stays method-neutral as an evaluation artifact. Public data lives on Hugging Face, not as a full local GitHub data copy.
-2. **ReTrace-Learn** — method track. ReTrace-Learn v1 has three paper-facing stages: **Graph Builder** -> **Proposal Policy** -> **DPA-guided RSFT/DPO** (only the first two are learned; stage 3 is a training protocol). Locations: `src/retrace_learn/`, `src/retracemem/`, method scripts/tests. ReTrace-Learn uses selected ReTrace-Bench-derived scenario data with declared split roles (`data/retrace_learn/`); split roles must be explicit, and leakage-free held-out evaluation is not claimed where the same gold labels are used for training.
+2. **ReTrace-Learn** — method track. ReTrace-Learn v1 has three paper-facing stages: **Graph Builder** -> **Proposal Policy** -> **DPA-guided RSFT/DPO** (only the first two are learned; stage 3 is a training protocol). Locations: `src/retrace_learn/`, `src/retracemem/`, method scripts/tests. ReTrace-Learn uses selected ReTrace-Bench-derived scenario data with declared split roles (`data/retrace_learn/`); split roles must be explicit, and leakage-free held-out evaluation is not claimed where the same gold labels are used for training. Local ReTrace-Bench downloads may be used as ReTrace-Learn training sources under ignored `local/` paths, as long as split roles are declared.
 
 **ReTrace-Engine** (Parser + RevisionGate + DPA + Audit Trace, reached via `authorize(...)`) is the implementation name for the deterministic commit path **inside ReTrace-Learn** — it is an implementation detail of stages 2–3, not a standalone paper, a standalone top-level track, or a third paper-level module. DPA is a deterministic verifier and does not learn.
 
@@ -164,9 +164,15 @@ To ensure absolute clean methodology and avoid test-set leakage:
   commit them.
 - Do not commit external clones, `artifacts/`, `analysis/`, caches,
   local environments, generated artifacts, benchmark downloads, model
-  checkpoints/weights, or API keys.
+  checkpoints/weights, API keys, local datasets, generated SFT corpora, model checkpoints, adapters, logs, predictions, or results.
 - Generated run directories must not be committed. Benchmark prediction dumps,
   generated reports, run logs, and diagnostics are local/generated artifacts.
+- Before every commit, remove Python caches:
+  ```bash
+  find . -type d -name "**pycache**" -prune -exec rm -rf {} +
+  find . -type f -name "*.pyc" -delete
+  rm -rf .pytest_cache .pycache_compile
+  ```
 - After running scripts, tests, builds, or imports, proactively look for and
   remove local cache/generated directories before committing. At minimum check
   for `.pycache_compile/`, `.pytest_cache/`, `__pycache__/`, `*.pyc`,
@@ -175,7 +181,7 @@ To ensure absolute clean methodology and avoid test-set leakage:
   `wandb/`, and `runs/`.
 - Put temporary training corpora, framework-specific scratch files, external
   checkouts, and machine-specific run material under ignored `local/` or the
-  ignored training artifact directories above. Do not add new `.gitignore`
+  ignored training artifact directories above. Local ReTrace-Bench downloads may be used as ReTrace-Learn training sources under ignored `local/` paths, as long as split roles are declared. Do not add new `.gitignore`
   entries for each framework unless a new artifact class is genuinely needed.
 - Preserve the canonical dataclass contracts in `src/retracemem/schemas.py`.
 - Add or update tests for every new behavior.

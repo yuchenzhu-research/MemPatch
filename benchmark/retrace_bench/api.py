@@ -67,8 +67,19 @@ def _normalize_response_object(response: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(response)
     for key in ("decision", "failure_diagnosis"):
         value = normalized.get(key)
-        if isinstance(value, (list, tuple)):
-            normalized[key] = value[0] if value else None
+        if isinstance(value, (list, tuple)) and len(value) == 1:
+            normalized[key] = value[0]
+    
+    memory_state = normalized.get("memory_state")
+    if isinstance(memory_state, dict):
+        new_mem = {}
+        for k, v in memory_state.items():
+            if isinstance(v, (list, tuple)) and len(v) == 1:
+                new_mem[k] = v[0]
+            else:
+                new_mem[k] = v
+        normalized["memory_state"] = new_mem
+
     evidence = normalized.get("evidence_event_ids")
     if isinstance(evidence, str):
         normalized["evidence_event_ids"] = [evidence]
@@ -151,11 +162,18 @@ def _validate_response(
         errors.append(f"{scenario_id}: missing or empty response")
         return
 
+    def is_hashable(v: Any) -> bool:
+        try:
+            hash(v)
+            return True
+        except TypeError:
+            return False
+
     # decision: required + must be a known label.
     decision = response.get("decision")
     if decision is None:
         errors.append(f"{scenario_id}: missing response field 'decision'")
-    elif decision not in DECISIONS:
+    elif not is_hashable(decision) or decision not in DECISIONS:
         errors.append(
             f"{scenario_id}: invalid decision label {decision!r} "
             f"(expected one of {sorted(DECISIONS)})"
@@ -169,10 +187,13 @@ def _validate_response(
         if not isinstance(memory_state, dict):
             errors.append(f"{scenario_id}: 'memory_state' must be an object (memory_id -> status)")
         else:
-            bad = sorted({s for s in memory_state.values() if s not in MEMORY_STATUSES})
+            bad = []
+            for s in memory_state.values():
+                if not is_hashable(s) or s not in MEMORY_STATUSES:
+                    bad.append(repr(s) if not is_hashable(s) else s)
             if bad:
                 errors.append(
-                    f"{scenario_id}: invalid memory_state labels {bad} "
+                    f"{scenario_id}: invalid memory_state labels {sorted(bad)} "
                     f"(expected one of {sorted(MEMORY_STATUSES)})"
                 )
             # Completeness: a status is expected for every visible memory ID.
@@ -192,7 +213,10 @@ def _validate_response(
         if not isinstance(evidence, list):
             errors.append(f"{scenario_id}: 'evidence_event_ids' must be a list of event IDs")
         else:
-            unknown = [eid for eid in evidence if eid not in event_ids]
+            unknown = []
+            for eid in evidence:
+                if not is_hashable(eid) or eid not in event_ids:
+                    unknown.append(eid)
             if unknown:
                 errors.append(
                     f"{scenario_id}: evidence_event_ids reference IDs not in event_trace: {unknown}"

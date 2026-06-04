@@ -25,6 +25,7 @@ HEADLINE_METRICS = (
     "failure_diagnosis_accuracy",
     "stale_reuse_rate",
     "joint_revision_success",
+    "structural_revision_success",
     "minimal_evidence_exact_match",
     "evidence_precision",
     "overcitation_rate",
@@ -201,10 +202,27 @@ def _is_stale_reuse(
             return True
     return False
 
+def _f1(predicted: Any, expected: Any) -> float:
+    def to_hashable_set(val: Any) -> set[Any]:
+        if not val:
+            return set()
+        if isinstance(val, (list, tuple, set)):
+            res = set()
+            for x in val:
+                try:
+                    hash(x)
+                    res.add(x)
+                except TypeError:
+                    res.add(repr(x))
+            return res
+        try:
+            hash(val)
+            return {val}
+        except TypeError:
+            return {repr(val)}
 
-def _f1(predicted: list[str], expected: list[str]) -> float:
-    p = set(predicted or [])
-    e = set(expected or [])
+    p = to_hashable_set(predicted)
+    e = to_hashable_set(expected)
     if not p and not e:
         return 1.0
     if not p or not e:
@@ -223,6 +241,8 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
     response = prediction.get("response", prediction)
     expected_state = gold["expected_memory_state"]
     predicted_state = response.get("memory_state", response.get("expected_memory_state", {})) or {}
+    if not isinstance(predicted_state, dict):
+        predicted_state = {}
     state_total = len(expected_state) or 1
     state_correct = sum(1 for mid, status in expected_state.items() if predicted_state.get(mid) == status)
     expected_decision = gold["expected_decision"]
@@ -259,7 +279,21 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
     memory_ok = (state_correct / state_total) >= 1.0
     key_fact_ok = key_fact_matches(answer, expected_answer, rubric)
 
-    pred_ev = set(response.get("evidence_event_ids", []) or [])
+    pred_ev_raw = response.get("evidence_event_ids", []) or []
+    if isinstance(pred_ev_raw, (list, tuple, set)):
+        pred_ev = set()
+        for x in pred_ev_raw:
+            try:
+                hash(x)
+                pred_ev.add(x)
+            except TypeError:
+                pred_ev.add(repr(x))
+    else:
+        try:
+            hash(pred_ev_raw)
+            pred_ev = {pred_ev_raw}
+        except TypeError:
+            pred_ev = {repr(pred_ev_raw)}
     gold_ev = set(gold["expected_evidence_event_ids"])
     
     if not gold_ev and not pred_ev:
@@ -288,6 +322,13 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
         and evidence_f1 >= 1.0
         and answer_state_consistency >= 1.0
         and float(stale_reuse) == 0.0
+    )
+
+    structural_revision_success = float(
+        decision_ok
+        and memory_ok
+        and evidence_f1 >= 1.0
+        and (expected_diag == predicted_diag)
     )
 
     meta = scenario.get("metadata", {}) or {}
@@ -323,6 +364,7 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
         "stale_reuse_rate": float(stale_reuse),
         # New AAAI headline metrics
         "joint_revision_success": joint_revision_success,
+        "structural_revision_success": structural_revision_success,
         "minimal_evidence_exact_match": float(pred_ev == gold_ev),
         "evidence_precision": evidence_precision,
         "overcitation_rate": overcitation_rate,
