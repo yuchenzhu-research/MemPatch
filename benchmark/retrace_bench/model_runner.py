@@ -52,6 +52,8 @@ DEFAULT_API_KEY_ENVS = {
     "minimax": "MINIMAX_API_KEY",
 }
 
+DEFAULT_MAX_TOKENS = 1024
+
 REQUIRED_RESPONSE_FIELDS = (
     "answer",
     "decision",
@@ -240,7 +242,7 @@ def call_openai_chat(
     base_url: str | None = None,
     temperature: float = 0.0,
     timeout: float = 120.0,
-    max_tokens: int = 1024,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
     json_mode: bool = False,
     disable_thinking: bool = False,
 ) -> str:
@@ -278,7 +280,7 @@ def call_anthropic(
     api_key_env: str,
     temperature: float = 0.0,
     timeout: float = 120.0,
-    max_tokens: int = 1024,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
     json_mode: bool = False,
     disable_thinking: bool = False,
 ) -> str:
@@ -312,7 +314,7 @@ def call_google(
     prompt: str,
     api_key_env: str,
     temperature: float = 0.0,
-    max_tokens: int = 1024,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
     json_mode: bool = False,
     disable_thinking: bool = False,
 ) -> str:
@@ -344,7 +346,7 @@ def call_model(
     base_url: str | None = None,
     temperature: float = 0.0,
     timeout: float = 120.0,
-    max_tokens: int = 1024,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
     json_mode: bool = False,
     disable_thinking: bool = False,
 ) -> str:
@@ -438,7 +440,7 @@ def run_model_predictions(
     base_url: str | None = None,
     temperature: float = 0.0,
     timeout: float = 120.0,
-    max_tokens: int = 1024,
+    max_tokens: int = DEFAULT_MAX_TOKENS,
     sleep_seconds: float = 0.0,
     continue_on_error: bool = False,
     progress_interval: int = 1,

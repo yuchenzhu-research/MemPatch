@@ -9,7 +9,11 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from benchmark.retrace_bench.model_runner import PROVIDERS, run_model_predictions  # noqa: E402
+from benchmark.retrace_bench.model_runner import (  # noqa: E402
+    DEFAULT_MAX_TOKENS,
+    PROVIDERS,
+    run_model_predictions,
+)
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
@@ -59,8 +63,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--max-tokens",
         type=int,
-        default=1024,
-        help="Maximum completion tokens for provider calls",
+        default=DEFAULT_MAX_TOKENS,
+        help=f"Maximum completion tokens for provider calls (default: {DEFAULT_MAX_TOKENS})",
     )
     parser.add_argument(
         "--sleep-seconds",
