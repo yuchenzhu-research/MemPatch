@@ -49,7 +49,7 @@ docs/
 |--------|-------|
 | Keep three docs in `/Users/yuchenzhu/Desktop/ReTrace/docs/` | Done |
 | Add stub `docs/skill.md`, `docs/memory_policy.md` | Placeholders for closed-source Skill.md track (`needs_review`) |
-| Top-level `MEMPATCH.md` or extend `README.md` | Single human entry; mention ReTrace as legacy module names |
+| Top-level `MEMPATCH.md` or extend `README.md` | Single human entry under MemPatch benchmark-first language |
 | Fix stale pointers | Update `RETRACE_BENCH.md` test path; note `experiments/` absence in `AGENTS.md` when editors touch it |
 
 No file moves.
@@ -98,7 +98,7 @@ Suggested order (each step: move + compatibility import + pytest):
 | Legacy | MemPatch target |
 |--------|-----------------|
 | ReTrace-Bench | MemPatch-Bench |
-| ReTrace-Learn | MemPatch scaffold (learned stages) |
+| Former ReTrace-Learn framing | MemPatch scaffold (Scenario View Builder + Revision Response Policy) |
 | `retracemem` PyPI name | `mempatch` or keep `retracemem` as kernel subpackage (`needs_review`) |
 | HF dataset `Sylvan-Vale-Moon/ReTrace-Bench` | New repo card or revision bump (`needs_review`) |
 | `NO_REVISION` | Alias `NO_PATCH` in paper-facing enums only (keep code enum stable until v2) |

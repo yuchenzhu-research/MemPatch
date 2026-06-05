@@ -1,21 +1,19 @@
-"""Stage 1 Graph Builder: raw dialogue -> candidate memory graph.
+"""Scenario View Builder: event trace / subagent submissions -> structured revision view.
 
-Turns multi-subagent dialogue into a structured memory graph:
-``evidence_nodes``, ``belief_nodes``, ``condition_nodes``,
+Turns scenario event traces and multi-subagent submissions into a structured
+revision view: ``evidence_nodes``, ``belief_nodes``, ``condition_nodes``,
 ``candidate_replacement_beliefs`` and ``dependency_edges``.
 
 Two implementations:
 
-* :class:`RuleBasedGraphExtractor` — deterministic parser over the ReTrace-Learn
-  dialogue markup (``@EVIDENCE`` / ``@BELIEF`` / ``@REPLACEMENT`` /
-  ``@CONDITION`` / ``@REQUIRES``). This is the offline oracle used to generate
-  SFT labels and to drive the smoke test; it is exact and dependency-free.
+* :class:`RuleBasedGraphExtractor` — deterministic parser over dialogue markup
+  (``@EVIDENCE`` / ``@BELIEF`` / ``@REPLACEMENT`` / ``@CONDITION`` /
+  ``@REQUIRES``). Offline oracle for SFT labels and smoke tests.
 * :class:`LearnedGraphExtractor` — thin wrapper around a text ``generate_fn``
-  (a 2B/4B model) that parses a JSON graph from the completion. The model itself
-  is out of scope here; this class only owns prompt assembly + fail-closed
-  parsing so a trained checkpoint can be dropped in.
+  that parses a JSON revision view from the completion. Owns prompt assembly +
+  fail-closed parsing so a trained checkpoint can be dropped in.
 
-The two share the markup spec so a model trained on ``(raw_dialogue, graph)``
+The two share the markup spec so a model trained on ``(event_trace, view)``
 pairs learns to reproduce what the rule-based oracle extracts.
 """
 from __future__ import annotations
@@ -80,12 +78,6 @@ class RuleBasedGraphExtractor:
         subagent_roles: list[str] | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        # Backward compatibility for positional subagent_roles as second argument
-        if isinstance(memory_snapshot, list) and all(isinstance(x, str) for x in memory_snapshot):
-            if subagent_roles is None:
-                subagent_roles = memory_snapshot
-                memory_snapshot = None
-
         graph = empty_graph()
         dep_counter = 0
         for line in raw_dialogue.splitlines():
@@ -161,8 +153,8 @@ def build_extraction_prompt(raw_dialogue: str, subagent_roles: list[str]) -> str
     """Assemble the instruction prompt for the learned graph extractor."""
     roles = ", ".join(subagent_roles) if subagent_roles else "unknown"
     return (
-        "You are the ReTrace-Learn graph extractor. Read the multi-subagent "
-        "dialogue and emit a single JSON object with keys: evidence_nodes, "
+        "You are the MemPatch Scenario View Builder. Read the multi-subagent "
+        "event trace / dialogue and emit a single JSON revision view with keys: evidence_nodes, "
         "belief_nodes, condition_nodes, candidate_replacement_beliefs, "
         "dependency_edges.\n"
         "- evidence_nodes: {evidence_id, timestamp, text}\n"
@@ -197,12 +189,6 @@ class LearnedGraphExtractor:
         subagent_roles: list[str] | None = None,
         metadata: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        # Backward compatibility for positional subagent_roles as second argument
-        if isinstance(memory_snapshot, list) and all(isinstance(x, str) for x in memory_snapshot):
-            if subagent_roles is None:
-                subagent_roles = memory_snapshot
-                memory_snapshot = None
-
         prompt = build_extraction_prompt(raw_dialogue, subagent_roles or [])
         completion = self._generate(prompt)
         try:

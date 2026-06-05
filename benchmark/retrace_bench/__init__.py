@@ -1,4 +1,4 @@
-"""ReTrace-Bench public evaluator package."""
+"""MemPatch-Bench public evaluator package."""
 
 __version__ = "1.1.0"
 

@@ -1,9 +1,9 @@
 """ReTrace-Engine commit path: Parser + RevisionGate + DPA runtime.
 
-(Implementation detail of stages 2-3, not a separate paper-level module.)
+(Implementation detail of Revision Response Policy and benchmark-grounded feedback.)
 
 This wraps the deterministic kernel (``retracemem.authorize``) with the
-ReTrace-Learn JSON parsing front-end. It is the program-only runtime that turns
+MemPatch JSON parsing front-end. It is the program-only runtime that turns
 a (possibly model-generated) action payload into final belief statuses plus a
 fully auditable trace. It never learns and never overrides DPA: it parses,
 validates structure, then defers all admission/authorization to ``authorize``.

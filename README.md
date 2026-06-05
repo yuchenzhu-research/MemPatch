@@ -6,14 +6,15 @@ RMI (Rapid Memory Integration) is the ability of an LLM agent to rapidly integra
 
 This repository implements one unified paper system across three layers:
 
-1. **MemPatch-Bench** (evaluation layer): benchmark API, schemas, scoring, validation, taxonomy, and minimal CLI support under `benchmark/retrace_bench/`. Package and script paths retain the `retrace_bench` name for compatibility.
-2. **MemPatch scaffold** (method/runtime layer): learned proposal and training code under `src/retrace_learn/`, plus multi-agent integration wrappers. Package path retains the `retrace_learn` name for compatibility.
-3. **Deterministic authorization** (authorization layer): DPA and `authorize(...)` under `src/retracemem/`. The model proposes typed patches; DPA authorizes. Package path retains the `retracemem` name for compatibility.
+1. **MemPatch-Bench** (evaluation layer): benchmark API, schemas, scoring, validation, taxonomy, and minimal CLI support under `benchmark/retrace_bench/`.
+2. **MemPatch scaffold** (method/runtime layer): Scenario View Builder, Revision Response Policy, and benchmark-grounded feedback under `src/retrace_learn/`, plus multi-agent integration wrappers.
+3. **Deterministic authorization** (authorization layer): DPA and `authorize(...)` under `src/retracemem/`. The model proposes typed patches; DPA authorizes and yields belief usability statuses that align with benchmark `memory_state` labels.
 
 One-sentence alignment: MemPatch preserves immutable evidence and patches the eligibility of prior beliefs for current answers through evidence-grounded typed revision actions authorized by deterministic DPA.
 
-Benchmark data is distributed through Hugging Face:
-`Sylvan-Vale-Moon/ReTrace-Bench` (dataset slug retained for compatibility).
+The paper-facing response interface is defined by MemPatch-Bench fields: `response.decision`, `response.memory_state`, `response.evidence_event_ids`, and `response.failure_diagnosis`.
+
+Benchmark data is distributed through Hugging Face: `Sylvan-Vale-Moon/ReTrace-Bench`.
 
 The local repository intentionally does not track generated reports, paper drafts, sample files, run dumps, or local benchmark-data copies.
 
@@ -54,8 +55,7 @@ source .venv/bin/activate
 pip install -e ".[dev,llm]"
 ```
 
-Download the MemPatch-Bench dataset from Hugging Face:
-`Sylvan-Vale-Moon/ReTrace-Bench` (dataset slug retained for compatibility).
+Download the MemPatch-Bench dataset from Hugging Face: `Sylvan-Vale-Moon/ReTrace-Bench`.
 
 Create local API-key configuration:
 

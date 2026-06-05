@@ -1,17 +1,17 @@
-"""Stage 2 Proposal Policy: candidate graph + new evidence -> typed proposal.
+"""Revision Response Policy: revision view -> benchmark-compatible response.
 
-Given a current memory graph + new evidence + candidate beliefs / replacements /
-condition anchors, propose typed revision actions from the canonical vocabulary.
+Given a structured revision view + new evidence + candidate beliefs / replacements /
+condition anchors, produce a benchmark-compatible revision response. Internally
+this is validated as typed patch actions that map to ``response.decision``,
+``response.memory_state``, ``response.evidence_event_ids``, and
+``response.failure_diagnosis``.
 
-* :class:`LearnedTypedRevisionProposer` wraps a text ``generate_fn`` (a trained
-  2B/4B model) and parses its completion into validated actions via the shared
-  fail-closed parser. The model is external; this owns prompt assembly + parsing.
-* :class:`ScriptedProposer` replays a fixed action list (used for the smoke test
-  and for oracle/teacher-forcing rollouts).
+* :class:`LearnedTypedRevisionProposer` wraps a text ``generate_fn`` and parses
+  its completion into validated actions via the shared fail-closed parser.
+* :class:`ScriptedProposer` replays a fixed action list (smoke test / oracle).
 
-Both return a :class:`ProposalOutput` carrying the raw completion, the parse
-result, and the validated actions, so it can feed straight into the runtime and
-the reward.
+Both return a :class:`ProposalOutput` carrying the raw completion, parse result,
+and validated actions for the runtime kernel and benchmark-grounded feedback.
 """
 from __future__ import annotations
 
@@ -97,9 +97,9 @@ def _view_payload(view: SharedCandidateView) -> dict[str, Any]:
 def build_proposer_prompt(view: SharedCandidateView) -> str:
     payload = _view_payload(view)
     return (
-        "You are the ReTrace-Learn typed revision proposer. Given the memory "
-        "graph context and the new evidence, output ONLY a JSON array of typed "
-        "revision actions.\n\n"
+        "You are the MemPatch Revision Response Policy. Given the revision view "
+        "and new evidence, output ONLY a JSON array of typed patch actions that "
+        "form a benchmark-compatible revision response.\n\n"
         f"{CANONICAL_ACTION_HELP}\n"
         "Each action object has keys: action_type, target_belief_id, "
         "target_condition_id, replacement_belief_id, evidence_ids, rationale.\n\n"

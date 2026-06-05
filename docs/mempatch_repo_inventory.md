@@ -1,6 +1,6 @@
 # MemPatch repository inventory
 
-**Generated context:** Post-merge snapshot of `/Users/yuchenzhu/Desktop/ReTrace` (2026-06-05). Branches `main`, `benchmark`, and `origin/*` all point to commit `67f6432`. Public naming in code/docs still says **ReTrace** / **ReTrace-Bench** / **ReTrace-Learn**; the MemPatch paper unifies these under one story (see `mempatch_paper_merge_plan.md`).
+**Generated context:** MemPatch unified paper system. Code paths under `retrace_*` name implementation modules; paper language is benchmark-first (see `mempatch_paper_merge_plan.md`).
 
 ## Top-level layout
 
@@ -15,7 +15,7 @@
 | `/Users/yuchenzhu/Desktop/ReTrace/hf_release/retrace_bench_v1_1/` | HF release metadata/manifests (not full scenario JSONL in git) |
 | `/Users/yuchenzhu/Desktop/ReTrace/scripts/` | Public CLI entrypoints for validate / evaluate / run model |
 | `/Users/yuchenzhu/Desktop/ReTrace/src/retracemem/` | **DPA / authorization / memory store / multi-agent commit** (MemPatch scaffold kernel) |
-| `/Users/yuchenzhu/Desktop/ReTrace/src/retrace_learn/` | **Learned Graph Builder + Proposal Policy** runtime and schemas |
+| `/Users/yuchenzhu/Desktop/ReTrace/src/retrace_learn/` | **Scenario View Builder + Revision Response Policy** runtime and schemas |
 | `/Users/yuchenzhu/Desktop/ReTrace/data/retrace_learn/` | Small method-side JSONL splits + manifest (not full bench) |
 | `/Users/yuchenzhu/Desktop/ReTrace/tests/` | Pytest: `authorize` core + benchmark API |
 | `/Users/yuchenzhu/Desktop/ReTrace/docs/` | MemPatch planning docs (this file + merge/refactor plans) |
@@ -44,13 +44,13 @@
 - `/Users/yuchenzhu/Desktop/ReTrace/scripts/evaluate_retrace_bench_predictions.py` — CLI wrapper for submissions.
 - `/Users/yuchenzhu/Desktop/ReTrace/tests/test_benchmark_api.py` — API/smoke tests.
 
-### MemPatch scaffold / method runtime (ReTrace-Learn + Engine)
+### MemPatch scaffold / method runtime
 
 | Component | Primary paths |
 |-----------|----------------|
 | Shared candidate view & method contracts | `src/retracemem/methods/contracts.py` |
-| Graph Builder (Stage 1) | `src/retrace_learn/runtime/graph_extractor.py` (`RuleBasedGraphExtractor`, `LearnedGraphExtractor`) |
-| Typed patch proposal (Stage 2) | `src/retrace_learn/runtime/learned_proposer.py`, `src/retrace_learn/runtime/dpa_runtime.py` (parse/validate actions) |
+| Scenario View Builder | `src/retrace_learn/runtime/graph_extractor.py` (`RuleBasedGraphExtractor`, `LearnedGraphExtractor`) |
+| Revision Response Policy | `src/retrace_learn/runtime/learned_proposer.py`, `src/retrace_learn/runtime/dpa_runtime.py` (parse/validate actions) |
 | Training signal helpers | `src/retrace_learn/runtime/reward.py`, `path_ranker.py`, `views.py` |
 | Method schemas | `src/retrace_learn/schemas.py` |
 | Multi-agent submission → proposals | `src/retracemem/multiagent/parser.py`, `contracts.py`, `utils.py` |
@@ -136,7 +136,7 @@ Roles for writing:
 - **Scaffold §5:** `authorization.py`, `tms/*`, `multiagent/commit.py`, `retrace_learn/runtime/*`.
 - **Experiments §6–7:** README run recipes; historical numbers likely in ignored `local/results/` (`needs_review`).
 
-Prior paper split (ReTrace-Bench paper vs ReTrace-Learn paper) is **obsolete** for MemPatch single-paper plan.
+MemPatch is one unified paper; benchmark response fields are the paper-facing interface.
 
 ---
 

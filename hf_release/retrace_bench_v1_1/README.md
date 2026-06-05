@@ -32,9 +32,9 @@ states without introducing stale, out-of-scope, or policy-invalid beliefs. It
 scores not only the final decision but also memory-state tracking, minimal
 evidence grounding, and failure diagnosis.
 
-> **Evaluation-only.** ReTrace-Bench is a benchmark for *evaluating* systems.
-> Do **not** train models on it, and in particular do **not** train the separate
-> *ReTrace-Learn* method on this data. Doing so invalidates results.
+> **Evaluation-only.** MemPatch-Bench is a benchmark for *evaluating* systems.
+> Do **not** train models on it, and in particular do **not** train the MemPatch
+> scaffold policy on this data. Doing so invalidates results.
 
 ## Splits (public release)
 

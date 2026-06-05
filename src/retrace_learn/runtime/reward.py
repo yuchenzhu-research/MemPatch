@@ -1,11 +1,19 @@
-"""Stage 3 DPA-guided training signal: the DPA-in-the-loop reward.
+"""Benchmark-grounded feedback: response metrics -> training signal.
 
-Computes a decomposed reward for a (sampled actions -> parser -> RevisionGate ->
-DPA) rollout, scored against gold final statuses and (optionally) gold actions.
-The reward is *grounded in the deterministic kernel's output*, not in surface
-action matching: the dominant signal is whether DPA's final belief statuses
-match gold, with shaping terms for JSON validity, grounding, and memory-safety
-failures (stale propagation, over/under update, spurious uncertainty).
+Computes decomposed feedback for a (sampled actions -> parser -> RevisionGate ->
+DPA) rollout, scored against benchmark gold labels and (optionally) gold actions.
+This feedback can support SFT/RSFT/DPO-style policy improvement when training
+scripts are configured for it.
+
+Reward terms map to MemPatch-Bench concepts:
+
+* ``final_status_reward`` — agreement between DPA output and gold ``memory_state``
+  labels (``current``, ``outdated``, ``blocked``, ``unresolved``, etc.)
+* ``evidence_grounding_reward`` — quality of cited evidence vs
+  ``evidence_event_ids`` expectations
+* ``stale_propagation_penalty`` — ``stale_memory_reuse`` / stale reuse rate
+* ``over_update_penalty`` / ``under_update_penalty`` — benchmark failure modes
+  ``over_update`` and ``under_update``
 
     R = + w_final  * final_status_reward
         + w_json   * valid_json_reward

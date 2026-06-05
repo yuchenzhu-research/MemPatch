@@ -26,10 +26,12 @@ def _scenario() -> dict:
         "hidden_gold": {
             "expected_decision": "use_current_memory",
             "expected_answer": "Fix merged",
-            "memory_states": {"m1": "current"},
-            "minimal_evidence_event_ids": ["e2"],
-            "failure_diagnosis": "stale_memory_reuse",
-            "answer_must_include": ["Fix merged"],
+            "expected_memory_state": {"m1": "current"},
+            "expected_evidence_event_ids": ["e2"],
+            "expected_failure_diagnosis": "stale_memory_reuse",
+            "counterevidence_event_ids": [],
+            "rubric": {"must_include": ["Fix merged"]},
+            "stale_or_wrong_answers": [],
         },
     }
 

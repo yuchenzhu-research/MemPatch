@@ -324,7 +324,7 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
         and float(stale_reuse) == 0.0
     )
 
-    # Exact full-structure success for answer-free ReTrace-Learn evaluations.
+    # Exact full-structure success for answer-free scaffold evaluations.
     # This intentionally requires exact/minimal evidence coverage via F1 == 1.0;
     # softer evidence behavior remains visible through evidence_f1/precision.
     structural_revision_success = float(

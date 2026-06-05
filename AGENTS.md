@@ -23,11 +23,22 @@ RMI (Rapid Memory Integration) is the ability of an LLM agent to rapidly integra
 
 Three layers:
 
-1. **MemPatch-Bench** — evaluation layer. Evaluation-only; owns benchmark schema, scoring, evaluator API, release packaging, and leakage checks. Locations: `benchmark/retrace_bench/`, `hf_release/retrace_bench_v1_1/`, benchmark scripts/tests. The benchmark layer stays method-neutral as an evaluation artifact. Public data lives on Hugging Face, not as a full local GitHub data copy. Package path `retrace_bench` retained for compatibility.
-2. **MemPatch scaffold** — method/runtime layer. MemPatch v1 has three paper-facing stages: **Graph Builder** -> **Proposal Policy** -> **DPA-guided RSFT/DPO** (only the first two are learned; stage 3 is a training protocol). Locations: `src/retrace_learn/`, method scripts/tests. Package path `retrace_learn` retained for compatibility. The scaffold uses selected MemPatch-Bench-derived scenario data with declared split roles (`data/retrace_learn/`); split roles must be explicit, and leakage-free held-out evaluation is not claimed where the same gold labels are used for training. Local MemPatch-Bench downloads may be used as training sources under ignored `local/` paths, as long as split roles are declared.
-3. **Deterministic authorization** — authorization layer. DPA and `authorize(...)` under `src/retracemem/`. Package path `retracemem` retained for compatibility. The model proposes typed patches; DPA authorizes. DPA is a deterministic verifier and does not learn.
+1. **MemPatch-Bench** — evaluation layer. Evaluation-only; owns benchmark schema, scoring, evaluator API, release packaging, and leakage checks. Locations: `benchmark/retrace_bench/`, `hf_release/retrace_bench_v1_1/`, benchmark scripts/tests. The benchmark layer stays method-neutral as an evaluation artifact. Public data lives on Hugging Face, not as a full local GitHub data copy.
+2. **MemPatch scaffold** — method/runtime layer. MemPatch v1 has three pipeline roles: **Scenario View Builder** -> **Revision Response Policy** -> **Benchmark-grounded feedback** (only the first two are learned; feedback is a training protocol). Locations: `src/retrace_learn/`, method scripts/tests. The scaffold uses selected MemPatch-Bench-derived scenario data with declared split roles (`data/retrace_learn/`); split roles must be explicit, and leakage-free held-out evaluation is not claimed where the same gold labels are used for training. Local MemPatch-Bench downloads may be used as training sources under ignored `local/` paths, as long as split roles are declared.
+3. **Deterministic authorization** — authorization layer. DPA and `authorize(...)` under `src/retracemem/`. The model proposes typed patches; DPA authorizes. DPA is a deterministic verifier and does not learn. Its output belief statuses map to benchmark `memory_state` labels (`current`, `outdated`, `blocked`, `unresolved`, etc.).
 
-**ReTrace-Engine** (Parser + RevisionGate + DPA + Audit Trace, reached via `authorize(...)`) is the internal implementation name for the deterministic commit path inside the MemPatch scaffold — it is an implementation detail of stages 2–3, not a standalone paper module. "ReTrace" in code paths refers to internal evidence-retracing machinery, not the paper title.
+**ReTrace-Engine** (Parser + RevisionGate + DPA + Audit Trace, reached via `authorize(...)`) is the internal implementation name for the deterministic commit path inside the MemPatch scaffold — an implementation detail of the revision-response and feedback roles, not a standalone paper module.
+
+## Benchmark Response Interface
+
+The paper-facing interface is defined by MemPatch-Bench response fields:
+
+- `response.decision` — revision decision (`use_current_memory`, `escalate`, etc.)
+- `response.memory_state` — per-memory usability labels scored against `hidden_gold.expected_memory_state`
+- `response.evidence_event_ids` — visible event ids grounding the response
+- `response.failure_diagnosis` — diagnostic failure mode when revision fails
+
+The scaffold's Revision Response Policy produces benchmark-compatible responses (internally validated as typed patch actions). DPA commit yields statuses that align with `memory_state` labels.
 
 Out of active scope (backlog only, do not add code/active docs): SkillOpt / frozen-agent skill optimization, `memory_policy.md` optimization, Microsoft SkillOpt integration. Closed-source Skill.md-style procedural policies may be mentioned only as a possible extension or deployment adaptation, not as active core implementation.
 
@@ -42,10 +53,10 @@ revision authorization for Rapid Memory Integration.
 
 Multiple subagents may submit evidence-bearing memory updates to a shared long-term memory. MemPatch controls which revisions are allowed to affect the shared usable memory basis.
 
-Stage naming and configuration hierarchy:
-- Prompt-Proposer / Stage A = `ReTrace-Prompt` (API baseline model proposes typed revision actions over a fixed candidate view, then routes through ReTrace-Engine). Config name retained for compatibility.
+Configuration hierarchy:
+- Prompt-Proposer / Stage A = `ReTrace-Prompt` (API baseline model proposes typed revision actions over a fixed candidate view, then routes through ReTrace-Engine).
 - DirectJudge / Stage B = `DirectJudge-API` (API baseline model directly predicts final belief usability status, completely bypassing ReTrace-Engine).
-- MemPatch scaffold / `ReTrace-Learn` config = the main trainable system: consumes raw dialogues/submissions -> builds candidate graph nodes/dependencies via the learned **Graph Builder** -> proposes typed actions via the learned **Proposal Policy** -> commits through the deterministic ReTrace-Engine, with **DPA-guided RSFT/DPO** supplying the training signal for the Proposal Policy. `ReTrace-Learn` config name retained for compatibility.
+- MemPatch scaffold (`retrace_learn` config) = the main trainable system: scenario/event_trace -> structured revision view via **Scenario View Builder** -> benchmark-compatible response via **Revision Response Policy** -> commits through deterministic ReTrace-Engine, with **Benchmark-grounded feedback** (`response` -> `memory_state` / evidence / diagnostic metrics -> training signal) supporting SFT/RSFT/DPO-style policy improvement.
 
 Public API Boundaries:
 - `authorize(...)` is the public deterministic authorization kernel inside ReTrace-Engine. Neither Defeat-Path Authorization (DPA) nor RevisionGate should be invoked directly by external callers. All updates/admissions and deterministic routing happen entirely inside `authorize`.

@@ -1,1 +1,1 @@
-"""ReTrace-Learn runtime: extractor, proposer, DPA runtime, reward, path ranker."""
+"""MemPatch scaffold runtime: Scenario View Builder, Revision Response Policy, DPA runtime, benchmark-grounded feedback."""

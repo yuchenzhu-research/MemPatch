@@ -1,10 +1,9 @@
-"""ReTrace-Learn training-data contracts.
+"""MemPatch scaffold training-data contracts.
 
-These dataclasses define the three JSONL training schemas used by the
-ReTrace-Learn upgrade (raw dialogue -> learned graph extraction -> learned
-typed revision proposal -> DPA-in-the-loop reward). They are intentionally
-*compatible* with the canonical ReTrace runtime vocabulary defined in
-``retracemem``:
+These dataclasses define JSONL training schemas for the MemPatch pipeline
+(scenario/event_trace -> revision view -> benchmark-compatible response ->
+benchmark-grounded feedback). They align with the canonical runtime vocabulary
+in ``retracemem``:
 
 * typed action vocabulary  -> :data:`CANONICAL_ACTIONS`
   (``SUPERSEDES``/``BLOCKS``/``RELEASES``/``UNCERTAIN``/``REAFFIRMS``/``NO_REVISION``)
@@ -44,7 +43,7 @@ CANDIDATE_PATH_TYPES: tuple[str, ...] = tuple(
 
 
 class SchemaValidationError(ValueError):
-    """Raised when a training example violates the ReTrace-Learn schema."""
+    """Raised when a training example violates the MemPatch scaffold schema."""
 
 
 # ---------------------------------------------------------------------------
@@ -161,7 +160,7 @@ def validate_actions(actions: list[RevisionAction]) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Memory graph (output of Graph Builder / input of Proposal Policy)
+# Revision view (output of Scenario View Builder / input of Revision Response Policy)
 # ---------------------------------------------------------------------------
 
 _GRAPH_KEYS = (
@@ -211,9 +210,9 @@ def validate_memory_graph(graph: dict[str, Any]) -> None:
 
 @dataclass(frozen=True)
 class GraphExtractionExample:
-    """Row of ``graph_extraction_sft.jsonl`` (Graph Builder SFT).
+    """Row of ``graph_extraction_sft.jsonl`` (Scenario View Builder SFT).
 
-    raw multi-subagent dialogue -> structured candidate memory graph.
+    scenario event_trace / subagent submissions -> structured revision view.
     """
 
     example_id: str
@@ -251,9 +250,9 @@ class GraphExtractionExample:
 
 @dataclass(frozen=True)
 class TypedRevisionExample:
-    """Row of ``typed_revision_sft.jsonl`` (Proposal Policy SFT).
+    """Row of ``typed_revision_sft.jsonl`` (Revision Response Policy SFT).
 
-    candidate memory graph + new evidence -> gold typed revision actions.
+    revision view + new evidence -> gold benchmark-compatible typed patch actions.
     """
 
     example_id: str
@@ -339,11 +338,11 @@ class TypedRevisionExample:
 
 @dataclass(frozen=True)
 class RLRolloutExample:
-    """Row of ``dpa_rl_rollouts.jsonl`` (DPA-guided RSFT / DPO).
+    """Row of ``dpa_rl_rollouts.jsonl`` (benchmark-grounded feedback).
 
-    A single sampled Proposal Policy rollout scored through
-    parser + RevisionGate + DPA. The DPA verdict supplies the preference /
-    reward signal; DPA itself does not learn.
+    A single sampled Revision Response Policy rollout scored through
+    parser + RevisionGate + DPA. Benchmark-aligned metrics supply the
+    preference / reward signal; DPA itself does not learn.
     """
 
     example_id: str

@@ -48,7 +48,7 @@ def authorize(
     authority is to *propose* typed actions; admission and final status are
     decided here, deterministically.
 
-    Mapping to the ReTrace-Learn formalism (concept -> code):
+    Mapping to the MemPatch scaffold formalism (concept -> code):
 
     * ``G_t = (E_t, B_t, C_t, D_t, R_t)`` — the typed graph state assembled below
       from the method-visible ``view``:

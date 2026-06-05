@@ -1,4 +1,4 @@
-"""Bridge between ReTrace-Learn JSON graphs/actions and the runtime kernel.
+"""Bridge between MemPatch revision views/actions and the runtime kernel.
 
 This module is the only place that translates the dict-shaped training data
 into the canonical ``retracemem`` dataclasses consumed by ``authorize(...)``.

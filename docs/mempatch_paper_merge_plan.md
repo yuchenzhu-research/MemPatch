@@ -2,9 +2,9 @@
 
 **Target paper:** *MemPatch: Benchmarking and Improving Rapid Memory Integration in LLM Agents*
 
-**Repo:** `/Users/yuchenzhu/Desktop/ReTrace` (internal code names: ReTrace, ReTrace-Bench, ReTrace-Learn, `retracemem` package).
+**Repo:** MemPatch unified paper system (`benchmark/retrace_bench/`, `src/retrace_learn/`, `src/retracemem/`).
 
-This map ties **existing files and concepts** to an **8-page** MemPatch narrative. ReTrace appears only where it names code modules or historical artifacts.
+This map ties **existing files and concepts** to an **8-page** MemPatch narrative. Historical `retrace_*` package paths appear only where they name code modules.
 
 ---
 
@@ -15,12 +15,12 @@ This map ties **existing files and concepts** to an **8-page** MemPatch narrativ
 | MemPatch | Umbrella system + paper title |
 | Rapid Memory Integration (RMI) | Agent must integrate new evidence into usable memory **quickly and correctly** under typed patch semantics |
 | MemPatch-Bench | `benchmark/retrace_bench/`, HF `ReTrace-Bench`, `hf_release/retrace_bench_v1_1/` |
-| MemPatch scaffold | Graph extraction + typed patch proposal + **DPA** + deterministic commit + audit trace (`src/retrace_learn/runtime/*` + `src/retracemem/*`) |
+| MemPatch scaffold | Scenario View Builder + Revision Response Policy + **DPA** + deterministic commit + audit trace (`src/retrace_learn/runtime/*` + `src/retracemem/*`) |
 | Patch action `a` | `EvidenceEdge` / `RevisionAction`: SUPERSEDE (code: `SUPERSEDES`), BLOCK, RELEASE, REAFFIRM, UNCERTAIN, NO_PATCH (code: `NO_REVISION`) |
 | Memory `M → M'` | Shared basis after `authorize(...)` / `commit_subagent_submission` — eligibility change, append-only evidence graph |
 | DPA | `DefeatPathAuthorizationAlgorithm` in `src/retracemem/tms/authorization.py` |
 | Baseline API proposer | `benchmark/retrace_bench/model_runner.py` (predicts bench **response** fields, not full scaffold) |
-| Learned proposer / graph builder | `LearnedTypedRevisionProposer`, `LearnedGraphExtractor` |
+| Learned Revision Response Policy / Scenario View Builder | `LearnedTypedRevisionProposer`, `LearnedGraphExtractor` |
 | Oracle / teacher | `RuleBasedGraphExtractor`, `ScriptedProposer`, E0 replay in tests |
 
 ---
@@ -37,10 +37,10 @@ This map ties **existing files and concepts** to an **8-page** MemPatch narrativ
 - **Contributions (draft bullets tied to repo):**
   1. MemPatch-Bench — 3780 public scenarios, multi-metric revision evaluation (`scorers_general.py` headline metrics).
   2. MemPatch scaffold — typed proposals + deterministic DPA commit (`authorize`).
-  3. Learning recipe — Graph Builder + Proposal Policy with DPA-guided rewards (`retrace_learn/runtime/reward.py`).
+  3. Learning recipe — Scenario View Builder + Revision Response Policy with benchmark-grounded feedback (`retrace_learn/runtime/reward.py`).
   4. Empirical study — API baselines via `run_retrace_bench_model.py` + learned/open-weight paths (`local/` runs, `needs_review` for numbers).
 
-**Drop from old dual-paper framing:** Separate “ReTrace-Bench paper” vs “ReTrace-Learn paper” — one contribution list.
+**Unified framing:** One MemPatch paper; benchmark response fields are the paper-facing interface.
 
 ---
 
@@ -112,10 +112,11 @@ This map ties **existing files and concepts** to an **8-page** MemPatch narrativ
 
 **Subsections mapped to implementation:**
 
-| Scaffold stage | Repo component |
+| Pipeline role | Repo component |
 |----------------|----------------|
-| Retrieval / candidate view | `SharedCandidateView`, `views.py` (bounded context) |
-| Typed patch proposal | `LearnedTypedRevisionProposer` / API baseline (bench runner is **not** full scaffold — clarify in text) |
+| Scenario View Builder | `graph_extractor.py`, `views.py` (scenario/event_trace -> revision view) |
+| Revision Response Policy | `LearnedTypedRevisionProposer` / API baseline (bench runner predicts `response` fields directly) |
+| Benchmark-grounded feedback | `reward.py` (memory_state / evidence / diagnostic metrics -> training signal) |
 | DPA | `DefeatPathAuthorizationAlgorithm` |
 | Commit | `authorize`, `commit_subagent_submission` |
 | Audit trail | `AuthorizationResult.trace`, gate decisions in trace dict |
