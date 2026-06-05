@@ -27,3 +27,6 @@ include = ["retracemem*", "retrace_learn*", "benchmark*"]
 [tool.pyright]
 include = ["benchmark", "scripts", "src"]
 extraPaths = [".", "src"]
+
+[tool.pytest.ini_options]
+pythonpath = [".", "src"]

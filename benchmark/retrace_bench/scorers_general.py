@@ -240,15 +240,15 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
     gold = canonical_hidden_gold_fields(gold_raw)
     response = prediction.get("response", prediction)
     expected_state = gold["expected_memory_state"]
-    predicted_state = response.get("memory_state", response.get("expected_memory_state", {})) or {}
+    predicted_state = response.get("memory_state", {}) or {}
     if not isinstance(predicted_state, dict):
         predicted_state = {}
     state_total = len(expected_state) or 1
     state_correct = sum(1 for mid, status in expected_state.items() if predicted_state.get(mid) == status)
     expected_decision = gold["expected_decision"]
-    predicted_decision = response.get("decision", response.get("expected_decision"))
+    predicted_decision = response.get("decision")
     expected_diag = gold["expected_failure_diagnosis"]
-    predicted_diag = normalize_failure_mode(response.get("failure_diagnosis", response.get("expected_failure_diagnosis")))
+    predicted_diag = normalize_failure_mode(response.get("failure_diagnosis"))
 
     rubric = gold["rubric"]
     answer = response.get("answer")
@@ -381,7 +381,7 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
         # open-ended language and should not be a headline metric.
         "answer_exact_match": float(answer_exact_match(answer, expected_answer)),
     }
-    # NOTE: legacy ``answer_accuracy`` and ``decision_accuracy`` were duplicates
+    # NOTE: previous ``answer_accuracy`` and ``decision_accuracy`` were duplicates
     # of ``answer_key_fact_accuracy`` and ``black_box_decision_accuracy`` and
     # have been removed as headline metrics.
     for mode in FAILURE_MODES:
@@ -399,8 +399,8 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
     return metrics
 
 
-# Backward-compatible alias of the centralized decision label space defined in
-# general_taxonomy.DECISIONS. Kept as a set for existing membership checks.
+# Set alias of the centralized decision label space defined in
+# general_taxonomy.DECISIONS. Kept as a set for membership checks.
 ALL_DECISIONS = set(DECISIONS)
 
 
@@ -440,7 +440,7 @@ def aggregate_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
         for r in valid_rows:
             exp_dec = r["expected_decision"]
             aliases = r.get("decision_aliases")
-            pred_raw = r.get("response", {}).get("decision", r.get("response", {}).get("expected_decision"))
+            pred_raw = r.get("response", {}).get("decision")
 
             exp_c = canonicalize_decision(exp_dec, exp_dec, aliases)
             pred_c = canonicalize_decision(pred_raw, exp_dec, aliases)

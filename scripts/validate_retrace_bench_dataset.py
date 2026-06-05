@@ -212,15 +212,12 @@ def validate_one(
             warnings.append(f"{sid}: realistic annotation_status={annotation_status!r} is non-standard")
         if annotation_status != "reviewed":
             msg = f"{sid}: realistic split is not manually reviewed (annotation_status={annotation_status!r})"
-            if packaging_final:
-                errors.append(msg)
-            elif smoke:
-                warnings.append(msg)
-            else:
-                warnings.append(msg)
+            warnings.append(msg)
 
     if split == "calibration" and packaging_final:
-        errors.append(f"{sid}: calibration split cannot be packaged for headline table generation")
+        warnings.append(
+            f"{sid}: calibration row is smoke/quickstart only; exclude from headline table generation"
+        )
 
     return errors, warnings
 

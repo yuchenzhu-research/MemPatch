@@ -52,9 +52,9 @@ Vocabulary: `scenario`, `public_input`, `event_trace`, `hidden_gold`, `response`
 | `src/retrace_learn/` | View Builder, Response Policy, feedback |
 | `src/retracemem/` | DPA-Consistent Projection (`authorize`, RevisionGate) |
 | `scripts/` | Evaluate, validate, run models |
-| `hf_release/retrace_bench_v1_1/` | Hugging Face release metadata |
+| `hf_release/mempatch_v1_1/` | Hugging Face release metadata |
 
-Data: Hugging Face `Sylvan-Vale-Moon/ReTrace-Bench`.
+Data: Hugging Face `Sylvan-Vale-Moon/MemPatch`.
 
 ## Setup
 
@@ -93,12 +93,12 @@ pip install -e ".[dev,llm]" && cp .env.example .env
 
 ```bash
 python scripts/run_retrace_bench_model.py \
-  --data local/ReTrace-Bench/calibration/scenarios.jsonl \
+  --data local/MemPatch/scenarios.jsonl \
   --provider siliconflow --model deepseek-ai/DeepSeek-V3 \
   --out-predictions local/predictions/calibration.jsonl --max-cases 10 --resume
 
 PYTHONPATH=. python scripts/evaluate_retrace_bench_predictions.py \
-  --data local/ReTrace-Bench/calibration/scenarios.jsonl \
+  --data local/MemPatch/scenarios.jsonl \
   --predictions local/predictions/calibration.jsonl --print-table
 ```
 

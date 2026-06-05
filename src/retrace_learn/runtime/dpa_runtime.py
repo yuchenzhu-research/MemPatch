@@ -1,4 +1,4 @@
-"""DPA-Consistent Projection — MemPatch Revision Module Step 4.
+"""DPA-Consistent Projection — MemPatch Revision Module Steps 4-5.
 
 Parses ``r_raw`` from the Revision Response Policy, routes through RevisionGate
 and ``authorize`` (DPA), and yields legal memory-state transitions ``T`` for
@@ -16,6 +16,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
+from benchmark.retrace_bench.general_taxonomy import DECISIONS, FAILURE_MODES
 from retracemem.authorization import authorize
 from retracemem.methods.contracts import SharedCandidateView
 from retracemem.multiagent.parser import (
@@ -34,6 +35,14 @@ from retrace_learn.runtime.engine_errors import (
     PARSER_SCHEMA_VIOLATION,
 )
 from retrace_learn.runtime.views import actions_to_proposal_batches
+
+
+BENCHMARK_STATUS_BY_DPA_STATUS = {
+    "AUTHORIZED": "current",
+    "SUPERSEDED": "outdated",
+    "BLOCKED": "blocked",
+    "UNRESOLVED": "unresolved",
+}
 
 
 @dataclass(frozen=True)
@@ -90,7 +99,11 @@ class RuntimeResult:
             for d in self.gate_decisions
             if d.get("admitted")
         }
-        return tuple(a for a in self.parse_result.actions if a.edge_id in admitted_ids)
+        return tuple(
+            a
+            for idx, a in enumerate(self.parse_result.actions)
+            if f"edge_rl_{idx}" in admitted_ids
+        )
 
     @property
     def rejected_actions(self) -> tuple[RevisionAction, ...]:
@@ -101,7 +114,11 @@ class RuntimeResult:
             for d in self.gate_decisions
             if d.get("admitted")
         }
-        return tuple(a for a in self.parse_result.actions if a.edge_id not in admitted_ids)
+        return tuple(
+            a
+            for idx, a in enumerate(self.parse_result.actions)
+            if a.action_type != "NO_REVISION" and f"edge_rl_{idx}" not in admitted_ids
+        )
 
     @property
     def final_statuses(self) -> dict[str, str]:
@@ -316,3 +333,111 @@ def run_from_text(
         parse_result=parse_result,
         audit_metadata=audit_metadata,
     )
+
+
+def _dedupe_preserve_order(values: list[str]) -> list[str]:
+    seen: set[str] = set()
+    out: list[str] = []
+    for value in values:
+        if value and value not in seen:
+            seen.add(value)
+            out.append(value)
+    return out
+
+
+def _raw_response_field(raw_response: Any, key: str) -> Any:
+    if isinstance(raw_response, dict):
+        response = raw_response.get("response")
+        if isinstance(response, dict) and key in response:
+            return response[key]
+        return raw_response.get(key)
+    return None
+
+
+def _project_memory_state(runtime_result: RuntimeResult) -> dict[str, str]:
+    memory_state: dict[str, str] = {}
+    for belief_id, status in runtime_result.final_belief_statuses.items():
+        memory_state[belief_id] = BENCHMARK_STATUS_BY_DPA_STATUS.get(
+            str(status),
+            "unresolved",
+        )
+    return memory_state
+
+
+def _project_evidence_event_ids(runtime_result: RuntimeResult) -> list[str]:
+    admitted_ids = {
+        d["edge_id"]
+        for d in runtime_result.gate_decisions
+        if d.get("admitted")
+    }
+    evidence: list[str] = []
+    for idx, action in enumerate(runtime_result.parse_result.actions):
+        if action.action_type == "NO_REVISION" or f"edge_rl_{idx}" in admitted_ids:
+            evidence.extend(action.evidence_ids)
+    return _dedupe_preserve_order(evidence)
+
+
+def _project_decision(memory_state: dict[str, str], raw_response: Any) -> str:
+    raw_decision = _raw_response_field(raw_response, "decision")
+    if isinstance(raw_decision, str) and raw_decision in DECISIONS:
+        return raw_decision
+    if any(status == "unresolved" for status in memory_state.values()):
+        return "mark_unresolved"
+    if any(status == "blocked" for status in memory_state.values()):
+        return "escalate"
+    return "use_current_memory"
+
+
+def _project_failure_diagnosis(
+    runtime_result: RuntimeResult,
+    memory_state: dict[str, str],
+    raw_response: Any,
+) -> str:
+    raw_diagnosis = _raw_response_field(raw_response, "failure_diagnosis")
+    if isinstance(raw_diagnosis, str) and raw_diagnosis in FAILURE_MODES:
+        return raw_diagnosis
+    if runtime_result.parser_errors:
+        return "memory_hallucination"
+    if runtime_result.gate_errors:
+        return "wrong_source_attribution"
+    if any(a.action_type == "SUPERSEDES" for a in runtime_result.admitted_actions):
+        return "stale_memory_reuse"
+    if any(status == "blocked" for status in memory_state.values()):
+        return "failure_to_release_or_restore"
+    if any(status == "unresolved" for status in memory_state.values()):
+        return "conflict_collapse"
+    return "unnecessary_memory_write"
+
+
+def project_to_benchmark_response(
+    runtime_result: RuntimeResult,
+    raw_response: Any | None = None,
+    *,
+    answer: str | None = None,
+) -> dict[str, Any]:
+    """Project DPA-authorized transitions into the benchmark response schema.
+
+    This is Algorithm 1 Step 5. It is intentionally a presentation-layer bridge:
+    DPA keeps its internal ``AUTHORIZED`` / ``SUPERSEDED`` / ``BLOCKED`` /
+    ``UNRESOLVED`` vocabulary, while MemPatch-Bench receives canonical
+    ``response.memory_state`` labels.
+    """
+    memory_state = _project_memory_state(runtime_result)
+    projected_answer = answer
+    if projected_answer is None:
+        raw_answer = _raw_response_field(raw_response, "answer")
+        projected_answer = raw_answer if isinstance(raw_answer, str) else ""
+    return {
+        "decision": _project_decision(memory_state, raw_response),
+        "memory_state": memory_state,
+        "evidence_event_ids": _project_evidence_event_ids(runtime_result),
+        "failure_diagnosis": _project_failure_diagnosis(
+            runtime_result,
+            memory_state,
+            raw_response,
+        ),
+        "answer": projected_answer,
+    }
+
+
+ProjectToBenchmarkResponse = project_to_benchmark_response

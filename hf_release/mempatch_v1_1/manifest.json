@@ -1,0 +1,25 @@
+{
+  "code_license": "MIT",
+  "data_file": "scenarios.jsonl",
+  "dataset": "MemPatch",
+  "dataset_license": "CC-BY-4.0",
+  "evaluation_only": true,
+  "generation_seed": 2027,
+  "github": "https://github.com/yuchenzhu-research/MemPatch",
+  "huggingface": "https://huggingface.co/datasets/Sylvan-Vale-Moon/MemPatch",
+  "notes": {
+    "calibration": "smoke/quickstart only; not for model selection or headline claims",
+    "private_hidden": "private evaluation only; not part of the public release",
+    "realistic": "synthetic_gold_unreviewed until human validation is recorded",
+    "single_hf_subset": "All public rows are published in one default Hugging Face config; use public_split_name for filtering."
+  },
+  "private_splits": [],
+  "public_split_name_counts": {
+    "calibration": 80,
+    "hard": 500,
+    "main": 3000,
+    "realistic": 200
+  },
+  "public_total": 3780,
+  "release_version": "1.1.0"
+}

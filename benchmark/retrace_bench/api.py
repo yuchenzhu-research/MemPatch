@@ -51,8 +51,9 @@ __all__ = [
 
 SCENARIO_JSONL_NAME = "scenarios.jsonl"
 
-# Fields that make up a canonical prediction ``response`` object. ``decision``
-# is the only hard-required field; the rest are scored when present.
+# Fields that make up a canonical prediction ``response`` object. In strict
+# evaluation every field is required so models cannot score through hidden-gold
+# shaped fallbacks or partial response objects.
 RESPONSE_FIELDS = (
     "answer",
     "decision",
@@ -178,9 +179,9 @@ def _validate_response(
             f"(expected one of {sorted(DECISIONS)})"
         )
 
-    # memory_state: optional, but if present must be a dict of valid statuses.
+    # memory_state: required and must be a dict of valid statuses.
     if "memory_state" not in response:
-        warnings.append(f"{scenario_id}: missing response field 'memory_state'")
+        errors.append(f"{scenario_id}: missing response field 'memory_state'")
     else:
         memory_state = response.get("memory_state")
         if not isinstance(memory_state, dict):
@@ -204,9 +205,9 @@ def _validate_response(
                     f"{scenario_id}: memory_state omits visible memory IDs {omitted}"
                 )
 
-    # evidence_event_ids: optional, but if present must reference real events.
+    # evidence_event_ids: required and must reference real events.
     if "evidence_event_ids" not in response:
-        warnings.append(f"{scenario_id}: missing response field 'evidence_event_ids'")
+        errors.append(f"{scenario_id}: missing response field 'evidence_event_ids'")
     else:
         evidence = response.get("evidence_event_ids")
         if not isinstance(evidence, list):
@@ -222,11 +223,10 @@ def _validate_response(
                 )
 
     # failure_diagnosis: required to be one of FAILURE_MODES (or an accepted
-    # normalized alias) when present. Missing is a warning; an unrecognized
-    # label is an error so strict mode rejects it. The scorer still normalizes
-    # free-text aliases, so documented aliases pass.
+    # normalized alias). The scorer still normalizes free-text aliases, so
+    # documented aliases pass.
     if "failure_diagnosis" not in response:
-        warnings.append(f"{scenario_id}: missing response field 'failure_diagnosis'")
+        errors.append(f"{scenario_id}: missing response field 'failure_diagnosis'")
     else:
         diagnosis = response.get("failure_diagnosis")
         if normalize_failure_mode(diagnosis) not in FAILURE_MODES:
@@ -235,9 +235,9 @@ def _validate_response(
                 f"(expected one of {sorted(FAILURE_MODES)} or a documented alias)"
             )
 
-    # answer: free text. Missing is a warning only.
+    # answer: free text, required for canonical benchmark responses.
     if "answer" not in response:
-        warnings.append(f"{scenario_id}: missing response field 'answer'")
+        errors.append(f"{scenario_id}: missing response field 'answer'")
 
 
 def evaluate_predictions(

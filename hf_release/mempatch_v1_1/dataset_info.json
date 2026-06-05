@@ -1,0 +1,15 @@
+{
+  "data_files": {
+    "default": "scenarios.jsonl"
+  },
+  "dataset_name": "MemPatch",
+  "license": "cc-by-4.0",
+  "public_split_name_counts": {
+    "calibration": 80,
+    "hard": 500,
+    "main": 3000,
+    "realistic": 200
+  },
+  "total_public_examples": 3780,
+  "version": "1.1.0"
+}
