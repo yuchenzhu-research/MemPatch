@@ -15,7 +15,11 @@ tags:
 - evaluation
 configs:
 - config_name: default
-  data_files: scenarios.jsonl
+  data_files:
+  - split: main
+    path: main/scenarios.jsonl
+  - split: hard
+    path: hard/scenarios.jsonl
 ---
 
 # MemPatch
@@ -26,9 +30,9 @@ Agents**. Each scenario tests whether an LLM agent integrates new evidence into
 `memory_state` labels (`current`, `outdated`, `blocked`, `unresolved`, etc.)
 without stale reuse, scope leakage, or policy-invalid beliefs.
 
-The released data is a single public scenario table. Rows retain
-`public_split_name` (`main`, `hard`, `realistic`, or `calibration`) so users can
-filter by split without navigating four Hugging Face subsets.
+The released data has two public splits: `main` and `hard`. The stress-only
+`realistic` rows and smoke-only `calibration` rows are not part of the public HF
+release used for paper-facing evaluation.
 
 > **Evaluation-only.** Do not train the MemPatch Revision Module policy on this
 > data. Doing so contaminates benchmark results.
@@ -39,22 +43,21 @@ filter by split without navigating four Hugging Face subsets.
 |---|---:|---|
 | `main` | 3000 | broad coverage across domains, difficulties, failure modes |
 | `hard` | 500 | L3/L4 adversarial; minimal-evidence, no latest-event shortcut |
-| `realistic` | 200 | realistic-style stress rows; `synthetic_gold_unreviewed` |
-| `calibration` | 80 | smoke / quickstart only |
 
-**Public total: 3780 rows.**
+**Public total: 3500 rows.**
 
-- `realistic` is a secondary stress subset until human validation is recorded.
-- `calibration` is smoke / quickstart only. Do not use it for model selection or
-  headline claims.
+- `realistic` remains a secondary stress subset until human validation is
+  recorded and is not included in this HF release.
+- `calibration` remains smoke / quickstart only and is not included in this HF
+  release.
 - Private hidden rows are not part of this public release.
 
 ## Format
 
-Each line in `scenarios.jsonl` is a JSON scenario object with a gold-free
-`public_input` and a `hidden_gold` block used by the official scorer. The
-public-facing model input must be taken through the official public view; do not
-feed `hidden_gold` or internal fields to a model.
+Each line in `main/scenarios.jsonl` or `hard/scenarios.jsonl` is a JSON scenario
+object with a gold-free `public_input` and a `hidden_gold` block used by the
+official scorer. The public-facing model input must be taken through the
+official public view; do not feed `hidden_gold` or internal fields to a model.
 
 The benchmark-compatible prediction interface is:
 
@@ -77,7 +80,7 @@ Use the official evaluator from the GitHub repository:
 
 ```bash
 python scripts/evaluate_retrace_bench_predictions.py \
-  --data scenarios.jsonl --predictions <your_predictions>.jsonl
+  --data main/scenarios.jsonl --predictions <your_predictions>.jsonl
 ```
 
 Core metrics: `decision_macro_f1`, `memory_state_accuracy`, `evidence_f1`,
