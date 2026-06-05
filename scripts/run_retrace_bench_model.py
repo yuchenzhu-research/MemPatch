@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run an LLM provider on ReTrace-Bench and write predictions.jsonl."""
+"""Run an LLM provider on MemPatch-Bench scenarios and write predictions.jsonl."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ from benchmark.retrace_bench.model_runner import (  # noqa: E402
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Run a provider/model over ReTrace-Bench scenarios and write prediction JSONL.",
+        description="Run a provider/model over MemPatch-Bench scenarios and write prediction JSONL.",
     )
     parser.add_argument(
         "--data",

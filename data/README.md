@@ -2,6 +2,4 @@
 
 Local data is intentionally minimal.
 
-MemPatch-Bench public evaluation data is distributed on Hugging Face at `Sylvan-Vale-Moon/ReTrace-Bench`, not stored as a full local GitHub copy.
-
-The MemPatch scaffold may keep only the selected method-side subset needed by active code and tests under `data/retrace_learn/`.
+MemPatch-Bench scenarios are on Hugging Face (`Sylvan-Vale-Moon/ReTrace-Bench`). Method-side training subsets with declared split roles live under `data/retrace_learn/`.

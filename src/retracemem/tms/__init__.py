@@ -1,4 +1,4 @@
-"""Truth-maintenance-inspired authorization for ReTrace."""
+"""Truth-maintenance-inspired DPA authorization for MemPatch."""
 
 from retracemem.tms.gate import RevisionGate
 from retracemem.tms.authorization import AuthorizationEngine

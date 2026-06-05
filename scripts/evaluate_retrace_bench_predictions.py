@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Official ReTrace-Bench evaluator for external prediction files.
+"""Official MemPatch-Bench evaluator for external prediction files.
 
 This is the public scorer for benchmark submissions. It does NOT run any model
 and requires no API keys: it only scores an existing JSONL predictions file
@@ -35,7 +35,7 @@ from benchmark.retrace_bench.api import (  # noqa: E402
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Official ReTrace-Bench evaluator for external predictions.",
+        description="Official MemPatch-Bench evaluator for external predictions.",
     )
     parser.add_argument(
         "--data",
@@ -92,7 +92,7 @@ def _write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def _print_table(result: dict[str, Any]) -> None:
-    print(f"\nReTrace-Bench headline metrics (scored {result['count']} predictions)")
+    print(f"\nMemPatch-Bench headline metrics (scored {result['count']} predictions)")
     print("-" * 56)
     for key in HEADLINE_METRICS:
         value = result["headline_metrics"].get(key)

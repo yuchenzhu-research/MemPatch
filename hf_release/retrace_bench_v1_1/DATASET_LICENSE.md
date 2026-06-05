@@ -1,6 +1,6 @@
-# ReTrace-Bench Dataset License
+# MemPatch-Bench Dataset License
 
-The ReTrace-Bench **dataset** (the scenario JSONL files in this bundle) is
+The MemPatch-Bench **dataset** (the scenario JSONL files in this bundle) is
 licensed under **Creative Commons Attribution 4.0 International (CC BY 4.0)**.
 
 https://creativecommons.org/licenses/by/4.0/
@@ -10,7 +10,7 @@ appropriate credit.
 
 ## Note on intended use
 
-ReTrace-Bench is an **evaluation-only** benchmark. While CC BY 4.0 permits
+MemPatch-Bench is an **evaluation-only** benchmark. While CC BY 4.0 permits
 adaptation, the authors request that you do **not** use it as training data for
 memory-revision systems (including the MemPatch scaffold), since doing so contaminates
 evaluation.

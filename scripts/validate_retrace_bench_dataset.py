@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate general English ReTrace-Bench JSONL files."""
+"""Validate MemPatch-Bench scenario JSONL files (canonical v1.1 schema)."""
 
 from __future__ import annotations
 

@@ -65,7 +65,7 @@ class RevisionAction:
     * ``NO_REVISION`` -> no belief/condition/replacement target.
 
     The v1 action object is closed-world: ``action_type`` from the canonical
-    enum and every id slot drawn from the candidate graph / visible evidence.
+    enum and every id slot drawn from the revision view / visible evidence.
     There is no open-ended ``scope`` field (the runtime parser and
     ``TypedRevisionTarget`` do not model one).
     """

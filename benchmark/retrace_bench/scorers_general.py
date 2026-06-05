@@ -1,4 +1,4 @@
-"""Scoring utilities for the general English ReTrace-Bench release."""
+"""Scoring utilities for MemPatch-Bench predictions against hidden_gold."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ from benchmark.retrace_bench.general_taxonomy import (
 )
 
 
-# Paper-facing headline metrics. These are what ReTrace-Bench reports as the
+# Paper-facing headline metrics for MemPatch-Bench evaluation.
 # primary scores in tables; they are computed in aggregate_metrics() (not as
 # per-example raw signals). decision_macro_f1 is the primary decision metric
 # because it is robust to the dominant use_current_memory class.
@@ -533,8 +533,7 @@ def aggregate_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
 
     # Grouped views so paper-facing scripts know which numbers are headline vs.
     # auxiliary without having to hard-code metric names. ``metrics`` is kept as
-    # the flat all-metrics dict for backward compatibility with existing
-    # consumers (e.g. scripts/run_retrace_bench_ablation.py:load_metrics).
+    # the flat all-metrics dict for scripts that consume the full metric set.
     headline_metrics = {k: metrics_dict[k] for k in HEADLINE_METRICS if k in metrics_dict}
     auxiliary_metrics = {k: metrics_dict[k] for k in AUXILIARY_METRICS if k in metrics_dict}
 

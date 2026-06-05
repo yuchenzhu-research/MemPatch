@@ -1,4 +1,4 @@
-"""Structured error contracts for ReTrace-Engine stages.
+"""Structured error contracts for the MemPatch commit path (ReTrace-Engine).
 
 Every stage of the deterministic backend (Parser, RevisionGate, DPA) reports
 failures and warnings through a shared ``EngineError`` dataclass. This enables:

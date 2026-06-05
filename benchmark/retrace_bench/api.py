@@ -1,8 +1,8 @@
-"""Official public scoring API for ReTrace-Bench.
+"""Official public scoring API for MemPatch-Bench.
 
-This module is the stable entrypoint external benchmark users should import. It
-wraps the existing scorer (:mod:`benchmark.retrace_bench.scorers_general`) and
-adds prediction loading, normalization, validation, and aggregate evaluation.
+Stable entrypoint for evaluating benchmark-compatible ``response`` predictions
+against ``hidden_gold``. Wraps :mod:`benchmark.retrace_bench.scorers_general`
+with prediction loading, normalization, validation, and aggregate metrics.
 
 Typical usage::
 
@@ -15,8 +15,7 @@ Typical usage::
     result = evaluate_predictions(scenarios, predictions, strict=True)
     print(result["headline_metrics"])
 
-The scorer itself is unchanged; this module only orchestrates it and exposes a
-documented, backward-compatible surface.
+This module orchestrates scoring and exposes the documented evaluation surface.
 """
 
 from __future__ import annotations

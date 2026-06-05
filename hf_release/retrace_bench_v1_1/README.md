@@ -24,13 +24,13 @@ configs:
   data_files: calibration/scenarios.jsonl
 ---
 
-# ReTrace-Bench
+# MemPatch-Bench
 
-ReTrace-Bench evaluates **agent memory-revision reliability**: whether a system
-processes new evidence to update, block, release, reaffirm, or reject memory
-states without introducing stale, out-of-scope, or policy-invalid beliefs. It
-scores not only the final decision but also memory-state tracking, minimal
-evidence grounding, and failure diagnosis.
+MemPatch-Bench evaluates **Rapid Memory Integration (RMI)**: whether an LLM agent
+correctly integrates new evidence into `memory_state` labels (`current`,
+`outdated`, `blocked`, `unresolved`, etc.) without stale reuse, scope leakage,
+or policy-invalid beliefs. It scores `decision`, `memory_state`,
+`evidence_event_ids`, and `failure_diagnosis` against `hidden_gold`.
 
 > **Evaluation-only.** MemPatch-Bench is a benchmark for *evaluating* systems.
 > Do **not** train models on it, and in particular do **not** train the MemPatch

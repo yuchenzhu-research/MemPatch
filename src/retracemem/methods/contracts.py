@@ -1,15 +1,14 @@
-"""Shared controlled-comparison contracts for Stage A/B attribution.
+"""Shared revision-view contracts for controlled method comparison.
 
-These dataclasses define the fixed authorization input shared by Stage A
-(ReTrace-LLM) and Stage B (DirectJudge-LLM) in the primary controlled
-comparison track. They are method-local and do not modify schemas.py.
+These dataclasses define the fixed authorization input shared by baseline
+configurations (typed-action proposer vs direct status judge) in the primary
+controlled comparison. They are method-local and do not modify schemas.py.
 
-Metadata policy (AB-1A.5 protocol lock):
+Metadata policy:
     ``metadata`` fields on SharedCandidateView, EvidenceNode, BeliefNode,
-    ConditionNode, DependencyEdge are NON-SEMANTIC diagnostic attachments in
-    the primary controlled A/B execution path. They MUST NOT be consumed by
-    ControlledReTraceLLM or DirectJudgeLLM during method execution and MUST
-    NOT affect the view_fingerprint.
+    ConditionNode, DependencyEdge are NON-SEMANTIC diagnostic attachments.
+    Baseline executors MUST NOT consume them during method execution and MUST
+    NOT include them in ``view_fingerprint``.
 """
 from __future__ import annotations
 
@@ -110,13 +109,12 @@ def _compute_view_fingerprint(
 
 @dataclass(frozen=True)
 class SharedCandidateView:
-    """Exact fixed authorization input shared by Stage A and Stage B.
+    """Bounded revision view: scenario context + new evidence for authorization.
 
-    In the primary controlled comparison, both methods receive this
-    identical view. Neither method performs its own extraction or retrieval.
+    In controlled comparison, all methods receive this identical view.
+    Neither method performs its own Scenario View Builder extraction.
 
-    ``metadata`` is a non-semantic diagnostic attachment. Controlled
-    execution (ControlledReTraceLLM, DirectJudgeLLM) MUST NOT read it.
+    ``metadata`` is non-semantic. Baseline executors MUST NOT read it.
     It is not included in ``view_fingerprint``.
     """
 

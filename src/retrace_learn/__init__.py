@@ -8,8 +8,9 @@ learned):
       -> Revision Response Policy           (learned)
       -> Benchmark-grounded feedback        (training protocol)
 
-The deterministic commit path (parser + RevisionGate + DPA runtime, i.e.
-ReTrace-Engine) is an implementation detail of the response and feedback roles.
+The deterministic commit path (parser + RevisionGate + DPA via ``authorize``)
+is internal to the scaffold: the model proposes; DPA authorizes; the benchmark
+evaluates ``memory_state``.
 ``reward.py`` supplies benchmark-grounded training signal; the defeat-path ranker
 is a future/optional extension.
 

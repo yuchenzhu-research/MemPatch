@@ -1,4 +1,4 @@
-"""Optional model runner for producing ReTrace-Bench prediction JSONL files.
+"""Optional model runner for producing MemPatch-Bench prediction JSONL files.
 
 This module is intentionally separate from the official evaluator API. It calls
 external LLM providers to create prediction files, then the model-agnostic
@@ -484,7 +484,7 @@ def run_model_predictions(
     start = time.monotonic()
 
     print(
-        f"ReTrace-Bench model runner | total={dataset_total} | resume={resume} | "
+        f"MemPatch-Bench model runner | total={dataset_total} | resume={resume} | "
         f"completed={completed_existing} | skipped={skipped_existing} | "
         f"planned={planned_new_cases} | max_new={max_cases if max_cases is not None else 'all'}",
         flush=True,

@@ -41,12 +41,11 @@ def authorize(
     bypass_gate: bool = False,
     audit_metadata: dict[str, Any] | None = None,
 ) -> AuthorizationResult:
-    """Deterministic shared-memory revision authorization kernel (sole public entrypoint).
+    """Deterministic authorization kernel (sole public entrypoint).
 
-    This is the single public entrypoint for executing authorization; callers
-    must not invoke :class:`RevisionGate` or the DPA directly. The model's only
-    authority is to *propose* typed actions; admission and final status are
-    decided here, deterministically.
+    The model proposes typed revision patches; DPA authorizes; MemPatch-Bench
+    evaluates the resulting ``memory_state``. Callers must not invoke
+    :class:`RevisionGate` or the DPA directly — use this entrypoint only.
 
     Mapping to the MemPatch scaffold formalism (concept -> code):
 

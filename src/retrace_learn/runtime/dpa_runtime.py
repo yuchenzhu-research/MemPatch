@@ -1,6 +1,8 @@
-"""ReTrace-Engine commit path: Parser + RevisionGate + DPA runtime.
+"""MemPatch commit path: Parser + RevisionGate + DPA runtime.
 
-(Implementation detail of Revision Response Policy and benchmark-grounded feedback.)
+Internal to the scaffold. The Revision Response Policy proposes typed patches;
+``authorize`` commits them; benchmark-grounded feedback scores the resulting
+``memory_state`` labels.
 
 This wraps the deterministic kernel (``retracemem.authorize``) with the
 MemPatch JSON parsing front-end. It is the program-only runtime that turns
