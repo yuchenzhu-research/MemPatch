@@ -1,8 +1,9 @@
-"""Scenario View Builder: event trace / subagent submissions -> structured revision view.
+"""Scenario View Builder — MemPatch Revision Module Step 1.
 
-Turns scenario event traces and multi-subagent submissions into a structured
-revision view: ``evidence_nodes``, ``belief_nodes``, ``condition_nodes``,
-``candidate_replacement_beliefs`` and ``dependency_edges``.
+``V ← BuildScenarioRevisionView(S, M)``: turns ``scenario`` / ``event_trace``
+and visible memory candidates into a structured revision view
+(``evidence_nodes``, ``belief_nodes``, ``condition_nodes``,
+``candidate_replacement_beliefs``, ``dependency_edges``).
 
 Two implementations:
 
@@ -153,8 +154,8 @@ def build_extraction_prompt(raw_dialogue: str, subagent_roles: list[str]) -> str
     """Assemble the instruction prompt for the learned graph extractor."""
     roles = ", ".join(subagent_roles) if subagent_roles else "unknown"
     return (
-        "You are the MemPatch Scenario View Builder. Read the multi-subagent "
-        "event trace / dialogue and emit a single JSON revision view with keys: evidence_nodes, "
+        "You are the MemPatch Revision Module Scenario View Builder (Step 1). "
+        "Read the scenario event_trace / dialogue and emit a single JSON revision view with keys: evidence_nodes, "
         "belief_nodes, condition_nodes, candidate_replacement_beliefs, "
         "dependency_edges.\n"
         "- evidence_nodes: {evidence_id, timestamp, text}\n"

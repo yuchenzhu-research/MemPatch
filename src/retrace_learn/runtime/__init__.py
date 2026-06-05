@@ -1,1 +1,1 @@
-"""MemPatch scaffold runtime: Scenario View Builder, Revision Response Policy, DPA runtime, benchmark-grounded feedback."""
+"""MemPatch Revision Module runtime (View Builder, Response Policy, DPA projection, feedback)."""

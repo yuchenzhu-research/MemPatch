@@ -1,10 +1,9 @@
-"""Revision Response Policy: revision view -> benchmark-compatible response.
+"""Revision Response Policy — MemPatch Revision Module Step 2.
 
-Given a structured revision view + new evidence + candidate beliefs / replacements /
-condition anchors, produce a benchmark-compatible revision response. Internally
-this is validated as typed patch actions that map to ``response.decision``,
+``r_raw ← πθ(V)``: given revision view ``V``, produce a raw benchmark-compatible
+revision response. Typed patch actions map to ``response.decision``,
 ``response.memory_state``, ``response.evidence_event_ids``, and
-``response.failure_diagnosis``.
+``response.failure_diagnosis`` after DPA-Consistent Projection (Step 4).
 
 * :class:`LearnedTypedRevisionProposer` wraps a text ``generate_fn`` and parses
   its completion into validated actions via the shared fail-closed parser.
@@ -97,9 +96,10 @@ def _view_payload(view: SharedCandidateView) -> dict[str, Any]:
 def build_proposer_prompt(view: SharedCandidateView) -> str:
     payload = _view_payload(view)
     return (
-        "You are the MemPatch Revision Response Policy. Given the revision view "
-        "and new evidence, output ONLY a JSON array of typed patch actions that "
-        "form a benchmark-compatible revision response.\n\n"
+        "You are the MemPatch Revision Module Response Policy (Step 2). Given the "
+        "revision view and new evidence, output ONLY a JSON array of typed patch "
+        "actions forming r_raw for DPA-Consistent Projection into a benchmark "
+        "response (decision, memory_state, evidence_event_ids, failure_diagnosis).\n\n"
         f"{CANONICAL_ACTION_HELP}\n"
         "Each action object has keys: action_type, target_belief_id, "
         "target_condition_id, replacement_belief_id, evidence_ids, rationale.\n\n"

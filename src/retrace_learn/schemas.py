@@ -1,9 +1,9 @@
-"""MemPatch scaffold training-data contracts.
+"""MemPatch Revision Module training-data contracts.
 
-These dataclasses define JSONL training schemas for the MemPatch pipeline
-(scenario/event_trace -> revision view -> benchmark-compatible response ->
-benchmark-grounded feedback). They align with the canonical runtime vocabulary
-in ``retracemem``:
+JSONL schemas for the revision module pipeline (Algorithm 1 in
+``docs/mempatch_revision_module.md``): scenario/event_trace → revision view
+→ benchmark-compatible response → DPA-Consistent Projection →
+benchmark-grounded feedback. Aligns with ``retracemem`` runtime vocabulary:
 
 * typed action vocabulary  -> :data:`CANONICAL_ACTIONS`
   (``SUPERSEDES``/``BLOCKS``/``RELEASES``/``UNCERTAIN``/``REAFFIRMS``/``NO_REVISION``)
@@ -43,7 +43,7 @@ CANDIDATE_PATH_TYPES: tuple[str, ...] = tuple(
 
 
 class SchemaValidationError(ValueError):
-    """Raised when a training example violates the MemPatch scaffold schema."""
+    """Raised when a training example violates the Revision Module schema."""
 
 
 # ---------------------------------------------------------------------------

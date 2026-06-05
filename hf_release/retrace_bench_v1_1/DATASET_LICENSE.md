@@ -12,7 +12,7 @@ appropriate credit.
 
 MemPatch-Bench is an **evaluation-only** benchmark. While CC BY 4.0 permits
 adaptation, the authors request that you do **not** use it as training data for
-memory-revision systems (including the MemPatch scaffold), since doing so contaminates
+memory-revision systems (including the MemPatch Revision Module), since doing so contaminates
 evaluation.
 
 ## Separate code license

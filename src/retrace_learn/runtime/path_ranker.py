@@ -1,6 +1,6 @@
 """Future/optional: Learned defeat-path ranker (safe, auditable).
 
-Not part of the v1 scaffold commit path; advisory, never on the commit path.
+Not part of the v1 MemPatch Revision Module commit path; advisory only.
 
 This does **not** replace DPA and the LLM never emits a final status directly.
 Instead the ranker scores *DPA-legal* candidate defeat paths and selects one.

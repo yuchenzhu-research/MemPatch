@@ -1,4 +1,4 @@
-"""Structured error contracts for the MemPatch commit path (ReTrace-Engine).
+"""Structured error contracts for DPA-Consistent Projection (Revision Module Step 4).
 
 Every stage of the deterministic backend (Parser, RevisionGate, DPA) reports
 failures and warnings through a shared ``EngineError`` dataclass. This enables:

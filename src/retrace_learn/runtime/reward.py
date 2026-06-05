@@ -1,19 +1,23 @@
-"""Benchmark-grounded feedback: response metrics -> training signal.
+"""Benchmark-grounded Feedback — MemPatch Revision Module training signal.
 
-Computes decomposed feedback for a (sampled actions -> parser -> RevisionGate ->
-DPA) rollout, scored against benchmark gold labels and (optionally) gold actions.
-This feedback can support SFT/RSFT/DPO-style policy improvement when training
-scripts are configured for it.
+After DPA-Consistent Projection, scores ``r_final`` against ``hidden_gold``
+and decomposes benchmark metrics into a training signal. Supports supervised
+``L = L_state + L_evidence + L_decision + L_diagnosis`` and preference-style
+improvement when training scripts are configured (SFT / RSFT / DPO).
 
-Reward terms map to MemPatch-Bench concepts:
+Benchmark-aligned reward terms:
 
-* ``final_status_reward`` — agreement between DPA output and gold ``memory_state``
-  labels (``current``, ``outdated``, ``blocked``, ``unresolved``, etc.)
-* ``evidence_grounding_reward`` — quality of cited evidence vs
-  ``evidence_event_ids`` expectations
-* ``stale_propagation_penalty`` — ``stale_memory_reuse`` / stale reuse rate
-* ``over_update_penalty`` / ``under_update_penalty`` — benchmark failure modes
-  ``over_update`` and ``under_update``
+* ``final_status_reward`` → ``memory_state_accuracy`` (``L_state``)
+* ``evidence_grounding_reward`` → ``evidence_f1`` (``L_evidence``)
+* ``stale_propagation_penalty`` → ``stale_reuse_rate`` / ``stale_memory_reuse``
+* ``over_update_penalty`` / ``under_update_penalty`` → failure modes
+
+Aggregate (conceptual):
+
+    R ≈ memory_state_accuracy + evidence_f1 + joint_revision_success
+        - stale_reuse_rate - over_update_penalty - under_update_penalty
+
+Decomposed implementation:
 
     R = + w_final  * final_status_reward
         + w_json   * valid_json_reward

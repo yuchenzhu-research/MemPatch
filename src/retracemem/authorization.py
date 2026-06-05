@@ -47,7 +47,7 @@ def authorize(
     evaluates the resulting ``memory_state``. Callers must not invoke
     :class:`RevisionGate` or the DPA directly — use this entrypoint only.
 
-    Mapping to the MemPatch scaffold formalism (concept -> code):
+    Mapping to the MemPatch Revision Module (concept -> code):
 
     * ``G_t = (E_t, B_t, C_t, D_t, R_t)`` — the typed graph state assembled below
       from the method-visible ``view``:

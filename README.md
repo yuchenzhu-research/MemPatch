@@ -2,52 +2,59 @@
 
 **MemPatch: Benchmarking and Improving Rapid Memory Integration in LLM Agents**
 
-RMI (Rapid Memory Integration) is the core problem: when an LLM agent receives new evidence, it must quickly determine whether each prior memory is still `current`, `outdated`, `blocked`, `unresolved`, `out_of_scope`, or `restored` — and produce the correct current memory state. The agent should not merely append new information.
+## Problem
 
-MemPatch is **one unified paper**, not a benchmark paper plus a separate method paper:
+RMI (Rapid Memory Integration): when an LLM agent receives new evidence, it must determine whether each memory is `current`, `outdated`, `blocked`, `unresolved`, `out_of_scope`, or `restored` — not merely append new information.
 
-- **MemPatch-Bench** defines scenarios, tasks, gold labels, and the evaluation interface.
-- **MemPatch scaffold** learns to produce benchmark-compatible revision responses.
-- **DPA** (`authorize(...)`) is the scaffold's deterministic authorization kernel: the model proposes; DPA authorizes; the benchmark evaluates the resulting memory state.
-- **Benchmark-grounded feedback** turns `memory_state`, `evidence_event_ids`, and diagnostic metrics into training signal for policy improvement.
+MemPatch turns memory revision into a **constrained benchmark-compatible state-transition problem** rather than free-form answer generation.
 
-## Paper-facing response interface
+## One paper, one module
 
-The external interface readers see is a benchmark `response`:
+| Piece | Role |
+|-------|------|
+| **MemPatch-Bench** | Defines scenarios, `hidden_gold`, and the paper-facing `response` interface |
+| **MemPatch Revision Module** | Learns to produce benchmark-compatible revision responses |
+| **DPA** (`authorize(...)`) | Deterministic verifier inside the module: model proposes, DPA authorizes, benchmark evaluates |
+| **Benchmark-grounded feedback** | Improves the Revision Response Policy from `memory_state` / evidence / diagnostic metrics |
+
+Algorithm spec: [`docs/mempatch_revision_module.md`](docs/mempatch_revision_module.md)
+
+## MemPatch Revision Module (summary)
+
+```text
+V  ← BuildScenarioRevisionView(scenario, memories)     # Scenario View Builder
+r_raw ← RevisionResponsePolicy(V)                       # Revision Response Policy
+T  ← DPAConsistentProjection(authorize, parse(r_raw))   # DPA-Consistent Projection
+r_final ← ProjectToBenchmarkResponse(T, r_raw)          # decision, memory_state, ...
+```
+
+Internal roles (not separate contributions): Scenario View Builder → Revision Response Policy → DPA-Consistent Projection → Benchmark-grounded Feedback.
+
+## Paper-facing response
 
 ```json
 {
   "decision": "use_current_memory",
-  "memory_state": {
-    "m1": "current",
-    "m2": "outdated",
-    "m3": "blocked"
-  },
+  "memory_state": {"m1": "current", "m2": "outdated", "m3": "blocked"},
   "evidence_event_ids": ["e2", "e5"],
   "failure_diagnosis": "stale_memory_reuse",
   "answer": "..."
 }
 ```
 
-Benchmark vocabulary: `scenario`, `public_input`, `event_trace`, `hidden_gold`, `response`, `decision`, `memory_state`, `evidence_event_ids`, `failure_diagnosis`, `failure_mode`, `memory_status`.
-
-Inside the scaffold, three implementation roles support this interface (not three paper contributions):
-
-1. **Scenario View Builder** — `scenario` / `event_trace` → structured revision view
-2. **Revision Response Policy** — revision view → benchmark-compatible response
-3. **Benchmark-grounded feedback** — response metrics → training signal
+Vocabulary: `scenario`, `public_input`, `event_trace`, `hidden_gold`, `response`, `decision`, `memory_state`, `evidence_event_ids`, `failure_diagnosis`, `failure_mode`, `memory_status`.
 
 ## Repository layout
 
-| Path | Role |
-|------|------|
-| `benchmark/retrace_bench/` | Evaluator API, taxonomy, scorers, validation |
+| Path | Role in MemPatch Revision Module |
+|------|----------------------------------|
+| `benchmark/retrace_bench/` | MemPatch-Bench evaluator (scores `response` vs `hidden_gold`) |
+| `src/retrace_learn/` | View Builder, Response Policy, feedback |
+| `src/retracemem/` | DPA-Consistent Projection (`authorize`, RevisionGate) |
+| `scripts/` | Evaluate, validate, run models |
 | `hf_release/retrace_bench_v1_1/` | Hugging Face release metadata |
-| `src/retrace_learn/` | Scenario View Builder, Revision Response Policy, feedback |
-| `src/retracemem/` | DPA, `authorize(...)`, memory store, multi-agent commit |
-| `scripts/` | Evaluate, validate, and run models on scenarios |
 
-Public scenario data: Hugging Face `Sylvan-Vale-Moon/ReTrace-Bench`. The repo does not track generated reports, paper drafts, run dumps, or local data copies.
+Data: Hugging Face `Sylvan-Vale-Moon/ReTrace-Bench`.
 
 ## Setup
 
@@ -69,38 +76,30 @@ PYTHONPATH=. python scripts/evaluate_retrace_bench_predictions.py \
 ```python
 from benchmark.retrace_bench.api import load_scenarios, load_predictions, evaluate_predictions
 
-scenarios = load_scenarios("path/to/scenarios.jsonl")
-predictions = load_predictions("path/to/predictions.jsonl")
-result = evaluate_predictions(scenarios, predictions, strict=True)
+result = evaluate_predictions(
+    load_scenarios("path/to/scenarios.jsonl"),
+    load_predictions("path/to/predictions.jsonl"),
+    strict=True,
+)
 ```
 
 ## Run a model locally
 
 ```bash
-git clone https://github.com/yuchenzhu-research/MemPatch.git
-cd MemPatch
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -e ".[dev,llm]"
-cp .env.example .env   # fill in provider API key
+git clone https://github.com/yuchenzhu-research/MemPatch.git && cd MemPatch
+python3 -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev,llm]" && cp .env.example .env
 ```
-
-Download scenarios from Hugging Face into `local/ReTrace-Bench/`, then:
 
 ```bash
 python scripts/run_retrace_bench_model.py \
   --data local/ReTrace-Bench/calibration/scenarios.jsonl \
-  --provider siliconflow \
-  --model deepseek-ai/DeepSeek-V3 \
-  --out-predictions local/predictions/siliconflow_calibration.jsonl \
-  --max-cases 10 \
-  --resume
+  --provider siliconflow --model deepseek-ai/DeepSeek-V3 \
+  --out-predictions local/predictions/calibration.jsonl --max-cases 10 --resume
 
 PYTHONPATH=. python scripts/evaluate_retrace_bench_predictions.py \
   --data local/ReTrace-Bench/calibration/scenarios.jsonl \
-  --predictions local/predictions/siliconflow_calibration.jsonl \
-  --out-metrics local/results/siliconflow_calibration.metrics.json \
-  --print-table
+  --predictions local/predictions/calibration.jsonl --print-table
 ```
 
 ## Verification

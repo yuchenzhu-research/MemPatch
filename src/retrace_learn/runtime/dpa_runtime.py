@@ -1,8 +1,9 @@
-"""MemPatch commit path: Parser + RevisionGate + DPA runtime.
+"""DPA-Consistent Projection — MemPatch Revision Module Step 4.
 
-Internal to the scaffold. The Revision Response Policy proposes typed patches;
-``authorize`` commits them; benchmark-grounded feedback scores the resulting
-``memory_state`` labels.
+Parses ``r_raw`` from the Revision Response Policy, routes through RevisionGate
+and ``authorize`` (DPA), and yields legal memory-state transitions ``T`` for
+``ProjectToBenchmarkResponse``. The model proposes; DPA authorizes; the
+benchmark evaluates the resulting ``memory_state``.
 
 This wraps the deterministic kernel (``retracemem.authorize``) with the
 MemPatch JSON parsing front-end. It is the program-only runtime that turns

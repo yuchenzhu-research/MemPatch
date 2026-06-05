@@ -34,7 +34,7 @@ or policy-invalid beliefs. It scores `decision`, `memory_state`,
 
 > **Evaluation-only.** MemPatch-Bench is a benchmark for *evaluating* systems.
 > Do **not** train models on it, and in particular do **not** train the MemPatch
-> scaffold policy on this data. Doing so invalidates results.
+> MemPatch Revision Module policy on this data. Doing so invalidates results.
 
 ## Splits (public release)
 
