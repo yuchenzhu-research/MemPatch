@@ -1,6 +1,8 @@
-# ReTrace-Bench
+# MemPatch-Bench
 
-ReTrace-Bench is the evaluation-only benchmark surface for agent memory revision reliability.
+MemPatch-Bench is the evaluation layer for Rapid Memory Integration (RMI): measuring how reliably LLM agents integrate new evidence with prior memory states through typed revision actions.
+
+The benchmark package path `benchmark/retrace_bench/` and Hugging Face dataset slug `ReTrace-Bench` are retained for compatibility. "ReTrace" in those paths refers to internal evidence-retracing machinery, not the paper title.
 
 Keep in GitHub:
 
@@ -11,4 +13,4 @@ Keep in GitHub:
 Do not keep local generated reports, paper drafts, sample files, run dumps, annotation packets, or duplicate benchmark-data copies.
 
 Official public data lives on Hugging Face:
-`Sylvan-Vale-Moon/ReTrace-Bench`.
+`Sylvan-Vale-Moon/ReTrace-Bench` (dataset slug retained for compatibility).

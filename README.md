@@ -1,12 +1,19 @@
-# ReTrace
+# MemPatch
 
-ReTrace contains two active code surfaces:
+**MemPatch: Benchmarking and Improving Rapid Memory Integration in LLM Agents**
 
-1. **ReTrace-Bench**: evaluation-only benchmark API, schemas, scoring, validation, taxonomy, and minimal CLI support under `benchmark/retrace_bench/`.
-2. **ReTrace-Learn**: active method/runtime code under `src/retrace_learn/` and `src/retracemem/`, centered on typed revision proposals committed through deterministic `authorize(...)`.
+RMI (Rapid Memory Integration) is the ability of an LLM agent to rapidly integrate new evidence with prior memory states by superseding, blocking, releasing, marking uncertain, reaffirming, or leaving unchanged affected memories.
+
+This repository implements one unified paper system across three layers:
+
+1. **MemPatch-Bench** (evaluation layer): benchmark API, schemas, scoring, validation, taxonomy, and minimal CLI support under `benchmark/retrace_bench/`. Package and script paths retain the `retrace_bench` name for compatibility.
+2. **MemPatch scaffold** (method/runtime layer): learned proposal and training code under `src/retrace_learn/`, plus multi-agent integration wrappers. Package path retains the `retrace_learn` name for compatibility.
+3. **Deterministic authorization** (authorization layer): DPA and `authorize(...)` under `src/retracemem/`. The model proposes typed patches; DPA authorizes. Package path retains the `retracemem` name for compatibility.
+
+One-sentence alignment: MemPatch preserves immutable evidence and patches the eligibility of prior beliefs for current answers through evidence-grounded typed revision actions authorized by deterministic DPA.
 
 Benchmark data is distributed through Hugging Face:
-`Sylvan-Vale-Moon/ReTrace-Bench`.
+`Sylvan-Vale-Moon/ReTrace-Bench` (dataset slug retained for compatibility).
 
 The local repository intentionally does not track generated reports, paper drafts, sample files, run dumps, or local benchmark-data copies.
 
@@ -18,7 +25,7 @@ source .venv/bin/activate
 pip install -e ".[dev]"
 ```
 
-## ReTrace-Bench Evaluator
+## MemPatch-Bench Evaluator
 
 ```bash
 PYTHONPATH=. python scripts/evaluate_retrace_bench_predictions.py \
@@ -47,8 +54,8 @@ source .venv/bin/activate
 pip install -e ".[dev,llm]"
 ```
 
-Download the ReTrace-Bench dataset from Hugging Face:
-`Sylvan-Vale-Moon/ReTrace-Bench`.
+Download the MemPatch-Bench dataset from Hugging Face:
+`Sylvan-Vale-Moon/ReTrace-Bench` (dataset slug retained for compatibility).
 
 Create local API-key configuration:
 

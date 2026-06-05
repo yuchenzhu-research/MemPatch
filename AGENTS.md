@@ -1,4 +1,4 @@
-# ReTrace Agent Instructions
+# MemPatch Agent Instructions
 
 This is the first file every coding model must read before editing this repository.
 
@@ -15,32 +15,37 @@ Read only these active authority documents before method work:
 
 Legacy planning documents, docs directories, paper drafts, generated reports, and old raw source-material files are no longer active authority. Git history preserves them.
 
-## Active Research Tracks
+## Unified Paper System
 
-ReTrace is an umbrella project governed as **two active research tracks**:
+MemPatch is one unified paper system: **Benchmarking and Improving Rapid Memory Integration in LLM Agents**.
 
-1. **ReTrace-Bench** — benchmark track. Evaluation-only; owns benchmark schema, scoring, evaluator API, release packaging, and leakage checks. Locations: `benchmark/retrace_bench/`, `hf_release/retrace_bench_v1_1/`, benchmark scripts/tests. The benchmark track stays method-neutral as an evaluation artifact. Public data lives on Hugging Face, not as a full local GitHub data copy.
-2. **ReTrace-Learn** — method track. ReTrace-Learn v1 has three paper-facing stages: **Graph Builder** -> **Proposal Policy** -> **DPA-guided RSFT/DPO** (only the first two are learned; stage 3 is a training protocol). Locations: `src/retrace_learn/`, `src/retracemem/`, method scripts/tests. ReTrace-Learn uses selected ReTrace-Bench-derived scenario data with declared split roles (`data/retrace_learn/`); split roles must be explicit, and leakage-free held-out evaluation is not claimed where the same gold labels are used for training. Local ReTrace-Bench downloads may be used as ReTrace-Learn training sources under ignored `local/` paths, as long as split roles are declared.
+RMI (Rapid Memory Integration) is the ability of an LLM agent to rapidly integrate new evidence with prior memory states by superseding, blocking, releasing, marking uncertain, reaffirming, or leaving unchanged affected memories.
 
-**ReTrace-Engine** (Parser + RevisionGate + DPA + Audit Trace, reached via `authorize(...)`) is the implementation name for the deterministic commit path **inside ReTrace-Learn** — it is an implementation detail of stages 2–3, not a standalone paper, a standalone top-level track, or a third paper-level module. DPA is a deterministic verifier and does not learn.
+Three layers:
 
-Out of active scope (backlog only, do not add code/active docs): ReTrace-SkillOpt / frozen-agent skill optimization, `memory_policy.md` optimization, Microsoft SkillOpt integration.
+1. **MemPatch-Bench** — evaluation layer. Evaluation-only; owns benchmark schema, scoring, evaluator API, release packaging, and leakage checks. Locations: `benchmark/retrace_bench/`, `hf_release/retrace_bench_v1_1/`, benchmark scripts/tests. The benchmark layer stays method-neutral as an evaluation artifact. Public data lives on Hugging Face, not as a full local GitHub data copy. Package path `retrace_bench` retained for compatibility.
+2. **MemPatch scaffold** — method/runtime layer. MemPatch v1 has three paper-facing stages: **Graph Builder** -> **Proposal Policy** -> **DPA-guided RSFT/DPO** (only the first two are learned; stage 3 is a training protocol). Locations: `src/retrace_learn/`, method scripts/tests. Package path `retrace_learn` retained for compatibility. The scaffold uses selected MemPatch-Bench-derived scenario data with declared split roles (`data/retrace_learn/`); split roles must be explicit, and leakage-free held-out evaluation is not claimed where the same gold labels are used for training. Local MemPatch-Bench downloads may be used as training sources under ignored `local/` paths, as long as split roles are declared.
+3. **Deterministic authorization** — authorization layer. DPA and `authorize(...)` under `src/retracemem/`. Package path `retracemem` retained for compatibility. The model proposes typed patches; DPA authorizes. DPA is a deterministic verifier and does not learn.
+
+**ReTrace-Engine** (Parser + RevisionGate + DPA + Audit Trace, reached via `authorize(...)`) is the internal implementation name for the deterministic commit path inside the MemPatch scaffold — it is an implementation detail of stages 2–3, not a standalone paper module. "ReTrace" in code paths refers to internal evidence-retracing machinery, not the paper title.
+
+Out of active scope (backlog only, do not add code/active docs): SkillOpt / frozen-agent skill optimization, `memory_policy.md` optimization, Microsoft SkillOpt integration. Closed-source Skill.md-style procedural policies may be mentioned only as a possible extension or deployment adaptation, not as active core implementation.
 
 ## One-Sentence Alignment
 
-ReTrace preserves immutable evidence and changes a belief's eligibility for current answers only through verified, temporally valid typed defeat paths computed by deterministic DPA.
+MemPatch preserves immutable evidence and patches the eligibility of prior beliefs for current answers through evidence-grounded typed revision actions authorized by deterministic DPA.
 
 ## Method Boundary / Identity
 
-The ReTrace-Learn paper is centered on multi-agent/subagent shared-memory
-revision authorization.
+The MemPatch paper is centered on multi-agent/subagent shared-memory
+revision authorization for Rapid Memory Integration.
 
-Multiple subagents may submit evidence-bearing memory updates to a shared long-term memory. ReTrace controls which revisions are allowed to affect the shared usable memory basis.
+Multiple subagents may submit evidence-bearing memory updates to a shared long-term memory. MemPatch controls which revisions are allowed to affect the shared usable memory basis.
 
 Stage naming and configuration hierarchy:
-- Prompt-Proposer / Stage A = `ReTrace-Prompt` (API baseline model proposes typed revision actions over a fixed candidate view, then routes through ReTrace-Engine).
-- DirectJudge / Stage B = `DirectJudge-API` (API baseline model directly predicts final belief usability status, completely bypassing the ReTrace-Engine).
-- ReTrace-Learn = `ReTrace-Learn` (the main trainable system: consumes raw dialogues/submissions -> builds candidate graph nodes/dependencies via the learned **Graph Builder** -> proposes typed actions via the learned **Proposal Policy** -> commits through the deterministic ReTrace-Engine, with **DPA-guided RSFT/DPO** supplying the training signal for the Proposal Policy).
+- Prompt-Proposer / Stage A = `ReTrace-Prompt` (API baseline model proposes typed revision actions over a fixed candidate view, then routes through ReTrace-Engine). Config name retained for compatibility.
+- DirectJudge / Stage B = `DirectJudge-API` (API baseline model directly predicts final belief usability status, completely bypassing ReTrace-Engine).
+- MemPatch scaffold / `ReTrace-Learn` config = the main trainable system: consumes raw dialogues/submissions -> builds candidate graph nodes/dependencies via the learned **Graph Builder** -> proposes typed actions via the learned **Proposal Policy** -> commits through the deterministic ReTrace-Engine, with **DPA-guided RSFT/DPO** supplying the training signal for the Proposal Policy. `ReTrace-Learn` config name retained for compatibility.
 
 Public API Boundaries:
 - `authorize(...)` is the public deterministic authorization kernel inside ReTrace-Engine. Neither Defeat-Path Authorization (DPA) nor RevisionGate should be invoked directly by external callers. All updates/admissions and deterministic routing happen entirely inside `authorize`.
@@ -50,9 +55,9 @@ STALE/CUPMem is an external validation/baseline pathway, not the definition of t
 
 Latent memory, RL consolidation, and delayed-utility learning belong to future-scope work.
 
-## ReTrace-Learn Paper Training Boundary
+## MemPatch Paper Training Boundary
 
-The ReTrace-Learn paper includes learning an explicit typed revision proposal
+The MemPatch paper includes learning an explicit typed revision proposal
 policy for multi-agent/subagent shared-memory updates.
 
 The learned policy consumes only method-visible inputs:
@@ -72,15 +77,15 @@ It proposes explicit revision actions from the canonical vocabulary:
 Final memory commit remains deterministic and API-free:
 
 ```text
-ReTrace-Learn proposal
+MemPatch proposal
     -> RevisionGate
     -> deterministic DPA / authorize(...)
     -> SharedMemoryCommitResult
 ```
 
-Future-scope work, not the ReTrace-Learn paper, owns latent-memory
+Future-scope work, not the MemPatch paper, owns latent-memory
 representations, long-horizon delayed-future-utility consolidation, and RL over
-hidden memory states. The ReTrace-Learn paper may later test short-horizon
+hidden memory states. The MemPatch paper may later test short-horizon
 explicit-action refinement only if it does not introduce latent memory or
 hidden-state consolidation.
 
@@ -110,6 +115,7 @@ def authorize(
 
 * Neither DPA nor RevisionGate should be invoked directly by external callers.
 * All updates/admissions and deterministic routing happen entirely inside `authorize`.
+* The model proposes typed patches; DPA authorizes.
 
 ## Canonical Runtime Vocabulary and Typed Edges
 
@@ -181,7 +187,7 @@ To ensure absolute clean methodology and avoid test-set leakage:
   `wandb/`, and `runs/`.
 - Put temporary training corpora, framework-specific scratch files, external
   checkouts, and machine-specific run material under ignored `local/` or the
-  ignored training artifact directories above. Local ReTrace-Bench downloads may be used as ReTrace-Learn training sources under ignored `local/` paths, as long as split roles are declared. Do not add new `.gitignore`
+  ignored training artifact directories above. Local MemPatch-Bench downloads may be used as MemPatch scaffold training sources under ignored `local/` paths, as long as split roles are declared. Do not add new `.gitignore`
   entries for each framework unless a new artifact class is genuinely needed.
 - Preserve the canonical dataclass contracts in `src/retracemem/schemas.py`.
 - Add or update tests for every new behavior.
@@ -205,7 +211,7 @@ E4 — STALE/CUPMem External Validation:
      external stale-memory validation and compatibility analysis.
 
 Do not let external STALE/CUPMem bridge code redefine the primary
-ReTrace-Learn method identity or the main evaluation data model.
+MemPatch method identity or the main evaluation data model.
 
 ## Verification
 

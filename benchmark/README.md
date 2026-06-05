@@ -1,6 +1,8 @@
-# Benchmark Package
+# MemPatch-Bench Package
 
-`benchmark/retrace_bench/` contains the ReTrace-Bench evaluator/API code.
+`benchmark/retrace_bench/` contains the MemPatch-Bench evaluator/API code. The `retrace_bench` package path is retained for compatibility.
+
+MemPatch-Bench is the evaluation layer of the unified MemPatch paper system. It stays method-neutral: it scores predictions against gold labels but does not implement proposal or authorization logic.
 
 Surviving code should be limited to:
 
