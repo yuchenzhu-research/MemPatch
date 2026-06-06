@@ -1,0 +1,433 @@
+#!/usr/bin/env python3
+"""Audit MemPatch scenario JSONL for learnable decision boundaries in public_input."""
+
+from __future__ import annotations
+
+import argparse
+import hashlib
+import json
+import re
+import sys
+from collections import Counter, defaultdict
+from pathlib import Path
+from typing import Any
+
+sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+
+from benchmark.mempatch_bench.general_taxonomy import DECISIONS, canonical_hidden_gold_fields
+from scripts.validate_mempatch_bench_dataset import _is_background_event
+
+NON_ANSWER_DECISIONS = ("ask_clarification", "escalate", "mark_unresolved")
+DEFAULT_JACCARD_WARN = 0.35
+CORE_EVENT_FIELDS = ("text", "actor_role", "trust_level", "visibility_scope", "event_type")
+
+
+def read_jsonl(path: Path) -> list[dict[str, Any]]:
+    rows: list[dict[str, Any]] = []
+    with path.open("r", encoding="utf-8") as f:
+        for line_no, line in enumerate(f, start=1):
+            if not line.strip():
+                continue
+            try:
+                rows.append(json.loads(line))
+            except json.JSONDecodeError as exc:
+                raise ValueError(f"{path}: line {line_no}: invalid JSON: {exc}") from exc
+    return rows
+
+
+def resolve_data_path(path: Path) -> Path:
+    if path.is_dir():
+        candidate = path / "scenarios.jsonl"
+        if candidate.is_file():
+            return candidate
+        raise FileNotFoundError(f"no scenarios.jsonl in directory: {path}")
+    if not path.is_file():
+        raise FileNotFoundError(f"scenarios file not found: {path}")
+    return path
+
+
+def infer_split_label(path: Path, scenario: dict[str, Any]) -> str:
+    split = scenario.get("public_split_name") or scenario.get("metadata", {}).get("split")
+    if split:
+        return str(split)
+    parent = path.parent.name
+    if parent in {"train", "main", "hard"}:
+        return parent
+    return path.stem
+
+
+def normalize_text(text: str) -> str:
+    text = text.lower().strip()
+    text = re.sub(r"\s+", " ", text)
+    text = re.sub(r"case-\d{6}", "case-<id>", text)
+    text = re.sub(r"case-\d+", "case-<id>", text)
+    return text
+
+
+def core_events(scenario: dict[str, Any], *, max_events: int = 3) -> list[dict[str, Any]]:
+    events = scenario.get("public_input", {}).get("event_trace", [])
+    picked: list[dict[str, Any]] = []
+    for event in events:
+        if _is_background_event(event):
+            continue
+        picked.append(event)
+        if len(picked) >= max_events:
+            break
+    return picked
+
+
+def event_feature_tuple(event: dict[str, Any]) -> tuple[str, ...]:
+    return tuple(
+        normalize_text(str(event.get(field) or "")) if field == "text" else str(event.get(field) or "")
+        for field in CORE_EVENT_FIELDS
+    )
+
+
+def core_event_signature(scenario: dict[str, Any], *, max_events: int = 3) -> dict[str, Any]:
+    events = core_events(scenario, max_events=max_events)
+    features = [event_feature_tuple(event) for event in events]
+    readable_parts: list[str] = []
+    for event, feat in zip(events, features):
+        readable_parts.append(
+            "|".join(
+                [
+                    f"role={feat[1]}",
+                    f"trust={feat[2]}",
+                    f"scope={feat[3]}",
+                    f"type={feat[4]}",
+                    f"text={feat[0][:80]}",
+                ]
+            )
+        )
+    readable = " ;; ".join(readable_parts) if readable_parts else "<empty>"
+    payload = json.dumps(features, ensure_ascii=False, separators=(",", ":"))
+    digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    return {
+        "hash": digest,
+        "readable": readable,
+        "event_count": len(events),
+        "events_preview": [
+            {
+                "event_id": event.get("event_id"),
+                "actor_role": event.get("actor_role"),
+                "trust_level": event.get("trust_level"),
+                "visibility_scope": event.get("visibility_scope"),
+                "event_type": event.get("event_type"),
+                "text": event.get("text"),
+            }
+            for event in events
+        ],
+    }
+
+
+def token_bigrams(text: str) -> set[str]:
+    tokens = re.findall(r"[a-z0-9]+", normalize_text(text))
+    if len(tokens) < 2:
+        return set(tokens)
+    return {f"{tokens[i]} {tokens[i + 1]}" for i in range(len(tokens) - 1)}
+
+
+def collect_public_event_text(scenarios: list[dict[str, Any]]) -> str:
+    chunks: list[str] = []
+    for scenario in scenarios:
+        for event in scenario.get("public_input", {}).get("event_trace", []):
+            if _is_background_event(event):
+                continue
+            chunks.append(str(event.get("text") or ""))
+    return "\n".join(chunks)
+
+
+def bigram_jaccard(text_a: str, text_b: str) -> float:
+    a = token_bigrams(text_a)
+    b = token_bigrams(text_b)
+    if not a and not b:
+        return 1.0
+    if not a or not b:
+        return 0.0
+    return len(a & b) / len(a | b)
+
+
+def pattern_value(scenario: dict[str, Any], key: str) -> str | None:
+    meta = scenario.get("metadata") or {}
+    value = meta.get(key) or scenario.get(key)
+    return str(value) if value is not None else None
+
+
+def pattern_cross_table(rows: list[dict[str, Any]], key: str) -> dict[str, dict[str, int]]:
+    table: dict[str, Counter[str]] = defaultdict(Counter)
+    for row in rows:
+        pattern = pattern_value(row, key)
+        if not pattern:
+            continue
+        gold = canonical_hidden_gold_fields(row.get("hidden_gold") or {})
+        decision = gold.get("expected_decision") or "<missing>"
+        table[pattern][decision] += 1
+    return {pattern: dict(counts) for pattern, counts in sorted(table.items())}
+
+
+def audit_dataset(
+    path: Path,
+    *,
+    max_core_events: int,
+    jaccard_warn: float,
+) -> dict[str, Any]:
+    data_path = resolve_data_path(path)
+    rows = read_jsonl(data_path)
+    split_label = infer_split_label(data_path, rows[0]) if rows else data_path.parent.name
+
+    decision_counts = Counter()
+    signature_to_rows: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    signature_meta: dict[str, dict[str, Any]] = {}
+    audited_rows: list[dict[str, Any]] = []
+
+    for row in rows:
+        gold = canonical_hidden_gold_fields(row.get("hidden_gold") or {})
+        decision = gold.get("expected_decision") or "<missing>"
+        decision_counts[decision] += 1
+        sig = core_event_signature(row, max_events=max_core_events)
+        signature_to_rows[sig["hash"]].append(
+            {
+                "scenario_id": row.get("scenario_id"),
+                "expected_decision": decision,
+                "signature": sig,
+            }
+        )
+        signature_meta[sig["hash"]] = sig
+        audited_rows.append(row)
+
+    signature_decisions: dict[str, set[str]] = {
+        sig: {entry["expected_decision"] for entry in entries}
+        for sig, entries in signature_to_rows.items()
+    }
+    collision_groups: list[dict[str, Any]] = []
+    for sig, decisions in signature_decisions.items():
+        if len(decisions) < 2:
+            continue
+        entries = signature_to_rows[sig]
+        collision_groups.append(
+            {
+                "core_event_signature_hash": sig,
+                "core_event_signature_readable": signature_meta[sig]["readable"],
+                "involved_decisions": sorted(decisions),
+                "scenario_ids": [entry["scenario_id"] for entry in entries],
+                "count": len(entries),
+                "events_preview": signature_meta[sig]["events_preview"],
+            }
+        )
+    collision_groups.sort(key=lambda item: (-item["count"], item["core_event_signature_hash"]))
+
+    non_answer_collisions = [
+        group
+        for group in collision_groups
+        if len(set(group["involved_decisions"]) & set(NON_ANSWER_DECISIONS)) >= 2
+    ]
+
+    ask_rows = [r for r in audited_rows if canonical_hidden_gold_fields(r.get("hidden_gold") or {}).get("expected_decision") == "ask_clarification"]
+    esc_rows = [r for r in audited_rows if canonical_hidden_gold_fields(r.get("hidden_gold") or {}).get("expected_decision") == "escalate"]
+    ask_esc_jaccard = bigram_jaccard(
+        collect_public_event_text(ask_rows),
+        collect_public_event_text(esc_rows),
+    )
+    jaccard_flags: list[str] = []
+    if ask_rows and esc_rows and ask_esc_jaccard >= jaccard_warn:
+        jaccard_flags.append(
+            f"ask_clarification vs escalate bigram Jaccard={ask_esc_jaccard:.3f} >= {jaccard_warn:.3f}"
+        )
+
+    ask_esc_signature_overlap = sorted(
+        sig
+        for sig, decisions in signature_decisions.items()
+        if "ask_clarification" in decisions and "escalate" in decisions
+    )
+
+    pattern_tables: dict[str, Any] = {}
+    for key in ("pattern", "pattern_trap_type", "decision_variant", "decision_triggers"):
+        table = pattern_cross_table(audited_rows, key)
+        if table:
+            pattern_tables[key] = table
+
+    fatal_issues: list[str] = []
+    if ask_esc_signature_overlap:
+        fatal_issues.append(
+            f"{split_label}: ask_clarification and escalate share {len(ask_esc_signature_overlap)} core_event_signature hash(es)"
+        )
+
+    return {
+        "split": split_label,
+        "path": str(data_path),
+        "count": len(rows),
+        "decision_counts": {d: decision_counts.get(d, 0) for d in DECISIONS},
+        "extra_decisions": {
+            k: v for k, v in sorted(decision_counts.items()) if k not in DECISIONS
+        },
+        "core_event_signature_collisions": collision_groups,
+        "non_answer_decision_collisions": non_answer_collisions,
+        "ask_escalate_bigram_jaccard": ask_esc_jaccard if ask_rows and esc_rows else None,
+        "ask_escalate_jaccard_flags": jaccard_flags,
+        "ask_escalate_shared_signatures": ask_esc_signature_overlap,
+        "pattern_tables": pattern_tables,
+        "fatal_issues": fatal_issues,
+        "top_collision_groups": collision_groups[:10],
+    }
+
+
+def render_markdown(report: dict[str, Any]) -> str:
+    lines: list[str] = [
+        "# MemPatch decision boundary audit",
+        "",
+        f"- datasets: {len(report['datasets'])}",
+        f"- total scenarios: {report['summary']['total_scenarios']}",
+        f"- total signature collisions (cross-decision): {report['summary']['total_collision_groups']}",
+        f"- ask↔escalate shared signatures: {report['summary']['ask_escalate_shared_signature_count']}",
+        f"- fatal issues: {len(report['summary']['fatal_issues'])}",
+        "",
+    ]
+    if report["summary"]["fatal_issues"]:
+        lines.append("## Fatal issues")
+        for issue in report["summary"]["fatal_issues"]:
+            lines.append(f"- {issue}")
+        lines.append("")
+
+    for dataset in report["datasets"]:
+        lines.extend(
+            [
+                f"## Split: {dataset['split']} (`{dataset['path']}`)",
+                "",
+                f"- rows: {dataset['count']}",
+                "",
+                "### expected_decision",
+                "",
+            ]
+        )
+        for decision in DECISIONS:
+            count = dataset["decision_counts"].get(decision, 0)
+            if count:
+                lines.append(f"- {decision}: {count}")
+        lines.append("")
+
+        if dataset.get("ask_escalate_bigram_jaccard") is not None:
+            lines.append(
+                f"- ask↔escalate bigram Jaccard: **{dataset['ask_escalate_bigram_jaccard']:.3f}**"
+            )
+            for flag in dataset.get("ask_escalate_jaccard_flags", []):
+                lines.append(f"- ⚠ {flag}")
+            lines.append("")
+
+        if dataset.get("pattern_tables"):
+            lines.append("### pattern × decision")
+            lines.append("")
+            for key, table in dataset["pattern_tables"].items():
+                lines.append(f"#### {key}")
+                lines.append("")
+                for pattern, counts in table.items():
+                    total = sum(counts.values())
+                    parts = ", ".join(f"{decision}={count}" for decision, count in sorted(counts.items()))
+                    lines.append(f"- `{pattern}` (n={total}): {parts}")
+                lines.append("")
+
+        if dataset.get("top_collision_groups"):
+            lines.append("### Top collision groups")
+            lines.append("")
+            for group in dataset["top_collision_groups"][:5]:
+                lines.append(f"- hash `{group['core_event_signature_hash'][:16]}...`")
+                lines.append(f"  - decisions: {', '.join(group['involved_decisions'])}")
+                lines.append(f"  - count: {group['count']}")
+                lines.append(f"  - scenario_ids: {', '.join(group['scenario_ids'][:8])}")
+                if len(group["scenario_ids"]) > 8:
+                    lines.append(f"  - ... +{len(group['scenario_ids']) - 8} more")
+                lines.append(f"  - signature: {group['core_event_signature_readable'][:200]}")
+                lines.append("")
+
+    return "\n".join(lines).rstrip() + "\n"
+
+
+def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
+    parser = argparse.ArgumentParser(description="Audit MemPatch decision boundaries in scenario JSONL.")
+    parser.add_argument(
+        "--data",
+        action="append",
+        required=True,
+        type=Path,
+        help="scenarios.jsonl or directory containing it (repeatable)",
+    )
+    parser.add_argument("--out-json", type=Path, default=None)
+    parser.add_argument("--out-md", type=Path, default=None)
+    parser.add_argument(
+        "--max-core-events",
+        type=int,
+        default=3,
+        help="Number of leading non-background events in core signature (default: 3)",
+    )
+    parser.add_argument(
+        "--jaccard-warn",
+        type=float,
+        default=DEFAULT_JACCARD_WARN,
+        help=f"Flag ask vs escalate bigram Jaccard at or above this threshold (default: {DEFAULT_JACCARD_WARN})",
+    )
+    parser.add_argument(
+        "--no-fail",
+        action="store_true",
+        help="Always exit 0 even when ask↔escalate signature collisions are found",
+    )
+    return parser.parse_args(argv)
+
+
+def main(argv: list[str] | None = None) -> int:
+    args = parse_args(argv)
+    datasets = [
+        audit_dataset(
+            path,
+            max_core_events=max(2, min(args.max_core_events, 3)),
+            jaccard_warn=args.jaccard_warn,
+        )
+        for path in args.data
+    ]
+
+    fatal_issues: list[str] = []
+    total_collisions = 0
+    ask_esc_shared = 0
+    total_rows = 0
+    for dataset in datasets:
+        fatal_issues.extend(dataset["fatal_issues"])
+        total_collisions += len(dataset["core_event_signature_collisions"])
+        ask_esc_shared += len(dataset["ask_escalate_shared_signatures"])
+        total_rows += dataset["count"]
+
+    report = {
+        "summary": {
+            "total_scenarios": total_rows,
+            "total_collision_groups": total_collisions,
+            "ask_escalate_shared_signature_count": ask_esc_shared,
+            "fatal_issues": fatal_issues,
+            "jaccard_warn_threshold": args.jaccard_warn,
+        },
+        "datasets": datasets,
+    }
+
+    if args.out_json:
+        args.out_json.parent.mkdir(parents=True, exist_ok=True)
+        args.out_json.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
+        print(f"Wrote {args.out_json}")
+
+    if args.out_md:
+        args.out_md.parent.mkdir(parents=True, exist_ok=True)
+        args.out_md.write_text(render_markdown(report), encoding="utf-8")
+        print(f"Wrote {args.out_md}")
+
+    print(
+        f"Audited {len(datasets)} dataset(s), {total_rows} scenarios, "
+        f"{total_collisions} collision group(s), {ask_esc_shared} ask↔escalate shared signature(s)"
+    )
+    for dataset in datasets:
+        print(f"  {dataset['split']}: collisions={len(dataset['core_event_signature_collisions'])}")
+        if dataset["ask_escalate_jaccard_flags"]:
+            for flag in dataset["ask_escalate_jaccard_flags"]:
+                print(f"    {flag}")
+
+    if fatal_issues and not args.no_fail:
+        return 2
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
