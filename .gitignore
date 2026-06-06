@@ -30,6 +30,8 @@ checkpoints/
 wandb/
 runs/
 *.safetensors
+*.gguf
+*.bin
 *.ckpt
 *.pt
 *.pth
