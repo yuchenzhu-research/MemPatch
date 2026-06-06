@@ -33,7 +33,7 @@ r_final ← ProjectToBenchmarkResponse(T, r_raw)
 
 1. Scenario View Builder — `graph_extractor.py`
 2. Revision Response Policy — `learned_proposer.py`
-3. DPA-Consistent Projection — `dpa_runtime.py`, `retracemem/authorization.py`
+3. DPA-Consistent Projection — `dpa_runtime.py`, `benchmark_projection.py`, `retracemem/authorization.py`
 4. Benchmark-grounded Feedback — `reward.py`
 
 ## Benchmark response interface

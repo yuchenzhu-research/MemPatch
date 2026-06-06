@@ -1,10 +1,8 @@
 from __future__ import annotations
 
-from retrace_learn.runtime.dpa_runtime import (
-    ParseResult,
-    RuntimeResult,
-    project_to_benchmark_response,
-)
+from retrace_learn.runtime.benchmark_projection import project_to_benchmark_response
+from retrace_learn.runtime.dpa_runtime import ParseResult, RuntimeResult
+from retrace_learn.runtime.revision_module import run_revision_module_on_scenario
 from retrace_learn.schemas import RevisionAction
 
 
@@ -42,7 +40,19 @@ def test_project_to_benchmark_response_maps_dpa_statuses_and_evidence() -> None:
         ),
     )
 
-    response = project_to_benchmark_response(runtime_result)
+    response = project_to_benchmark_response(
+        runtime_result=runtime_result,
+        scenario_public_view={
+            "public_input": {
+                "initial_memory": [
+                    {"memory_id": "m1"},
+                    {"memory_id": "m2"},
+                    {"memory_id": "m3"},
+                    {"memory_id": "m4"},
+                ]
+            }
+        },
+    )
 
     assert response["memory_state"] == {
         "m1": "outdated",
@@ -74,13 +84,16 @@ def test_project_to_benchmark_response_preserves_valid_raw_fields() -> None:
     )
 
     response = project_to_benchmark_response(
-        runtime_result,
-        {
+        runtime_result=runtime_result,
+        raw_response={
             "response": {
                 "decision": "use_current_memory",
                 "failure_diagnosis": "unnecessary_memory_write",
                 "answer": "Use the current memory.",
             }
+        },
+        scenario_public_view={
+            "public_input": {"initial_memory": [{"memory_id": "m1"}]}
         },
     )
 
@@ -91,3 +104,28 @@ def test_project_to_benchmark_response_preserves_valid_raw_fields() -> None:
         "failure_diagnosis": "unnecessary_memory_write",
         "answer": "Use the current memory.",
     }
+
+
+def test_revision_module_pipeline_emits_strict_response_fields() -> None:
+    scenario = {
+        "scenario_id": "case_pipeline_1",
+        "public_input": {
+            "initial_memory": [{"memory_id": "m1", "text": "Old value"}],
+            "event_trace": [
+                {"event_id": "e1", "text": "Earlier"},
+                {"event_id": "e2", "text": "Latest"},
+            ],
+        },
+        "black_box_task": {"prompt": "What is the current value?"},
+    }
+    prediction = run_revision_module_on_scenario(scenario)
+    response = prediction["response"]
+    assert set(response.keys()) == {
+        "answer",
+        "decision",
+        "memory_state",
+        "evidence_event_ids",
+        "failure_diagnosis",
+    }
+    assert response["memory_state"] == {"m1": "current"}
+    assert response["evidence_event_ids"] == ["e2"]

@@ -49,8 +49,14 @@ These are **implementation roles inside one module**, not separate paper contrib
 |------|---------|------|
 | **Scenario View Builder** | `S, M` → revision view `V` | `src/retrace_learn/runtime/graph_extractor.py` |
 | **Revision Response Policy** | `V` → raw response `r_raw` | `src/retrace_learn/runtime/learned_proposer.py` |
-| **DPA-Consistent Projection** | parse + authorize + project to legal transitions | `src/retrace_learn/runtime/dpa_runtime.py`, `src/retracemem/authorization.py` |
+| **DPA-Consistent Projection** | parse + authorize + project to legal transitions | `dpa_runtime.py`, `authorization.py`, `benchmark_projection.py` |
 | **Benchmark-grounded Feedback** | metrics → training signal | `src/retrace_learn/runtime/reward.py` |
+
+Implementation entrypoints:
+
+- Full method path: `scripts/run_mempatch_revision_module.py`
+- Direct Response baseline: `scripts/run_retrace_bench_model.py` (alias: `run_mempatch_model.py`)
+- Evaluator: `scripts/evaluate_retrace_bench_predictions.py` (alias: `evaluate_mempatch_predictions.py`)
 
 ## 6. Algorithm 1 — MemPatch Revision Module
 
@@ -144,6 +150,30 @@ Benchmark-grounded feedback can support SFT, RSFT, or DPO-style policy improveme
 | **Response policy w/o benchmark-grounded feedback** | Fixed or prompted policy; no `reward.py` training signal |
 
 Baselines in repo configs: `ReTrace-Prompt`, `DirectJudge-API`, MemPatch-Bench model runner (end-task `response` without full module).
+
+## 10. Cost-aware experiment plan (P2)
+
+Do not start with full 3500 rows or closed-source flagship models.
+
+| Stage | Scope | Goal |
+|-------|-------|------|
+| **0** | `compileall` + evaluator strict-mode tests | No model spend; schema / projection sanity |
+| **1** | `main20` + `hard20`, one cheap open-weight model | Smoke Direct Response vs Revision Module runner |
+| **2** | `main80` + `hard20`, up to three open models | Small comparison only |
+| **3** | `main200` + `hard100` | Direct baseline vs full module vs w/o DPA projection |
+| **4** | Full `main3000` + `hard500` | Only after Stage 3 shows signal |
+
+Example Revision Module smoke:
+
+```bash
+python scripts/run_mempatch_revision_module.py \
+  --data local/MemPatch/main/scenarios.jsonl \
+  --out-predictions local/predictions/mempatch_main20.jsonl \
+  --max-cases 20 \
+  --resume
+```
+
+Public HF release metadata (`hf_release/mempatch_v1_1/manifest.json`) documents **main=3000, hard=500, total=3500**. Scenario JSONL files are not vendored in git; download from Hugging Face into `local/`.
 
 ## 9. Paper-facing summary
 

@@ -83,7 +83,19 @@ result = evaluate_predictions(
 )
 ```
 
-## Run a model locally
+## Run Revision Module (method path)
+
+```bash
+python scripts/run_mempatch_revision_module.py \
+  --data local/MemPatch/main/scenarios.jsonl \
+  --out-predictions local/predictions/mempatch_main20.jsonl \
+  --max-cases 20 \
+  --resume
+```
+
+Direct Response baseline: `scripts/run_retrace_bench_model.py` (alias `run_mempatch_model.py`).
+
+## Run a model locally (Direct Response baseline)
 
 ```bash
 git clone https://github.com/yuchenzhu-research/MemPatch.git && cd MemPatch
