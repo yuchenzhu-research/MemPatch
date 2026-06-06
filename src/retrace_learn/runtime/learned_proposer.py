@@ -150,12 +150,12 @@ class ScriptedProposer:
 
 
 class PromptProposer:
-    """Prompt-based Zero-Shot Proposer stub (TODO)."""
+    """Prompt-based proposer backed by a text ``generate_fn``."""
 
     policy_variant = "prompt_proposer"
 
-    def __init__(self, client: Any) -> None:
-        self.client = client
+    def __init__(self, generate_fn: GENERATE_FN) -> None:
+        self._proposer = LearnedTypedRevisionProposer(generate_fn)
 
     def propose(
         self,
@@ -163,9 +163,7 @@ class PromptProposer:
         *,
         metadata: dict[str, Any] | None = None,
     ) -> ProposalOutput:
-        # TODO: Implement prompt-driven zero-shot typed revision proposal
-        from retrace_learn.runtime.dpa_runtime import ParseResult
-        return ProposalOutput(raw_text="[]", parse_result=ParseResult(valid_json=True, schema_valid=True, actions=()))
+        return self._proposer.propose(view, metadata=metadata)
 
 
 class OracleProposer:

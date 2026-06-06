@@ -54,6 +54,8 @@ runs/
 # HF release bundle: ship manifests/checksums/cards; keep full JSONL local-only.
 !hf_release/retrace_bench_v1_1/**/manifest.json
 !hf_release/retrace_bench_v1_1/**/checksums.json
+!hf_release/mempatch_v1_1/**/manifest.json
+!hf_release/mempatch_v1_1/**/checksums.json
 outputs/
 
 # Secrets / credentials / tokens — never commit any of these.

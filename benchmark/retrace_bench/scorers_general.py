@@ -243,8 +243,17 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
     predicted_state = response.get("memory_state", {}) or {}
     if not isinstance(predicted_state, dict):
         predicted_state = {}
-    state_total = len(expected_state) or 1
-    state_correct = sum(1 for mid, status in expected_state.items() if predicted_state.get(mid) == status)
+    if not expected_state:
+        # Policy-refusal rows may omit memory-state gold; do not penalize N/A rows.
+        state_total = 0
+        state_correct = 0
+        memory_state_accuracy = 1.0
+    else:
+        state_total = len(expected_state)
+        state_correct = sum(
+            1 for mid, status in expected_state.items() if predicted_state.get(mid) == status
+        )
+        memory_state_accuracy = state_correct / state_total
     expected_decision = gold["expected_decision"]
     predicted_decision = response.get("decision")
     expected_diag = gold["expected_failure_diagnosis"]
@@ -276,7 +285,7 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
     )
 
     decision_ok = decision_matches(predicted_decision, expected_decision, decision_aliases)
-    memory_ok = (state_correct / state_total) >= 1.0
+    memory_ok = memory_state_accuracy >= 1.0
     key_fact_ok = key_fact_matches(answer, expected_answer, rubric)
 
     pred_ev_raw = response.get("evidence_event_ids", []) or []
@@ -361,7 +370,7 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
         # headline decision metric, because it is dominated by the majority
         # use_current_memory class.
         "black_box_decision_accuracy": float(decision_ok),
-        "memory_state_accuracy": state_correct / state_total,
+        "memory_state_accuracy": memory_state_accuracy,
         "evidence_f1": evidence_f1,
         "failure_diagnosis_accuracy": float(expected_diag == predicted_diag),
         "stale_reuse_rate": float(stale_reuse),

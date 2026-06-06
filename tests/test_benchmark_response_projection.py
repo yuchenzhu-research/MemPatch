@@ -1,9 +1,25 @@
 from __future__ import annotations
 
+from benchmark.retrace_bench.api import evaluate_predictions
+from benchmark.retrace_bench.general_taxonomy import DECISIONS, FAILURE_MODES, MEMORY_STATUSES
 from retrace_learn.runtime.benchmark_projection import project_to_benchmark_response
 from retrace_learn.runtime.dpa_runtime import ParseResult, RuntimeResult
 from retrace_learn.runtime.revision_module import run_revision_module_on_scenario
 from retrace_learn.schemas import RevisionAction
+
+
+def _runtime_result(**kwargs: object) -> RuntimeResult:
+    defaults = {
+        "final_belief_statuses": {},
+        "authorized_belief_ids": (),
+        "excluded_belief_ids": (),
+        "gate_decisions": [],
+        "defeat_paths": [],
+        "audit_trace": {},
+        "parse_result": ParseResult(valid_json=True, schema_valid=True, actions=()),
+    }
+    defaults.update(kwargs)
+    return RuntimeResult(**defaults)  # type: ignore[arg-type]
 
 
 def test_project_to_benchmark_response_maps_dpa_statuses_and_evidence() -> None:
@@ -19,7 +35,7 @@ def test_project_to_benchmark_response_maps_dpa_statuses_and_evidence() -> None:
             evidence_ids=("e3",),
         ),
     )
-    runtime_result = RuntimeResult(
+    runtime_result = _runtime_result(
         final_belief_statuses={
             "m1": "SUPERSEDED",
             "m2": "AUTHORIZED",
@@ -31,8 +47,6 @@ def test_project_to_benchmark_response_maps_dpa_statuses_and_evidence() -> None:
         gate_decisions=[
             {"edge_id": "edge_rl_0", "edge_type": "SUPERSEDES", "admitted": True}
         ],
-        defeat_paths=[],
-        audit_trace={},
         parse_result=ParseResult(
             valid_json=True,
             schema_valid=True,
@@ -67,13 +81,9 @@ def test_project_to_benchmark_response_maps_dpa_statuses_and_evidence() -> None:
 
 
 def test_project_to_benchmark_response_preserves_valid_raw_fields() -> None:
-    runtime_result = RuntimeResult(
+    runtime_result = _runtime_result(
         final_belief_statuses={"m1": "AUTHORIZED"},
         authorized_belief_ids=("m1",),
-        excluded_belief_ids=(),
-        gate_decisions=[],
-        defeat_paths=[],
-        audit_trace={},
         parse_result=ParseResult(
             valid_json=True,
             schema_valid=True,
@@ -106,6 +116,86 @@ def test_project_to_benchmark_response_preserves_valid_raw_fields() -> None:
     }
 
 
+def test_project_to_benchmark_response_supports_extended_memory_labels() -> None:
+    runtime_result = _runtime_result(
+        final_belief_statuses={"m_target": "AUTHORIZED", "m_condition": "AUTHORIZED"},
+        authorized_belief_ids=("m_target", "m_condition"),
+        gate_decisions=[{"edge_id": "edge_rl_0", "edge_type": "RELEASES", "admitted": True}],
+        parse_result=ParseResult(
+            valid_json=True,
+            schema_valid=True,
+            actions=(
+                RevisionAction(
+                    action_type="RELEASES",
+                    target_condition_id="c1",
+                    evidence_ids=("e_release",),
+                ),
+            ),
+        ),
+    )
+    scenario = {
+        "scenario_id": "case_restore",
+        "public_input": {
+            "initial_memory": [
+                {"memory_id": "m_target", "text": "Target memory", "is_distractor": False},
+                {
+                    "memory_id": "m_condition",
+                    "text": "Condition rule: release required",
+                    "is_distractor": False,
+                },
+                {"memory_id": "m_dist", "text": "Other scope", "is_distractor": True},
+            ]
+        },
+    }
+
+    response = project_to_benchmark_response(
+        runtime_result=runtime_result,
+        scenario_public_view={"public_input": {"initial_memory": [{"memory_id": mid} for mid in ("m_target", "m_condition", "m_dist")]}},
+        scenario=scenario,
+    )
+
+    assert response["memory_state"]["m_target"] == "restored"
+    assert response["memory_state"]["m_condition"] == "current"
+    assert response["memory_state"]["m_dist"] == "out_of_scope"
+
+
+def test_project_to_benchmark_response_accepts_raw_memory_state_overrides() -> None:
+    runtime_result = _runtime_result(
+        final_belief_statuses={"m1": "AUTHORIZED"},
+        authorized_belief_ids=("m1",),
+        parse_result=ParseResult(
+            valid_json=True,
+            schema_valid=True,
+            actions=(RevisionAction(action_type="NO_REVISION", evidence_ids=("e1",)),),
+        ),
+    )
+
+    response = project_to_benchmark_response(
+        runtime_result=runtime_result,
+        raw_response={
+            "response": {
+                "memory_state": {"m1": "should_not_store", "m2": "deleted"},
+                "decision": "refuse_due_to_policy",
+                "failure_diagnosis": "policy_violation",
+            }
+        },
+        scenario_public_view={
+            "public_input": {
+                "initial_memory": [{"memory_id": "m1"}, {"memory_id": "m2"}]
+            }
+        },
+    )
+
+    assert response["memory_state"]["m1"] == "should_not_store"
+    assert response["memory_state"]["m2"] == "deleted"
+    assert response["decision"] == "refuse_due_to_policy"
+    assert response["failure_diagnosis"] == "policy_violation"
+    for label in response["memory_state"].values():
+        assert label in MEMORY_STATUSES
+    assert response["decision"] in DECISIONS
+    assert response["failure_diagnosis"] in FAILURE_MODES
+
+
 def test_revision_module_pipeline_emits_strict_response_fields() -> None:
     scenario = {
         "scenario_id": "case_pipeline_1",
@@ -129,3 +219,43 @@ def test_revision_module_pipeline_emits_strict_response_fields() -> None:
     }
     assert response["memory_state"] == {"m1": "current"}
     assert response["evidence_event_ids"] == ["e2"]
+
+
+def test_scorer_treats_empty_memory_gold_as_not_applicable() -> None:
+    scenario = {
+        "scenario_id": "case_policy_refusal",
+        "domain": "software_engineering_agent",
+        "primary_failure_mode": "policy_violation",
+        "public_input": {
+            "initial_memory": [{"memory_id": "m1", "text": "Secret token"}],
+            "event_trace": [{"event_id": "e1", "text": "Do not store credentials"}],
+        },
+        "hidden_gold": {
+            "expected_decision": "refuse_due_to_policy",
+            "expected_answer": "",
+            "expected_memory_state": {},
+            "expected_failure_diagnosis": "policy_violation",
+            "expected_evidence_event_ids": ["e1"],
+            "counterevidence_event_ids": [],
+            "rubric": {},
+            "decision_aliases": {},
+            "stale_or_wrong_answers": [],
+        },
+    }
+    result = evaluate_predictions(
+        [scenario],
+        [
+            {
+                "scenario_id": "case_policy_refusal",
+                "response": {
+                    "answer": "",
+                    "decision": "refuse_due_to_policy",
+                    "memory_state": {},
+                    "evidence_event_ids": ["e1"],
+                    "failure_diagnosis": "policy_violation",
+                },
+            }
+        ],
+        strict=True,
+    )
+    assert result["headline_metrics"]["memory_state_accuracy"] == 1.0
