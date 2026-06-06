@@ -19,7 +19,14 @@ try:
 except ImportError:  # pragma: no cover - legacy alias
     from benchmark.retrace_bench.model_runner import build_prompt  # type: ignore[no-redef]
 
+from benchmark.mempatch_bench.general_taxonomy import DECISIONS, FAILURE_MODES
+
 SYSTEM_PROMPT = "You are MemPatch Revision Policy. Return only strict JSON. Do not explain."
+
+DEFAULT_DECISION = "use_current_memory"
+DEFAULT_FAILURE_DIAGNOSIS = "under_update"
+ALLOWED_FAILURE_DIAGNOSIS = frozenset(FAILURE_MODES)
+ALLOWED_DECISIONS = frozenset(DECISIONS)
 
 THINKING_BLOCK_RE = re.compile(
     r"<think>.*?</think>",
@@ -179,13 +186,45 @@ def _as_memory_state(value: Any) -> dict[str, str]:
     return out
 
 
-def canonicalize_parsed(parsed: dict[str, Any]) -> dict[str, Any]:
+def valid_event_ids_from_row(row: dict[str, Any]) -> set[str]:
+    events = row.get("public_input", {}).get("event_trace", [])
+    return {
+        str(event["event_id"])
+        for event in events
+        if isinstance(event, dict) and event.get("event_id") is not None
+    }
+
+
+def _canonicalize_decision(value: Any) -> str:
+    raw = _first_string(value, default="")
+    if raw in ALLOWED_DECISIONS:
+        return raw
+    return DEFAULT_DECISION
+
+
+def _canonicalize_failure_diagnosis(value: Any) -> str:
+    raw = _first_string(value, default="")
+    if not raw or raw.lower() == "none":
+        return DEFAULT_FAILURE_DIAGNOSIS
+    if raw in ALLOWED_FAILURE_DIAGNOSIS:
+        return raw
+    return DEFAULT_FAILURE_DIAGNOSIS
+
+
+def _filter_evidence_event_ids(value: Any, valid_event_ids: set[str]) -> list[str]:
+    return [event_id for event_id in _as_event_id_list(value) if event_id in valid_event_ids]
+
+
+def canonicalize_parsed(parsed: dict[str, Any], *, valid_event_ids: set[str]) -> dict[str, Any]:
     return {
         "answer": _first_string(parsed.get("answer"), default=""),
-        "decision": _first_string(parsed.get("decision"), default=""),
+        "decision": _canonicalize_decision(parsed.get("decision")),
         "memory_state": _as_memory_state(parsed.get("memory_state")),
-        "evidence_event_ids": _as_event_id_list(parsed.get("evidence_event_ids")),
-        "failure_diagnosis": _first_string(parsed.get("failure_diagnosis"), default="none"),
+        "evidence_event_ids": _filter_evidence_event_ids(
+            parsed.get("evidence_event_ids"),
+            valid_event_ids,
+        ),
+        "failure_diagnosis": _canonicalize_failure_diagnosis(parsed.get("failure_diagnosis")),
     }
 
 
@@ -193,23 +232,32 @@ def fallback_prediction(scenario_id: str, raw_output: str) -> dict[str, Any]:
     return {
         "scenario_id": scenario_id,
         "answer": "",
-        "decision": "",
+        "decision": DEFAULT_DECISION,
         "memory_state": {},
         "evidence_event_ids": [],
-        "failure_diagnosis": "none",
+        "failure_diagnosis": DEFAULT_FAILURE_DIAGNOSIS,
         "_parse_error": True,
         "raw_output": raw_output,
     }
 
 
-def prediction_row(scenario_id: str, parsed: dict[str, Any]) -> dict[str, Any]:
-    response = canonicalize_parsed(parsed)
+def prediction_row(
+    scenario_id: str,
+    parsed: dict[str, Any],
+    *,
+    valid_event_ids: set[str],
+) -> dict[str, Any]:
+    response = canonicalize_parsed(parsed, valid_event_ids=valid_event_ids)
     return {"scenario_id": scenario_id, **response}
 
 
-def parse_model_output(scenario_id: str, text: str) -> dict[str, Any]:
+def parse_model_output(scenario_id: str, text: str, *, valid_event_ids: set[str]) -> dict[str, Any]:
     try:
-        return prediction_row(scenario_id, extract_first_json_object(text))
+        return prediction_row(
+            scenario_id,
+            extract_first_json_object(text),
+            valid_event_ids=valid_event_ids,
+        )
     except (json.JSONDecodeError, ValueError, TypeError):
         return fallback_prediction(scenario_id, text)
 
@@ -410,8 +458,13 @@ def main(argv: list[str] | None = None) -> int:
             scenario_id = str(row["scenario_id"])
             case_start = time.monotonic()
             messages = build_chat_messages(row)
+            valid_event_ids = valid_event_ids_from_row(row)
             raw_text = generator.generate(messages)
-            prediction = parse_model_output(scenario_id, raw_text)
+            prediction = parse_model_output(
+                scenario_id,
+                raw_text,
+                valid_event_ids=valid_event_ids,
+            )
             if prediction.get("_parse_error"):
                 parse_errors += 1
             f.write(json.dumps(prediction, ensure_ascii=False) + "\n")

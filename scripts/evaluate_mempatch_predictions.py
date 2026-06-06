@@ -120,6 +120,8 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     for warning in result["warnings"]:
+        if args.allow_missing and "missing prediction" in warning:
+            continue
         print(f"warning: {warning}", file=sys.stderr)
     if not strict:
         for err in result["errors"]:
