@@ -202,13 +202,21 @@ def _canonicalize_decision(value: Any) -> str:
     return DEFAULT_DECISION
 
 
-def _canonicalize_failure_diagnosis(value: Any) -> str:
-    raw = _first_string(value, default="")
+def _canonicalize_failure_diagnosis(value: Any) -> tuple[str, bool]:
+    if isinstance(value, list):
+        if not value:
+            return DEFAULT_FAILURE_DIAGNOSIS, True
+        raw = str(value[0])
+    elif value is None:
+        return DEFAULT_FAILURE_DIAGNOSIS, True
+    else:
+        raw = str(value)
+
     if not raw or raw.lower() == "none":
-        return DEFAULT_FAILURE_DIAGNOSIS
+        return DEFAULT_FAILURE_DIAGNOSIS, True
     if raw in ALLOWED_FAILURE_DIAGNOSIS:
-        return raw
-    return DEFAULT_FAILURE_DIAGNOSIS
+        return raw, False
+    return DEFAULT_FAILURE_DIAGNOSIS, True
 
 
 def _filter_evidence_event_ids(value: Any, valid_event_ids: set[str]) -> list[str]:
@@ -216,7 +224,10 @@ def _filter_evidence_event_ids(value: Any, valid_event_ids: set[str]) -> list[st
 
 
 def canonicalize_parsed(parsed: dict[str, Any], *, valid_event_ids: set[str]) -> dict[str, Any]:
-    return {
+    failure_diagnosis, invalid_failure_diagnosis = _canonicalize_failure_diagnosis(
+        parsed.get("failure_diagnosis")
+    )
+    row: dict[str, Any] = {
         "answer": _first_string(parsed.get("answer"), default=""),
         "decision": _canonicalize_decision(parsed.get("decision")),
         "memory_state": _as_memory_state(parsed.get("memory_state")),
@@ -224,8 +235,11 @@ def canonicalize_parsed(parsed: dict[str, Any], *, valid_event_ids: set[str]) ->
             parsed.get("evidence_event_ids"),
             valid_event_ids,
         ),
-        "failure_diagnosis": _canonicalize_failure_diagnosis(parsed.get("failure_diagnosis")),
+        "failure_diagnosis": failure_diagnosis,
     }
+    if invalid_failure_diagnosis:
+        row["_invalid_failure_diagnosis"] = True
+    return row
 
 
 def fallback_prediction(scenario_id: str, raw_output: str) -> dict[str, Any]:
@@ -236,6 +250,7 @@ def fallback_prediction(scenario_id: str, raw_output: str) -> dict[str, Any]:
         "memory_state": {},
         "evidence_event_ids": [],
         "failure_diagnosis": DEFAULT_FAILURE_DIAGNOSIS,
+        "_invalid_failure_diagnosis": True,
         "_parse_error": True,
         "raw_output": raw_output,
     }
