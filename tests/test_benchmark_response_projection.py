@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from benchmark.mempatch_bench.api import evaluate_predictions
 from benchmark.mempatch_bench.general_taxonomy import DECISIONS, FAILURE_MODES, MEMORY_STATUSES
+from benchmark.mempatch_bench.public_view import public_scenario_view
 from retrace_learn.runtime.benchmark_projection import project_to_benchmark_response
 from retrace_learn.runtime.dpa_runtime import ParseResult, RuntimeResult
 from retrace_learn.runtime.revision_module import run_revision_module_on_scenario
@@ -137,26 +138,21 @@ def test_project_to_benchmark_response_supports_extended_memory_labels() -> None
         "scenario_id": "case_restore",
         "public_input": {
             "initial_memory": [
-                {"memory_id": "m_target", "text": "Target memory", "is_distractor": False},
-                {
-                    "memory_id": "m_condition",
-                    "text": "Condition rule: release required",
-                    "is_distractor": False,
-                },
-                {"memory_id": "m_dist", "text": "Other scope", "is_distractor": True},
+                {"memory_id": "m_target", "text": "Target memory"},
+                {"memory_id": "m_condition", "text": "Condition rule: release required"},
+                {"memory_id": "m-case-distractor", "text": "Distractor info: other scope"},
             ]
         },
     }
 
     response = project_to_benchmark_response(
         runtime_result=runtime_result,
-        scenario_public_view={"public_input": {"initial_memory": [{"memory_id": mid} for mid in ("m_target", "m_condition", "m_dist")]}},
-        scenario=scenario,
+        scenario_public_view=public_scenario_view(scenario),
     )
 
     assert response["memory_state"]["m_target"] == "restored"
     assert response["memory_state"]["m_condition"] == "current"
-    assert response["memory_state"]["m_dist"] == "out_of_scope"
+    assert response["memory_state"]["m-case-distractor"] == "out_of_scope"
 
 
 def test_project_to_benchmark_response_accepts_raw_memory_state_overrides() -> None:

@@ -82,20 +82,20 @@ def public_scenario_view(scenario: dict[str, Any]) -> dict[str, Any]:
     tasks: dict[str, Any] = {}
     for key in ("black_box_task", "memory_state_task", "evidence_retrieval_task", "diagnostic_task"):
         if key in scenario:
-            tasks[key] = scenario[key]
+            tasks[key] = _strip_internal(scenario[key])
     if not tasks and scenario.get("tasks"):
         raw_tasks = scenario["tasks"]
         if isinstance(raw_tasks, dict):
-            tasks = dict(raw_tasks)
+            tasks = _strip_internal(raw_tasks)
         elif isinstance(raw_tasks, list):
-            tasks = {"tasks": raw_tasks}
+            tasks = {"tasks": _strip_internal(raw_tasks)}
 
     view: dict[str, Any] = {
         "scenario_id": scenario["scenario_id"],
         "domain": scenario.get("domain"),
         "difficulty": scenario.get("difficulty") or scenario.get("difficulty_level"),
-        "workflow_context": scenario.get("workflow_context", ""),
+        "workflow_context": _strip_internal(scenario.get("workflow_context", "")),
         "public_input": sanitize_public_input(scenario.get("public_input", {})),
     }
-    view.update(tasks)
+    view.update(_strip_internal(tasks))
     return view

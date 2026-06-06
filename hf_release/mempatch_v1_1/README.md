@@ -62,7 +62,7 @@ Prediction interface:
 
 ## Scoring
 
-Use the official evaluator alias from the anonymous artifact repository:
+Use the official evaluator script from the anonymous artifact repository:
 
 ```bash
 python scripts/evaluate_mempatch_predictions.py \

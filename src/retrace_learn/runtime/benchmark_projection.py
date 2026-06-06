@@ -53,22 +53,34 @@ def _visible_memory_ids(scenario_public_view: dict[str, Any] | None) -> list[str
     return ids or None
 
 
-def _distractor_memory_ids(scenario: dict[str, Any] | None) -> set[str]:
-    if not scenario:
+def _memory_looks_like_distractor(memory_id: str, text: str) -> bool:
+    """Public-visible distractor cues (never reads dataset-internal flags)."""
+    mid = memory_id.lower()
+    if mid.endswith("-distractor") or mid.endswith("_distractor"):
+        return True
+    return text.strip().startswith("Distractor info:")
+
+
+def _distractor_memory_ids(scenario_public_view: dict[str, Any] | None) -> set[str]:
+    if not scenario_public_view:
         return set()
     ids: set[str] = set()
-    for memory in (scenario.get("public_input") or {}).get("initial_memory") or []:
-        if isinstance(memory, dict) and memory.get("is_distractor") and memory.get("memory_id"):
-            ids.add(str(memory["memory_id"]))
+    for memory in (scenario_public_view.get("public_input") or {}).get("initial_memory") or []:
+        if not isinstance(memory, dict) or not memory.get("memory_id"):
+            continue
+        memory_id = str(memory["memory_id"])
+        text = str(memory.get("text") or "")
+        if _memory_looks_like_distractor(memory_id, text):
+            ids.add(memory_id)
     return ids
 
 
-def _condition_memory_ids(scenario: dict[str, Any] | None) -> set[str]:
+def _condition_memory_ids(scenario_public_view: dict[str, Any] | None) -> set[str]:
     """Heuristic for condition-rule memories used in release/restore scenarios."""
-    if not scenario:
+    if not scenario_public_view:
         return set()
     ids: set[str] = set()
-    for memory in (scenario.get("public_input") or {}).get("initial_memory") or []:
+    for memory in (scenario_public_view.get("public_input") or {}).get("initial_memory") or []:
         if not isinstance(memory, dict) or not memory.get("memory_id"):
             continue
         text = str(memory.get("text") or "")
@@ -99,13 +111,13 @@ def _apply_scenario_memory_hints(
     memory_state: dict[str, str],
     runtime_result: "RuntimeResult",
     *,
-    scenario: dict[str, Any] | None,
+    scenario_public_view: dict[str, Any] | None,
 ) -> dict[str, str]:
-    if not scenario:
+    if not scenario_public_view:
         return memory_state
 
-    distractors = _distractor_memory_ids(scenario)
-    conditions = _condition_memory_ids(scenario)
+    distractors = _distractor_memory_ids(scenario_public_view)
+    conditions = _condition_memory_ids(scenario_public_view)
     has_release = any(a.action_type == "RELEASES" for a in runtime_result.admitted_actions)
 
     updated = dict(memory_state)
@@ -130,7 +142,6 @@ def _project_memory_state(
     runtime_result: RuntimeResult,
     *,
     scenario_public_view: dict[str, Any] | None = None,
-    scenario: dict[str, Any] | None = None,
     raw_response: Any | None = None,
 ) -> dict[str, str]:
     base = _apply_scenario_memory_hints(
@@ -139,13 +150,13 @@ def _project_memory_state(
             for belief_id, status in runtime_result.final_belief_statuses.items()
         },
         runtime_result,
-        scenario=scenario,
+        scenario_public_view=scenario_public_view,
     )
     visible = _visible_memory_ids(scenario_public_view)
     if visible is not None:
         base = {mid: base.get(mid, "current") for mid in visible}
     merged = _merge_raw_memory_state(base, raw_response)
-    for memory_id in _distractor_memory_ids(scenario):
+    for memory_id in _distractor_memory_ids(scenario_public_view):
         if memory_id in merged:
             merged[memory_id] = "out_of_scope"
     return merged
@@ -223,14 +234,12 @@ def project_to_benchmark_response(
     runtime_result: "RuntimeResult",
     raw_response: Any | None = None,
     scenario_public_view: dict[str, Any] | None = None,
-    scenario: dict[str, Any] | None = None,
     fallback_answer: str = "",
 ) -> dict[str, Any]:
     """Project DPA-authorized transitions into evaluator-ready response fields."""
     memory_state = _project_memory_state(
         runtime_result,
         scenario_public_view=scenario_public_view,
-        scenario=scenario,
         raw_response=raw_response,
     )
     raw_answer = _raw_response_field(raw_response, "answer")

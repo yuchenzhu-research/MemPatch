@@ -61,6 +61,9 @@ python scripts/run_mempatch_revision_module.py \
   --data local/MemPatch/main/scenarios.jsonl \
   --out-predictions local/predictions/module_main20.jsonl \
   --max-cases 20 \
+  --policy prompt \
+  --provider siliconflow \
+  --model <OPEN_MODEL_NAME> \
   --resume
 
 PYTHONPATH=. python scripts/evaluate_mempatch_predictions.py \

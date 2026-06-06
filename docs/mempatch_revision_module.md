@@ -24,7 +24,7 @@ The **MemPatch Revision Module** is not a Transformer block or LoRA adapter. It 
 |--------|-------------|
 | `S` | Scenario: `public_input`, `event_trace`, query / task prompt |
 | `M` | Visible memory candidates (`initial_memory`, related beliefs) |
-| `πθ` | Revision Response Policy (learned or API) |
+| `πθ` | Revision Response Policy (prompted API or scripted replay; learned weights are future work) |
 | `A` | Deterministic DPA verifier (`authorize(...)`) |
 
 ## 4. Outputs
@@ -50,7 +50,7 @@ These are **implementation roles inside one module**, not separate paper contrib
 | **Scenario View Builder** | `S, M` → revision view `V` | `src/retrace_learn/runtime/graph_extractor.py` |
 | **Revision Response Policy** | `V` → raw response `r_raw` | `src/retrace_learn/runtime/learned_proposer.py` |
 | **DPA-Consistent Projection** | parse + authorize + project | `dpa_runtime.py`, `benchmark_projection.py`, `authorization.py` |
-| **Benchmark-grounded Feedback** | metrics → training signal | `src/retrace_learn/runtime/reward.py` |
+| **Benchmark-grounded Feedback** | Decomposable reward interface (`reward.py`; not wired to training in this artifact) |
 
 Implementation entrypoints:
 
@@ -124,7 +124,7 @@ Negative response (benchmark failure modes):
 - `stale_memory_reuse`, `under_update`, `over_update`
 - `scope_leakage`, `wrong_source_attribution`, `memory_hallucination`
 
-**Benchmark-grounded reward** (implemented in `reward.py`; weights tunable):
+**Benchmark-grounded reward** (implemented in `reward.py` as a decomposable interface; weights tunable when a training loop exists):
 
 ```text
 R = memory_state_accuracy
@@ -136,7 +136,7 @@ R = memory_state_accuracy
   - scope_leakage_penalty
 ```
 
-Benchmark-grounded feedback can support SFT, RSFT, or DPO-style policy improvement when training scripts are configured. Full DPO pipelines are not claimed unless corresponding scripts and results exist.
+`reward.py` defines a benchmark-grounded reward interface that *can* support SFT, RSFT, or DPO-style policy improvement once a training loop is added. This artifact does not ship trained policies or DPO scripts; do not claim full DPO unless corresponding scripts and results exist.
 
 ## 8. Ablation plan
 
@@ -163,13 +163,16 @@ Do not start with full 3500 rows or closed-source flagship models.
 | **3** | `main200` + `hard100` | Direct baseline vs full module vs w/o DPA projection |
 | **4** | Full `main3000` + `hard500` | Only after Stage 3 shows signal |
 
-Example Revision Module smoke:
+Example Revision Module run (reported results: use `--policy prompt`, not default `noop`):
 
 ```bash
 python scripts/run_mempatch_revision_module.py \
   --data local/MemPatch/main/scenarios.jsonl \
   --out-predictions local/predictions/mempatch_main20.jsonl \
   --max-cases 20 \
+  --policy prompt \
+  --provider siliconflow \
+  --model <OPEN_MODEL_NAME> \
   --resume
 ```
 
@@ -177,4 +180,4 @@ Public HF release metadata (`hf_release/mempatch_v1_1/manifest.json`) documents 
 
 ## 9. Paper-facing summary
 
-MemPatch-Bench defines the benchmark-compatible response interface for RMI. The MemPatch Revision Module learns to produce better revision responses. DPA projects proposed revisions into legal memory-state transitions. Benchmark-grounded feedback improves the response policy.
+MemPatch-Bench defines the benchmark-compatible response interface for RMI. The MemPatch Revision Module is designed to produce revision responses through a prompted or scripted policy, DPA-consistent projection, and benchmark response projection. Benchmark-grounded feedback is defined in `reward.py` as a training interface; improving the policy via that feedback is future work in this artifact.

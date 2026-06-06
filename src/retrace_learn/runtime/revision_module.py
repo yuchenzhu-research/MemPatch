@@ -50,7 +50,6 @@ def run_revision_module_on_scenario(
         runtime_result=runtime_result,
         raw_response=raw_response,
         scenario_public_view=public_view,
-        scenario=scenario,
         fallback_answer=fallback_answer,
     )
     return {"scenario_id": scenario["scenario_id"], "response": response}

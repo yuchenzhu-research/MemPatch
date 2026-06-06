@@ -13,7 +13,7 @@ One story:
 - **MemPatch-Bench** — paper-facing `response` interface and `hidden_gold` scoring
 - **MemPatch Revision Module** — algorithm module for benchmark-compatible revision responses
 - **DPA** — deterministic verifier inside the module (`authorize`)
-- **Benchmark-grounded feedback** — training signal from benchmark metrics
+- **Benchmark-grounded feedback** — decomposable reward interface in `reward.py` (not wired to a training loop in this artifact)
 
 ## MemPatch Revision Module
 
