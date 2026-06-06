@@ -74,8 +74,8 @@ EOF
 echo "MLX LoRA config written to ${MLX_CONFIG}"
 echo "Model: ${MLX_MODEL} | iters=${ITERS} | max_seq_length=${MAX_SEQ_LEN} | lora_rank=${LORA_RANK}"
 
-# Primary entrypoint (mlx-lm >= 0.25): python -m mlx_lm lora
-python -m mlx_lm lora --config "${MLX_CONFIG}"
+# Primary entrypoint (mlx-lm >= 0.25): "${PYTHON:-python}" -m mlx_lm lora
+"${PYTHON:-python}" -m mlx_lm lora --config "${MLX_CONFIG}"
 
 # ---------------------------------------------------------------------------
 # Post-training hard_probe_50 evaluation (manual)
