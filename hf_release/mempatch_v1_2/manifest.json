@@ -1,0 +1,63 @@
+{
+  "code_license": "MIT",
+  "data_files": {
+    "hard": "hard/scenarios.jsonl",
+    "main": "main/scenarios.jsonl",
+    "train": "train/scenarios.jsonl"
+  },
+  "dataset": "MemPatch",
+  "dataset_license": "CC-BY-4.0",
+  "decision_quotas": {
+    "hard": {
+      "ask_clarification": 100,
+      "escalate": 75,
+      "mark_unresolved": 100,
+      "refuse_due_to_policy": 75,
+      "use_current_memory": 150
+    },
+    "main": {
+      "ask_clarification": 100,
+      "escalate": 75,
+      "mark_unresolved": 150,
+      "refuse_due_to_policy": 75,
+      "use_current_memory": 400
+    },
+    "train": {
+      "ask_clarification": 600,
+      "escalate": 600,
+      "mark_unresolved": 600,
+      "refuse_due_to_policy": 300,
+      "use_current_memory": 600
+    }
+  },
+  "generation_seed_policy": "split-prefixed:v12",
+  "notes": {
+    "generator": "scripts/generate_mempatch_v12.py",
+    "hf_dataset": "Sylvan-Vale-Moon/MemPatch",
+    "split_policy": "All five DECISIONS required in train and main; hard remains held-out adversarial eval.",
+    "status": "released",
+    "train": "local/SFT-only split in v1.2; not for benchmark leaderboard eval",
+    "v1_1_baseline": "main/hard only; train split introduced in v1.2"
+  },
+  "public_split_name_counts": {
+    "hard": 500,
+    "main": 800,
+    "train": 2700
+  },
+  "public_total": 4000,
+  "release_version": "1.2.0",
+  "scenario_id_ranges": {
+    "hard": [
+      "case-003001",
+      "case-003500"
+    ],
+    "main": [
+      "case-000001",
+      "case-000800"
+    ],
+    "train": [
+      "case-100001",
+      "case-102700"
+    ]
+  }
+}

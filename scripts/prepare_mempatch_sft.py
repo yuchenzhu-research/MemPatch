@@ -275,10 +275,16 @@ def print_main_inventory(buckets: dict[str, list[dict[str, Any]]]) -> None:
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Prepare MemPatch SFT JSONL for smoke training.")
     parser.add_argument(
+        "--train",
+        type=Path,
+        default=None,
+        help="optional v1.2 train split scenarios.jsonl (preferred over --main for SFT)",
+    )
+    parser.add_argument(
         "--main",
         type=Path,
         default=Path("hf_release/mempatch_v1_1/main/scenarios.jsonl"),
-        help="main split scenarios.jsonl",
+        help="main split scenarios.jsonl (used when --train is absent)",
     )
     parser.add_argument(
         "--hard",
@@ -315,15 +321,27 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    if not args.main.is_file():
-        print(f"error: main scenarios not found: {args.main}", file=sys.stderr)
+    train_path = args.train
+    main_path = args.main
+    if train_path is not None and train_path.is_file():
+        source_path = train_path
+        source_label = "train"
+    elif main_path.is_file():
+        source_path = main_path
+        source_label = "main"
+    else:
+        if train_path is not None:
+            print(f"error: train scenarios not found: {train_path}", file=sys.stderr)
+        print(f"error: main scenarios not found: {main_path}", file=sys.stderr)
         return 1
     if not args.hard.is_file():
         print(f"error: hard scenarios not found: {args.hard}", file=sys.stderr)
         return 1
 
-    main_rows = read_jsonl(args.main)
+    main_rows = read_jsonl(source_path)
     hard_rows = read_jsonl(args.hard)
+    if source_label == "train":
+        print(f"SFT source: train split ({len(main_rows)} rows) from {source_path}")
 
     if args.hard_probe_size > len(hard_rows):
         print(
