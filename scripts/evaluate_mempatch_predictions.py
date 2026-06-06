@@ -123,6 +123,8 @@ def main(argv: list[str] | None = None) -> int:
         print(f"warning: {warning}", file=sys.stderr)
     if not strict:
         for err in result["errors"]:
+            if args.allow_missing and "missing prediction" in err:
+                continue
             print(f"error (non-strict): {err}", file=sys.stderr)
 
     if args.out_metrics:
