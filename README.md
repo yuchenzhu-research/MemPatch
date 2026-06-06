@@ -13,48 +13,34 @@ MemPatch turns memory revision into a **constrained benchmark-compatible state-t
 | Piece | Role |
 |-------|------|
 | **MemPatch-Bench** | Defines scenarios, `hidden_gold`, and the paper-facing `response` interface |
-| **MemPatch Revision Module** | Learns to produce benchmark-compatible revision responses |
-| **DPA** (`authorize(...)`) | Deterministic verifier inside the module: model proposes, DPA authorizes, benchmark evaluates |
-| **Benchmark-grounded feedback** | Improves the Revision Response Policy from `memory_state` / evidence / diagnostic metrics |
+| **MemPatch Revision Module** | Produces benchmark-compatible revision responses |
+| **DPA** (`authorize(...)`) | Deterministic verifier inside the module |
+| **Benchmark-grounded feedback** | Training signal from benchmark metrics |
 
 Algorithm spec: [`docs/mempatch_revision_module.md`](docs/mempatch_revision_module.md)
+
+Experiment plan: [`docs/experiments_open_source_budget_plan.md`](docs/experiments_open_source_budget_plan.md)
 
 ## MemPatch Revision Module (summary)
 
 ```text
-V  ← BuildScenarioRevisionView(scenario, memories)     # Scenario View Builder
-r_raw ← RevisionResponsePolicy(V)                       # Revision Response Policy
-T  ← DPAConsistentProjection(authorize, parse(r_raw))   # DPA-Consistent Projection
-r_final ← ProjectToBenchmarkResponse(T, r_raw)          # decision, memory_state, ...
+V  ← BuildScenarioRevisionView(scenario, memories)
+r_raw ← RevisionResponsePolicy(V)
+T  ← DPAConsistentProjection(A, parse(r_raw))
+r_final ← ProjectToBenchmarkResponse(T, r_raw)
 ```
-
-Internal roles (not separate contributions): Scenario View Builder → Revision Response Policy → DPA-Consistent Projection → Benchmark-grounded Feedback.
 
 ## Paper-facing response
 
 ```json
 {
   "decision": "use_current_memory",
-  "memory_state": {"m1": "current", "m2": "outdated", "m3": "blocked"},
+  "memory_state": {"m1": "current", "m2": "outdated"},
   "evidence_event_ids": ["e2", "e5"],
   "failure_diagnosis": "stale_memory_reuse",
   "answer": "..."
 }
 ```
-
-Vocabulary: `scenario`, `public_input`, `event_trace`, `hidden_gold`, `response`, `decision`, `memory_state`, `evidence_event_ids`, `failure_diagnosis`, `failure_mode`, `memory_status`.
-
-## Repository layout
-
-| Path | Role in MemPatch Revision Module |
-|------|----------------------------------|
-| `benchmark/retrace_bench/` | MemPatch-Bench evaluator (scores `response` vs `hidden_gold`) |
-| `src/retrace_learn/` | View Builder, Response Policy, feedback |
-| `src/retracemem/` | DPA-Consistent Projection (`authorize`, RevisionGate) |
-| `scripts/` | Evaluate, validate, run models |
-| `hf_release/mempatch_v1_1/` | Hugging Face release metadata |
-
-Data: Hugging Face `Sylvan-Vale-Moon/MemPatch`.
 
 ## Setup
 
@@ -67,14 +53,14 @@ pip install -e ".[dev]"
 ## Evaluate predictions
 
 ```bash
-PYTHONPATH=. python scripts/evaluate_retrace_bench_predictions.py \
+PYTHONPATH=. python scripts/evaluate_mempatch_predictions.py \
   --data path/to/scenarios.jsonl \
   --predictions path/to/predictions.jsonl \
   --print-table
 ```
 
 ```python
-from benchmark.retrace_bench.api import load_scenarios, load_predictions, evaluate_predictions
+from benchmark.mempatch_bench.api import load_scenarios, load_predictions, evaluate_predictions
 
 result = evaluate_predictions(
     load_scenarios("path/to/scenarios.jsonl"),
@@ -83,7 +69,16 @@ result = evaluate_predictions(
 )
 ```
 
-## Run Revision Module (method path)
+Fixture smoke (no model cost):
+
+```bash
+PYTHONPATH=. python scripts/evaluate_mempatch_predictions.py \
+  --data tests/fixtures/smoke_scenarios.jsonl \
+  --predictions tests/fixtures/smoke_predictions.jsonl \
+  --print-table
+```
+
+## MemPatch Revision Module (method path)
 
 ```bash
 python scripts/run_mempatch_revision_module.py \
@@ -93,29 +88,46 @@ python scripts/run_mempatch_revision_module.py \
   --resume
 ```
 
-Direct Response baseline: `scripts/run_retrace_bench_model.py` (alias `run_mempatch_model.py`).
-
-## Run a model locally (Direct Response baseline)
+## Direct Response baseline
 
 ```bash
-git clone https://github.com/yuchenzhu-research/MemPatch.git && cd MemPatch
-python3 -m venv .venv && source .venv/bin/activate
-pip install -e ".[dev,llm]" && cp .env.example .env
+python scripts/run_mempatch_model.py \
+  --data local/MemPatch/main/scenarios.jsonl \
+  --provider siliconflow \
+  --model <OPEN_MODEL_NAME> \
+  --out-predictions local/predictions/direct_main20.jsonl \
+  --max-cases 20 \
+  --resume
 ```
+
+Prompt size smoke (no API call):
 
 ```bash
-python scripts/run_retrace_bench_model.py \
-  --data local/MemPatch/main/scenarios.jsonl \
-  --provider siliconflow --model deepseek-ai/DeepSeek-V3 \
-  --out-predictions local/predictions/calibration.jsonl --max-cases 10 --resume
-
-PYTHONPATH=. python scripts/evaluate_retrace_bench_predictions.py \
-  --data local/MemPatch/main/scenarios.jsonl \
-  --predictions local/predictions/calibration.jsonl --print-table
+python scripts/run_mempatch_model.py \
+  --data tests/fixtures/smoke_scenarios.jsonl \
+  --provider siliconflow \
+  --model <OPEN_MODEL_NAME> \
+  --out-predictions local/predictions/smoke.jsonl \
+  --max-cases 1 \
+  --print-prompt-stats
 ```
+
+Public evaluation data: Hugging Face artifact `MemPatch` v1.1 (`main`: 3000, `hard`: 500). See `hf_release/mempatch_v1_1/manifest.json`. Download JSONL into `local/MemPatch/` (not vendored in git).
 
 ## Verification
 
 ```bash
-env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q benchmark scripts src
+env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q benchmark scripts src tests
+PYTHONPATH=.:src .venv/bin/python -m pytest -q
+```
+
+## Citation (anonymous placeholder)
+
+```bibtex
+@misc{mempatch2026,
+  title  = {MemPatch: Benchmarking and Improving Rapid Memory Integration in LLM Agents},
+  author = {Anonymous},
+  year   = {2026},
+  note   = {Evaluation-only benchmark release.}
+}
 ```

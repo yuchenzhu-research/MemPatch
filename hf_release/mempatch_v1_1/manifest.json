@@ -8,8 +8,8 @@
   "dataset_license": "CC-BY-4.0",
   "evaluation_only": true,
   "generation_seed": 2027,
-  "github": "https://github.com/yuchenzhu-research/MemPatch",
-  "huggingface": "https://huggingface.co/datasets/Sylvan-Vale-Moon/MemPatch",
+  "artifact_repository": "anonymous (blind review)",
+  "artifact_host": "anonymous Hugging Face dataset card (blind review)",
   "notes": {
     "calibration": "smoke/quickstart only; not part of the public HF release",
     "private_hidden": "private evaluation only; not part of the public release",

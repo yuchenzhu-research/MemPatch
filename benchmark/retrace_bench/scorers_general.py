@@ -365,7 +365,7 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
         "evidence_f1": evidence_f1,
         "failure_diagnosis_accuracy": float(expected_diag == predicted_diag),
         "stale_reuse_rate": float(stale_reuse),
-        # New AAAI headline metrics
+        # Headline metrics for paper-facing tables
         "joint_revision_success": joint_revision_success,
         "structural_revision_success": structural_revision_success,
         "minimal_evidence_exact_match": float(pred_ev == gold_ev),

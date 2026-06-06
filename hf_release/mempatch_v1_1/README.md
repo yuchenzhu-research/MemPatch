@@ -24,18 +24,11 @@ configs:
 
 # MemPatch
 
-MemPatch supports **Rapid Memory Integration (RMI)** evaluation for the paper
-**MemPatch: Benchmarking and Improving Rapid Memory Integration in LLM
-Agents**. Each scenario tests whether an LLM agent integrates new evidence into
-`memory_state` labels (`current`, `outdated`, `blocked`, `unresolved`, etc.)
-without stale reuse, scope leakage, or policy-invalid beliefs.
+MemPatch supports **Rapid Memory Integration (RMI)** evaluation. Each scenario tests whether an LLM agent integrates new evidence into `memory_state` labels (`current`, `outdated`, `blocked`, `unresolved`, etc.) without stale reuse, scope leakage, or policy-invalid beliefs.
 
-The released data has two public splits: `main` and `hard`. The stress-only
-`realistic` rows and smoke-only `calibration` rows are not part of the public HF
-release used for paper-facing evaluation.
+The public release contains two splits only: `main` and `hard`. Stress-only `realistic` and smoke-only `calibration` rows are **not** part of this public release.
 
-> **Evaluation-only.** Do not train the MemPatch Revision Module policy on this
-> data. Doing so contaminates benchmark results.
+> **Evaluation-only.** Do not train the MemPatch Revision Module policy on this data.
 
 ## Public Rows
 
@@ -46,20 +39,13 @@ release used for paper-facing evaluation.
 
 **Public total: 3500 rows.**
 
-- `realistic` remains a secondary stress subset until human validation is
-  recorded and is not included in this HF release.
-- `calibration` remains smoke / quickstart only and is not included in this HF
-  release.
-- Private hidden rows are not part of this public release.
+There is **no train split** in this release.
 
 ## Format
 
-Each line in `main/scenarios.jsonl` or `hard/scenarios.jsonl` is a JSON scenario
-object with a gold-free `public_input` and a `hidden_gold` block used by the
-official scorer. The public-facing model input must be taken through the
-official public view; do not feed `hidden_gold` or internal fields to a model.
+Each line in `main/scenarios.jsonl` or `hard/scenarios.jsonl` is a JSON scenario with gold-free `public_input` and scorer-only `hidden_gold`.
 
-The benchmark-compatible prediction interface is:
+Prediction interface:
 
 ```json
 {
@@ -76,36 +62,27 @@ The benchmark-compatible prediction interface is:
 
 ## Scoring
 
-Use the official evaluator from the GitHub repository:
+Use the official evaluator alias from the anonymous artifact repository:
 
 ```bash
-python scripts/evaluate_retrace_bench_predictions.py \
+python scripts/evaluate_mempatch_predictions.py \
   --data main/scenarios.jsonl --predictions <your_predictions>.jsonl
 ```
 
-Core metrics: `decision_macro_f1`, `memory_state_accuracy`, `evidence_f1`,
-`minimal_evidence_exact_match`, `failure_diagnosis_accuracy`,
-`joint_revision_success`, `stale_reuse_rate`, `format_failure_rate`.
+Core metrics: `decision_macro_f1`, `memory_state_accuracy`, `evidence_f1`, `failure_diagnosis_accuracy`, `joint_revision_success`, `stale_reuse_rate`.
 
 ## Licensing
 
 - **Dataset:** CC BY 4.0 (see `DATASET_LICENSE.md`).
-- **Code:** MIT, hosted at https://github.com/yuchenzhu-research/MemPatch.
-
-## Provenance
-
-- Deterministically generated with seed `2027`.
-- Release version `1.1.0`.
-- Code, schema, validators, and benchmark runner:
-  https://github.com/yuchenzhu-research/MemPatch.
+- **Code:** MIT (anonymous artifact repository, blind review).
 
 ## Citation
 
 ```bibtex
 @misc{mempatch2026,
   title  = {MemPatch: Benchmarking and Improving Rapid Memory Integration in LLM Agents},
-  author = {MemPatch authors},
+  author = {Anonymous},
   year   = {2026},
-  note   = {Evaluation-only benchmark release. \url{https://github.com/yuchenzhu-research/MemPatch}}
+  note   = {Evaluation-only benchmark release.}
 }
 ```

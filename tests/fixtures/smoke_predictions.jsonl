@@ -1,0 +1,1 @@
+{"scenario_id": "case_000001", "response": {"answer": "New value", "decision": "use_current_memory", "memory_state": {"m1": "outdated"}, "evidence_event_ids": ["e1"], "failure_diagnosis": "stale_memory_reuse"}}

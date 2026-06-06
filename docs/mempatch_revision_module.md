@@ -49,14 +49,14 @@ These are **implementation roles inside one module**, not separate paper contrib
 |------|---------|------|
 | **Scenario View Builder** | `S, M` → revision view `V` | `src/retrace_learn/runtime/graph_extractor.py` |
 | **Revision Response Policy** | `V` → raw response `r_raw` | `src/retrace_learn/runtime/learned_proposer.py` |
-| **DPA-Consistent Projection** | parse + authorize + project to legal transitions | `dpa_runtime.py`, `authorization.py`, `benchmark_projection.py` |
+| **DPA-Consistent Projection** | parse + authorize + project | `dpa_runtime.py`, `benchmark_projection.py`, `authorization.py` |
 | **Benchmark-grounded Feedback** | metrics → training signal | `src/retrace_learn/runtime/reward.py` |
 
 Implementation entrypoints:
 
 - Full method path: `scripts/run_mempatch_revision_module.py`
-- Direct Response baseline: `scripts/run_retrace_bench_model.py` (alias: `run_mempatch_model.py`)
-- Evaluator: `scripts/evaluate_retrace_bench_predictions.py` (alias: `evaluate_mempatch_predictions.py`)
+- Direct Response baseline: `scripts/run_mempatch_model.py`
+- Evaluator: `scripts/evaluate_mempatch_predictions.py`
 
 ## 6. Algorithm 1 — MemPatch Revision Module
 
@@ -149,7 +149,7 @@ Benchmark-grounded feedback can support SFT, RSFT, or DPO-style policy improveme
 | **Direct answer only** | Baseline: free-form answer, no revision module |
 | **Response policy w/o benchmark-grounded feedback** | Fixed or prompted policy; no `reward.py` training signal |
 
-Baselines in repo configs: `ReTrace-Prompt`, `DirectJudge-API`, MemPatch-Bench model runner (end-task `response` without full module).
+Baselines: Direct Response runner, DirectJudge-style status prediction, full Revision Module runner.
 
 ## 10. Cost-aware experiment plan (P2)
 
