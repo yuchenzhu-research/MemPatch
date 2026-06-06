@@ -19,29 +19,11 @@ try:
 except ImportError:  # pragma: no cover - legacy alias
     from benchmark.retrace_bench.model_runner import build_prompt  # type: ignore[no-redef]
 
-PROMPT_SUFFIX = """\
-/no_think
-Return exactly one strict JSON object.
-Do not output reasoning.
-Do not output Markdown.
-Do not include <think>.
-The first character after any removed thinking block must be {.
-Use only these memory_state values: current, outdated, blocked, unresolved, out_of_scope, restored.
-Use only string values for decision and failure_diagnosis.
-If a memory is only relevant to a different workspace, branch, version, or scope, label it out_of_scope.
-Do not include counterevidence_event_ids in evidence_event_ids unless they support the final answer."""
+SYSTEM_PROMPT = "You are MemPatch Revision Policy. Return only strict JSON. Do not explain."
 
 THINKING_BLOCK_RE = re.compile(
     r"<think>.*?</think>",
     flags=re.IGNORECASE | re.DOTALL,
-)
-
-RESPONSE_FIELDS = (
-    "answer",
-    "decision",
-    "memory_state",
-    "evidence_event_ids",
-    "failure_diagnosis",
 )
 
 
@@ -76,13 +58,74 @@ def probe_public_view(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def build_mlx_prompt(row: dict[str, Any]) -> str:
-    return build_prompt(probe_public_view(row)) + "\n\n" + PROMPT_SUFFIX
+def build_chat_messages(row: dict[str, Any]) -> list[dict[str, str]]:
+    user_content = build_prompt(probe_public_view(row)) + "\n\n/no_think"
+    return [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": user_content},
+    ]
+
+
+IM_END = "<|" + "im_end|>"
+IM_START = "<|" + "im_start|>"
+
+
+def format_qwen_chat_prompt(messages: list[dict[str, str]]) -> str:
+    parts: list[str] = []
+    for message in messages:
+        role = message["role"]
+        content = message["content"]
+        parts.append(f"{IM_START}{role}\n{content}\n{IM_END}\n")
+    parts.append(f"{IM_START}assistant\n")
+    return "".join(parts)
+
+
+def format_chat_prompt(
+    messages: list[dict[str, str]],
+    tokenizer: Any | None = None,
+) -> str:
+    if tokenizer is not None and getattr(tokenizer, "chat_template", None):
+        return tokenizer.apply_chat_template(
+            messages,
+            tokenize=False,
+            add_generation_prompt=True,
+        )
+    return format_qwen_chat_prompt(messages)
 
 
 def strip_thinking(text: str) -> str:
-    cleaned = THINKING_BLOCK_RE.sub("", text)
-    return cleaned.strip()
+    return THINKING_BLOCK_RE.sub("", text).strip()
+
+
+def _find_balanced_json_object(raw: str) -> str:
+    start = raw.find("{")
+    if start == -1:
+        raise ValueError("no JSON object start")
+    depth = 0
+    in_string = False
+    escape = False
+    quote = ""
+    for index in range(start, len(raw)):
+        char = raw[index]
+        if in_string:
+            if escape:
+                escape = False
+            elif char == "\\":
+                escape = True
+            elif char == quote:
+                in_string = False
+            continue
+        if char in {'"', "'"}:
+            in_string = True
+            quote = char
+            continue
+        if char == "{":
+            depth += 1
+        elif char == "}":
+            depth -= 1
+            if depth == 0:
+                return raw[start : index + 1]
+    raise ValueError("unbalanced JSON object")
 
 
 def extract_first_json_object(text: str) -> dict[str, Any]:
@@ -93,11 +136,7 @@ def extract_first_json_object(text: str) -> dict[str, Any]:
     try:
         value = json.loads(raw)
     except json.JSONDecodeError:
-        start = raw.find("{")
-        end = raw.rfind("}")
-        if start == -1 or end == -1 or end <= start:
-            raise
-        value = json.loads(raw[start : end + 1])
+        value = json.loads(_find_balanced_json_object(raw))
     if not isinstance(value, dict):
         raise ValueError("model output JSON must be an object")
     return value
@@ -175,25 +214,10 @@ def parse_model_output(scenario_id: str, text: str) -> dict[str, Any]:
         return fallback_prediction(scenario_id, text)
 
 
-def _load_generate_api() -> tuple[Any, Any, Callable[..., str]]:
+def _load_generate_api() -> tuple[Any, Callable[..., str]]:
     from mlx_lm import generate, load
 
-    return load, generate, generate
-
-
-def generate_with_api(
-    *,
-    model: str,
-    adapter_path: str | None,
-    prompt: str,
-    max_tokens: int,
-) -> str:
-    load, generate_fn, _ = _load_generate_api()
-    load_kwargs: dict[str, Any] = {}
-    if adapter_path:
-        load_kwargs["adapter_path"] = adapter_path
-    mlx_model, tokenizer = load(model, **load_kwargs)
-    return generate_fn(mlx_model, tokenizer, prompt=prompt, max_tokens=max_tokens, verbose=False)
+    return load, generate
 
 
 def generate_with_subprocess(
@@ -247,14 +271,17 @@ class MlxGenerator:
     def _ensure_api_model(self) -> None:
         if self._mlx_model is not None:
             return
-        load, generate_fn, _ = _load_generate_api()
+        load, generate_fn = _load_generate_api()
         load_kwargs: dict[str, Any] = {}
         if self.adapter_path:
             load_kwargs["adapter_path"] = self.adapter_path
         self._mlx_model, self._tokenizer = load(self.model, **load_kwargs)
         self._generate_fn = generate_fn
 
-    def generate(self, prompt: str) -> str:
+    def generate(self, messages: list[dict[str, str]]) -> str:
+        self._ensure_api_model()
+        assert self._tokenizer is not None
+        prompt = format_chat_prompt(messages, self._tokenizer)
         if self.use_subprocess:
             return generate_with_subprocess(
                 python=self.python,
@@ -263,10 +290,8 @@ class MlxGenerator:
                 prompt=prompt,
                 max_tokens=self.max_tokens,
             )
-        self._ensure_api_model()
         assert self._generate_fn is not None
         assert self._mlx_model is not None
-        assert self._tokenizer is not None
         return self._generate_fn(
             self._mlx_model,
             self._tokenizer,
@@ -340,9 +365,11 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.print_prompt_stats:
         if rows:
-            prompt = build_mlx_prompt(rows[0])
+            messages = build_chat_messages(rows[0])
+            prompt = format_qwen_chat_prompt(messages)
             print(f"prompt_chars={len(prompt)}", flush=True)
             print(f"scenario_id={rows[0]['scenario_id']}", flush=True)
+            print(f"prompt_prefix={prompt[:240]!r}", flush=True)
         else:
             print("prompt_chars=0", flush=True)
             print("scenario_id=", flush=True)
@@ -382,8 +409,8 @@ def main(argv: list[str] | None = None) -> int:
         for index, row in enumerate(planned, start=1):
             scenario_id = str(row["scenario_id"])
             case_start = time.monotonic()
-            prompt = build_mlx_prompt(row)
-            raw_text = generator.generate(prompt)
+            messages = build_chat_messages(row)
+            raw_text = generator.generate(messages)
             prediction = parse_model_output(scenario_id, raw_text)
             if prediction.get("_parse_error"):
                 parse_errors += 1
@@ -394,6 +421,7 @@ def main(argv: list[str] | None = None) -> int:
             print(
                 f"[{index}/{len(planned)}] {scenario_id} "
                 f"parse_error={bool(prediction.get('_parse_error'))} "
+                f"decision={prediction.get('decision')!r} "
                 f"case={elapsed:.1f}s",
                 flush=True,
             )
@@ -404,7 +432,7 @@ def main(argv: list[str] | None = None) -> int:
         f"total={total:.1f}s | output={out_path}",
         flush=True,
     )
-    return 0
+    return 1 if parse_errors else 0
 
 
 if __name__ == "__main__":
