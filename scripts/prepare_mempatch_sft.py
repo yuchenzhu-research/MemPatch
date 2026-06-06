@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from pathlib import Path
 from typing import Any
@@ -16,6 +17,14 @@ from benchmark.mempatch_bench.model_runner import build_prompt
 from benchmark.mempatch_bench.public_view import public_scenario_view
 
 SYSTEM_PROMPT = "You are MemPatch Revision Policy. Return only strict JSON."
+
+SYSTEM_PROMPT_EVIDENCE_COMPACT = """You are MemPatch Revision Policy.
+Return only one strict JSON object.
+evidence_event_ids must be a JSON array of exact event_id strings from event_trace.
+If supporting evidence exists, evidence_event_ids must not be empty.
+Do not include counterevidence unless it supports the final decision.
+answer must be one short sentence.
+Do not explain."""
 
 LEAKAGE_MARKERS = (
     "hidden_gold",
@@ -31,6 +40,8 @@ LEAKAGE_MARKERS = (
     "pattern_trap_type",
     "canonical_failure_mode",
 )
+
+TARGET_STYLES = ("default", "evidence_compact")
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -53,15 +64,46 @@ def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
             f.write(json.dumps(row, ensure_ascii=False, separators=(",", ":")) + "\n")
 
 
-def gold_to_response(scenario: dict[str, Any]) -> dict[str, Any]:
+def compact_answer(text: str) -> str:
+    text = re.sub(r"\s+", " ", text.strip())
+    if not text:
+        return ""
+    match = re.search(r"[.!?](?:\s|$)", text)
+    if match:
+        return text[: match.end()].strip()
+    return text
+
+
+def gold_to_response(scenario: dict[str, Any], *, target_style: str = "default") -> dict[str, Any]:
     gold = canonical_hidden_gold_fields(scenario.get("hidden_gold") or {})
-    return {
+    answer = gold["expected_answer"] or ""
+    if target_style == "evidence_compact":
+        answer = compact_answer(answer)
+    response = {
         "decision": gold["expected_decision"],
         "memory_state": gold["expected_memory_state"],
         "evidence_event_ids": gold["expected_evidence_event_ids"],
         "failure_diagnosis": gold["expected_failure_diagnosis"],
-        "answer": gold["expected_answer"],
+        "answer": answer,
     }
+    if target_style == "evidence_compact":
+        return {
+            "decision": response["decision"],
+            "memory_state": response["memory_state"],
+            "evidence_event_ids": response["evidence_event_ids"],
+            "failure_diagnosis": response["failure_diagnosis"],
+            "answer": response["answer"],
+        }
+    return response
+
+
+def system_prompt_for_style(target_style: str, evidence_event_ids: list[str]) -> str:
+    if target_style != "evidence_compact":
+        return SYSTEM_PROMPT
+    prompt = SYSTEM_PROMPT_EVIDENCE_COMPACT
+    if evidence_event_ids:
+        prompt += "\nevidence_event_ids must not be empty for this scenario."
+    return prompt
 
 
 def assistant_content(response: dict[str, Any]) -> str:
@@ -75,15 +117,22 @@ def assert_no_leakage(user_content: str, *, scenario_id: str) -> None:
             raise ValueError(f"{scenario_id}: user content leaks {marker!r}")
 
 
-def sft_example(scenario: dict[str, Any]) -> dict[str, Any]:
+def sft_example(scenario: dict[str, Any], *, target_style: str = "default") -> dict[str, Any]:
     view = public_scenario_view(scenario)
     user_content = build_prompt(view)
     assert_no_leakage(user_content, scenario_id=str(scenario["scenario_id"]))
+    response = gold_to_response(scenario, target_style=target_style)
     return {
         "messages": [
-            {"role": "system", "content": SYSTEM_PROMPT},
+            {
+                "role": "system",
+                "content": system_prompt_for_style(
+                    target_style,
+                    response["evidence_event_ids"],
+                ),
+            },
             {"role": "user", "content": user_content},
-            {"role": "assistant", "content": assistant_content(gold_to_response(scenario))},
+            {"role": "assistant", "content": assistant_content(response)},
         ]
     }
 
@@ -119,6 +168,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--train-size", type=int, default=512)
     parser.add_argument("--valid-size", type=int, default=64)
     parser.add_argument("--hard-probe-size", type=int, default=50)
+    parser.add_argument(
+        "--target-style",
+        choices=TARGET_STYLES,
+        default="default",
+        help="SFT target style; evidence_compact emphasizes evidence_event_ids ordering",
+    )
     return parser.parse_args(argv)
 
 
@@ -148,8 +203,13 @@ def main(argv: list[str] | None = None) -> int:
         )
         return 1
 
-    train_rows = [sft_example(s) for s in main_rows[: args.train_size]]
-    valid_rows = [sft_example(s) for s in main_rows[args.train_size : need_main]]
+    train_rows = [
+        sft_example(s, target_style=args.target_style) for s in main_rows[: args.train_size]
+    ]
+    valid_rows = [
+        sft_example(s, target_style=args.target_style)
+        for s in main_rows[args.train_size : need_main]
+    ]
     probe_rows = [hard_probe_row(s) for s in hard_rows[: args.hard_probe_size]]
 
     out_dir = args.out_dir
@@ -159,7 +219,8 @@ def main(argv: list[str] | None = None) -> int:
 
     print(
         f"Wrote {len(train_rows)} train, {len(valid_rows)} valid, "
-        f"{len(probe_rows)} hard_probe rows to {out_dir}"
+        f"{len(probe_rows)} hard_probe rows to {out_dir} "
+        f"(target_style={args.target_style})"
     )
     return 0
 

@@ -33,6 +33,15 @@ THINKING_BLOCK_RE = re.compile(
     flags=re.IGNORECASE | re.DOTALL,
 )
 
+EVENT_ID_RE = re.compile(r"e-case-[a-zA-Z0-9_-]+")
+
+RETRY_USER_PROMPT = """/no_think
+Return exactly one valid JSON object with keys:
+decision, memory_state, evidence_event_ids, failure_diagnosis, answer.
+evidence_event_ids must be a JSON array of event_id strings.
+answer must be one sentence.
+Do not output any text outside JSON."""
+
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
     rows: list[dict[str, Any]] = []
@@ -63,6 +72,14 @@ def probe_public_view(row: dict[str, Any]) -> dict[str, Any]:
         "scenario_id": row["scenario_id"],
         "public_input": row["public_input"],
     }
+
+
+def build_retry_chat_messages(row: dict[str, Any]) -> list[dict[str, str]]:
+    payload = json.dumps(probe_public_view(row), ensure_ascii=False, separators=(",", ":"))
+    return [
+        {"role": "system", "content": SYSTEM_PROMPT},
+        {"role": "user", "content": f"{payload}\n\n{RETRY_USER_PROMPT}"},
+    ]
 
 
 def build_chat_messages(row: dict[str, Any]) -> list[dict[str, str]]:
@@ -219,8 +236,33 @@ def _canonicalize_failure_diagnosis(value: Any) -> tuple[str, bool]:
     return DEFAULT_FAILURE_DIAGNOSIS, True
 
 
+def _extract_event_id_candidates(value: Any) -> list[str]:
+    if isinstance(value, list):
+        return _as_event_id_list(value)
+    if not isinstance(value, str):
+        return []
+    seen: set[str] = set()
+    candidates: list[str] = []
+
+    def add(event_id: str) -> None:
+        if event_id and event_id not in seen:
+            seen.add(event_id)
+            candidates.append(event_id)
+
+    for match in EVENT_ID_RE.findall(value):
+        add(match)
+    for token in re.split(r"[\s,\[\]\"']+", value.strip()):
+        if token:
+            add(token)
+    return candidates
+
+
 def _filter_evidence_event_ids(value: Any, valid_event_ids: set[str]) -> list[str]:
-    return [event_id for event_id in _as_event_id_list(value) if event_id in valid_event_ids]
+    return [
+        event_id
+        for event_id in _extract_event_id_candidates(value)
+        if event_id in valid_event_ids
+    ]
 
 
 def canonicalize_parsed(parsed: dict[str, Any], *, valid_event_ids: set[str]) -> dict[str, Any]:
@@ -266,7 +308,7 @@ def prediction_row(
     return {"scenario_id": scenario_id, **response}
 
 
-def parse_model_output(scenario_id: str, text: str, *, valid_event_ids: set[str]) -> dict[str, Any]:
+def parse_model_output(scenario_id: str, text: str, *, valid_event_ids: set[str]) -> dict[str, Any] | None:
     try:
         return prediction_row(
             scenario_id,
@@ -274,7 +316,7 @@ def parse_model_output(scenario_id: str, text: str, *, valid_event_ids: set[str]
             valid_event_ids=valid_event_ids,
         )
     except (json.JSONDecodeError, ValueError, TypeError):
-        return fallback_prediction(scenario_id, text)
+        return None
 
 
 def _load_generate_api() -> tuple[Any, Callable[..., str]]:
@@ -480,6 +522,18 @@ def main(argv: list[str] | None = None) -> int:
                 raw_text,
                 valid_event_ids=valid_event_ids,
             )
+            if prediction is None:
+                retry_messages = build_retry_chat_messages(row)
+                retry_raw = generator.generate(retry_messages)
+                prediction = parse_model_output(
+                    scenario_id,
+                    retry_raw,
+                    valid_event_ids=valid_event_ids,
+                )
+                if prediction is not None:
+                    prediction["_retried"] = True
+                else:
+                    prediction = fallback_prediction(scenario_id, retry_raw)
             if prediction.get("_parse_error"):
                 parse_errors += 1
             f.write(json.dumps(prediction, ensure_ascii=False) + "\n")
