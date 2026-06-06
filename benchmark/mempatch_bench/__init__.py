@@ -1,6 +1,8 @@
-"""MemPatch-Bench public evaluator package (paper-facing alias)."""
+"""MemPatch-Bench public evaluator package."""
 
-from benchmark.retrace_bench.api import (
+__version__ = "1.1.0"
+
+from benchmark.mempatch_bench.api import (
     AUXILIARY_METRICS,
     DECISIONS,
     FAILURE_MODES,

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from benchmark.retrace_bench.api import evaluate_predictions
-from benchmark.retrace_bench.general_taxonomy import DECISIONS, FAILURE_MODES, MEMORY_STATUSES
+from benchmark.mempatch_bench.api import evaluate_predictions
+from benchmark.mempatch_bench.general_taxonomy import DECISIONS, FAILURE_MODES, MEMORY_STATUSES
 from retrace_learn.runtime.benchmark_projection import project_to_benchmark_response
 from retrace_learn.runtime.dpa_runtime import ParseResult, RuntimeResult
 from retrace_learn.runtime.revision_module import run_revision_module_on_scenario

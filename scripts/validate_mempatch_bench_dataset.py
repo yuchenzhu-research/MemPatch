@@ -12,7 +12,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from benchmark.retrace_bench.general_taxonomy import (
+from benchmark.mempatch_bench.general_taxonomy import (
     DECISIONS,
     DIFFICULTIES,
     DOMAINS,

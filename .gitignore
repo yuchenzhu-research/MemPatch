@@ -46,14 +46,12 @@ runs/
 *.jsonl.gz
 
 # JSONL is ignored by default; only active fixtures, releases, and test data
-# are allowlisted below. Do not broadly unignore `data/retrace_bench/**` because
+# are allowlisted below. Do not broadly unignore `data/mempatch/**` because
 # that directory is also used for local generated diagnostics/blueprints.
 *.jsonl
 !tests/**/*.jsonl
 !data/retrace_learn/v1/boundary_audit/**
 # HF release bundle: ship manifests/checksums/cards; keep full JSONL local-only.
-!hf_release/retrace_bench_v1_1/**/manifest.json
-!hf_release/retrace_bench_v1_1/**/checksums.json
 !hf_release/mempatch_v1_1/**/manifest.json
 !hf_release/mempatch_v1_1/**/checksums.json
 outputs/

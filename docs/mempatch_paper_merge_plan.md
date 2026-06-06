@@ -25,7 +25,7 @@ MemPatch-Bench defines the benchmark-compatible `response` interface. The MemPat
 
 | Paper term | Implementation |
 |------------|----------------|
-| MemPatch-Bench | `benchmark/retrace_bench/` |
+| MemPatch-Bench | `benchmark/mempatch_bench/` |
 | MemPatch Revision Module | `src/retrace_learn/` + `src/retracemem/` commit path |
 | Scenario View Builder | `graph_extractor.py` |
 | Revision Response Policy | `learned_proposer.py` |

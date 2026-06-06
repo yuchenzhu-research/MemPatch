@@ -2,7 +2,7 @@
 
 This module is intentionally separate from the official evaluator API. It calls
 external LLM providers to create prediction files, then the model-agnostic
-scorer in :mod:`benchmark.retrace_bench.api` can evaluate those files.
+scorer in :mod:`benchmark.mempatch_bench.api` can evaluate those files.
 """
 
 from __future__ import annotations
@@ -17,13 +17,13 @@ import time
 from pathlib import Path
 from typing import Any
 
-from benchmark.retrace_bench.api import load_scenarios
-from benchmark.retrace_bench.general_taxonomy import (
+from benchmark.mempatch_bench.api import load_scenarios
+from benchmark.mempatch_bench.general_taxonomy import (
     DECISIONS,
     FAILURE_MODES,
     MEMORY_STATUSES,
 )
-from benchmark.retrace_bench.public_view import public_scenario_view
+from benchmark.mempatch_bench.public_view import public_scenario_view
 
 PROVIDERS = (
     "openai",

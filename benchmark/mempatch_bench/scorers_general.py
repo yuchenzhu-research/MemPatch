@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from benchmark.retrace_bench.general_taxonomy import (
+from benchmark.mempatch_bench.general_taxonomy import (
     DECISIONS,
     FAILURE_MODES,
     NON_ANSWER_DECISIONS,
