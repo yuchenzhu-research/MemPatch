@@ -55,18 +55,31 @@ LEAKAGE_MARKERS = (
     "canonical_failure_mode",
 )
 
-MLX_LORA_YAML = """model: local/models/Qwen3-14B-MLX-4bit
-data: local/train_data/mempatch_v13_smoke
-adapter_path: local/adapters/qwen3_14b_mempatch_v13_smoke
-iters: 64
+def mlx_lora_yaml(*, root: Path, data_dir: Path) -> str:
+    model_dir = root / "local/models/Qwen3-14B-MLX-4bit"
+    adapter_dir = root / "local/adapters/qwen3_14b_mempatch_v13_smoke"
+    return f"""model: "{model_dir.resolve()}"
+train: true
+fine_tune_type: lora
+optimizer: adamw
+data: "{data_dir.resolve()}"
+seed: 2027
 batch_size: 1
-grad_accumulation_steps: 8
+iters: 64
+learning_rate: 1.0e-5
 max_seq_length: 2048
-learning_rate: 1e-5
-rank: 8
-scale: 16
-dropout: 0.05
-keys: q_proj, v_proj, o_proj
+grad_accumulation_steps: 8
+grad_checkpoint: true
+mask_prompt: true
+adapter_path: "{adapter_dir.resolve()}"
+save_every: 32
+steps_per_eval: 32
+val_batches: 32
+lora_parameters:
+  keys: ["self_attn.q_proj", "self_attn.v_proj", "self_attn.o_proj"]
+  rank: 8
+  scale: 16.0
+  dropout: 0.05
 """
 
 
@@ -287,7 +300,7 @@ def main(argv: list[str] | None = None) -> int:
     write_jsonl(out_dir / "hard_balanced50.jsonl", hard50)
 
     args.mlx_config.parent.mkdir(parents=True, exist_ok=True)
-    args.mlx_config.write_text(MLX_LORA_YAML, encoding="utf-8")
+    args.mlx_config.write_text(mlx_lora_yaml(root=root, data_dir=out_dir), encoding="utf-8")
 
     print(f"Wrote {len(train_sft)} train, {len(valid_sft)} valid, {len(hard50)} hard_balanced50 -> {out_dir}")
     print(f"Wrote MLX config -> {args.mlx_config}")
