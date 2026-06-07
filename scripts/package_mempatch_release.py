@@ -13,6 +13,8 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
+from benchmark.general_taxonomy import BENCH_SCHEMA_VERSION
+
 SCENARIO_JSONL = "scenarios.jsonl"
 DEFAULT_SPLITS = ("train", "validation", "test")
 
@@ -58,6 +60,7 @@ def build_manifest(
 ) -> dict[str, Any]:
     manifest = dict(base_manifest)
     manifest["release_version"] = release_version
+    manifest["schema_version"] = BENCH_SCHEMA_VERSION
     manifest["dataset"] = dataset_name
     manifest["data_files"] = {split: f"{split}/{SCENARIO_JSONL}" for split in split_paths}
     manifest["public_split_name_counts"] = {

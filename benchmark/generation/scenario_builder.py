@@ -16,6 +16,7 @@ from benchmark.generation.blueprints import (
     V13DecisionVariant,
     V13PatternFamily,
 )
+from benchmark.general_taxonomy import BENCH_SCHEMA_VERSION
 from benchmark.generation.decision_resolver import resolve_expected_decision
 from benchmark.generation.unified_renderer_v13 import DEFAULT_RENDERER, MemPatchUnifiedRendererV13
 
@@ -85,7 +86,7 @@ def build_scenario_metadata(
 ) -> dict[str, Any]:
     decision = variant.decision
     return {
-        "schema_version": "mempatch_bench_general_1",
+        "schema_version": BENCH_SCHEMA_VERSION,
         "renderer": RENDERER,
         "benchmark_version": BENCHMARK_VERSION,
         "split": blueprint.split,

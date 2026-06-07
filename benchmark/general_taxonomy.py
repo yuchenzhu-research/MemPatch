@@ -142,6 +142,8 @@ NON_ANSWER_DECISIONS = (
     "mark_unresolved",
 )
 
+BENCH_SCHEMA_VERSION = "mempatch_bench_general_1"
+
 PUBLIC_FORBIDDEN_TERMS = (
     "retrace",
     "dpa",

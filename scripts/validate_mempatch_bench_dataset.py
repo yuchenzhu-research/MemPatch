@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate MemPatch-Bench scenario JSONL files (canonical v1.1 schema)."""
+"""Validate MemPatch-Bench scenario JSONL files (canonical v1.3 schema)."""
 
 from __future__ import annotations
 
@@ -13,6 +13,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from benchmark.general_taxonomy import (
+    BENCH_SCHEMA_VERSION,
     DECISIONS,
     PRIMARY_DIFFICULTIES,
     PRIMARY_DOMAINS,
@@ -233,6 +234,18 @@ def validate_one(
         warnings.append(
             f"{sid}: calibration row is smoke/quickstart only; exclude from headline table generation"
         )
+
+    if packaging_final:
+        meta = scenario.get("metadata") or {}
+        schema_version = meta.get("schema_version")
+        if schema_version != BENCH_SCHEMA_VERSION:
+            errors.append(
+                f"{sid}: metadata.schema_version {schema_version!r} != {BENCH_SCHEMA_VERSION!r}"
+            )
+        if scenario.get("benchmark_version") != "v1.3":
+            errors.append(
+                f"{sid}: benchmark_version {scenario.get('benchmark_version')!r} != 'v1.3'"
+            )
 
     return errors, warnings
 

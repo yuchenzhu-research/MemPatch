@@ -48,6 +48,7 @@ Earlier internal dataset drafts had decision-boundary issues:
 
 v1.3 fixes the label coverage and public decision boundary:
 
+- metadata schema version: `mempatch_bench_general_1`;
 - all five decision labels appear in every split;
 - `ask_clarification`, `escalate`, and `mark_unresolved` have mutually visible
   natural-language triggers;

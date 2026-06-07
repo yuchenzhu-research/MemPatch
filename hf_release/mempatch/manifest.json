@@ -17,6 +17,7 @@
   "public_total": 4000,
   "release_version": "1.3.0",
   "renderer": "unified_renderer_v13",
+  "schema_version": "mempatch_bench_general_1",
   "splits": {
     "test": {
       "count": 500,

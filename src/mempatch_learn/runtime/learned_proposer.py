@@ -164,38 +164,3 @@ class PromptProposer:
         metadata: dict[str, Any] | None = None,
     ) -> ProposalOutput:
         return self._proposer.propose(view, metadata=metadata)
-
-
-class OracleProposer:
-    """Oracle Proposer stub (TODO)."""
-
-    policy_variant = "oracle_proposer"
-
-    def propose(
-        self,
-        view: SharedCandidateView,
-        *,
-        metadata: dict[str, Any] | None = None,
-    ) -> ProposalOutput:
-        # TODO: Replay ground-truth gold revision actions for the given view
-        from mempatch_learn.runtime.dpa_runtime import ParseResult
-        return ProposalOutput(raw_text="[]", parse_result=ParseResult(valid_json=True, schema_valid=True, actions=()))
-
-
-class ReplayProposer:
-    """Replay Proposer stub (TODO)."""
-
-    policy_variant = "replay_proposer"
-
-    def __init__(self, pre_generated_proposals: dict[str, str]) -> None:
-        self.pre_generated_proposals = pre_generated_proposals
-
-    def propose(
-        self,
-        view: SharedCandidateView,
-        *,
-        metadata: dict[str, Any] | None = None,
-    ) -> ProposalOutput:
-        # TODO: Replay matching proposal for the given view
-        from mempatch_learn.runtime.dpa_runtime import ParseResult
-        return ProposalOutput(raw_text="[]", parse_result=ParseResult(valid_json=True, schema_valid=True, actions=()))
