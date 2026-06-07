@@ -118,11 +118,13 @@ def mlx_lora_yaml(
     data_dir: Path,
     adapter_dir: Path,
     profile: str = "smoke",
+    model_dir: Path | None = None,
 ) -> str:
     if profile not in MLX_PROFILES:
         raise ValueError(f"unknown MLX profile {profile!r}; expected one of {sorted(MLX_PROFILES)}")
     cfg = MLX_PROFILES[profile]
-    model_dir = root / "local/models/Qwen3-14B-MLX-4bit"
+    if model_dir is None:
+        model_dir = root / "local/models/Qwen3-14B-MLX-4bit"
     keys_yaml = json.dumps(cfg["lora_keys"])
     return f"""model: "{model_dir.resolve()}"
 train: true
@@ -325,6 +327,17 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="LoRA adapter output directory written into the MLX config.",
     )
     parser.add_argument(
+        "--model-dir",
+        type=Path,
+        default=root / "local/models/Qwen3-14B-MLX-4bit",
+        help="Base MLX model directory for the LoRA config.",
+    )
+    parser.add_argument(
+        "--config-only",
+        action="store_true",
+        help="Only write mlx_lora.yaml (reuse existing SFT JSONL in --out-dir).",
+    )
+    parser.add_argument(
         "--profile",
         choices=sorted(MLX_PROFILES),
         default="smoke",
@@ -339,9 +352,31 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def write_mlx_config(root: Path, args: argparse.Namespace) -> None:
+    args.mlx_config.parent.mkdir(parents=True, exist_ok=True)
+    args.mlx_config.write_text(
+        mlx_lora_yaml(
+            root=root,
+            data_dir=args.out_dir,
+            adapter_dir=args.adapter_dir,
+            profile=args.profile,
+            model_dir=args.model_dir,
+        ),
+        encoding="utf-8",
+    )
+    print(f"Wrote MLX config ({args.profile}) -> {args.mlx_config}")
+
+
 def main(argv: list[str] | None = None) -> int:
     root = Path(__file__).resolve().parent.parent
     args = parse_args(argv)
+    if args.config_only:
+        if not (args.out_dir / "train.jsonl").is_file():
+            print(f"error: --config-only requires {args.out_dir}/train.jsonl", file=sys.stderr)
+            return 1
+        write_mlx_config(root, args)
+        return 0
+
     for path, name in (
         (args.train_data, "train"),
         (args.validation_data, "validation"),
@@ -392,22 +427,12 @@ def main(argv: list[str] | None = None) -> int:
     write_jsonl(out_dir / "hard_balanced50.jsonl", hard50)
     write_jsonl(out_dir / "hard_balanced50_sft.jsonl", hard50_sft)
 
-    args.mlx_config.parent.mkdir(parents=True, exist_ok=True)
-    args.mlx_config.write_text(
-        mlx_lora_yaml(
-            root=root,
-            data_dir=out_dir,
-            adapter_dir=args.adapter_dir,
-            profile=args.profile,
-        ),
-        encoding="utf-8",
-    )
+    write_mlx_config(root, args)
 
     print(
         f"Wrote {len(train_sft)} train, {len(valid_sft)} valid, "
         f"{len(hard50)} hard_balanced50, {len(hard50_sft)} hard_balanced50_sft -> {out_dir}"
     )
-    print(f"Wrote MLX config ({args.profile}) -> {args.mlx_config}")
     if valid_actual != valid_quotas:
         print(f"validation actual sample counts: {valid_actual}")
     if hard_actual != HARD_QUOTAS:
