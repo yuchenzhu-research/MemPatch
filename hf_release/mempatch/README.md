@@ -69,6 +69,22 @@ v1.3 fixes the label coverage and public decision boundary:
 Use the current split names only: `train`, `validation`, `test`.
 Do not use the old `main` / `hard` naming in new experiments.
 
+## v1.3 Taxonomy Coverage
+
+The v1.3 release uses primary labels from the broader taxonomy:
+
+- 7 primary `failure_diagnosis` labels:
+  `conflict_collapse`, `under_update`, `wrong_source_attribution`,
+  `scope_leakage`, `policy_violation`, `stale_memory_reuse`,
+  `memory_hallucination`
+- 8 primary pattern families
+- 6 primary domains
+- difficulty is represented with short labels: `train` and `validation` are
+  `L3`; `test` is `L4`
+
+Additional taxonomy labels in the code are reserved for future releases and are
+not present as v1.3 gold labels.
+
 ## Decision Distribution
 
 | split | use_current_memory | mark_unresolved | ask_clarification | escalate | refuse_due_to_policy | total |

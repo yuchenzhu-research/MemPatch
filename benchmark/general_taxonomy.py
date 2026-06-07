@@ -1,65 +1,103 @@
 """Neutral taxonomy for the general English MemPatch-Bench release."""
 
-DOMAINS = (
+PRIMARY_DOMAINS = (
     "software_engineering_agent",
     "enterprise_multi_tool_workflow",
     "customer_support_crm",
     "calendar_task_workflow",
     "research_knowledge_work",
-    "personal_assistant_preference",
-    "ecommerce_recommendation",
     "data_analysis_bi",
 )
 
-FAILURE_MODES = (
+RESERVED_DOMAINS = (
+    "personal_assistant_preference",
+    "ecommerce_recommendation",
+)
+
+DOMAINS = PRIMARY_DOMAINS + RESERVED_DOMAINS
+
+PRIMARY_FAILURE_MODES = (
     "stale_memory_reuse",
     "under_update",
-    "over_update",
     "conflict_collapse",
     "scope_leakage",
     "policy_violation",
     "wrong_source_attribution",
     "memory_hallucination",
+)
+
+RESERVED_FAILURE_MODES = (
+    "over_update",
     "unnecessary_memory_write",
     "failure_to_forget",
     "failure_to_release_or_restore",
 )
 
-DIFFICULTIES = (
-    "L1_single_hop_update",
-    "L2_multi_hop_with_distractor",
-    "L3_conditional_validity",
-    "L4_cross_scope_adversarial_audit",
-)
+FAILURE_MODES = PRIMARY_FAILURE_MODES + RESERVED_FAILURE_MODES
 
-PATTERNS = (
-    "merged_but_unreleased",
+PRIMARY_DIFFICULTIES = ("L3", "L4")
+RESERVED_DIFFICULTIES = ("L1", "L2")
+DIFFICULTIES = RESERVED_DIFFICULTIES + PRIMARY_DIFFICULTIES
+
+DIFFICULTY_DEFINITIONS = {
+    "L1": "single-hop update",
+    "L2": "multi-hop update with distractor",
+    "L3": "conditional validity",
+    "L4": "cross-scope adversarial audit",
+}
+
+DIFFICULTY_ALIASES = {
+    "L1_single_hop_update": "L1",
+    "L2_multi_hop_with_distractor": "L2",
+    "L3_conditional_validity": "L3",
+    "L4_cross_scope_adversarial_audit": "L4",
+}
+
+PRIMARY_PATTERNS = (
     "closed_as_duplicate_not_fixed",
-    "docs_ahead_of_code",
-    "release_then_revert",
     "version_scope_leakage",
-    "branch_scope_leakage",
     "authority_conflict",
     "ci_failed_after_claim",
     "security_policy_override",
-    "backport_only_fix",
     "maintainer_correction_over_user_claim",
-    "stale_comment_after_new_release",
     "label_state_mismatch",
-    "multi_memory_coupling",
     "negative_evidence_required",
 )
 
-MEMORY_STATUSES = (
+RESERVED_PATTERNS = (
+    "merged_but_unreleased",
+    "docs_ahead_of_code",
+    "release_then_revert",
+    "branch_scope_leakage",
+    "backport_only_fix",
+    "stale_comment_after_new_release",
+    "multi_memory_coupling",
+)
+
+PATTERNS = PRIMARY_PATTERNS + RESERVED_PATTERNS
+
+PRIMARY_MEMORY_STATUSES = (
     "current",
-    "outdated",
     "blocked",
     "unresolved",
     "out_of_scope",
-    "deleted",
     "should_not_store",
+)
+
+RESERVED_MEMORY_STATUSES = (
+    "outdated",
+    "deleted",
     "restored",
 )
+
+MEMORY_STATUSES = PRIMARY_MEMORY_STATUSES + RESERVED_MEMORY_STATUSES
+
+
+def normalize_difficulty(value: object) -> str:
+    """Normalize short and legacy long difficulty labels to L1-L4."""
+    text = str(value or "").strip()
+    return DIFFICULTY_ALIASES.get(text, text)
+
 
 def canonical_hidden_gold_fields(gold: dict) -> dict:
     """Read canonical v1.1 hidden_gold fields."""
@@ -114,12 +152,9 @@ PUBLIC_FORBIDDEN_TERMS = (
     "dataset",
 )
 
-# Discriminative, label-faithful definitions for the 11 failure modes. These are
-# general (no per-scenario gold) and are intended to be shown to evaluation
-# participants and baselines so the diagnostic enum is interpretable. The keys
-# are exactly FAILURE_MODES; mechanisms are written to distinguish commonly
-# confused pairs (under_update vs stale_memory_reuse, over_update vs
-# scope_leakage, failure_to_release_or_restore vs conflict_collapse, etc.).
+# Discriminative, label-faithful definitions for the failure modes. v1.3 uses
+# PRIMARY_FAILURE_MODES in gold labels; RESERVED_FAILURE_MODES remain documented
+# for API compatibility and future releases.
 FAILURE_MODE_DEFINITIONS = {
     "stale_memory_reuse": (
         "A newer valid record supersedes an older memory, but the older memory "
@@ -168,4 +203,3 @@ FAILURE_MODE_DEFINITIONS = {
         "this lifecycle."
     ),
 }
-

@@ -146,7 +146,7 @@ def build_scenario(
         "public_split_name": blueprint.split,
         "domain": family.domain,
         "primary_failure_mode": family.primary_failure_mode,
-        "difficulty": blueprint.difficulty,
+        "difficulty": rendered.get("difficulty_level", blueprint.difficulty),
         "workflow_context": rendered.get("workflow_context", ""),
         "source_type": "controlled_synthetic",
         "source_pointers": rendered.get(

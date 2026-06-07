@@ -8,6 +8,7 @@ from benchmark.general_taxonomy import (
     DECISIONS,
     FAILURE_MODES,
     NON_ANSWER_DECISIONS,
+    PRIMARY_FAILURE_MODES,
     canonical_hidden_gold_fields,
 )
 
@@ -393,7 +394,7 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
     # NOTE: previous ``answer_accuracy`` and ``decision_accuracy`` were duplicates
     # of ``answer_key_fact_accuracy`` and ``black_box_decision_accuracy`` and
     # have been removed as headline metrics.
-    for mode in FAILURE_MODES:
+    for mode in PRIMARY_FAILURE_MODES:
         metrics[f"{mode}_rate"] = float(scenario.get("primary_failure_mode") == mode and predicted_diag == mode)
     metrics["under_update_rate"] = float(predicted_diag == "under_update")
     metrics["over_update_rate"] = float(predicted_diag == "over_update")

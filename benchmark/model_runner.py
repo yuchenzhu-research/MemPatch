@@ -20,8 +20,8 @@ from typing import Any
 from benchmark.api import load_scenarios
 from benchmark.general_taxonomy import (
     DECISIONS,
-    FAILURE_MODES,
-    MEMORY_STATUSES,
+    PRIMARY_FAILURE_MODES,
+    PRIMARY_MEMORY_STATUSES,
 )
 from benchmark.public_view import public_scenario_view
 
@@ -182,9 +182,9 @@ def build_prompt(public_view: dict[str, Any]) -> str:
         "required_output_schema": {
             "answer": "short final answer/action text",
             "decision": list(DECISIONS),
-            "memory_state": {mid: list(MEMORY_STATUSES) for mid in memory_ids},
+            "memory_state": {mid: list(PRIMARY_MEMORY_STATUSES) for mid in memory_ids},
             "evidence_event_ids": "minimal list of event_id strings from public_input.event_trace",
-            "failure_diagnosis": list(FAILURE_MODES),
+            "failure_diagnosis": list(PRIMARY_FAILURE_MODES),
         },
         **public_view,
     }

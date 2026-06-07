@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from benchmark.general_taxonomy import DECISIONS, FAILURE_MODES, MEMORY_STATUSES
+from benchmark.general_taxonomy import DECISIONS, MEMORY_STATUSES, PRIMARY_FAILURE_MODES
 
 if TYPE_CHECKING:
     from retrace_learn.runtime.dpa_runtime import RuntimeResult
@@ -19,6 +19,13 @@ BENCHMARK_STATUS_BY_DPA_STATUS = {
     "SUPERSEDED": "outdated",
     "BLOCKED": "blocked",
     "UNRESOLVED": "unresolved",
+}
+
+RESERVED_TO_PRIMARY_FAILURE_MODE = {
+    "over_update": "scope_leakage",
+    "unnecessary_memory_write": "memory_hallucination",
+    "failure_to_forget": "stale_memory_reuse",
+    "failure_to_release_or_restore": "conflict_collapse",
 }
 
 
@@ -196,8 +203,10 @@ def _project_failure_diagnosis(
     raw_response: Any,
 ) -> str:
     raw_diagnosis = _raw_response_field(raw_response, "failure_diagnosis")
-    if isinstance(raw_diagnosis, str) and raw_diagnosis in FAILURE_MODES:
+    if isinstance(raw_diagnosis, str) and raw_diagnosis in PRIMARY_FAILURE_MODES:
         return raw_diagnosis
+    if isinstance(raw_diagnosis, str) and raw_diagnosis in RESERVED_TO_PRIMARY_FAILURE_MODE:
+        return RESERVED_TO_PRIMARY_FAILURE_MODE[raw_diagnosis]
 
     raw_decision = _raw_response_field(raw_response, "decision")
     if raw_decision == "refuse_due_to_policy":
@@ -205,7 +214,7 @@ def _project_failure_diagnosis(
     if any(status == "should_not_store" for status in memory_state.values()):
         return "policy_violation"
     if any(status == "deleted" for status in memory_state.values()):
-        return "failure_to_forget"
+        return "stale_memory_reuse"
     if any(status == "out_of_scope" for status in memory_state.values()):
         if any(status == "current" for status in memory_state.values()):
             return "scope_leakage"
@@ -217,16 +226,16 @@ def _project_failure_diagnosis(
         return "stale_memory_reuse"
     if any(status == "restored" for status in memory_state.values()):
         if any(status == "blocked" for status in memory_state.values()):
-            return "failure_to_release_or_restore"
-        return "failure_to_release_or_restore"
+            return "conflict_collapse"
+        return "under_update"
     if any(status == "blocked" for status in memory_state.values()):
-        return "failure_to_release_or_restore"
+        return "conflict_collapse"
     if any(status == "unresolved" for status in memory_state.values()):
         return "conflict_collapse"
     if any(a.action_type in {"BLOCKS", "RELEASES", "UNCERTAIN", "REAFFIRMS"} for a in runtime_result.admitted_actions):
         if len(runtime_result.admitted_actions) > 1:
-            return "over_update"
-    return "unnecessary_memory_write"
+            return "scope_leakage"
+    return "memory_hallucination"
 
 
 def project_to_benchmark_response(

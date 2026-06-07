@@ -28,6 +28,8 @@ from benchmark.general_taxonomy import (
     DECISIONS,
     FAILURE_MODES,
     MEMORY_STATUSES,
+    PRIMARY_FAILURE_MODES,
+    PRIMARY_MEMORY_STATUSES,
 )
 from benchmark.scorers_general import (
     AUXILIARY_METRICS,
@@ -47,6 +49,8 @@ __all__ = [
     "DECISIONS",
     "MEMORY_STATUSES",
     "FAILURE_MODES",
+    "PRIMARY_FAILURE_MODES",
+    "PRIMARY_MEMORY_STATUSES",
 ]
 
 SCENARIO_JSONL_NAME = "scenarios.jsonl"

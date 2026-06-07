@@ -31,6 +31,12 @@ LLM baselines: `pip install -e ".[dev,llm]"`
 | `validation` | 800 | Dev eval |
 | `test` | 500 | Held-out final eval |
 
+v1.3 uses 7 primary failure modes, 8 pattern families, and 6 domains. The
+taxonomy module keeps additional reserved labels for future releases and API
+compatibility, but model-facing v1.3 prompts and release validation use the
+primary sets. Difficulty labels are short labels: train/validation are `L3`;
+test is `L4`.
+
 Regenerate:
 
 ```bash

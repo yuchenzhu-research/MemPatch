@@ -1,7 +1,12 @@
 from __future__ import annotations
 
 from benchmark.api import evaluate_predictions
-from benchmark.general_taxonomy import DECISIONS, FAILURE_MODES, MEMORY_STATUSES
+from benchmark.general_taxonomy import (
+    DECISIONS,
+    FAILURE_MODES,
+    MEMORY_STATUSES,
+    PRIMARY_FAILURE_MODES,
+)
 from benchmark.public_view import public_scenario_view
 from retrace_learn.runtime.benchmark_projection import project_to_benchmark_response
 from retrace_learn.runtime.dpa_runtime import ParseResult, RuntimeResult
@@ -81,7 +86,7 @@ def test_project_to_benchmark_response_maps_dpa_statuses_and_evidence() -> None:
     assert response["answer"] == ""
 
 
-def test_project_to_benchmark_response_preserves_valid_raw_fields() -> None:
+def test_project_to_benchmark_response_maps_reserved_raw_diagnosis_to_primary() -> None:
     runtime_result = _runtime_result(
         final_belief_statuses={"m1": "AUTHORIZED"},
         authorized_belief_ids=("m1",),
@@ -112,9 +117,10 @@ def test_project_to_benchmark_response_preserves_valid_raw_fields() -> None:
         "decision": "use_current_memory",
         "memory_state": {"m1": "current"},
         "evidence_event_ids": ["e1"],
-        "failure_diagnosis": "unnecessary_memory_write",
+        "failure_diagnosis": "memory_hallucination",
         "answer": "Use the current memory.",
     }
+    assert response["failure_diagnosis"] in PRIMARY_FAILURE_MODES
 
 
 def test_project_to_benchmark_response_supports_extended_memory_labels() -> None:
@@ -190,6 +196,7 @@ def test_project_to_benchmark_response_accepts_raw_memory_state_overrides() -> N
         assert label in MEMORY_STATUSES
     assert response["decision"] in DECISIONS
     assert response["failure_diagnosis"] in FAILURE_MODES
+    assert response["failure_diagnosis"] in PRIMARY_FAILURE_MODES
 
 
 def test_revision_module_pipeline_emits_strict_response_fields() -> None:

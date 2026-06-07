@@ -14,14 +14,16 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from benchmark.general_taxonomy import (
     DECISIONS,
-    DIFFICULTIES,
-    DOMAINS,
-    FAILURE_MODES,
-    MEMORY_STATUSES,
+    PRIMARY_DIFFICULTIES,
+    PRIMARY_DOMAINS,
+    PRIMARY_FAILURE_MODES,
+    PRIMARY_MEMORY_STATUSES,
+    PRIMARY_PATTERNS,
     PUBLIC_FORBIDDEN_TERMS,
     TASK_TYPES,
     TRUST_LEVELS,
     canonical_hidden_gold_fields,
+    normalize_difficulty,
 )
 
 
@@ -84,14 +86,25 @@ def validate_one(
 
     split = _infer_split(scenario, data_path)
 
-    if scenario.get("domain") not in DOMAINS:
+    if scenario.get("domain") not in PRIMARY_DOMAINS:
         errors.append(f"{sid}: invalid domain '{scenario.get('domain')}'")
-    if scenario.get("primary_failure_mode") not in FAILURE_MODES:
+    if scenario.get("primary_failure_mode") not in PRIMARY_FAILURE_MODES:
         errors.append(f"{sid}: invalid primary_failure_mode '{scenario.get('primary_failure_mode')}'")
 
-    diff = scenario.get("difficulty") or scenario.get("difficulty_level")
-    if diff not in DIFFICULTIES and diff not in ("L1", "L2", "L3", "L4"):
-        errors.append(f"{sid}: invalid difficulty level '{diff}'")
+    pattern = scenario.get("pattern") or scenario.get("metadata", {}).get("pattern")
+    if pattern not in PRIMARY_PATTERNS:
+        errors.append(f"{sid}: invalid pattern '{pattern}'")
+
+    raw_diff = scenario.get("difficulty")
+    raw_diff_level = scenario.get("difficulty_level")
+    diff = normalize_difficulty(raw_diff or raw_diff_level)
+    diff_level = normalize_difficulty(raw_diff_level) if raw_diff_level else diff
+    if diff not in PRIMARY_DIFFICULTIES:
+        errors.append(f"{sid}: invalid difficulty level '{raw_diff or raw_diff_level}'")
+    if raw_diff and raw_diff_level and diff != diff_level:
+        errors.append(
+            f"{sid}: difficulty '{raw_diff}' does not match difficulty_level '{raw_diff_level}'"
+        )
 
     has_new_tasks = any(
         k in scenario
@@ -120,15 +133,17 @@ def validate_one(
     expected_state = gold["expected_memory_state"]
     if not expected_state and gold.get("expected_decision") != "refuse_due_to_policy":
         errors.append(f"{sid}: hidden_gold.expected_memory_state is missing or empty")
-    bad_statuses = sorted({s for s in expected_state.values() if s not in MEMORY_STATUSES})
+    bad_statuses = sorted({s for s in expected_state.values() if s not in PRIMARY_MEMORY_STATUSES})
     if bad_statuses:
         errors.append(f"{sid}: invalid memory statuses in expected_memory_state: {bad_statuses}")
 
     expected_diag = gold.get("expected_failure_diagnosis")
     if not expected_diag:
         errors.append(f"{sid}: hidden_gold.expected_failure_diagnosis is missing")
-    elif expected_diag not in FAILURE_MODES:
-        errors.append(f"{sid}: hidden_gold.expected_failure_diagnosis '{expected_diag}' not in FAILURE_MODES")
+    elif expected_diag not in PRIMARY_FAILURE_MODES:
+        errors.append(
+            f"{sid}: hidden_gold.expected_failure_diagnosis '{expected_diag}' not in PRIMARY_FAILURE_MODES"
+        )
 
     if len(events) < 2:
         errors.append(f"{sid}: expected at least 2 events")
@@ -186,7 +201,7 @@ def validate_one(
     if len(answer) > 100 and answer.lower() in text:
         errors.append(f"{sid}: public text leaks full hidden_gold.expected_answer")
 
-    is_hard_or_l34 = diff in ("L3", "L4", "L3_conditional_validity", "L4_cross_scope_adversarial_audit")
+    is_hard_or_l34 = diff in ("L3", "L4")
     if is_hard_or_l34 and events:
         sorted_events = sorted(events, key=lambda e: e.get("timestamp", "") or str(e.get("timestamp_order", "")))
         latest_event_id = sorted_events[-1].get("event_id") if sorted_events else None
