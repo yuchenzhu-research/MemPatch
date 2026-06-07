@@ -22,7 +22,7 @@ def export_splits(
     scenarios_by_split: dict[str, list[dict[str, Any]]],
     out_dir: Path,
 ) -> dict[str, Any]:
-    """Write train/main/hard/scenarios.jsonl and return export manifest summary."""
+    """Write train/validation/test scenarios.jsonl files and return manifest summary."""
     manifest: dict[str, Any] = {
         "renderer": RENDERER,
         "benchmark_version": "v1.3",

@@ -6,6 +6,7 @@ by ``decision_resolver`` after render, not here.
 
 from __future__ import annotations
 
+import hashlib
 import random
 from typing import Any
 
@@ -148,11 +149,60 @@ def _difficulty_factors(*, events: int, policy: bool = False, ci: bool = False) 
     }
 
 
-def _inject_triggers(events: list[dict[str, Any]], triggers: tuple[str, ...]) -> None:
-    """Prefix core events with explicit visible trigger markers."""
-    for idx, trigger in enumerate(triggers):
+SPLIT_SURFACE_INDICES: dict[str, tuple[int, ...]] = {
+    "train": (0, 1),
+    "validation": (2, 3),
+    "test": (4,),
+}
+
+SURFACE_NOTES: tuple[tuple[str, str, str], ...] = (
+    (
+        "The release desk records this as a same-day state audit.",
+        "The note is tied to the stable workspace review queue.",
+        "No additional reviewer comment changes the scope.",
+    ),
+    (
+        "The operations log frames this as a memory-integrity check.",
+        "The entry is attached to the current stable workspace thread.",
+        "A later workspace-beta note is documented separately.",
+    ),
+    (
+        "The coordinator labels the thread as a pending state review.",
+        "The event is linked to the active stable workspace timeline.",
+        "No separate owner has resolved the ambiguity in this trace.",
+    ),
+    (
+        "The audit trail treats this as a targeted memory-state review.",
+        "The note remains within the stable workspace evidence bundle.",
+        "Related beta activity is recorded outside the target scope.",
+    ),
+    (
+        "The workspace log marks this as a final pre-write consistency check.",
+        "The evidence appears in the stable workspace handoff notes.",
+        "No later public event supersedes these core observations.",
+    ),
+)
+
+
+def _surface_index(blueprint: V13BlueprintInstance) -> int:
+    pool = SPLIT_SURFACE_INDICES.get(blueprint.split, tuple(range(len(SURFACE_NOTES))))
+    if not pool:
+        return 0
+    payload = f"{blueprint.split}:{blueprint.decision_variant}:{blueprint.scenario_num}"
+    digest = hashlib.sha256(payload.encode("utf-8")).hexdigest()
+    return pool[int(digest[:8], 16) % len(pool)]
+
+
+def _surface_template_id(variant: V13DecisionVariant, surface_index: int) -> str:
+    return f"{variant.variant_id}:surface-{surface_index}"
+
+
+def _apply_surface_variation(events: list[dict[str, Any]], surface_index: int) -> None:
+    """Add natural surface variation without exposing trigger IDs."""
+    notes = SURFACE_NOTES[surface_index % len(SURFACE_NOTES)]
+    for idx, note in enumerate(notes):
         if idx < len(events):
-            events[idx]["text"] = f"[trigger:{trigger}] {events[idx]['text']}"
+            events[idx]["text"] = f"{events[idx]['text']} {note}"
 
 
 def _build_core_events(
@@ -160,6 +210,7 @@ def _build_core_events(
     variant: V13DecisionVariant,
     *,
     rng: random.Random,
+    surface_index: int,
 ) -> tuple[list[dict[str, Any]], list[str], list[str], str]:
     """Return (events, evidence_ids, counter_ids, expected_answer)."""
     case_ref = _case_ref(blueprint)
@@ -342,7 +393,7 @@ def _build_core_events(
                 blueprint=blueprint, suffix="2", order=2,
                 actor_role="calendar_bot", trust_level="trusted", scope="workspace-stable",
                 event_type="comment",
-                text=f"Calendar bot logged ambiguous_user_intent on {case_ref} {topic}.",
+                text=f"Calendar bot logged that the user intent is ambiguous for {case_ref} {topic}.",
             ),
             _event(
                 blueprint=blueprint, suffix="3", order=3,
@@ -375,7 +426,7 @@ def _build_core_events(
                 blueprint=blueprint, suffix="3", order=3,
                 actor_role="auditor", trust_level="verified", scope="workspace-stable",
                 event_type="audit",
-                text=f"Sufficient evidence exists for {case_ref} but policy_human_review_required applies.",
+                text=f"Sufficient evidence exists for {case_ref}, but policy requires human review before the write.",
             ),
         ],
         [f"e-case-{_sid(blueprint)}-1", f"e-case-{_sid(blueprint)}-2"],
@@ -500,7 +551,7 @@ def _build_core_events(
                 blueprint=blueprint, suffix="2", order=2,
                 actor_role="monitor", trust_level="trusted", scope="workspace-stable",
                 event_type="monitor",
-                text=f"Monitoring silent for {case_ref}; mark_insufficient_passive evidence.",
+                text=f"Monitoring is silent for {case_ref}; the passive evidence remains insufficient.",
             ),
             _event(
                 blueprint=blueprint, suffix="3", order=3,
@@ -584,7 +635,7 @@ def _build_core_events(
                 blueprint=blueprint, suffix="3", order=3,
                 actor_role="ci", trust_level="trusted", scope="workspace-stable",
                 event_type="ci",
-                text=f"Partial CI logs inconclusive for {case_ref}; cannot escalate or ask user.",
+                text=f"Partial CI logs are inconclusive for {case_ref}; there is no reviewer route or user-input path.",
             ),
         ],
         [f"e-case-{_sid(blueprint)}-1", f"e-case-{_sid(blueprint)}-2"],
@@ -649,7 +700,7 @@ def _build_core_events(
         raise ValueError(f"No event spec for variant {vid}")
 
     core, evidence, counter, answer = specs[vid]
-    _inject_triggers(core, variant.triggers)
+    _apply_surface_variation(core, surface_index)
     return core, evidence, counter, answer
 
 
@@ -686,8 +737,9 @@ class MemPatchUnifiedRendererV13:
         agent = DOMAIN_AGENTS.get(family.domain, "Coordinator")
         mids = _memory_ids(blueprint)
 
+        surface_index = _surface_index(blueprint)
         core, evidence_ids, counter_ids, answer = _build_core_events(
-            blueprint, variant, rng=rng,
+            blueprint, variant, rng=rng, surface_index=surface_index,
         )
 
         sid = _sid(blueprint)
@@ -755,6 +807,7 @@ class MemPatchUnifiedRendererV13:
                 f"{agent} is auditing {topic} and checking state integrity for {case_ref} "
                 f"on {family.domain}."
             ),
+            "surface_template_id": _surface_template_id(variant, surface_index),
             "public_input": {"event_trace": events, "initial_memory": memories},
             "hidden_gold": hidden_gold,
             "difficulty_level": difficulty,

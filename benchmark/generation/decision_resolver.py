@@ -23,7 +23,8 @@ from benchmark.generation.blueprints import (
 # Marker phrases embedded by unified_renderer_v13 in event text (see design doc).
 TRIGGER_PHRASES: dict[str, re.Pattern[str]] = {
     "missing_target_scope": re.compile(
-        r"\[trigger:missing_target_scope\]|update (it|the memory) without specifying",
+        r"\[trigger:missing_target_scope\]|update (it|the memory) without specifying|"
+        r"without specifying .*target|no target memory specified",
         re.I,
     ),
     "ambiguous_user_intent": re.compile(

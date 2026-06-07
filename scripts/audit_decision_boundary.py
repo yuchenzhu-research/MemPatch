@@ -19,6 +19,8 @@ from scripts.validate_mempatch_bench_dataset import _is_background_event
 
 NON_ANSWER_DECISIONS = ("ask_clarification", "escalate", "mark_unresolved")
 DEFAULT_JACCARD_WARN = 0.35
+MIN_TOTAL_NORMALIZED_TEMPLATES = 80
+MIN_TEMPLATES_PER_DECISION_VARIANT = 5
 CORE_EVENT_FIELDS = ("text", "actor_role", "trust_level", "visibility_scope", "event_type")
 
 
@@ -193,6 +195,41 @@ def public_view_hash(scenario: dict[str, Any]) -> str:
     return hashlib.sha256(payload.encode("utf-8")).hexdigest()
 
 
+def decision_variant_values() -> set[str]:
+    try:
+        from benchmark.generation.blueprints import all_variants
+
+        return {variant.variant_id for _family, variant in all_variants()}
+    except ImportError:
+        return set()
+
+
+def marker_leakage_violations(scenario: dict[str, Any], *, decision_variants: set[str]) -> list[str]:
+    """Return public event text leakage findings for release-blocking markers."""
+    sid = str(scenario.get("scenario_id") or "<unknown>")
+    variants = decision_variants | {
+        str((scenario.get("metadata") or {}).get("decision_variant") or "")
+    }
+    variants.discard("")
+    checks: list[tuple[str, re.Pattern[str]]] = [
+        ("literal [trigger:", re.compile(r"\[trigger:", re.I)),
+        ("literal trigger:", re.compile(r"trigger:", re.I)),
+    ]
+    for decision in DECISIONS:
+        checks.append((f"decision enum {decision}", re.compile(rf"\b{re.escape(decision)}\b", re.I)))
+    for variant in variants:
+        checks.append((f"decision_variant {variant}", re.compile(rf"\b{re.escape(variant)}\b", re.I)))
+
+    findings: list[str] = []
+    for event in scenario.get("public_input", {}).get("event_trace", []) or []:
+        text = str(event.get("text") or "")
+        for label, pattern in checks:
+            if pattern.search(text):
+                event_id = event.get("event_id") or "<missing-event-id>"
+                findings.append(f"{sid}/{event_id}: public event text leaks {label}")
+    return findings
+
+
 def metadata_triggers(scenario: dict[str, Any]) -> list[str]:
     meta = scenario.get("metadata") or {}
     raw = meta.get("decision_triggers")
@@ -244,7 +281,11 @@ def audit_dataset(
     signature_to_rows: dict[str, list[dict[str, Any]]] = defaultdict(list)
     signature_meta: dict[str, dict[str, Any]] = {}
     public_view_to_rows: dict[str, list[dict[str, Any]]] = defaultdict(list)
+    template_hashes_by_decision: dict[str, set[str]] = defaultdict(set)
+    template_hashes_by_variant: dict[str, set[str]] = defaultdict(set)
     audited_rows: list[dict[str, Any]] = []
+    leakage_violations: list[str] = []
+    known_decision_variants = decision_variant_values()
     trigger_coverage: dict[str, dict[str, int]] = {
         d: {"with_metadata": 0, "with_public_trigger": 0, "total": 0}
         for d in NON_ANSWER_DECISIONS
@@ -266,10 +307,17 @@ def audit_dataset(
         )
         signature_meta[sig["hash"]] = sig
         pv_hash = public_view_hash(row)
+        meta = row.get("metadata") or {}
+        variant = str(meta.get("decision_variant") or "<missing>")
+        template_hashes_by_decision[decision].add(pv_hash)
+        template_hashes_by_variant[variant].add(pv_hash)
         public_view_to_rows[pv_hash].append(
             {"scenario_id": row.get("scenario_id"), "expected_decision": decision}
         )
         audited_rows.append(row)
+        leakage_violations.extend(
+            marker_leakage_violations(row, decision_variants=known_decision_variants)
+        )
 
         if decision in NON_ANSWER_DECISIONS:
             trigger_coverage[decision]["total"] += 1
@@ -410,6 +458,12 @@ def audit_dataset(
         fatal_issues.append(
             f"{split_label}: gold_public_consistency: ... +{len(gold_consistency_violations) - 20} more"
         )
+    for violation in leakage_violations[:20]:
+        fatal_issues.append(f"{split_label}: public_marker_leakage: {violation}")
+    if len(leakage_violations) > 20:
+        fatal_issues.append(
+            f"{split_label}: public_marker_leakage: ... +{len(leakage_violations) - 20} more"
+        )
 
     return {
         "split": split_label,
@@ -430,6 +484,23 @@ def audit_dataset(
         "decision_triggers_coverage": trigger_coverage,
         "mark_unresolved_breakdown": dict(mark_unresolved_breakdown),
         "gold_public_consistency_violations": gold_consistency_violations,
+        "public_marker_leakage_violations": leakage_violations,
+        "normalized_public_view_template_count": len(public_view_to_rows),
+        "normalized_public_view_template_hashes": sorted(public_view_to_rows),
+        "templates_per_decision": {
+            decision: len(template_hashes_by_decision.get(decision, set()))
+            for decision in DECISIONS
+        },
+        "template_hashes_by_decision": {
+            decision: sorted(template_hashes_by_decision.get(decision, set()))
+            for decision in DECISIONS
+        },
+        "templates_per_decision_variant": {
+            variant: len(hashes) for variant, hashes in sorted(template_hashes_by_variant.items())
+        },
+        "template_hashes_by_decision_variant": {
+            variant: sorted(hashes) for variant, hashes in sorted(template_hashes_by_variant.items())
+        },
         "fatal_issues": fatal_issues,
         "top_collision_groups": collision_groups[:10],
         "top_public_view_collisions": public_view_collisions[:10],
@@ -445,6 +516,7 @@ def render_markdown(report: dict[str, Any]) -> str:
         f"- total signature collisions (cross-decision): {report['summary']['total_collision_groups']}",
         f"- ask↔escalate shared signatures: {report['summary']['ask_escalate_shared_signature_count']}",
         f"- non-answer public-view collisions: {report['summary']['non_answer_public_view_collision_count']}",
+        f"- normalized public-view templates: {report['summary']['normalized_public_view_template_count']}",
         f"- fatal issues: {len(report['summary']['fatal_issues'])}",
         "",
     ]
@@ -453,6 +525,26 @@ def render_markdown(report: dict[str, Any]) -> str:
         for issue in report["summary"]["fatal_issues"]:
             lines.append(f"- {issue}")
         lines.append("")
+
+    lines.append("## Template diversity")
+    lines.append("")
+    lines.append(
+        f"- total normalized public-view templates: "
+        f"{report['summary']['normalized_public_view_template_count']}"
+    )
+    for pair, count in report["summary"].get("split_template_overlap", {}).items():
+        lines.append(f"- {pair}: {count}")
+    lines.append("")
+    lines.append("### templates per decision")
+    lines.append("")
+    for decision, count in report["summary"].get("templates_per_decision", {}).items():
+        lines.append(f"- {decision}: {count}")
+    lines.append("")
+    lines.append("### templates per decision_variant")
+    lines.append("")
+    for variant, count in report["summary"].get("templates_per_decision_variant", {}).items():
+        lines.append(f"- {variant}: {count}")
+    lines.append("")
 
     for dataset in report["datasets"]:
         lines.extend(
@@ -488,6 +580,13 @@ def render_markdown(report: dict[str, Any]) -> str:
                     f"metadata={stats['with_metadata']}/{stats['total']}"
                 )
             lines.append("")
+
+        lines.append("### normalized public-view templates")
+        lines.append("")
+        lines.append(f"- total templates in split: {dataset['normalized_public_view_template_count']}")
+        for decision, count in dataset.get("templates_per_decision", {}).items():
+            lines.append(f"- {decision}: {count}")
+        lines.append("")
 
         if dataset.get("mark_unresolved_breakdown"):
             lines.append("### mark_unresolved breakdown")
@@ -580,6 +679,9 @@ def main(argv: list[str] | None = None) -> int:
     non_answer_public_collisions = 0
     total_rows = 0
     pattern_decision_split: dict[str, dict[str, Counter[str]]] = defaultdict(lambda: defaultdict(Counter))
+    template_hashes_by_split: dict[str, set[str]] = {}
+    template_hashes_by_variant: dict[str, set[str]] = defaultdict(set)
+    template_hashes_by_decision: dict[str, set[str]] = defaultdict(set)
 
     for dataset in datasets:
         fatal_issues.extend(dataset["fatal_issues"])
@@ -588,11 +690,48 @@ def main(argv: list[str] | None = None) -> int:
         non_answer_public_collisions += len(dataset.get("non_answer_public_view_collisions", []))
         total_rows += dataset["count"]
         split = dataset["split"]
+        template_hashes_by_split[split] = set(dataset.get("normalized_public_view_template_hashes", []))
+        for decision, hashes in dataset.get("template_hashes_by_decision", {}).items():
+            template_hashes_by_decision[decision].update(hashes)
+        for variant, hashes in dataset.get("template_hashes_by_decision_variant", {}).items():
+            template_hashes_by_variant[variant].update(hashes)
         for key in ("pattern", "decision_variant"):
             table = dataset.get("pattern_tables", {}).get(key, {})
             for pattern, counts in table.items():
                 for decision, count in counts.items():
                     pattern_decision_split[f"{key}:{pattern}"][split][decision] += count
+
+    all_template_hashes = set().union(*template_hashes_by_split.values()) if template_hashes_by_split else set()
+    split_template_overlap: dict[str, int] = {}
+    split_names = sorted(template_hashes_by_split)
+    for i, left in enumerate(split_names):
+        for right in split_names[i + 1 :]:
+            split_template_overlap[f"{left} ∩ {right}"] = len(
+                template_hashes_by_split[left] & template_hashes_by_split[right]
+            )
+
+    templates_per_variant = {
+        variant: len(hashes) for variant, hashes in sorted(template_hashes_by_variant.items())
+    }
+    templates_per_decision = {
+        decision: len(template_hashes_by_decision.get(decision, set()))
+        for decision in DECISIONS
+    }
+    low_diversity_variants = {
+        variant: count
+        for variant, count in templates_per_variant.items()
+        if count < MIN_TEMPLATES_PER_DECISION_VARIANT
+    }
+    if len(all_template_hashes) < MIN_TOTAL_NORMALIZED_TEMPLATES:
+        fatal_issues.append(
+            f"release: normalized public-view templates {len(all_template_hashes)} "
+            f"< {MIN_TOTAL_NORMALIZED_TEMPLATES}"
+        )
+    if low_diversity_variants:
+        fatal_issues.append(
+            "release: decision_variant template diversity below "
+            f"{MIN_TEMPLATES_PER_DECISION_VARIANT}: {low_diversity_variants}"
+        )
 
     report = {
         "summary": {
@@ -600,6 +739,10 @@ def main(argv: list[str] | None = None) -> int:
             "total_collision_groups": total_collisions,
             "ask_escalate_shared_signature_count": ask_esc_shared,
             "non_answer_public_view_collision_count": non_answer_public_collisions,
+            "normalized_public_view_template_count": len(all_template_hashes),
+            "split_template_overlap": split_template_overlap,
+            "templates_per_decision": templates_per_decision,
+            "templates_per_decision_variant": templates_per_variant,
             "fatal_issues": fatal_issues,
             "jaccard_warn_threshold": args.jaccard_warn,
             "pattern_decision_split_matrix": {

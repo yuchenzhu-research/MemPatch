@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate MemPatch v1.3 pilot JSONL (train/main/hard)."""
+"""Generate MemPatch v1.3 pilot/full JSONL (train/validation/test)."""
 
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--full",
         action="store_true",
-        help="Use full quotas (train 2700 / main 800 / hard 500) instead of pilot",
+        help="Use full quotas (train 2700 / validation 800 / test 500) instead of pilot",
     )
     parser.add_argument(
         "--dry-run",
