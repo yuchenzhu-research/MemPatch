@@ -1,7 +1,7 @@
 """MemPatch Revision Module training-data contracts.
 
 JSONL schemas for the revision module pipeline (Algorithm 1 in
-``docs/mempatch_revision_module.md``): scenario/event_trace → revision view
+``AGENTS.md``): scenario/event_trace → revision view
 → benchmark-compatible response → DPA-Consistent Projection →
 benchmark-grounded feedback. Aligns with ``retracemem`` runtime vocabulary:
 

@@ -9,7 +9,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from benchmark.mempatch_bench.model_runner import (  # noqa: E402
+from benchmark.model_runner import (  # noqa: E402
     DEFAULT_MAX_TOKENS,
     PROVIDERS,
     run_model_predictions,

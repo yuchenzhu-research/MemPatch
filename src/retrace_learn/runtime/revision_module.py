@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from benchmark.mempatch_bench.public_view import public_scenario_view
+from benchmark.public_view import public_scenario_view
 
 from retrace_learn.runtime.benchmark_projection import project_to_benchmark_response
 from retrace_learn.runtime.dpa_runtime import run_from_text

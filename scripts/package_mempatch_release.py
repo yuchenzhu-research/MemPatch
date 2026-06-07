@@ -14,7 +14,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 SCENARIO_JSONL = "scenarios.jsonl"
-DEFAULT_SPLITS = ("train", "main", "hard")
+DEFAULT_SPLITS = ("train", "validation", "test")
 
 
 def sha256_file(path: Path) -> str:
@@ -67,7 +67,7 @@ def build_manifest(
     if "train" in manifest["public_split_name_counts"]:
         manifest["notes"] = {
             **(manifest.get("notes") or {}),
-            "train": "local/SFT-only split in v1.2; not for benchmark leaderboard eval",
+            "train": "SFT-only; not for benchmark leaderboard eval",
         }
     return manifest
 
@@ -78,20 +78,20 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--input-dir",
         type=Path,
         required=True,
-        help="Directory containing {train,main,hard}/scenarios.jsonl",
+        help="Directory containing {train,validation,test}/scenarios.jsonl",
     )
     parser.add_argument(
         "--out-dir",
         type=Path,
         required=True,
-        help="Release bundle directory (e.g. hf_release/mempatch_v1_2)",
+        help="Release bundle directory (e.g. hf_release/mempatch)",
     )
     parser.add_argument(
         "--splits",
         default=",".join(DEFAULT_SPLITS),
-        help="Comma-separated splits to include if present (default: train,main,hard)",
+        help="Comma-separated splits to include if present (default: train,validation,test)",
     )
-    parser.add_argument("--release-version", default="1.2.0")
+    parser.add_argument("--release-version", default="1.3.0")
     parser.add_argument("--dataset-name", default="MemPatch")
     parser.add_argument(
         "--base-manifest",

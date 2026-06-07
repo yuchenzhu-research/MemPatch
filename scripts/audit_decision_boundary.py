@@ -14,7 +14,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from benchmark.mempatch_bench.general_taxonomy import DECISIONS, canonical_hidden_gold_fields
+from benchmark.general_taxonomy import DECISIONS, canonical_hidden_gold_fields
 from scripts.validate_mempatch_bench_dataset import _is_background_event
 
 NON_ANSWER_DECISIONS = ("ask_clarification", "escalate", "mark_unresolved")
@@ -51,7 +51,7 @@ def infer_split_label(path: Path, scenario: dict[str, Any]) -> str:
     if split:
         return str(split)
     parent = path.parent.name
-    if parent in {"train", "main", "hard"}:
+    if parent in {"train", "validation", "test", "main", "hard"}:
         return parent
     return path.stem
 
@@ -214,7 +214,7 @@ def is_mark_ci_derived(scenario: dict[str, Any]) -> bool:
 
 def detect_triggers_in_public(scenario: dict[str, Any]) -> set[str]:
     try:
-        from benchmark.generation.v13.decision_resolver import detect_triggers
+        from benchmark.generation.decision_resolver import detect_triggers
 
         return detect_triggers(scenario.get("public_input") or {})
     except ImportError:
@@ -287,7 +287,7 @@ def audit_dataset(
         public_triggers = detect_triggers_in_public(row)
         sid = str(row.get("scenario_id") or "<unknown>")
         try:
-            from benchmark.generation.v13.blueprints import (
+            from benchmark.generation.blueprints import (
                 ASK_TRIGGERS,
                 ESCALATE_TRIGGERS,
                 MARK_CI_TRIGGERS,

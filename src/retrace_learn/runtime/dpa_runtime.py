@@ -18,7 +18,7 @@ from typing import Any
 
 from retracemem.authorization import authorize
 from retracemem.methods.contracts import SharedCandidateView
-from retracemem.multiagent.parser import (
+from retracemem.action_parser import (
     ParseErrorCode,
     StructuredParseError,
     extract_json_array,

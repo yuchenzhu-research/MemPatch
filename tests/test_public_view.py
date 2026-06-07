@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from benchmark.mempatch_bench.public_view import public_scenario_view
+from benchmark.public_view import public_scenario_view
 
 
 def test_public_scenario_view_strips_internal_task_fields() -> None:

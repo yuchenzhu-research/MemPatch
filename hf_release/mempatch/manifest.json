@@ -1,0 +1,157 @@
+{
+  "benchmark_version": "v1.3",
+  "data_files": {
+    "test": "test/scenarios.jsonl",
+    "train": "train/scenarios.jsonl",
+    "validation": "validation/scenarios.jsonl"
+  },
+  "dataset": "MemPatch",
+  "notes": {
+    "train": "SFT-only; not for benchmark leaderboard eval"
+  },
+  "public_split_name_counts": {
+    "test": 500,
+    "train": 2700,
+    "validation": 800
+  },
+  "public_total": 4000,
+  "release_version": "1.3.0",
+  "renderer": "unified_renderer_v13",
+  "splits": {
+    "test": {
+      "count": 500,
+      "decision_counts": {
+        "ask_clarification": 100,
+        "escalate": 75,
+        "mark_unresolved": 100,
+        "refuse_due_to_policy": 75,
+        "use_current_memory": 150
+      },
+      "path": "hf_release/mempatch/test/scenarios.jsonl",
+      "pattern_decision_matrix": {
+        "authority_conflict": {
+          "ask_clarification": 25,
+          "escalate": 25,
+          "mark_unresolved": 17
+        },
+        "ci_failed_after_claim": {
+          "escalate": 25,
+          "mark_unresolved": 32
+        },
+        "closed_as_duplicate_not_fixed": {
+          "ask_clarification": 25,
+          "mark_unresolved": 17
+        },
+        "label_state_mismatch": {
+          "refuse_due_to_policy": 37,
+          "use_current_memory": 50
+        },
+        "maintainer_correction_over_user_claim": {
+          "ask_clarification": 25,
+          "use_current_memory": 50
+        },
+        "negative_evidence_required": {
+          "mark_unresolved": 34
+        },
+        "security_policy_override": {
+          "escalate": 25,
+          "refuse_due_to_policy": 38
+        },
+        "version_scope_leakage": {
+          "ask_clarification": 25,
+          "use_current_memory": 50
+        }
+      }
+    },
+    "train": {
+      "count": 2700,
+      "decision_counts": {
+        "ask_clarification": 600,
+        "escalate": 600,
+        "mark_unresolved": 600,
+        "refuse_due_to_policy": 300,
+        "use_current_memory": 600
+      },
+      "path": "hf_release/mempatch/train/scenarios.jsonl",
+      "pattern_decision_matrix": {
+        "authority_conflict": {
+          "ask_clarification": 150,
+          "escalate": 200,
+          "mark_unresolved": 100
+        },
+        "ci_failed_after_claim": {
+          "escalate": 200,
+          "mark_unresolved": 200
+        },
+        "closed_as_duplicate_not_fixed": {
+          "ask_clarification": 150,
+          "mark_unresolved": 100
+        },
+        "label_state_mismatch": {
+          "refuse_due_to_policy": 150,
+          "use_current_memory": 200
+        },
+        "maintainer_correction_over_user_claim": {
+          "ask_clarification": 150,
+          "use_current_memory": 200
+        },
+        "negative_evidence_required": {
+          "mark_unresolved": 200
+        },
+        "security_policy_override": {
+          "escalate": 200,
+          "refuse_due_to_policy": 150
+        },
+        "version_scope_leakage": {
+          "ask_clarification": 150,
+          "use_current_memory": 200
+        }
+      }
+    },
+    "validation": {
+      "count": 800,
+      "decision_counts": {
+        "ask_clarification": 100,
+        "escalate": 75,
+        "mark_unresolved": 150,
+        "refuse_due_to_policy": 75,
+        "use_current_memory": 400
+      },
+      "path": "hf_release/mempatch/validation/scenarios.jsonl",
+      "pattern_decision_matrix": {
+        "authority_conflict": {
+          "ask_clarification": 25,
+          "escalate": 25,
+          "mark_unresolved": 25
+        },
+        "ci_failed_after_claim": {
+          "escalate": 25,
+          "mark_unresolved": 50
+        },
+        "closed_as_duplicate_not_fixed": {
+          "ask_clarification": 25,
+          "mark_unresolved": 25
+        },
+        "label_state_mismatch": {
+          "refuse_due_to_policy": 37,
+          "use_current_memory": 133
+        },
+        "maintainer_correction_over_user_claim": {
+          "ask_clarification": 25,
+          "use_current_memory": 134
+        },
+        "negative_evidence_required": {
+          "mark_unresolved": 50
+        },
+        "security_policy_override": {
+          "escalate": 25,
+          "refuse_due_to_policy": 38
+        },
+        "version_scope_leakage": {
+          "ask_clarification": 25,
+          "use_current_memory": 133
+        }
+      }
+    }
+  }
+}

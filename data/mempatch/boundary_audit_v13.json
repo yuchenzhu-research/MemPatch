@@ -1,0 +1,1071 @@
+{
+  "summary": {
+    "total_scenarios": 4000,
+    "total_collision_groups": 0,
+    "ask_escalate_shared_signature_count": 0,
+    "non_answer_public_view_collision_count": 0,
+    "fatal_issues": [],
+    "jaccard_warn_threshold": 0.35,
+    "pattern_decision_split_matrix": {
+      "decision_variant:ambiguous_scope_no_verified_ruling": {
+        "train": {
+          "ask_clarification": 150
+        },
+        "validation": {
+          "ask_clarification": 25
+        },
+        "test": {
+          "ask_clarification": 25
+        }
+      },
+      "decision_variant:ci_contradiction_independent": {
+        "train": {
+          "mark_unresolved": 100
+        },
+        "validation": {
+          "mark_unresolved": 25
+        },
+        "test": {
+          "mark_unresolved": 16
+        }
+      },
+      "decision_variant:ci_monitor_gap": {
+        "train": {
+          "mark_unresolved": 100
+        },
+        "validation": {
+          "mark_unresolved": 25
+        },
+        "test": {
+          "mark_unresolved": 16
+        }
+      },
+      "decision_variant:compliance_block_with_sufficient_evidence": {
+        "train": {
+          "escalate": 200
+        },
+        "validation": {
+          "escalate": 25
+        },
+        "test": {
+          "escalate": 25
+        }
+      },
+      "decision_variant:compliance_do_not_store": {
+        "train": {
+          "refuse_due_to_policy": 150
+        },
+        "validation": {
+          "refuse_due_to_policy": 37
+        },
+        "test": {
+          "refuse_due_to_policy": 37
+        }
+      },
+      "decision_variant:credential_forbidden_write": {
+        "train": {
+          "refuse_due_to_policy": 150
+        },
+        "validation": {
+          "refuse_due_to_policy": 38
+        },
+        "test": {
+          "refuse_due_to_policy": 38
+        }
+      },
+      "decision_variant:dual_verified_no_policy_gate": {
+        "train": {
+          "mark_unresolved": 100
+        },
+        "validation": {
+          "mark_unresolved": 25
+        },
+        "test": {
+          "mark_unresolved": 17
+        }
+      },
+      "decision_variant:duplicate_ticket_assumed_fixed": {
+        "train": {
+          "mark_unresolved": 100
+        },
+        "validation": {
+          "mark_unresolved": 25
+        },
+        "test": {
+          "mark_unresolved": 17
+        }
+      },
+      "decision_variant:human_review_gate_active": {
+        "train": {
+          "escalate": 200
+        },
+        "validation": {
+          "escalate": 25
+        },
+        "test": {
+          "escalate": 25
+        }
+      },
+      "decision_variant:missing_target_on_update_request": {
+        "train": {
+          "ask_clarification": 150
+        },
+        "validation": {
+          "ask_clarification": 25
+        },
+        "test": {
+          "ask_clarification": 25
+        }
+      },
+      "decision_variant:multiple_matching_memories": {
+        "train": {
+          "ask_clarification": 150
+        },
+        "validation": {
+          "ask_clarification": 25
+        },
+        "test": {
+          "ask_clarification": 25
+        }
+      },
+      "decision_variant:passive_monitor_gap": {
+        "train": {
+          "mark_unresolved": 100
+        },
+        "validation": {
+          "mark_unresolved": 25
+        },
+        "test": {
+          "mark_unresolved": 17
+        }
+      },
+      "decision_variant:protected_prod_memory": {
+        "train": {
+          "escalate": 200
+        },
+        "validation": {
+          "escalate": 25
+        },
+        "test": {
+          "escalate": 25
+        }
+      },
+      "decision_variant:trust_chain_broken": {
+        "train": {
+          "mark_unresolved": 100
+        },
+        "validation": {
+          "mark_unresolved": 25
+        },
+        "test": {
+          "mark_unresolved": 17
+        }
+      },
+      "decision_variant:user_intent_ambiguous_action": {
+        "train": {
+          "ask_clarification": 150
+        },
+        "validation": {
+          "ask_clarification": 25
+        },
+        "test": {
+          "ask_clarification": 25
+        }
+      },
+      "decision_variant:verified_auditor_signoff": {
+        "train": {
+          "use_current_memory": 200
+        },
+        "validation": {
+          "use_current_memory": 133
+        },
+        "test": {
+          "use_current_memory": 50
+        }
+      },
+      "decision_variant:verified_maintainer_overrides_user": {
+        "train": {
+          "use_current_memory": 200
+        },
+        "validation": {
+          "use_current_memory": 134
+        },
+        "test": {
+          "use_current_memory": 50
+        }
+      },
+      "decision_variant:verified_release_confirms_stable": {
+        "train": {
+          "use_current_memory": 200
+        },
+        "validation": {
+          "use_current_memory": 133
+        },
+        "test": {
+          "use_current_memory": 50
+        }
+      },
+      "pattern:authority_conflict": {
+        "train": {
+          "escalate": 200,
+          "ask_clarification": 150,
+          "mark_unresolved": 100
+        },
+        "validation": {
+          "escalate": 25,
+          "ask_clarification": 25,
+          "mark_unresolved": 25
+        },
+        "test": {
+          "escalate": 25,
+          "ask_clarification": 25,
+          "mark_unresolved": 17
+        }
+      },
+      "pattern:ci_failed_after_claim": {
+        "train": {
+          "escalate": 200,
+          "mark_unresolved": 200
+        },
+        "validation": {
+          "escalate": 25,
+          "mark_unresolved": 50
+        },
+        "test": {
+          "escalate": 25,
+          "mark_unresolved": 32
+        }
+      },
+      "pattern:closed_as_duplicate_not_fixed": {
+        "train": {
+          "ask_clarification": 150,
+          "mark_unresolved": 100
+        },
+        "validation": {
+          "ask_clarification": 25,
+          "mark_unresolved": 25
+        },
+        "test": {
+          "ask_clarification": 25,
+          "mark_unresolved": 17
+        }
+      },
+      "pattern:label_state_mismatch": {
+        "train": {
+          "use_current_memory": 200,
+          "refuse_due_to_policy": 150
+        },
+        "validation": {
+          "use_current_memory": 133,
+          "refuse_due_to_policy": 37
+        },
+        "test": {
+          "use_current_memory": 50,
+          "refuse_due_to_policy": 37
+        }
+      },
+      "pattern:maintainer_correction_over_user_claim": {
+        "train": {
+          "use_current_memory": 200,
+          "ask_clarification": 150
+        },
+        "validation": {
+          "use_current_memory": 134,
+          "ask_clarification": 25
+        },
+        "test": {
+          "use_current_memory": 50,
+          "ask_clarification": 25
+        }
+      },
+      "pattern:negative_evidence_required": {
+        "train": {
+          "mark_unresolved": 200
+        },
+        "validation": {
+          "mark_unresolved": 50
+        },
+        "test": {
+          "mark_unresolved": 34
+        }
+      },
+      "pattern:security_policy_override": {
+        "train": {
+          "escalate": 200,
+          "refuse_due_to_policy": 150
+        },
+        "validation": {
+          "escalate": 25,
+          "refuse_due_to_policy": 38
+        },
+        "test": {
+          "escalate": 25,
+          "refuse_due_to_policy": 38
+        }
+      },
+      "pattern:version_scope_leakage": {
+        "train": {
+          "use_current_memory": 200,
+          "ask_clarification": 150
+        },
+        "validation": {
+          "use_current_memory": 133,
+          "ask_clarification": 25
+        },
+        "test": {
+          "use_current_memory": 50,
+          "ask_clarification": 25
+        }
+      }
+    }
+  },
+  "datasets": [
+    {
+      "split": "train",
+      "path": "hf_release/mempatch/train/scenarios.jsonl",
+      "count": 2700,
+      "decision_counts": {
+        "use_current_memory": 600,
+        "escalate": 600,
+        "ask_clarification": 600,
+        "refuse_due_to_policy": 300,
+        "mark_unresolved": 600
+      },
+      "extra_decisions": {},
+      "core_event_signature_collisions": [],
+      "non_answer_decision_collisions": [],
+      "public_view_collisions": [],
+      "non_answer_public_view_collisions": [],
+      "ask_escalate_bigram_jaccard": 0.07661290322580645,
+      "ask_escalate_jaccard_flags": [],
+      "ask_escalate_shared_signatures": [],
+      "pattern_tables": {
+        "pattern": {
+          "authority_conflict": {
+            "escalate": 200,
+            "ask_clarification": 150,
+            "mark_unresolved": 100
+          },
+          "ci_failed_after_claim": {
+            "escalate": 200,
+            "mark_unresolved": 200
+          },
+          "closed_as_duplicate_not_fixed": {
+            "ask_clarification": 150,
+            "mark_unresolved": 100
+          },
+          "label_state_mismatch": {
+            "use_current_memory": 200,
+            "refuse_due_to_policy": 150
+          },
+          "maintainer_correction_over_user_claim": {
+            "use_current_memory": 200,
+            "ask_clarification": 150
+          },
+          "negative_evidence_required": {
+            "mark_unresolved": 200
+          },
+          "security_policy_override": {
+            "escalate": 200,
+            "refuse_due_to_policy": 150
+          },
+          "version_scope_leakage": {
+            "use_current_memory": 200,
+            "ask_clarification": 150
+          }
+        },
+        "pattern_trap_type": {
+          "apply_fix_unspecified": {
+            "ask_clarification": 150
+          },
+          "auditor_confirms_current": {
+            "use_current_memory": 200
+          },
+          "beta_distractor_ignored": {
+            "use_current_memory": 200
+          },
+          "bi_compliance_refusal": {
+            "refuse_due_to_policy": 150
+          },
+          "ci_passive_gap": {
+            "mark_unresolved": 100
+          },
+          "ci_verified_contradiction": {
+            "mark_unresolved": 100
+          },
+          "compliance_blocks_despite_evidence": {
+            "escalate": 200
+          },
+          "crm_record_ambiguity": {
+            "ask_clarification": 150
+          },
+          "duplicate_closure_trap": {
+            "mark_unresolved": 100
+          },
+          "no_authority_path": {
+            "mark_unresolved": 100
+          },
+          "no_passive_confirmation": {
+            "mark_unresolved": 100
+          },
+          "prod_memory_policy_gate": {
+            "escalate": 200
+          },
+          "reviewer_hold_blocks_auto_write": {
+            "escalate": 200
+          },
+          "secret_in_memory_request": {
+            "refuse_due_to_policy": 150
+          },
+          "stable_beta_both_active": {
+            "ask_clarification": 150
+          },
+          "trust_verified_maintainer": {
+            "use_current_memory": 200
+          },
+          "user_update_without_target": {
+            "ask_clarification": 150
+          },
+          "verified_sources_disagree": {
+            "mark_unresolved": 100
+          }
+        },
+        "decision_variant": {
+          "ambiguous_scope_no_verified_ruling": {
+            "ask_clarification": 150
+          },
+          "ci_contradiction_independent": {
+            "mark_unresolved": 100
+          },
+          "ci_monitor_gap": {
+            "mark_unresolved": 100
+          },
+          "compliance_block_with_sufficient_evidence": {
+            "escalate": 200
+          },
+          "compliance_do_not_store": {
+            "refuse_due_to_policy": 150
+          },
+          "credential_forbidden_write": {
+            "refuse_due_to_policy": 150
+          },
+          "dual_verified_no_policy_gate": {
+            "mark_unresolved": 100
+          },
+          "duplicate_ticket_assumed_fixed": {
+            "mark_unresolved": 100
+          },
+          "human_review_gate_active": {
+            "escalate": 200
+          },
+          "missing_target_on_update_request": {
+            "ask_clarification": 150
+          },
+          "multiple_matching_memories": {
+            "ask_clarification": 150
+          },
+          "passive_monitor_gap": {
+            "mark_unresolved": 100
+          },
+          "protected_prod_memory": {
+            "escalate": 200
+          },
+          "trust_chain_broken": {
+            "mark_unresolved": 100
+          },
+          "user_intent_ambiguous_action": {
+            "ask_clarification": 150
+          },
+          "verified_auditor_signoff": {
+            "use_current_memory": 200
+          },
+          "verified_maintainer_overrides_user": {
+            "use_current_memory": 200
+          },
+          "verified_release_confirms_stable": {
+            "use_current_memory": 200
+          }
+        },
+        "decision_triggers": {
+          "['ambiguous_user_intent', 'missing_target_scope']": {
+            "ask_clarification": 150
+          },
+          "['ambiguous_workspace', 'ambiguous_user_intent']": {
+            "ask_clarification": 150
+          },
+          "['assume_duplicate_means_fixed']": {
+            "mark_unresolved": 100
+          },
+          "['ci_passive_monitor_gap']": {
+            "mark_unresolved": 100
+          },
+          "['ci_second_verified_contradiction']": {
+            "mark_unresolved": 100
+          },
+          "['compliance_do_not_store']": {
+            "refuse_due_to_policy": 150
+          },
+          "['credential_secret_forbidden', 'security_policy_forbids_storage']": {
+            "refuse_due_to_policy": 150
+          },
+          "['mark_insufficient_passive']": {
+            "mark_unresolved": 100
+          },
+          "['mark_stalemate_no_authority']": {
+            "mark_unresolved": 100
+          },
+          "['mark_verified_conflict']": {
+            "mark_unresolved": 100
+          },
+          "['missing_target_scope', 'explicit_hold_for_user']": {
+            "ask_clarification": 150
+          },
+          "['multiple_candidate_memories']": {
+            "ask_clarification": 150
+          },
+          "['policy_human_review_required', 'verified_reviewer_hold']": {
+            "escalate": 200
+          },
+          "['protected_production_memory', 'policy_human_review_required']": {
+            "escalate": 200
+          },
+          "['security_compliance_block', 'evidence_sufficient_but_policy_blocks']": {
+            "escalate": 200
+          },
+          "['verified_auditor_confirms', 'stable_scope_matches_target']": {
+            "use_current_memory": 200
+          },
+          "['verified_ci_release_confirms', 'distractor_beta_out_of_scope']": {
+            "use_current_memory": 200
+          },
+          "['verified_maintainer_confirms', 'stable_scope_matches_target']": {
+            "use_current_memory": 200
+          }
+        }
+      },
+      "decision_triggers_coverage": {
+        "ask_clarification": {
+          "with_metadata": 600,
+          "with_public_trigger": 600,
+          "total": 600
+        },
+        "escalate": {
+          "with_metadata": 600,
+          "with_public_trigger": 600,
+          "total": 600
+        },
+        "mark_unresolved": {
+          "with_metadata": 600,
+          "with_public_trigger": 600,
+          "total": 600
+        }
+      },
+      "mark_unresolved_breakdown": {
+        "ci_derived": 200,
+        "non_ci": 400
+      },
+      "gold_public_consistency_violations": [],
+      "fatal_issues": [],
+      "top_collision_groups": [],
+      "top_public_view_collisions": []
+    },
+    {
+      "split": "validation",
+      "path": "hf_release/mempatch/validation/scenarios.jsonl",
+      "count": 800,
+      "decision_counts": {
+        "use_current_memory": 400,
+        "escalate": 75,
+        "ask_clarification": 100,
+        "refuse_due_to_policy": 75,
+        "mark_unresolved": 150
+      },
+      "extra_decisions": {},
+      "core_event_signature_collisions": [],
+      "non_answer_decision_collisions": [],
+      "public_view_collisions": [],
+      "non_answer_public_view_collisions": [],
+      "ask_escalate_bigram_jaccard": 0.07661290322580645,
+      "ask_escalate_jaccard_flags": [],
+      "ask_escalate_shared_signatures": [],
+      "pattern_tables": {
+        "pattern": {
+          "authority_conflict": {
+            "escalate": 25,
+            "ask_clarification": 25,
+            "mark_unresolved": 25
+          },
+          "ci_failed_after_claim": {
+            "escalate": 25,
+            "mark_unresolved": 50
+          },
+          "closed_as_duplicate_not_fixed": {
+            "ask_clarification": 25,
+            "mark_unresolved": 25
+          },
+          "label_state_mismatch": {
+            "use_current_memory": 133,
+            "refuse_due_to_policy": 37
+          },
+          "maintainer_correction_over_user_claim": {
+            "use_current_memory": 134,
+            "ask_clarification": 25
+          },
+          "negative_evidence_required": {
+            "mark_unresolved": 50
+          },
+          "security_policy_override": {
+            "escalate": 25,
+            "refuse_due_to_policy": 38
+          },
+          "version_scope_leakage": {
+            "use_current_memory": 133,
+            "ask_clarification": 25
+          }
+        },
+        "pattern_trap_type": {
+          "apply_fix_unspecified": {
+            "ask_clarification": 25
+          },
+          "auditor_confirms_current": {
+            "use_current_memory": 133
+          },
+          "beta_distractor_ignored": {
+            "use_current_memory": 133
+          },
+          "bi_compliance_refusal": {
+            "refuse_due_to_policy": 37
+          },
+          "ci_passive_gap": {
+            "mark_unresolved": 25
+          },
+          "ci_verified_contradiction": {
+            "mark_unresolved": 25
+          },
+          "compliance_blocks_despite_evidence": {
+            "escalate": 25
+          },
+          "crm_record_ambiguity": {
+            "ask_clarification": 25
+          },
+          "duplicate_closure_trap": {
+            "mark_unresolved": 25
+          },
+          "no_authority_path": {
+            "mark_unresolved": 25
+          },
+          "no_passive_confirmation": {
+            "mark_unresolved": 25
+          },
+          "prod_memory_policy_gate": {
+            "escalate": 25
+          },
+          "reviewer_hold_blocks_auto_write": {
+            "escalate": 25
+          },
+          "secret_in_memory_request": {
+            "refuse_due_to_policy": 38
+          },
+          "stable_beta_both_active": {
+            "ask_clarification": 25
+          },
+          "trust_verified_maintainer": {
+            "use_current_memory": 134
+          },
+          "user_update_without_target": {
+            "ask_clarification": 25
+          },
+          "verified_sources_disagree": {
+            "mark_unresolved": 25
+          }
+        },
+        "decision_variant": {
+          "ambiguous_scope_no_verified_ruling": {
+            "ask_clarification": 25
+          },
+          "ci_contradiction_independent": {
+            "mark_unresolved": 25
+          },
+          "ci_monitor_gap": {
+            "mark_unresolved": 25
+          },
+          "compliance_block_with_sufficient_evidence": {
+            "escalate": 25
+          },
+          "compliance_do_not_store": {
+            "refuse_due_to_policy": 37
+          },
+          "credential_forbidden_write": {
+            "refuse_due_to_policy": 38
+          },
+          "dual_verified_no_policy_gate": {
+            "mark_unresolved": 25
+          },
+          "duplicate_ticket_assumed_fixed": {
+            "mark_unresolved": 25
+          },
+          "human_review_gate_active": {
+            "escalate": 25
+          },
+          "missing_target_on_update_request": {
+            "ask_clarification": 25
+          },
+          "multiple_matching_memories": {
+            "ask_clarification": 25
+          },
+          "passive_monitor_gap": {
+            "mark_unresolved": 25
+          },
+          "protected_prod_memory": {
+            "escalate": 25
+          },
+          "trust_chain_broken": {
+            "mark_unresolved": 25
+          },
+          "user_intent_ambiguous_action": {
+            "ask_clarification": 25
+          },
+          "verified_auditor_signoff": {
+            "use_current_memory": 133
+          },
+          "verified_maintainer_overrides_user": {
+            "use_current_memory": 134
+          },
+          "verified_release_confirms_stable": {
+            "use_current_memory": 133
+          }
+        },
+        "decision_triggers": {
+          "['ambiguous_user_intent', 'missing_target_scope']": {
+            "ask_clarification": 25
+          },
+          "['ambiguous_workspace', 'ambiguous_user_intent']": {
+            "ask_clarification": 25
+          },
+          "['assume_duplicate_means_fixed']": {
+            "mark_unresolved": 25
+          },
+          "['ci_passive_monitor_gap']": {
+            "mark_unresolved": 25
+          },
+          "['ci_second_verified_contradiction']": {
+            "mark_unresolved": 25
+          },
+          "['compliance_do_not_store']": {
+            "refuse_due_to_policy": 37
+          },
+          "['credential_secret_forbidden', 'security_policy_forbids_storage']": {
+            "refuse_due_to_policy": 38
+          },
+          "['mark_insufficient_passive']": {
+            "mark_unresolved": 25
+          },
+          "['mark_stalemate_no_authority']": {
+            "mark_unresolved": 25
+          },
+          "['mark_verified_conflict']": {
+            "mark_unresolved": 25
+          },
+          "['missing_target_scope', 'explicit_hold_for_user']": {
+            "ask_clarification": 25
+          },
+          "['multiple_candidate_memories']": {
+            "ask_clarification": 25
+          },
+          "['policy_human_review_required', 'verified_reviewer_hold']": {
+            "escalate": 25
+          },
+          "['protected_production_memory', 'policy_human_review_required']": {
+            "escalate": 25
+          },
+          "['security_compliance_block', 'evidence_sufficient_but_policy_blocks']": {
+            "escalate": 25
+          },
+          "['verified_auditor_confirms', 'stable_scope_matches_target']": {
+            "use_current_memory": 133
+          },
+          "['verified_ci_release_confirms', 'distractor_beta_out_of_scope']": {
+            "use_current_memory": 133
+          },
+          "['verified_maintainer_confirms', 'stable_scope_matches_target']": {
+            "use_current_memory": 134
+          }
+        }
+      },
+      "decision_triggers_coverage": {
+        "ask_clarification": {
+          "with_metadata": 100,
+          "with_public_trigger": 100,
+          "total": 100
+        },
+        "escalate": {
+          "with_metadata": 75,
+          "with_public_trigger": 75,
+          "total": 75
+        },
+        "mark_unresolved": {
+          "with_metadata": 150,
+          "with_public_trigger": 150,
+          "total": 150
+        }
+      },
+      "mark_unresolved_breakdown": {
+        "ci_derived": 50,
+        "non_ci": 100
+      },
+      "gold_public_consistency_violations": [],
+      "fatal_issues": [],
+      "top_collision_groups": [],
+      "top_public_view_collisions": []
+    },
+    {
+      "split": "test",
+      "path": "hf_release/mempatch/test/scenarios.jsonl",
+      "count": 500,
+      "decision_counts": {
+        "use_current_memory": 150,
+        "escalate": 75,
+        "ask_clarification": 100,
+        "refuse_due_to_policy": 75,
+        "mark_unresolved": 100
+      },
+      "extra_decisions": {},
+      "core_event_signature_collisions": [],
+      "non_answer_decision_collisions": [],
+      "public_view_collisions": [],
+      "non_answer_public_view_collisions": [],
+      "ask_escalate_bigram_jaccard": 0.07661290322580645,
+      "ask_escalate_jaccard_flags": [],
+      "ask_escalate_shared_signatures": [],
+      "pattern_tables": {
+        "pattern": {
+          "authority_conflict": {
+            "escalate": 25,
+            "ask_clarification": 25,
+            "mark_unresolved": 17
+          },
+          "ci_failed_after_claim": {
+            "escalate": 25,
+            "mark_unresolved": 32
+          },
+          "closed_as_duplicate_not_fixed": {
+            "ask_clarification": 25,
+            "mark_unresolved": 17
+          },
+          "label_state_mismatch": {
+            "use_current_memory": 50,
+            "refuse_due_to_policy": 37
+          },
+          "maintainer_correction_over_user_claim": {
+            "use_current_memory": 50,
+            "ask_clarification": 25
+          },
+          "negative_evidence_required": {
+            "mark_unresolved": 34
+          },
+          "security_policy_override": {
+            "escalate": 25,
+            "refuse_due_to_policy": 38
+          },
+          "version_scope_leakage": {
+            "use_current_memory": 50,
+            "ask_clarification": 25
+          }
+        },
+        "pattern_trap_type": {
+          "apply_fix_unspecified": {
+            "ask_clarification": 25
+          },
+          "auditor_confirms_current": {
+            "use_current_memory": 50
+          },
+          "beta_distractor_ignored": {
+            "use_current_memory": 50
+          },
+          "bi_compliance_refusal": {
+            "refuse_due_to_policy": 37
+          },
+          "ci_passive_gap": {
+            "mark_unresolved": 16
+          },
+          "ci_verified_contradiction": {
+            "mark_unresolved": 16
+          },
+          "compliance_blocks_despite_evidence": {
+            "escalate": 25
+          },
+          "crm_record_ambiguity": {
+            "ask_clarification": 25
+          },
+          "duplicate_closure_trap": {
+            "mark_unresolved": 17
+          },
+          "no_authority_path": {
+            "mark_unresolved": 17
+          },
+          "no_passive_confirmation": {
+            "mark_unresolved": 17
+          },
+          "prod_memory_policy_gate": {
+            "escalate": 25
+          },
+          "reviewer_hold_blocks_auto_write": {
+            "escalate": 25
+          },
+          "secret_in_memory_request": {
+            "refuse_due_to_policy": 38
+          },
+          "stable_beta_both_active": {
+            "ask_clarification": 25
+          },
+          "trust_verified_maintainer": {
+            "use_current_memory": 50
+          },
+          "user_update_without_target": {
+            "ask_clarification": 25
+          },
+          "verified_sources_disagree": {
+            "mark_unresolved": 17
+          }
+        },
+        "decision_variant": {
+          "ambiguous_scope_no_verified_ruling": {
+            "ask_clarification": 25
+          },
+          "ci_contradiction_independent": {
+            "mark_unresolved": 16
+          },
+          "ci_monitor_gap": {
+            "mark_unresolved": 16
+          },
+          "compliance_block_with_sufficient_evidence": {
+            "escalate": 25
+          },
+          "compliance_do_not_store": {
+            "refuse_due_to_policy": 37
+          },
+          "credential_forbidden_write": {
+            "refuse_due_to_policy": 38
+          },
+          "dual_verified_no_policy_gate": {
+            "mark_unresolved": 17
+          },
+          "duplicate_ticket_assumed_fixed": {
+            "mark_unresolved": 17
+          },
+          "human_review_gate_active": {
+            "escalate": 25
+          },
+          "missing_target_on_update_request": {
+            "ask_clarification": 25
+          },
+          "multiple_matching_memories": {
+            "ask_clarification": 25
+          },
+          "passive_monitor_gap": {
+            "mark_unresolved": 17
+          },
+          "protected_prod_memory": {
+            "escalate": 25
+          },
+          "trust_chain_broken": {
+            "mark_unresolved": 17
+          },
+          "user_intent_ambiguous_action": {
+            "ask_clarification": 25
+          },
+          "verified_auditor_signoff": {
+            "use_current_memory": 50
+          },
+          "verified_maintainer_overrides_user": {
+            "use_current_memory": 50
+          },
+          "verified_release_confirms_stable": {
+            "use_current_memory": 50
+          }
+        },
+        "decision_triggers": {
+          "['ambiguous_user_intent', 'missing_target_scope']": {
+            "ask_clarification": 25
+          },
+          "['ambiguous_workspace', 'ambiguous_user_intent']": {
+            "ask_clarification": 25
+          },
+          "['assume_duplicate_means_fixed']": {
+            "mark_unresolved": 17
+          },
+          "['ci_passive_monitor_gap']": {
+            "mark_unresolved": 16
+          },
+          "['ci_second_verified_contradiction']": {
+            "mark_unresolved": 16
+          },
+          "['compliance_do_not_store']": {
+            "refuse_due_to_policy": 37
+          },
+          "['credential_secret_forbidden', 'security_policy_forbids_storage']": {
+            "refuse_due_to_policy": 38
+          },
+          "['mark_insufficient_passive']": {
+            "mark_unresolved": 17
+          },
+          "['mark_stalemate_no_authority']": {
+            "mark_unresolved": 17
+          },
+          "['mark_verified_conflict']": {
+            "mark_unresolved": 17
+          },
+          "['missing_target_scope', 'explicit_hold_for_user']": {
+            "ask_clarification": 25
+          },
+          "['multiple_candidate_memories']": {
+            "ask_clarification": 25
+          },
+          "['policy_human_review_required', 'verified_reviewer_hold']": {
+            "escalate": 25
+          },
+          "['protected_production_memory', 'policy_human_review_required']": {
+            "escalate": 25
+          },
+          "['security_compliance_block', 'evidence_sufficient_but_policy_blocks']": {
+            "escalate": 25
+          },
+          "['verified_auditor_confirms', 'stable_scope_matches_target']": {
+            "use_current_memory": 50
+          },
+          "['verified_ci_release_confirms', 'distractor_beta_out_of_scope']": {
+            "use_current_memory": 50
+          },
+          "['verified_maintainer_confirms', 'stable_scope_matches_target']": {
+            "use_current_memory": 50
+          }
+        }
+      },
+      "decision_triggers_coverage": {
+        "ask_clarification": {
+          "with_metadata": 100,
+          "with_public_trigger": 100,
+          "total": 100
+        },
+        "escalate": {
+          "with_metadata": 75,
+          "with_public_trigger": 75,
+          "total": 75
+        },
+        "mark_unresolved": {
+          "with_metadata": 100,
+          "with_public_trigger": 100,
+          "total": 100
+        }
+      },
+      "mark_unresolved_breakdown": {
+        "ci_derived": 32,
+        "non_ci": 68
+      },
+      "gold_public_consistency_violations": [],
+      "fatal_issues": [],
+      "top_collision_groups": [],
+      "top_public_view_collisions": []
+    }
+  ]
+}

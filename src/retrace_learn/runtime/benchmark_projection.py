@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from benchmark.mempatch_bench.general_taxonomy import DECISIONS, FAILURE_MODES, MEMORY_STATUSES
+from benchmark.general_taxonomy import DECISIONS, FAILURE_MODES, MEMORY_STATUSES
 
 if TYPE_CHECKING:
     from retrace_learn.runtime.dpa_runtime import RuntimeResult

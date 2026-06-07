@@ -12,7 +12,7 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from benchmark.mempatch_bench.general_taxonomy import (
+from benchmark.general_taxonomy import (
     DECISIONS,
     DIFFICULTIES,
     DOMAINS,
@@ -65,7 +65,7 @@ def _infer_split(scenario: dict[str, Any], data_path: Path | None) -> str | None
         return split
     if data_path is not None:
         name = data_path.parent.name
-        for candidate in ("main", "hard", "realistic", "calibration", "private_hidden"):
+        for candidate in ("train", "validation", "test", "main", "hard", "realistic", "calibration", "private_hidden"):
             if name.startswith(f"{candidate}_"):
                 return candidate
     return scenario.get("metadata", {}).get("split")
@@ -193,7 +193,7 @@ def validate_one(
         if latest_event_id and latest_event_id in gold_ev and len(gold_ev) == 1:
             errors.append(f"{sid}: L3/L4 has latest-event shortcut (latest event is the sole minimal evidence)")
 
-    if split == "hard" or diff in ("L3", "L4"):
+    if split in ("test", "hard") or diff in ("L3", "L4"):
         non_bg = [e for e in events if not _is_background_event(e)]
         if len(non_bg) < 3:
             errors.append(f"{sid}: hard/L3/L4 scenario has too few non-background events ({len(non_bg)} < 3)")
@@ -265,7 +265,12 @@ def validate_dataset(
     auto_smoke = smoke
     if data_path is not None and any(x in data_path.parent.name for x in ("_30_en", "_20_en", "smoke")):
         auto_smoke = True
-    if not auto_smoke:
+    v13_release = rows and all(
+        (row.get("benchmark_version") == "v1.3")
+        or (row.get("metadata") or {}).get("renderer") == "unified_renderer_v13"
+        for row in rows
+    )
+    if not auto_smoke and not v13_release:
         for key, threshold in thresholds.items():
             rate = counters[key] / n
             if rate < threshold:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 
-from benchmark.mempatch_bench.api import evaluate_predictions
+from benchmark.api import evaluate_predictions
 
 
 def _scenario() -> dict:

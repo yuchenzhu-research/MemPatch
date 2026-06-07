@@ -12,8 +12,8 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
-from benchmark.mempatch_bench.api import load_scenarios  # noqa: E402
-from benchmark.mempatch_bench.model_runner import call_model  # noqa: E402
+from benchmark.api import load_scenarios  # noqa: E402
+from benchmark.model_runner import call_model  # noqa: E402
 from retrace_learn.runtime.learned_proposer import (  # noqa: E402
     LearnedTypedRevisionProposer,
     ScriptedProposer,

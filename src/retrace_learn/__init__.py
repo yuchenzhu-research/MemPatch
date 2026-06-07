@@ -1,9 +1,8 @@
 """MemPatch Revision Module — learned revision response for RMI.
 
-Four internal roles (see ``docs/mempatch_revision_module.md``):
+Four internal roles (see ``AGENTS.md``):
 
-  Scenario View Builder → Revision Response Policy
-  → DPA-Consistent Projection → Benchmark-grounded Feedback
+  Scenario View Builder → Revision Response Policy → DPA-Consistent Projection
 
 The model proposes benchmark-compatible revision responses; DPA authorizes;
 MemPatch-Bench evaluates ``memory_state``. Implementation paths:

@@ -12,8 +12,8 @@ from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-from benchmark.mempatch_bench.general_taxonomy import DECISIONS
-from benchmark.mempatch_bench.general_taxonomy import canonical_hidden_gold_fields
+from benchmark.general_taxonomy import DECISIONS
+from benchmark.general_taxonomy import canonical_hidden_gold_fields
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
