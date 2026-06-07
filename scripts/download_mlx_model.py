@@ -4,8 +4,12 @@
 from __future__ import annotations
 
 import argparse
+import json
 import os
 from pathlib import Path
+import subprocess
+from tempfile import TemporaryDirectory
+from urllib.parse import quote
 
 PRESETS: dict[str, dict[str, str]] = {
     "gemma3-12b": {
@@ -22,30 +26,301 @@ PRESETS: dict[str, dict[str, str]] = {
     },
 }
 
+DEFAULT_TIMEOUT_SECONDS = 30
+DEFAULT_MAX_WORKERS = 1
+DEFAULT_RETRIES = 10
+PROXY_ENV_KEYS = ("HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy")
 
-def download(repo_id: str, out_dir: Path) -> None:
+
+def load_env_file(path: Path) -> bool:
+    if not path.is_file():
+        return False
+    for raw_line in path.read_text(encoding="utf-8").splitlines():
+        line = raw_line.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        value = value.strip().strip("'\"")
+        if key and key not in os.environ:
+            os.environ[key] = value
+    return True
+
+
+def active_proxy() -> str:
+    return next((os.environ[key] for key in PROXY_ENV_KEYS if os.environ.get(key)), "")
+
+
+def configure_environment(args: argparse.Namespace) -> None:
+    if args.env_file is not None:
+        loaded = load_env_file(args.env_file)
+        print(f"env_file={args.env_file if loaded else '(not loaded)'}")
+
+    if args.proxy:
+        os.environ["HTTP_PROXY"] = args.proxy
+        os.environ["HTTPS_PROXY"] = args.proxy
+        os.environ["http_proxy"] = args.proxy
+        os.environ["https_proxy"] = args.proxy
+
+    if args.endpoint:
+        os.environ["HF_ENDPOINT"] = args.endpoint.rstrip("/")
+
+    timeout = args.timeout
+    if timeout is None:
+        timeout = int(os.environ.get("HF_HUB_DOWNLOAD_TIMEOUT", DEFAULT_TIMEOUT_SECONDS))
+    os.environ["HF_HUB_DOWNLOAD_TIMEOUT"] = str(timeout)
+    os.environ["HF_HUB_ETAG_TIMEOUT"] = str(timeout)
+
+    if args.disable_xet:
+        os.environ["HF_HUB_DISABLE_XET"] = "1"
+
+
+def hub_settings(args: argparse.Namespace) -> tuple[str, str | None, int, int]:
+    token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
+    endpoint = os.environ.get("HF_ENDPOINT", "").strip().rstrip("/")
+    timeout = int(os.environ.get("HF_HUB_DOWNLOAD_TIMEOUT", str(DEFAULT_TIMEOUT_SECONDS)))
+    max_workers = args.max_workers
+    if max_workers is None:
+        max_workers = int(os.environ.get("HF_HUB_DOWNLOAD_MAX_WORKERS", str(DEFAULT_MAX_WORKERS)))
+    return token or "", endpoint or None, timeout, max_workers
+
+
+def print_hub_settings(token: str, endpoint: str | None, timeout: int, max_workers: int) -> None:
+    print(f"  HF_ENDPOINT={endpoint or '(default huggingface.co)'}")
+    print(f"  proxy={active_proxy() or '(none)'}")
+    print(f"  HF_TOKEN={'set' if token else 'unset - set HF_TOKEN for higher rate limits'}")
+    print(f"  HF_HUB_DISABLE_XET={os.environ.get('HF_HUB_DISABLE_XET', '0')}")
+    print(f"  timeout={timeout}s")
+    print(f"  max_workers={max_workers}")
+
+
+def normalized_endpoint(endpoint: str | None) -> str:
+    return (endpoint or "https://huggingface.co").rstrip("/")
+
+
+def is_official_endpoint(endpoint: str | None) -> bool:
+    return normalized_endpoint(endpoint) in {
+        "https://huggingface.co",
+        "https://www.huggingface.co",
+    }
+
+
+def selected_transport(args: argparse.Namespace, endpoint: str | None) -> str:
+    if args.transport != "auto":
+        return args.transport
+    return "hub" if is_official_endpoint(endpoint) else "curl"
+
+
+def repo_api_url(endpoint: str | None, repo_id: str, revision: str) -> str:
+    base = normalized_endpoint(endpoint)
+    repo_path = quote(repo_id, safe="/")
+    if revision and revision != "main":
+        return f"{base}/api/models/{repo_path}/revision/{quote(revision, safe='')}"
+    return f"{base}/api/models/{repo_path}"
+
+
+def resolve_file_url(endpoint: str | None, repo_id: str, revision: str, filename: str) -> str:
+    base = normalized_endpoint(endpoint)
+    repo_path = quote(repo_id, safe="/")
+    return f"{base}/{repo_path}/resolve/{quote(revision, safe='')}/{quote(filename, safe='/')}"
+
+
+def list_repo_files_via_api(
+    repo_id: str,
+    endpoint: str | None,
+    revision: str,
+    token: str,
+    timeout: int,
+) -> list[str]:
+    url = repo_api_url(endpoint, repo_id, revision)
+    cmd = [
+        "curl",
+        "--fail",
+        "--location",
+        "--silent",
+        "--show-error",
+        "--connect-timeout",
+        str(timeout),
+        "--user-agent",
+        "MemPatch/download_mlx_model.py",
+    ]
+    if token:
+        cmd.extend(["--header", f"Authorization: Bearer {token}"])
+    cmd.append(url)
+    result = subprocess.run(cmd, check=False, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise SystemExit(f"Repo API request failed with exit code {result.returncode}: {url}")
+    try:
+        payload = json.loads(result.stdout)
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"Repo API did not return JSON: {url}") from exc
+    files = [item["rfilename"] for item in payload.get("siblings", []) if item.get("rfilename")]
+    if not files:
+        raise SystemExit(f"No files found from repo API: {url}")
+    return files
+
+
+def curl_download_file(
+    url: str,
+    dest: Path,
+    token: str,
+    timeout: int,
+    retries: int,
+) -> None:
+    if dest.is_file() and dest.stat().st_size > 0:
+        print(f"  exists {dest.name} ({dest.stat().st_size / (1024**2):.1f} MiB)")
+        return
+
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    partial = dest.with_name(dest.name + ".incomplete")
+    cmd = [
+        "curl",
+        "--fail",
+        "--location",
+        "--continue-at",
+        "-",
+        "--retry",
+        str(retries),
+        "--retry-delay",
+        "5",
+        "--retry-all-errors",
+        "--connect-timeout",
+        str(timeout),
+        "--output",
+        str(partial),
+    ]
+    if token:
+        cmd.extend(["--header", f"Authorization: Bearer {token}"])
+    cmd.append(url)
+
+    result = subprocess.run(cmd, check=False)
+    if result.returncode != 0:
+        raise SystemExit(f"curl failed with exit code {result.returncode}: {dest.name}")
+    partial.replace(dest)
+
+
+def expected_weight_shards(out_dir: Path) -> set[str]:
+    index_path = out_dir / "model.safetensors.index.json"
+    if not index_path.is_file():
+        return set()
+    import json
+
+    payload = json.loads(index_path.read_text(encoding="utf-8"))
+    weight_map = payload.get("weight_map") or {}
+    return {str(name) for name in set(weight_map.values())}
+
+
+def verify_download(out_dir: Path) -> None:
+    shards = expected_weight_shards(out_dir)
+    if not shards:
+        single = out_dir / "model.safetensors"
+        if single.is_file():
+            print(f"Verified single weight file: {single.name}")
+            return
+        raise SystemExit(f"Missing weight index or model.safetensors in {out_dir}")
+
+    missing = sorted(shard for shard in shards if not (out_dir / shard).is_file())
+    if missing:
+        raise SystemExit(f"Incomplete download in {out_dir}; missing shards: {missing}")
+    total_bytes = sum((out_dir / shard).stat().st_size for shard in shards)
+    print(f"Verified {len(shards)} weight shards ({total_bytes / (1024**3):.2f} GiB)")
+
+
+def check_connectivity(repo_id: str, args: argparse.Namespace) -> None:
+    from huggingface_hub import hf_hub_download, snapshot_download
+
+    token, endpoint, timeout, max_workers = hub_settings(args)
+    print(f"Checking {repo_id}")
+    print_hub_settings(token, endpoint, timeout, max_workers)
+    transport = selected_transport(args, endpoint)
+    print(f"  transport={transport}")
+
+    if transport == "curl":
+        files = list_repo_files_via_api(repo_id, endpoint, args.revision, token, timeout)
+        print(f"  metadata_ok={len(files)} files visible")
+        with TemporaryDirectory() as tmp_dir:
+            config_path = Path(tmp_dir) / "config.json"
+            curl_download_file(
+                resolve_file_url(endpoint, repo_id, args.revision, "config.json"),
+                config_path,
+                token,
+                timeout,
+                args.retries,
+            )
+            print(f"  small_file_ok={config_path.name} ({config_path.stat().st_size} bytes)")
+        return
+
+    try:
+        files = snapshot_download(
+            repo_id=repo_id,
+            dry_run=True,
+            token=token or None,
+            endpoint=endpoint,
+            revision=args.revision,
+            etag_timeout=timeout,
+            max_workers=1,
+        )
+    except Exception as exc:
+        raise SystemExit(f"Metadata check failed: {type(exc).__name__}: {exc}") from exc
+    print(f"  metadata_ok={len(files)} files visible")
+
+    try:
+        with TemporaryDirectory() as tmp_dir:
+            path = Path(
+                hf_hub_download(
+                    repo_id=repo_id,
+                    filename="config.json",
+                    local_dir=tmp_dir,
+                    token=token or None,
+                    endpoint=endpoint,
+                    revision=args.revision,
+                    etag_timeout=timeout,
+                )
+            )
+            print(f"  small_file_ok={path.name} ({path.stat().st_size} bytes)")
+    except Exception as exc:
+        raise SystemExit(
+            "Small-file download failed. If metadata succeeded, the proxy is likely "
+            f"unstable during HTTPS download: {type(exc).__name__}: {exc}"
+        ) from exc
+
+
+def download(repo_id: str, out_dir: Path, args: argparse.Namespace) -> None:
     from huggingface_hub import snapshot_download
 
     out_dir.mkdir(parents=True, exist_ok=True)
-    token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
-    endpoint = os.environ.get("HF_ENDPOINT", "").strip()
-    proxy = (
-        os.environ.get("HTTPS_PROXY")
-        or os.environ.get("https_proxy")
-        or os.environ.get("HTTP_PROXY")
-        or os.environ.get("http_proxy")
-    )
+    token, endpoint, timeout, max_workers = hub_settings(args)
     print(f"Downloading {repo_id} -> {out_dir}")
-    print(f"  HF_ENDPOINT={endpoint or '(default huggingface.co)'}")
-    print(f"  proxy={proxy or '(none)'}")
-    print(f"  HF_TOKEN={'set' if token else 'unset — large models may stall without token'}")
+    print_hub_settings(token, endpoint, timeout, max_workers)
+    transport = selected_transport(args, endpoint)
+    print(f"  transport={transport}")
+
+    if transport == "curl":
+        files = list_repo_files_via_api(repo_id, endpoint, args.revision, token, timeout)
+        print(f"  files={len(files)}")
+        for index, filename in enumerate(files, start=1):
+            print(f"[{index}/{len(files)}] {filename}")
+            curl_download_file(
+                resolve_file_url(endpoint, repo_id, args.revision, filename),
+                out_dir / filename,
+                token,
+                timeout,
+                args.retries,
+            )
+        verify_download(out_dir)
+        print(f"Done: {out_dir}")
+        return
+
     snapshot_download(
         repo_id=repo_id,
         local_dir=str(out_dir),
-        local_dir_use_symlinks=False,
-        resume_download=True,
-        token=token,
+        token=token or None,
+        endpoint=endpoint,
+        revision=args.revision,
+        etag_timeout=timeout,
+        max_workers=max_workers,
     )
+    verify_download(out_dir)
     print(f"Done: {out_dir}")
 
 
@@ -71,11 +346,70 @@ def parse_args() -> argparse.Namespace:
         type=Path,
         default=root / "local/models",
     )
+    parser.add_argument(
+        "--env-file",
+        type=Path,
+        default=root / ".env",
+        help="Load environment variables from this file if they are not already set.",
+    )
+    parser.add_argument(
+        "--no-env-file",
+        action="store_const",
+        const=None,
+        dest="env_file",
+        help="Do not load .env before contacting Hugging Face.",
+    )
+    parser.add_argument(
+        "--proxy",
+        help="HTTP proxy URL, for example http://127.0.0.1:1082.",
+    )
+    parser.add_argument(
+        "--endpoint",
+        help="Override Hugging Face endpoint, for example https://hf-mirror.com.",
+    )
+    parser.add_argument(
+        "--revision",
+        default="main",
+        help="Repo revision, branch, tag, or commit to download.",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        help=f"Hub metadata/download timeout in seconds (default: {DEFAULT_TIMEOUT_SECONDS}).",
+    )
+    parser.add_argument(
+        "--max-workers",
+        type=int,
+        help=f"Parallel downloads (default: {DEFAULT_MAX_WORKERS}; use 1 for unstable proxies).",
+    )
+    parser.add_argument(
+        "--disable-xet",
+        action="store_true",
+        help="Set HF_HUB_DISABLE_XET=1 before importing huggingface_hub.",
+    )
+    parser.add_argument(
+        "--transport",
+        choices=("auto", "hub", "curl"),
+        default="auto",
+        help="Download backend. auto uses curl for non-official endpoints.",
+    )
+    parser.add_argument(
+        "--retries",
+        type=int,
+        default=DEFAULT_RETRIES,
+        help=f"curl retry count for the curl transport (default: {DEFAULT_RETRIES}).",
+    )
+    parser.add_argument(
+        "--check",
+        action="store_true",
+        help="Only test repo metadata and config.json download; do not download weights.",
+    )
     return parser.parse_args()
 
 
 def main() -> int:
     args = parse_args()
+    configure_environment(args)
     if args.preset is None and not args.repo_id:
         raise SystemExit("Provide --preset or --repo-id")
 
@@ -89,7 +423,10 @@ def main() -> int:
             raise SystemExit("--repo-id requires --out-dir")
         out_dir = args.out_dir
 
-    download(repo_id, out_dir.resolve())
+    if args.check:
+        check_connectivity(repo_id, args)
+    else:
+        download(repo_id, out_dir.resolve(), args)
     return 0
 
 
