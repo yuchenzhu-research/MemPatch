@@ -165,6 +165,71 @@ def pattern_cross_table(rows: list[dict[str, Any]], key: str) -> dict[str, dict[
     return {pattern: dict(counts) for pattern, counts in sorted(table.items())}
 
 
+def sanitized_public_view(scenario: dict[str, Any]) -> str:
+    """Full public view with ids/timestamps normalized for collision detection."""
+    public = scenario.get("public_input") or {}
+    parts: list[str] = [normalize_text(str(scenario.get("workflow_context") or ""))]
+    for event in public.get("event_trace") or []:
+        if _is_background_event(event):
+            continue
+        parts.append(
+            "|".join(
+                [
+                    normalize_text(str(event.get("text") or "")),
+                    str(event.get("actor_role") or ""),
+                    str(event.get("trust_level") or ""),
+                    str(event.get("visibility_scope") or ""),
+                    str(event.get("event_type") or ""),
+                ]
+            )
+        )
+    for memory in public.get("initial_memory") or []:
+        parts.append(normalize_text(str(memory.get("text") or "")))
+    return "\n".join(parts)
+
+
+def public_view_hash(scenario: dict[str, Any]) -> str:
+    payload = sanitized_public_view(scenario)
+    return hashlib.sha256(payload.encode("utf-8")).hexdigest()
+
+
+def metadata_triggers(scenario: dict[str, Any]) -> list[str]:
+    meta = scenario.get("metadata") or {}
+    raw = meta.get("decision_triggers")
+    if isinstance(raw, list):
+        return [str(t) for t in raw]
+    if raw is not None:
+        return [str(raw)]
+    return []
+
+
+def is_mark_ci_derived(scenario: dict[str, Any]) -> bool:
+    meta = scenario.get("metadata") or {}
+    if meta.get("mark_ci_derived") is True:
+        return True
+    triggers = metadata_triggers(scenario)
+    ci_prefix = ("ci_second_verified_contradiction", "ci_passive_monitor_gap", "ci_no_authority_path")
+    return any(t in ci_prefix for t in triggers)
+
+
+def detect_triggers_in_public(scenario: dict[str, Any]) -> set[str]:
+    try:
+        from benchmark.generation.v13.decision_resolver import detect_triggers
+
+        return detect_triggers(scenario.get("public_input") or {})
+    except ImportError:
+        return set()
+
+
+ASK_ANSWER_RE = re.compile(r"\b(clarif|ask (the )?user|need.*(scope|target|confirm))\b", re.I)
+ESCALATE_ANSWER_RE = re.compile(
+    r"\b(escalat|human review|approval required|policy block|compliance block)\b", re.I
+)
+UNRESOLVED_ANSWER_RE = re.compile(
+    r"\b(unresolved|cannot determine|conflict|insufficient evidence|no authority)\b", re.I
+)
+
+
 def audit_dataset(
     path: Path,
     *,
@@ -178,7 +243,14 @@ def audit_dataset(
     decision_counts = Counter()
     signature_to_rows: dict[str, list[dict[str, Any]]] = defaultdict(list)
     signature_meta: dict[str, dict[str, Any]] = {}
+    public_view_to_rows: dict[str, list[dict[str, Any]]] = defaultdict(list)
     audited_rows: list[dict[str, Any]] = []
+    trigger_coverage: dict[str, dict[str, int]] = {
+        d: {"with_metadata": 0, "with_public_trigger": 0, "total": 0}
+        for d in NON_ANSWER_DECISIONS
+    }
+    mark_unresolved_breakdown = Counter({"ci_derived": 0, "non_ci": 0})
+    gold_consistency_violations: list[str] = []
 
     for row in rows:
         gold = canonical_hidden_gold_fields(row.get("hidden_gold") or {})
@@ -193,7 +265,53 @@ def audit_dataset(
             }
         )
         signature_meta[sig["hash"]] = sig
+        pv_hash = public_view_hash(row)
+        public_view_to_rows[pv_hash].append(
+            {"scenario_id": row.get("scenario_id"), "expected_decision": decision}
+        )
         audited_rows.append(row)
+
+        if decision in NON_ANSWER_DECISIONS:
+            trigger_coverage[decision]["total"] += 1
+            meta_triggers = metadata_triggers(row)
+            public_triggers = detect_triggers_in_public(row)
+            if meta_triggers:
+                trigger_coverage[decision]["with_metadata"] += 1
+            if public_triggers:
+                trigger_coverage[decision]["with_public_trigger"] += 1
+
+        if decision == "mark_unresolved":
+            mark_unresolved_breakdown["ci_derived" if is_mark_ci_derived(row) else "non_ci"] += 1
+
+        answer = str(gold.get("expected_answer") or "")
+        public_triggers = detect_triggers_in_public(row)
+        sid = str(row.get("scenario_id") or "<unknown>")
+        try:
+            from benchmark.generation.v13.blueprints import (
+                ASK_TRIGGERS,
+                ESCALATE_TRIGGERS,
+                MARK_CI_TRIGGERS,
+                MARK_NON_CI_TRIGGERS,
+            )
+        except ImportError:
+            ASK_TRIGGERS = ESCALATE_TRIGGERS = MARK_CI_TRIGGERS = MARK_NON_CI_TRIGGERS = ()  # type: ignore
+
+        if ASK_ANSWER_RE.search(answer):
+            if not (public_triggers & set(ASK_TRIGGERS)):
+                gold_consistency_violations.append(
+                    f"{sid}: answer implies ask/clarify but no ask trigger in public_input"
+                )
+        if ESCALATE_ANSWER_RE.search(answer):
+            if not (public_triggers & set(ESCALATE_TRIGGERS)):
+                gold_consistency_violations.append(
+                    f"{sid}: answer implies escalate/approval but no escalation trigger in public_input"
+                )
+        if UNRESOLVED_ANSWER_RE.search(answer):
+            mark_triggers = set(MARK_NON_CI_TRIGGERS) | set(MARK_CI_TRIGGERS)
+            if not (public_triggers & mark_triggers):
+                gold_consistency_violations.append(
+                    f"{sid}: answer implies unresolved but no mark trigger in public_input"
+                )
 
     signature_decisions: dict[str, set[str]] = {
         sig: {entry["expected_decision"] for entry in entries}
@@ -220,6 +338,27 @@ def audit_dataset(
         group
         for group in collision_groups
         if len(set(group["involved_decisions"]) & set(NON_ANSWER_DECISIONS)) >= 2
+    ]
+
+    public_view_collisions: list[dict[str, Any]] = []
+    for pv_hash, entries in public_view_to_rows.items():
+        decisions = {e["expected_decision"] for e in entries}
+        if len(decisions) < 2:
+            continue
+        public_view_collisions.append(
+            {
+                "public_view_hash": pv_hash,
+                "involved_decisions": sorted(decisions),
+                "scenario_ids": [e["scenario_id"] for e in entries],
+                "count": len(entries),
+            }
+        )
+    public_view_collisions.sort(key=lambda item: (-item["count"], item["public_view_hash"]))
+
+    non_answer_public_collisions = [
+        g
+        for g in public_view_collisions
+        if len(set(g["involved_decisions"]) & set(NON_ANSWER_DECISIONS)) >= 2
     ]
 
     ask_rows = [r for r in audited_rows if canonical_hidden_gold_fields(r.get("hidden_gold") or {}).get("expected_decision") == "ask_clarification"]
@@ -251,6 +390,26 @@ def audit_dataset(
         fatal_issues.append(
             f"{split_label}: ask_clarification and escalate share {len(ask_esc_signature_overlap)} core_event_signature hash(es)"
         )
+    if non_answer_collisions:
+        fatal_issues.append(
+            f"{split_label}: {len(non_answer_collisions)} core_event_signature collision(s) among ask/escalate/mark"
+        )
+    if non_answer_public_collisions:
+        fatal_issues.append(
+            f"{split_label}: {len(non_answer_public_collisions)} full public-view collision(s) among ask/escalate/mark"
+        )
+    for decision, stats in trigger_coverage.items():
+        if stats["total"] and stats["with_public_trigger"] < stats["total"]:
+            missing = stats["total"] - stats["with_public_trigger"]
+            fatal_issues.append(
+                f"{split_label}: {decision} missing public trigger coverage on {missing}/{stats['total']} rows"
+            )
+    for violation in gold_consistency_violations[:20]:
+        fatal_issues.append(f"{split_label}: gold_public_consistency: {violation}")
+    if len(gold_consistency_violations) > 20:
+        fatal_issues.append(
+            f"{split_label}: gold_public_consistency: ... +{len(gold_consistency_violations) - 20} more"
+        )
 
     return {
         "split": split_label,
@@ -262,12 +421,18 @@ def audit_dataset(
         },
         "core_event_signature_collisions": collision_groups,
         "non_answer_decision_collisions": non_answer_collisions,
+        "public_view_collisions": public_view_collisions,
+        "non_answer_public_view_collisions": non_answer_public_collisions,
         "ask_escalate_bigram_jaccard": ask_esc_jaccard if ask_rows and esc_rows else None,
         "ask_escalate_jaccard_flags": jaccard_flags,
         "ask_escalate_shared_signatures": ask_esc_signature_overlap,
         "pattern_tables": pattern_tables,
+        "decision_triggers_coverage": trigger_coverage,
+        "mark_unresolved_breakdown": dict(mark_unresolved_breakdown),
+        "gold_public_consistency_violations": gold_consistency_violations,
         "fatal_issues": fatal_issues,
         "top_collision_groups": collision_groups[:10],
+        "top_public_view_collisions": public_view_collisions[:10],
     }
 
 
@@ -279,6 +444,7 @@ def render_markdown(report: dict[str, Any]) -> str:
         f"- total scenarios: {report['summary']['total_scenarios']}",
         f"- total signature collisions (cross-decision): {report['summary']['total_collision_groups']}",
         f"- ask↔escalate shared signatures: {report['summary']['ask_escalate_shared_signature_count']}",
+        f"- non-answer public-view collisions: {report['summary']['non_answer_public_view_collision_count']}",
         f"- fatal issues: {len(report['summary']['fatal_issues'])}",
         "",
     ]
@@ -313,6 +479,31 @@ def render_markdown(report: dict[str, Any]) -> str:
                 lines.append(f"- ⚠ {flag}")
             lines.append("")
 
+        if dataset.get("decision_triggers_coverage"):
+            lines.append("### decision_triggers coverage")
+            lines.append("")
+            for decision, stats in dataset["decision_triggers_coverage"].items():
+                lines.append(
+                    f"- {decision}: public={stats['with_public_trigger']}/{stats['total']}, "
+                    f"metadata={stats['with_metadata']}/{stats['total']}"
+                )
+            lines.append("")
+
+        if dataset.get("mark_unresolved_breakdown"):
+            lines.append("### mark_unresolved breakdown")
+            lines.append("")
+            for key, count in dataset["mark_unresolved_breakdown"].items():
+                lines.append(f"- {key}: {count}")
+            lines.append("")
+
+        if dataset.get("top_public_view_collisions"):
+            lines.append("### Top public-view collision groups")
+            lines.append("")
+            for group in dataset["top_public_view_collisions"][:5]:
+                lines.append(f"- hash `{group['public_view_hash'][:16]}...`")
+                lines.append(f"  - decisions: {', '.join(group['involved_decisions'])}")
+                lines.append(f"  - count: {group['count']}")
+                lines.append("")
         if dataset.get("pattern_tables"):
             lines.append("### pattern × decision")
             lines.append("")
@@ -367,7 +558,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--no-fail",
         action="store_true",
-        help="Always exit 0 even when ask↔escalate signature collisions are found",
+        help="Always exit 0 even when release-blocking audit failures are found",
     )
     return parser.parse_args(argv)
 
@@ -386,20 +577,35 @@ def main(argv: list[str] | None = None) -> int:
     fatal_issues: list[str] = []
     total_collisions = 0
     ask_esc_shared = 0
+    non_answer_public_collisions = 0
     total_rows = 0
+    pattern_decision_split: dict[str, dict[str, Counter[str]]] = defaultdict(lambda: defaultdict(Counter))
+
     for dataset in datasets:
         fatal_issues.extend(dataset["fatal_issues"])
         total_collisions += len(dataset["core_event_signature_collisions"])
         ask_esc_shared += len(dataset["ask_escalate_shared_signatures"])
+        non_answer_public_collisions += len(dataset.get("non_answer_public_view_collisions", []))
         total_rows += dataset["count"]
+        split = dataset["split"]
+        for key in ("pattern", "decision_variant"):
+            table = dataset.get("pattern_tables", {}).get(key, {})
+            for pattern, counts in table.items():
+                for decision, count in counts.items():
+                    pattern_decision_split[f"{key}:{pattern}"][split][decision] += count
 
     report = {
         "summary": {
             "total_scenarios": total_rows,
             "total_collision_groups": total_collisions,
             "ask_escalate_shared_signature_count": ask_esc_shared,
+            "non_answer_public_view_collision_count": non_answer_public_collisions,
             "fatal_issues": fatal_issues,
             "jaccard_warn_threshold": args.jaccard_warn,
+            "pattern_decision_split_matrix": {
+                key: {split: dict(counts) for split, counts in splits.items()}
+                for key, splits in sorted(pattern_decision_split.items())
+            },
         },
         "datasets": datasets,
     }
@@ -416,7 +622,9 @@ def main(argv: list[str] | None = None) -> int:
 
     print(
         f"Audited {len(datasets)} dataset(s), {total_rows} scenarios, "
-        f"{total_collisions} collision group(s), {ask_esc_shared} ask↔escalate shared signature(s)"
+        f"{total_collisions} signature collision group(s), "
+        f"{ask_esc_shared} ask↔escalate shared signature(s), "
+        f"{non_answer_public_collisions} non-answer public-view collision group(s)"
     )
     for dataset in datasets:
         print(f"  {dataset['split']}: collisions={len(dataset['core_event_signature_collisions'])}")

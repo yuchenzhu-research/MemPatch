@@ -13,15 +13,23 @@ python scripts/audit_decision_boundary.py \
   --out-md local/results/decision_boundary_audit.md
 ```
 
-Add `--no-fail` to always exit 0 (for overnight pipelines). Without it, the script exits **2** when `ask_clarification` and `escalate` share a `core_event_signature` within a split.
+Add `--no-fail` to always exit 0 (for overnight pipelines). Without it, the script exits **2** on release-blocking failures:
+
+- `ask_clarification` and `escalate` share a `core_event_signature`
+- ask / escalate / mark share `core_event_signature` or full sanitized public view
+- non-answer decisions missing visible trigger coverage in `public_input`
+- `gold_public_consistency` violations (answer text vs public triggers)
 
 ## What it checks
 
 - per-split `expected_decision` histogram
 - `core_event_signature` from the first 2–3 non-background `event_trace` rows
+- full sanitized public-view hash collisions
 - cross-decision signature collisions (especially ask / escalate / mark_unresolved)
 - ask vs escalate public event-text bigram Jaccard (warn threshold default 0.35)
-- optional `pattern` / `pattern_trap_type` / `decision_variant` / `decision_triggers` cross tables when metadata exists
+- `pattern` / `pattern_trap_type` / `decision_variant` / `decision_triggers` cross tables
+- `mark_unresolved` ci-derived vs non-ci breakdown
+- global `pattern × decision × split` matrix in JSON summary
 
 ## Overnight helper (local only)
 
