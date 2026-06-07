@@ -1,21 +1,16 @@
 #!/usr/bin/env bash
-# MemPatch paper pipeline — download → verify → DeepSeek smoke → LoRA → test500 → export/plot
+# MemPatch paper pipeline (single entry): download → smoke → LoRA → test500 → export/plot
 #
-# Models (MLX, Mac-feasible):
-#   qwen35-27b   Qwen3.5-27B-4bit        (~16 GiB, hf-mirror + curl)
-#   gemma4-12b   Gemma-4-12B-it-4bit     (~8 GiB)
-#   deepseek_r1  DeepSeek-R1-Distill-14B (~7.8 GiB, needs thinking-close + JSON prefill)
+# Models: Qwen3.5-27B, Gemma-4-12B, DeepSeek-R1-Distill-14B (MLX 4-bit, hf-mirror default)
 #
 # Usage:
-#   bash scripts/run_paper_pipeline.sh                 # full pipeline
-#   bash scripts/run_paper_pipeline.sh --check-only    # can we download? (no weights)
-#   bash scripts/run_paper_pipeline.sh --download-only # download + verify only
-#   SKIP_DOWNLOAD=1 bash scripts/run_paper_pipeline.sh # train+eval (models already local)
-#   USE_MIRROR=0 bash scripts/run_paper_pipeline.sh    # huggingface.co direct
-#
-# Background download (if you only want weights first):
-#   bash scripts/download_paper_models.sh --background
-#
+#   bash scripts/run_paper_pipeline.sh                    # full run
+#   bash scripts/run_paper_pipeline.sh --check-only       # dataset + HF mirror check
+#   bash scripts/run_paper_pipeline.sh --download-only    # download + verify only
+#   bash scripts/run_paper_pipeline.sh --download-bg      # download in background, exit
+#   SKIP_DOWNLOAD=1 bash scripts/run_paper_pipeline.sh    # skip download phase
+#   SKIP_TRAIN=1 bash scripts/run_paper_pipeline.sh       # eval + export only
+#   USE_MIRROR=0 bash scripts/run_paper_pipeline.sh       # huggingface.co direct
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -27,13 +22,44 @@ PAPER_TRAIN_PROFILE="${PAPER_TRAIN_PROFILE:-paper}"
 SKIP_DOWNLOAD="${SKIP_DOWNLOAD:-0}"
 SKIP_DEEPSEEK_SMOKE="${SKIP_DEEPSEEK_SMOKE:-0}"
 SKIP_TRAIN="${SKIP_TRAIN:-0}"
+MODELS="${MODELS:-qwen35_27b,gemma4_12b,deepseek_r1}"
+SEED="${SEED:-42}"
 
-DEEPSEEK_MODEL="$ROOT/local/models/DeepSeek-R1-Distill-Qwen-14B-4bit"
-DEEPSEEK_ADAPTER="$ROOT/local/adapters/deepseek_r1_14b_pathB_lora"
-SMOKE_DIR="$ROOT/local/train_data/paper/smoke5"
-SMOKE_SFT="$SMOKE_DIR/sft.jsonl"
-SMOKE_SCENARIOS="$SMOKE_DIR/scenarios.jsonl"
-LOGS="$ROOT/local/logs/paper"
+RESULTS="${RESULTS:-$ROOT/local/results/paper}"
+PAPER_DATA="${PAPER_DATA:-$ROOT/local/train_data/paper}"
+SHARED_SFT="${SHARED_SFT:-$PAPER_DATA/shared_sft}"
+TEST_BUNDLE="${TEST_BUNDLE:-$PAPER_DATA/test500}"
+LOGS="${LOGS:-$ROOT/local/logs/paper}"
+SMOKE_DIR="$PAPER_DATA/smoke5"
+
+DOWNLOAD_PRESETS="qwen35-27b gemma4-12b deepseek-r1-14b"
+
+model_key_preset() {
+  case "$1" in
+    qwen35_27b) echo "qwen35-27b" ;;
+    gemma4_12b) echo "gemma4-12b" ;;
+    deepseek_r1) echo "deepseek-r1-14b" ;;
+    *) echo "unknown model key: $1" >&2; return 1 ;;
+  esac
+}
+
+model_key_slug() {
+  case "$1" in
+    qwen35_27b) echo "qwen35_27b" ;;
+    gemma4_12b) echo "gemma4_12b" ;;
+    deepseek_r1) echo "deepseek_r1_14b" ;;
+    *) echo "unknown model key: $1" >&2; return 1 ;;
+  esac
+}
+
+model_key_local_name() {
+  case "$1" in
+    qwen35_27b) echo "Qwen3.5-27B-4bit" ;;
+    gemma4_12b) echo "gemma-4-12B-it-4bit" ;;
+    deepseek_r1) echo "DeepSeek-R1-Distill-Qwen-14B-4bit" ;;
+    *) echo "unknown model key: $1" >&2; return 1 ;;
+  esac
+}
 
 log() { printf '[pipeline] %s\n' "$*"; }
 
@@ -44,109 +70,303 @@ require_python() {
   fi
 }
 
+mirror_args() {
+  MIRROR_ARGS=()
+  if [[ "$USE_MIRROR" == "1" ]]; then
+    MIRROR_ARGS=(--mirror --disable-xet)
+  fi
+}
+
+download_cli_args() {
+  mirror_args
+  DOWNLOAD_CLI=(
+    --max-workers 1
+    --retries 10
+    --timeout 300
+    "${MIRROR_ARGS[@]}"
+  )
+}
+
+preset_local_name() {
+  case "$1" in
+    qwen35-27b) echo "Qwen3.5-27B-4bit" ;;
+    gemma4-12b) echo "gemma-4-12B-it-4bit" ;;
+    deepseek-r1-14b) echo "DeepSeek-R1-Distill-Qwen-14B-4bit" ;;
+    *) echo "$1" ;;
+  esac
+}
+
+preset_status() {
+  local preset="$1"
+  local local_name
+  local_name="$(preset_local_name "$preset")"
+  if [[ -d "$ROOT/local/models/$local_name" ]] && "$PYTHON" "$ROOT/scripts/download_mlx_model.py" \
+      --preset "$preset" --verify-local >/dev/null 2>&1; then
+    echo "complete"
+  elif [[ -d "$ROOT/local/models/$local_name" ]]; then
+    echo "partial"
+  else
+    echo "missing"
+  fi
+}
+
+print_model_status() {
+  printf '\n%-22s %-12s %s\n' "PRESET" "STATUS" "LOCAL_DIR"
+  printf '%.0s-' {1..70}; echo
+  local preset local_name
+  for preset in $DOWNLOAD_PRESETS; do
+    local_name="$(preset_local_name "$preset")"
+    printf '%-22s %-12s %s\n' "$preset" "$(preset_status "$preset")" "$ROOT/local/models/$local_name"
+  done
+  echo
+}
+
+phase_audit_dataset() {
+  log "Dataset audit (4000 scenarios, decision-boundary gate)"
+  PYTHONPATH=.:src "$PYTHON" "$ROOT/scripts/audit_decision_boundary.py" \
+    --data "$ROOT/hf_release/mempatch/train" \
+    --data "$ROOT/hf_release/mempatch/validation" \
+    --data "$ROOT/hf_release/mempatch/test"
+}
+
 phase_check_downloadable() {
-  log "Phase 0/7: check mirror/HF connectivity (metadata + config.json, no weights)"
-  USE_MIRROR="$USE_MIRROR" bash "$ROOT/scripts/download_paper_models.sh" --check
+  log "HF mirror connectivity (--check, no weights)"
+  mirror_args
+  for preset in $DOWNLOAD_PRESETS; do
+    log "  check preset=$preset"
+    "$PYTHON" "$ROOT/scripts/download_mlx_model.py" \
+      --preset "$preset" --check "${MIRROR_ARGS[@]}"
+  done
+}
+
+download_preset() {
+  local preset="$1"
+  local local_name
+  local_name="$(preset_local_name "$preset")"
+  download_cli_args
+
+  if [[ "$(preset_status "$preset")" == "complete" ]]; then
+    log "already complete: $local_name"
+    return 0
+  fi
+
+  log "downloading preset=$preset -> $local_name (mirror=$USE_MIRROR)"
+  "$PYTHON" "$ROOT/scripts/download_mlx_model.py" \
+    --preset "$preset" "${DOWNLOAD_CLI[@]}"
+  "$PYTHON" "$ROOT/scripts/download_mlx_model.py" \
+    --preset "$preset" --verify-local
+}
+
+download_preset_background() {
+  local preset="$1"
+  local log_file="$LOGS/download_${preset//-/_}.log"
+  download_cli_args
+
+  if [[ "$(preset_status "$preset")" == "complete" ]]; then
+    log "skip background (complete): $(preset_local_name "$preset")"
+    return 0
+  fi
+  if pgrep -f "download_mlx_model.py --preset ${preset}" >/dev/null 2>&1; then
+    log "skip background (running): $preset"
+    return 0
+  fi
+
+  mkdir -p "$LOGS"
+  log "background download preset=$preset -> $log_file"
+  nohup "$PYTHON" "$ROOT/scripts/download_mlx_model.py" \
+    --preset "$preset" "${DOWNLOAD_CLI[@]}" >>"$log_file" 2>&1 &
+  log "  pid=$! log=$log_file"
 }
 
 phase_download() {
-  log "Phase 1/7: download + verify all paper models"
-  USE_MIRROR="$USE_MIRROR" bash "$ROOT/scripts/download_paper_models.sh"
+  for preset in $DOWNLOAD_PRESETS; do
+    download_preset "$preset"
+  done
+  print_model_status
+}
+
+phase_download_background() {
+  for preset in $DOWNLOAD_PRESETS; do
+    download_preset_background "$preset"
+  done
+  print_model_status
 }
 
 phase_deepseek_smoke() {
   if [[ "$SKIP_DEEPSEEK_SMOKE" == "1" ]]; then
-    log "Phase 2/7: SKIP_DEEPSEEK_SMOKE=1"
+    log "SKIP_DEEPSEEK_SMOKE=1"
     return 0
   fi
-  if [[ ! -d "$DEEPSEEK_MODEL" ]]; then
-    log "Phase 2/7: skip DeepSeek smoke (model not local)"
+  local model_dir="$ROOT/local/models/DeepSeek-R1-Distill-Qwen-14B-4bit"
+  if [[ ! -d "$model_dir" ]]; then
+    log "skip DeepSeek smoke (model not local)"
     return 0
   fi
-  log "Phase 2/7: DeepSeek R1 JSON smoke (5 cases, thinking-off + brace prefill)"
-  mkdir -p "$LOGS"
+
+  log "DeepSeek R1 JSON smoke (5 cases)"
+  mkdir -p "$LOGS" "$SMOKE_DIR"
   local pred="$LOGS/deepseek_smoke5_predictions.jsonl"
   local metrics="$LOGS/deepseek_smoke5_metrics.json"
-  local adapter_args=()
-  if [[ -d "$DEEPSEEK_ADAPTER" ]]; then
-    adapter_args=(--adapter-path "$DEEPSEEK_ADAPTER")
-  else
-    log "  (no adapter yet — testing base + R1 prompt fix only)"
-    adapter_args=(--no-adapter)
+  local adapter_dir="$ROOT/local/adapters/deepseek_r1_14b_pathB_lora"
+  local adapter_args=(--no-adapter)
+  if [[ -d "$adapter_dir" ]]; then
+    adapter_args=(--adapter-path "$adapter_dir")
   fi
-  if [[ ! -f "$SMOKE_SFT" ]]; then
-    log "  building 5-case validation smoke bundle"
+
+  if [[ ! -f "$SMOKE_DIR/sft.jsonl" ]]; then
     "$PYTHON" "$ROOT/scripts/build_paper_eval_bundle.py" \
       --scenarios "$ROOT/hf_release/mempatch/validation/scenarios.jsonl" \
-      --out-dir "$SMOKE_DIR" \
-      --limit 5
+      --out-dir "$SMOKE_DIR" --limit 5
   fi
-  "$PYTHON" "$ROOT/scripts/run_mlx_lora_smoke_eval.py" \
-    --model "$DEEPSEEK_MODEL" \
-    "${adapter_args[@]}" \
-    --data "$SMOKE_SFT" \
-    --eval-data "$SMOKE_SCENARIOS" \
-    --limit 5 \
-    --out-predictions "$pred" \
-    --out-metrics "$metrics" \
-    --max-tokens 256 \
-    --temp 0.0
 
-  local ok_count
-  ok_count=$("$PYTHON" -c "
+  "$PYTHON" "$ROOT/scripts/run_mlx_lora_smoke_eval.py" \
+    --model "$model_dir" "${adapter_args[@]}" \
+    --data "$SMOKE_DIR/sft.jsonl" \
+    --eval-data "$SMOKE_DIR/scenarios.jsonl" \
+    --limit 5 --out-predictions "$pred" --out-metrics "$metrics" \
+    --max-tokens 256 --temp 0.0
+
+  local ok total
+  read -r ok total <<< "$("$PYTHON" -c "
 import json
 from pathlib import Path
-rows = [json.loads(l) for l in Path('$pred').read_text().splitlines() if l.strip()]
-ok = sum(1 for r in rows if r.get('response'))
-print(ok, len(rows))
-")
-  local ok="${ok_count%% *}"
-  local total="${ok_count##* }"
-  log "  DeepSeek smoke: ${ok}/${total} JSON parse ok"
+rows=[json.loads(l) for l in Path('$pred').read_text().splitlines() if l.strip()]
+print(sum(1 for r in rows if r.get('response')), len(rows))
+")"
+  log "DeepSeek smoke: ${ok}/${total} JSON parse ok"
   if [[ "$ok" -lt 4 ]]; then
-    echo "error: DeepSeek R1 smoke failed (${ok}/${total}). Check scripts/mlx_chat_utils.py" >&2
+    echo "error: DeepSeek smoke failed — check scripts/mlx_chat_utils.py" >&2
     exit 1
   fi
 }
 
-phase_experiments() {
-  log "Phase 3–7/7: LoRA train → test500 eval → export → plot (run_paper_experiments.sh)"
-  SKIP_DOWNLOAD=1 \
-  SKIP_TRAIN="$SKIP_TRAIN" \
-  USE_MIRROR="$USE_MIRROR" \
-  PAPER_TRAIN_PROFILE="$PAPER_TRAIN_PROFILE" \
-  bash "$ROOT/scripts/run_paper_experiments.sh"
+run_path_b() {
+  local slug="$1" variant="$2" model_dir="$3" adapter_dir="$4"
+  local sft_jsonl="$5" eval_scenarios="$6" split_tag="$7"
+  local out_dir="$RESULTS/$slug"
+  mkdir -p "$out_dir"
+  local adapter_args=(--no-adapter)
+  [[ "$variant" == "lora" ]] && adapter_args=(--adapter-path "$adapter_dir")
+
+  log "Path B | model=$slug variant=$variant split=$split_tag"
+  "$PYTHON" "$ROOT/scripts/run_mlx_lora_smoke_eval.py" \
+    --data "$sft_jsonl" --model "$model_dir" "${adapter_args[@]}" \
+    --out-predictions "$out_dir/pathB_${variant}_${split_tag}_predictions.jsonl" \
+    --eval-data "$eval_scenarios" \
+    --out-metrics "$out_dir/pathB_${variant}_${split_tag}_metrics.json" \
+    --model-tag "$slug" --variant-tag "$variant" --split-tag "$split_tag" \
+    --max-tokens 256 --temp 0.0
+}
+
+run_path_a() {
+  local slug="$1" model_dir="$2" eval_scenarios="$3" split_tag="$4"
+  local out_dir="$RESULTS/$slug"
+  mkdir -p "$out_dir"
+  log "Path A | model=$slug split=$split_tag"
+  "$PYTHON" "$ROOT/scripts/run_mlx_revision_module_eval.py" \
+    --data "$eval_scenarios" --model "$model_dir" --no-adapter \
+    --out-predictions "$out_dir/pathA_base_${split_tag}_predictions.jsonl" \
+    --eval-data "$eval_scenarios" \
+    --out-metrics "$out_dir/pathA_base_${split_tag}_metrics.json" \
+    --model-tag "$slug" --variant-tag base --split-tag "$split_tag" \
+    --max-tokens 512 --temp 0.0
+}
+
+train_path_b_lora() {
+  local slug="$1" model_dir="$2" adapter_dir="$3" mlx_config="$4" profile="$5"
+  log "Train Path B LoRA | model=$slug profile=$profile"
+  "$PYTHON" "$ROOT/scripts/prepare_mempatch_v13_smoke.py" \
+    --profile "$profile" --out-dir "$SHARED_SFT" \
+    --model-dir "$model_dir" --adapter-dir "$adapter_dir" \
+    --mlx-config "$mlx_config" --config-only
+  "$PYTHON" -m mlx_lm lora --config "$mlx_config"
+}
+
+phase_train_eval_export() {
+  mkdir -p "$RESULTS" "$LOGS" "$PAPER_DATA"
+  IFS=',' read -r -a MODEL_KEYS <<< "$MODELS"
+
+  log "build test500 eval bundle"
+  "$PYTHON" "$ROOT/scripts/build_paper_eval_bundle.py" --out-dir "$TEST_BUNDLE"
+
+  if [[ "$SKIP_TRAIN" != "1" ]]; then
+    log "shared SFT quotas (profile=$PAPER_TRAIN_PROFILE)"
+    "$PYTHON" "$ROOT/scripts/prepare_mempatch_v13_smoke.py" \
+      --profile "$PAPER_TRAIN_PROFILE" --out-dir "$SHARED_SFT" \
+      --model-dir "$ROOT/local/models/$(model_key_local_name "${MODEL_KEYS[0]}")" \
+      --adapter-dir "$ROOT/local/adapters/paper_placeholder" \
+      --mlx-config "$LOGS/placeholder.yaml" --seed "$SEED"
+  fi
+
+  for key in "${MODEL_KEYS[@]}"; do
+    local slug model_dir
+    slug="$(model_key_slug "$key")"
+    model_dir="$ROOT/local/models/$(model_key_local_name "$key")"
+    local adapter_dir="$ROOT/local/adapters/${slug}_pathB_lora"
+    local mlx_config="$LOGS/$slug/mlx_lora.yaml"
+    mkdir -p "$LOGS/$slug"
+
+    if [[ ! -d "$model_dir" ]]; then
+      echo "error: missing model $model_dir (run download first)" >&2
+      exit 1
+    fi
+
+    if [[ "$SKIP_TRAIN" != "1" ]]; then
+      train_path_b_lora "$slug" "$model_dir" "$adapter_dir" "$mlx_config" "$PAPER_TRAIN_PROFILE"
+    fi
+
+    run_path_b "$slug" lora "$model_dir" "$adapter_dir" \
+      "$TEST_BUNDLE/sft.jsonl" "$TEST_BUNDLE/scenarios.jsonl" test500
+    run_path_a "$slug" "$model_dir" "$TEST_BUNDLE/scenarios.jsonl" test500
+  done
+
+  log "export benchmark-paper assets"
+  "$PYTHON" "$ROOT/scripts/export_benchmark_paper_assets.py" \
+    --results-dir "$RESULTS" \
+    --out-dir "$RESULTS/export/benchmark_paper" \
+    --primary-split test500
+
+  if "$PYTHON" -c "import matplotlib" 2>/dev/null; then
+    "$PYTHON" "$ROOT/scripts/plot_benchmark_paper_figures.py" \
+      --export-dir "$RESULTS/export/benchmark_paper" \
+      --out-dir "$RESULTS/export/benchmark_paper/figures"
+  else
+    log "matplotlib not installed; skip PNG (pip install matplotlib)"
+  fi
 }
 
 main() {
   require_python
   mkdir -p "$LOGS"
 
-  local mode="${1:-full}"
-  case "$mode" in
+  case "${1:-full}" in
     --check-only)
+      phase_audit_dataset
       phase_check_downloadable
-      USE_MIRROR="$USE_MIRROR" bash "$ROOT/scripts/download_paper_models.sh" --status
-      log "All three presets reachable via mirror when USE_MIRROR=1."
+      print_model_status
       ;;
     --download-only)
       phase_check_downloadable
       phase_download
       ;;
+    --download-bg)
+      phase_download_background
+      ;;
     full|"")
+      phase_audit_dataset
       if [[ "$SKIP_DOWNLOAD" != "1" ]]; then
         phase_check_downloadable
         phase_download
       else
-        log "Phase 0–1/7: SKIP_DOWNLOAD=1"
-        USE_MIRROR="$USE_MIRROR" bash "$ROOT/scripts/download_paper_models.sh" --status
+        log "SKIP_DOWNLOAD=1"
+        print_model_status
       fi
       phase_deepseek_smoke
-      phase_experiments
-      log "Pipeline complete. Results: $ROOT/local/results/paper/export/benchmark_paper/"
+      phase_train_eval_export
+      log "Done -> $RESULTS/export/benchmark_paper/"
       ;;
     *)
-      echo "usage: $0 [--check-only|--download-only|full]" >&2
+      echo "usage: $0 [--check-only|--download-only|--download-bg|full]" >&2
       exit 1
       ;;
   esac

@@ -83,12 +83,10 @@ PYTHONPATH=.:src python scripts/run_mempatch_revision_module.py \
 
 ## MLX paper experiments (Qwen3.5 / Gemma 4 / DeepSeek-R1)
 
-```bash
-# Full pipeline: download → DeepSeek smoke → LoRA (256 iters) → test500 → figures
-bash scripts/run_paper_pipeline.sh
+Single entry script (download → LoRA 256 iters → test500 → figures):
 
-# Download only (hf-mirror by default)
-bash scripts/download_paper_models.sh
+```bash
+bash scripts/run_paper_pipeline.sh
 ```
 
 ## Layout
