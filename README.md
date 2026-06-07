@@ -87,7 +87,7 @@ PYTHONPATH=.:src python scripts/run_mempatch_revision_module.py \
 benchmark/           Evaluator API, taxonomy, model runner, generation/
 src/retrace_learn/     Revision module (runtime/)
 src/retracemem/        DPA authorization kernel
-scripts/               CLI: eval, generate, audit, validate, package
+scripts/               7 core (eval, generate, audit, validate, package, runners) + 4 MLX train CLIs
 tests/                 Unit tests + smoke fixtures
 hf_release/mempatch/   Dataset bundle (4000 scenarios)
 data/mempatch/         Tracked audit artifacts

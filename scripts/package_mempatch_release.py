@@ -104,11 +104,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Run validate_mempatch_bench_dataset.py --packaging-final on each split",
     )
-    parser.add_argument(
-        "--report",
-        action="store_true",
-        help="Run report_split_decision_distribution.py after packaging",
-    )
     return parser.parse_args(argv)
 
 
@@ -186,17 +181,6 @@ def main(argv: list[str] | None = None) -> int:
             if proc.returncode != 0:
                 failed = True
         if failed:
-            return 1
-
-    if args.report:
-        cmd = [python, str(repo_root / "scripts" / "report_split_decision_distribution.py")]
-        for split in split_paths:
-            cmd.extend(["--split", split, str(out_dir / split)])
-        if (out_dir / "manifest.json").is_file():
-            cmd.extend(["--manifest", str(out_dir / "manifest.json")])
-        print(f"\n$ {' '.join(cmd)}")
-        proc = subprocess.run(cmd, check=False)
-        if proc.returncode != 0:
             return 1
 
     return 0

@@ -192,7 +192,7 @@ PYTHONPATH=.:src python scripts/generate_mempatch.py \
 PYTHONPATH=.:src python scripts/package_mempatch_release.py \
   --input-dir hf_release/mempatch \
   --out-dir hf_release/mempatch \
-  --validate --report
+  --validate
 ```
 
 ## Limitations
