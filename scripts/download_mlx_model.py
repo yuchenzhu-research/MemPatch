@@ -295,11 +295,22 @@ def curl_repo_files(
     if api_weight_files != indexed_shards:
         print(f"  api_weight_files={api_weight_files}")
         print(f"  indexed_shards={indexed_shards}")
-        first_indexed_url = resolve_file_url(endpoint, repo_id, revision, indexed_shards[0])
-        if api_weight_files and not url_is_reachable(first_indexed_url, token, timeout):
+        reachable_indexed = [
+            shard
+            for shard in indexed_shards
+            if url_is_reachable(
+                resolve_file_url(endpoint, repo_id, revision, shard),
+                token,
+                timeout,
+            )
+        ]
+        if reachable_indexed and len(reachable_indexed) == len(indexed_shards):
+            non_weight_files = [f for f in files if not f.endswith(".safetensors")]
+            return non_weight_files + indexed_shards
+        if api_weight_files:
             print(
-                "  warning: indexed shard URL is not reachable; using API safetensors "
-                "files and rebuilding local index after download",
+                "  warning: indexed shard URLs are missing or unreachable; using API "
+                "safetensors files and rebuilding local index after download",
             )
             non_weight_files = [f for f in files if not f.endswith(".safetensors")]
             return non_weight_files + api_weight_files
@@ -351,18 +362,27 @@ def curl_download_file(
     partial.replace(dest)
 
 
+def cleanup_stale_artifacts(out_dir: Path) -> None:
+    """Remove partial downloads left by interrupted curl runs."""
+    if not out_dir.is_dir():
+        return
+    for path in out_dir.glob("*.incomplete"):
+        if path.is_file():
+            print(f"  removing stale partial: {path.name}")
+            path.unlink()
+
+
 def expected_weight_shards(out_dir: Path) -> set[str]:
     index_path = out_dir / "model.safetensors.index.json"
     if not index_path.is_file():
         return set()
-    import json
-
     payload = json.loads(index_path.read_text(encoding="utf-8"))
     weight_map = payload.get("weight_map") or {}
     return {str(name) for name in set(weight_map.values())}
 
 
 def verify_download(out_dir: Path) -> None:
+    repair_index_if_needed(out_dir)
     shards = expected_weight_shards(out_dir)
     if not shards:
         single = out_dir / "model.safetensors"
@@ -387,10 +407,15 @@ def local_weight_files(out_dir: Path) -> list[str]:
 
 
 def rebuild_safetensors_index(out_dir: Path, weight_files: list[str]) -> None:
-    from safetensors import safe_open
-
     if not weight_files:
         return
+    try:
+        from safetensors import safe_open
+    except ImportError as exc:
+        raise SystemExit(
+            "Cannot rebuild model.safetensors.index.json without the safetensors package. "
+            "Install it in your venv: pip install safetensors"
+        ) from exc
 
     weight_map: dict[str, str] = {}
     for filename in weight_files:
@@ -488,6 +513,7 @@ def download(repo_id: str, out_dir: Path, args: argparse.Namespace) -> None:
     from huggingface_hub import snapshot_download
 
     out_dir.mkdir(parents=True, exist_ok=True)
+    cleanup_stale_artifacts(out_dir)
     token, endpoint, timeout, max_workers = hub_settings(args)
     print(f"Downloading {repo_id} -> {out_dir}")
     print_hub_settings(token, endpoint, timeout, max_workers)
@@ -520,6 +546,7 @@ def download(repo_id: str, out_dir: Path, args: argparse.Namespace) -> None:
         etag_timeout=timeout,
         max_workers=max_workers,
     )
+    repair_index_if_needed(out_dir)
     verify_download(out_dir)
     print(f"Done: {out_dir}")
 
@@ -604,6 +631,11 @@ def parse_args() -> argparse.Namespace:
         action="store_true",
         help="Only test repo metadata and config.json download; do not download weights.",
     )
+    parser.add_argument(
+        "--verify-local",
+        action="store_true",
+        help="Repair model.safetensors.index.json if needed and verify an existing local dir.",
+    )
     return parser.parse_args()
 
 
@@ -625,6 +657,11 @@ def main() -> int:
 
     if args.check:
         check_connectivity(repo_id, args)
+    elif args.verify_local:
+        cleanup_stale_artifacts(out_dir)
+        repair_index_if_needed(out_dir)
+        verify_download(out_dir)
+        print(f"Verified local model: {out_dir}")
     else:
         download(repo_id, out_dir.resolve(), args)
     return 0

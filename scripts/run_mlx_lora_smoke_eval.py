@@ -142,6 +142,10 @@ def write_metrics(args: argparse.Namespace, predictions: list[dict[str, Any]]) -
         allow_missing=True,
     )
     payload = {
+        "path": getattr(args, "path_tag", "B"),
+        "model": getattr(args, "model_tag", None),
+        "variant": getattr(args, "variant_tag", None),
+        "split": getattr(args, "split_tag", None),
         "count": result["count"],
         "headline_metrics": result["headline_metrics"],
         "auxiliary_metrics": result["auxiliary_metrics"],
@@ -201,6 +205,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--offset", type=int, default=0)
     parser.add_argument("--max-tokens", type=int, default=256)
     parser.add_argument("--temp", type=float, default=0.0)
+    parser.add_argument("--model-tag", default=None)
+    parser.add_argument("--variant-tag", default=None)
+    parser.add_argument("--split-tag", default=None)
     args = parser.parse_args(argv)
     if args.no_adapter:
         args.adapter_path = None

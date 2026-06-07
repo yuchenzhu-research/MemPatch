@@ -67,6 +67,20 @@ SMOKE_LORA_KEYS = [
 ]
 
 MLX_PROFILES: dict[str, dict[str, Any]] = {
+    "bench": {
+        "batch_size": 1,
+        "iters": 32,
+        "learning_rate": 1.0e-5,
+        "max_seq_length": 2048,
+        "grad_accumulation_steps": 4,
+        "save_every": 16,
+        "steps_per_eval": 16,
+        "val_batches": 16,
+        "lora_keys": SMOKE_LORA_KEYS,
+        "lora_rank": 8,
+        "lora_scale": 16.0,
+        "lora_dropout": 0.05,
+    },
     "smoke": {
         "batch_size": 1,
         "iters": 64,
