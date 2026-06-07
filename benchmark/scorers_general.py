@@ -6,7 +6,6 @@ from typing import Any
 
 from benchmark.general_taxonomy import (
     DECISIONS,
-    FAILURE_MODES,
     NON_ANSWER_DECISIONS,
     PRIMARY_FAILURE_MODES,
     canonical_hidden_gold_fields,
@@ -51,15 +50,11 @@ AUXILIARY_METRICS = (
 DIAGNOSIS_ALIASES = {
     "stale_memory_reuse": ("stale", "outdated", "obsolete", "superseded", "earlier instruction", "old note"),
     "under_update": ("under update", "failed to update", "not incorporate", "missed update"),
-    "over_update": ("over update", "overwrote", "over-applied", "too broad"),
     "conflict_collapse": ("conflict", "incompatible", "unresolved", "collapse"),
     "scope_leakage": ("scope", "out of scope", "cross-scope", "wrong workspace"),
     "policy_violation": ("policy", "private", "credential", "secure", "refuse"),
     "wrong_source_attribution": ("source", "attribution", "wrong source", "misattributed"),
     "memory_hallucination": ("hallucination", "unsupported", "false premise", "missing fact"),
-    "unnecessary_memory_write": ("unnecessary", "should not store", "no need to store"),
-    "failure_to_forget": ("forget", "deleted", "remove obsolete"),
-    "failure_to_release_or_restore": ("restore", "release", "cleared", "temporary block"),
 }
 
 
@@ -83,10 +78,10 @@ def normalize_failure_mode(value: Any) -> str:
     if isinstance(value, (list, tuple)) and len(value) == 1:
         value = value[0]
     text = _norm(value)
-    if text in FAILURE_MODES:
+    if text in PRIMARY_FAILURE_MODES:
         return text
     text = text.replace("-", "_").replace(" ", "_")
-    if text in FAILURE_MODES:
+    if text in PRIMARY_FAILURE_MODES:
         return text
     raw = _norm(value)
     for mode, aliases in DIAGNOSIS_ALIASES.items():
@@ -396,10 +391,6 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
     # have been removed as headline metrics.
     for mode in PRIMARY_FAILURE_MODES:
         metrics[f"{mode}_rate"] = float(scenario.get("primary_failure_mode") == mode and predicted_diag == mode)
-    metrics["under_update_rate"] = float(predicted_diag == "under_update")
-    metrics["over_update_rate"] = float(predicted_diag == "over_update")
-    metrics["scope_leakage_rate"] = float(predicted_diag == "scope_leakage")
-    metrics["policy_violation_rate"] = float(predicted_diag == "policy_violation")
     # Format failure: no parseable decision (e.g. LLM emitted invalid JSON).
     metrics["format_failure_rate"] = float(predicted_decision is None)
     metrics["stale_anchor_hit_rate"] = float(stale_anchor_hit)

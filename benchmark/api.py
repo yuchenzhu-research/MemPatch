@@ -26,8 +26,6 @@ from typing import Any
 
 from benchmark.general_taxonomy import (
     DECISIONS,
-    FAILURE_MODES,
-    MEMORY_STATUSES,
     PRIMARY_FAILURE_MODES,
     PRIMARY_MEMORY_STATUSES,
 )
@@ -54,6 +52,12 @@ __all__ = [
 ]
 
 SCENARIO_JSONL_NAME = "scenarios.jsonl"
+
+# Public v1.3 evaluation label spaces. The broader taxonomy module keeps
+# reserved labels for future releases, but the public API should validate and
+# report against labels that actually occur in the v1.3 benchmark gold.
+FAILURE_MODES = PRIMARY_FAILURE_MODES
+MEMORY_STATUSES = PRIMARY_MEMORY_STATUSES
 
 # Fields that make up a canonical prediction ``response`` object. In strict
 # evaluation every field is required so models cannot score through hidden-gold
@@ -226,9 +230,9 @@ def _validate_response(
                     f"{scenario_id}: evidence_event_ids reference IDs not in event_trace: {unknown}"
                 )
 
-    # failure_diagnosis: required to be one of FAILURE_MODES (or an accepted
-    # normalized alias). The scorer still normalizes free-text aliases, so
-    # documented aliases pass.
+    # failure_diagnosis: required to be one of the v1.3 primary failure modes
+    # (or an accepted normalized alias). Reserved taxonomy labels are not valid
+    # public benchmark outputs for this release.
     if "failure_diagnosis" not in response:
         errors.append(f"{scenario_id}: missing response field 'failure_diagnosis'")
     else:

@@ -2,7 +2,14 @@ from __future__ import annotations
 
 import pytest
 
-from benchmark.api import evaluate_predictions
+from benchmark.api import FAILURE_MODES, MEMORY_STATUSES, evaluate_predictions
+from benchmark.general_taxonomy import (
+    PRIMARY_FAILURE_MODES,
+    PRIMARY_MEMORY_STATUSES,
+    RESERVED_FAILURE_MODES,
+    RESERVED_MEMORY_STATUSES,
+)
+from benchmark.scorers_general import score_prediction
 
 
 def _scenario() -> dict:
@@ -17,7 +24,7 @@ def _scenario() -> dict:
         "hidden_gold": {
             "expected_decision": "use_current_memory",
             "expected_answer": "New value",
-            "expected_memory_state": {"m1": "outdated"},
+            "expected_memory_state": {"m1": "blocked"},
             "expected_failure_diagnosis": "stale_memory_reuse",
             "expected_evidence_event_ids": ["e1"],
             "counterevidence_event_ids": [],
@@ -55,7 +62,7 @@ def test_prediction_expected_fields_do_not_score_as_response_fallback() -> None:
                     "memory_state": {"m1": "current"},
                     "evidence_event_ids": [],
                     "failure_diagnosis": "under_update",
-                    "expected_memory_state": {"m1": "outdated"},
+                    "expected_memory_state": {"m1": "blocked"},
                     "expected_evidence_event_ids": ["e1"],
                     "expected_failure_diagnosis": "stale_memory_reuse",
                 },
@@ -68,3 +75,54 @@ def test_prediction_expected_fields_do_not_score_as_response_fallback() -> None:
     assert metrics["memory_state_accuracy"] == 0.0
     assert metrics["evidence_f1"] == 0.0
     assert metrics["failure_diagnosis_accuracy"] == 0.0
+
+
+def test_public_api_exposes_v13_primary_taxonomy_only() -> None:
+    assert FAILURE_MODES == PRIMARY_FAILURE_MODES
+    assert MEMORY_STATUSES == PRIMARY_MEMORY_STATUSES
+    assert not set(FAILURE_MODES) & set(RESERVED_FAILURE_MODES)
+    assert not set(MEMORY_STATUSES) & set(RESERVED_MEMORY_STATUSES)
+
+
+def test_strict_evaluation_rejects_reserved_failure_diagnosis() -> None:
+    with pytest.raises(ValueError) as excinfo:
+        evaluate_predictions(
+            [_scenario()],
+            [
+                {
+                    "scenario_id": "case_000001",
+                    "response": {
+                        "answer": "New value",
+                        "decision": "use_current_memory",
+                        "memory_state": {"m1": "current"},
+                        "evidence_event_ids": ["e1"],
+                        "failure_diagnosis": "over_update",
+                    },
+                }
+            ],
+            strict=True,
+        )
+
+    message = str(excinfo.value)
+    assert "invalid failure_diagnosis label 'over_update'" in message
+    assert "over_update" not in str(sorted(FAILURE_MODES))
+
+
+def test_reserved_failure_metrics_are_not_reported() -> None:
+    metrics = score_prediction(
+        _scenario(),
+        {
+            "response": {
+                "answer": "New value",
+                "decision": "use_current_memory",
+                "memory_state": {"m1": "current"},
+                "evidence_event_ids": ["e1"],
+                "failure_diagnosis": "stale_memory_reuse",
+            }
+        },
+    )
+
+    assert "over_update_rate" not in metrics
+    assert "unnecessary_memory_write_rate" not in metrics
+    assert "failure_to_forget_rate" not in metrics
+    assert "failure_to_release_or_restore_rate" not in metrics

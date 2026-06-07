@@ -3,20 +3,23 @@
 Maps DPA-authorized transitions (``RuntimeResult``) into the canonical
 MemPatch-Bench ``response`` schema. DPA keeps internal statuses
 (``AUTHORIZED``, ``SUPERSEDED``, …); the evaluator receives ``memory_state``
-labels (``current``, ``outdated``, …).
+labels from the public v1.3 primary status space.
 """
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from benchmark.general_taxonomy import DECISIONS, MEMORY_STATUSES, PRIMARY_FAILURE_MODES
+from benchmark.general_taxonomy import DECISIONS, PRIMARY_FAILURE_MODES, PRIMARY_MEMORY_STATUSES
 
 if TYPE_CHECKING:
     from retrace_learn.runtime.dpa_runtime import RuntimeResult
 
 BENCHMARK_STATUS_BY_DPA_STATUS = {
     "AUTHORIZED": "current",
-    "SUPERSEDED": "outdated",
+    # v1.3 does not expose an ``outdated`` memory_state label. A superseding
+    # admitted edge means the visible memory slot has a current authorized
+    # basis after projection.
+    "SUPERSEDED": "current",
     "BLOCKED": "blocked",
     "UNRESOLVED": "unresolved",
 }
@@ -109,7 +112,7 @@ def _merge_raw_memory_state(
         return memory_state
     merged = dict(memory_state)
     for memory_id, label in raw_state.items():
-        if isinstance(label, str) and label in MEMORY_STATUSES:
+        if isinstance(label, str) and label in PRIMARY_MEMORY_STATUSES:
             merged[str(memory_id)] = label
     return merged
 
@@ -134,10 +137,7 @@ def _apply_scenario_memory_hints(
             updated[mid] = "out_of_scope"
             continue
         benchmark = _dpa_status_to_benchmark(str(dpa_status))
-        if benchmark == "current" and has_release and mid not in conditions:
-            updated[mid] = "restored"
-        else:
-            updated[mid] = benchmark
+        updated[mid] = benchmark
 
     for memory_id in distractors:
         if memory_id in updated:
@@ -192,8 +192,6 @@ def _project_decision(memory_state: dict[str, str], raw_response: Any) -> str:
         return "mark_unresolved"
     if any(status == "blocked" for status in memory_state.values()):
         return "escalate"
-    if any(status == "deleted" for status in memory_state.values()):
-        return "mark_unresolved"
     return "use_current_memory"
 
 
@@ -213,8 +211,6 @@ def _project_failure_diagnosis(
         return "policy_violation"
     if any(status == "should_not_store" for status in memory_state.values()):
         return "policy_violation"
-    if any(status == "deleted" for status in memory_state.values()):
-        return "stale_memory_reuse"
     if any(status == "out_of_scope" for status in memory_state.values()):
         if any(status == "current" for status in memory_state.values()):
             return "scope_leakage"
@@ -224,10 +220,6 @@ def _project_failure_diagnosis(
         return "wrong_source_attribution"
     if any(a.action_type == "SUPERSEDES" for a in runtime_result.admitted_actions):
         return "stale_memory_reuse"
-    if any(status == "restored" for status in memory_state.values()):
-        if any(status == "blocked" for status in memory_state.values()):
-            return "conflict_collapse"
-        return "under_update"
     if any(status == "blocked" for status in memory_state.values()):
         return "conflict_collapse"
     if any(status == "unresolved" for status in memory_state.values()):

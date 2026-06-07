@@ -31,6 +31,47 @@ DEFAULT_MAX_WORKERS = 1
 DEFAULT_RETRIES = 10
 PROXY_ENV_KEYS = ("HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy")
 
+KNOWN_REPO_FILES: dict[str, tuple[str, ...]] = {
+    "mlx-community/gemma-3-12b-it-4bit": (
+        ".gitattributes",
+        "README.md",
+        "added_tokens.json",
+        "chat_template.json",
+        "config.json",
+        "generation_config.json",
+        "model.safetensors.index.json",
+        "model-00001-of-00002.safetensors",
+        "model-00002-of-00002.safetensors",
+        "preprocessor_config.json",
+        "processor_config.json",
+        "special_tokens_map.json",
+        "tokenizer.json",
+        "tokenizer.model",
+        "tokenizer_config.json",
+    ),
+    "mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit": (
+        ".gitattributes",
+        "README.md",
+        "config.json",
+        "model.safetensors.index.json",
+        "model-00001-of-00002.safetensors",
+        "model-00002-of-00002.safetensors",
+        "special_tokens_map.json",
+        "tokenizer.json",
+        "tokenizer_config.json",
+    ),
+    "mlx-community/Qwen3-14B-MLX-4bit": (
+        "config.json",
+        "merges.txt",
+        "model.safetensors.index.json",
+        "model-00001-of-00002.safetensors",
+        "model-00002-of-00002.safetensors",
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "vocab.json",
+    ),
+}
+
 
 def load_env_file(path: Path) -> bool:
     if not path.is_file():
@@ -160,6 +201,117 @@ def list_repo_files_via_api(
     return files
 
 
+def download_text_via_curl(url: str, token: str, timeout: int, retries: int) -> str:
+    cmd = [
+        "curl",
+        "--fail",
+        "--location",
+        "--silent",
+        "--show-error",
+        "--retry",
+        str(retries),
+        "--retry-delay",
+        "5",
+        "--retry-all-errors",
+        "--connect-timeout",
+        str(timeout),
+    ]
+    if token:
+        cmd.extend(["--header", f"Authorization: Bearer {token}"])
+    cmd.append(url)
+    result = subprocess.run(cmd, check=False, capture_output=True, text=True)
+    if result.returncode != 0:
+        raise SystemExit(f"curl failed with exit code {result.returncode}: {url}")
+    return result.stdout
+
+
+def indexed_weight_shards_via_curl(
+    repo_id: str,
+    endpoint: str | None,
+    revision: str,
+    token: str,
+    timeout: int,
+    retries: int,
+) -> list[str]:
+    url = resolve_file_url(endpoint, repo_id, revision, "model.safetensors.index.json")
+    try:
+        payload = json.loads(download_text_via_curl(url, token, timeout, retries))
+    except json.JSONDecodeError as exc:
+        raise SystemExit(f"Weight index did not return JSON: {url}") from exc
+    shards = sorted(set(str(name) for name in (payload.get("weight_map") or {}).values()))
+    return shards
+
+
+def url_is_reachable(url: str, token: str, timeout: int) -> bool:
+    cmd = [
+        "curl",
+        "--fail",
+        "--location",
+        "--head",
+        "--silent",
+        "--show-error",
+        "--connect-timeout",
+        str(timeout),
+        "--max-time",
+        str(max(timeout, 30)),
+    ]
+    if token:
+        cmd.extend(["--header", f"Authorization: Bearer {token}"])
+    cmd.append(url)
+    return subprocess.run(cmd, check=False, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+
+
+def curl_repo_files(
+    repo_id: str,
+    endpoint: str | None,
+    revision: str,
+    token: str,
+    timeout: int,
+    retries: int,
+) -> list[str]:
+    try:
+        files = list_repo_files_via_api(repo_id, endpoint, revision, token, timeout)
+    except SystemExit as exc:
+        known_files = KNOWN_REPO_FILES.get(repo_id)
+        if not known_files:
+            raise
+        print(f"  warning: repo API failed ({exc}); using known file list for {repo_id}")
+        files = list(known_files)
+    if "model.safetensors.index.json" not in files:
+        return files
+
+    indexed_shards = indexed_weight_shards_via_curl(
+        repo_id,
+        endpoint,
+        revision,
+        token,
+        timeout,
+        retries,
+    )
+    if not indexed_shards:
+        return files
+
+    api_weight_files = sorted(f for f in files if f.endswith(".safetensors"))
+    if api_weight_files != indexed_shards:
+        print(f"  api_weight_files={api_weight_files}")
+        print(f"  indexed_shards={indexed_shards}")
+        first_indexed_url = resolve_file_url(endpoint, repo_id, revision, indexed_shards[0])
+        if api_weight_files and not url_is_reachable(first_indexed_url, token, timeout):
+            print(
+                "  warning: indexed shard URL is not reachable; using API safetensors "
+                "files and rebuilding local index after download",
+            )
+            non_weight_files = [f for f in files if not f.endswith(".safetensors")]
+            return non_weight_files + api_weight_files
+        print(
+            "  warning: repo API safetensors list differs from model.safetensors.index.json; "
+            "using indexed shards",
+        )
+
+    non_weight_files = [f for f in files if not f.endswith(".safetensors")]
+    return non_weight_files + indexed_shards
+
+
 def curl_download_file(
     url: str,
     dest: Path,
@@ -226,6 +378,53 @@ def verify_download(out_dir: Path) -> None:
     print(f"Verified {len(shards)} weight shards ({total_bytes / (1024**3):.2f} GiB)")
 
 
+def local_weight_files(out_dir: Path) -> list[str]:
+    return sorted(
+        path.name
+        for path in out_dir.glob("model-*.safetensors")
+        if path.is_file()
+    )
+
+
+def rebuild_safetensors_index(out_dir: Path, weight_files: list[str]) -> None:
+    from safetensors import safe_open
+
+    if not weight_files:
+        return
+
+    weight_map: dict[str, str] = {}
+    for filename in weight_files:
+        path = out_dir / filename
+        with safe_open(path, framework="numpy") as handle:
+            for key in handle.keys():
+                weight_map[key] = filename
+
+    index_path = out_dir / "model.safetensors.index.json"
+    if index_path.exists():
+        backup = out_dir / "model.safetensors.index.json.upstream_mismatch"
+        if not backup.exists():
+            backup.write_text(index_path.read_text(encoding="utf-8"), encoding="utf-8")
+    payload = {
+        "metadata": {
+            "total_size": sum((out_dir / filename).stat().st_size for filename in weight_files),
+        },
+        "weight_map": dict(sorted(weight_map.items())),
+    }
+    index_path.write_text(json.dumps(payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+    print(f"Rebuilt model.safetensors.index.json for {len(weight_files)} local shards")
+
+
+def repair_index_if_needed(out_dir: Path) -> None:
+    weight_files = local_weight_files(out_dir)
+    if not weight_files:
+        return
+    indexed = sorted(expected_weight_shards(out_dir))
+    if indexed and indexed == weight_files:
+        return
+    print(f"  warning: local index shards {indexed or '<missing>'} do not match local weights {weight_files}")
+    rebuild_safetensors_index(out_dir, weight_files)
+
+
 def check_connectivity(repo_id: str, args: argparse.Namespace) -> None:
     from huggingface_hub import hf_hub_download, snapshot_download
 
@@ -236,7 +435,7 @@ def check_connectivity(repo_id: str, args: argparse.Namespace) -> None:
     print(f"  transport={transport}")
 
     if transport == "curl":
-        files = list_repo_files_via_api(repo_id, endpoint, args.revision, token, timeout)
+        files = curl_repo_files(repo_id, endpoint, args.revision, token, timeout, args.retries)
         print(f"  metadata_ok={len(files)} files visible")
         with TemporaryDirectory() as tmp_dir:
             config_path = Path(tmp_dir) / "config.json"
@@ -296,7 +495,7 @@ def download(repo_id: str, out_dir: Path, args: argparse.Namespace) -> None:
     print(f"  transport={transport}")
 
     if transport == "curl":
-        files = list_repo_files_via_api(repo_id, endpoint, args.revision, token, timeout)
+        files = curl_repo_files(repo_id, endpoint, args.revision, token, timeout, args.retries)
         print(f"  files={len(files)}")
         for index, filename in enumerate(files, start=1):
             print(f"[{index}/{len(files)}] {filename}")
@@ -307,6 +506,7 @@ def download(repo_id: str, out_dir: Path, args: argparse.Namespace) -> None:
                 timeout,
                 args.retries,
             )
+        repair_index_if_needed(out_dir)
         verify_download(out_dir)
         print(f"Done: {out_dir}")
         return

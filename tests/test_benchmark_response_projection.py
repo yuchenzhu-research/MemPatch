@@ -4,8 +4,8 @@ from benchmark.api import evaluate_predictions
 from benchmark.general_taxonomy import (
     DECISIONS,
     FAILURE_MODES,
-    MEMORY_STATUSES,
     PRIMARY_FAILURE_MODES,
+    PRIMARY_MEMORY_STATUSES,
 )
 from benchmark.public_view import public_scenario_view
 from retrace_learn.runtime.benchmark_projection import project_to_benchmark_response
@@ -75,7 +75,7 @@ def test_project_to_benchmark_response_maps_dpa_statuses_and_evidence() -> None:
     )
 
     assert response["memory_state"] == {
-        "m1": "outdated",
+        "m1": "current",
         "m2": "current",
         "m3": "blocked",
         "m4": "unresolved",
@@ -123,7 +123,7 @@ def test_project_to_benchmark_response_maps_reserved_raw_diagnosis_to_primary() 
     assert response["failure_diagnosis"] in PRIMARY_FAILURE_MODES
 
 
-def test_project_to_benchmark_response_supports_extended_memory_labels() -> None:
+def test_project_to_benchmark_response_keeps_release_projection_primary() -> None:
     runtime_result = _runtime_result(
         final_belief_statuses={"m_target": "AUTHORIZED", "m_condition": "AUTHORIZED"},
         authorized_belief_ids=("m_target", "m_condition"),
@@ -156,7 +156,7 @@ def test_project_to_benchmark_response_supports_extended_memory_labels() -> None
         scenario_public_view=public_scenario_view(scenario),
     )
 
-    assert response["memory_state"]["m_target"] == "restored"
+    assert response["memory_state"]["m_target"] == "current"
     assert response["memory_state"]["m_condition"] == "current"
     assert response["memory_state"]["m-case-distractor"] == "out_of_scope"
 
@@ -189,11 +189,11 @@ def test_project_to_benchmark_response_accepts_raw_memory_state_overrides() -> N
     )
 
     assert response["memory_state"]["m1"] == "should_not_store"
-    assert response["memory_state"]["m2"] == "deleted"
+    assert response["memory_state"]["m2"] == "current"
     assert response["decision"] == "refuse_due_to_policy"
     assert response["failure_diagnosis"] == "policy_violation"
     for label in response["memory_state"].values():
-        assert label in MEMORY_STATUSES
+        assert label in PRIMARY_MEMORY_STATUSES
     assert response["decision"] in DECISIONS
     assert response["failure_diagnosis"] in FAILURE_MODES
     assert response["failure_diagnosis"] in PRIMARY_FAILURE_MODES
