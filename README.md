@@ -81,15 +81,26 @@ PYTHONPATH=.:src python scripts/run_mempatch_revision_module.py \
   --scripted-actions tests/fixtures/scripted_noop_actions.json
 ```
 
+## MLX paper experiments (Qwen3.5 / Gemma 4 / DeepSeek-R1)
+
+```bash
+# Full pipeline: download → DeepSeek smoke → LoRA (256 iters) → test500 → figures
+bash scripts/run_paper_pipeline.sh
+
+# Download only (hf-mirror by default)
+bash scripts/download_paper_models.sh
+```
+
 ## Layout
 
 ```
 benchmark/              MemPatch-Bench: evaluator, taxonomy, scenario generator
 src/mempatch_learn/     Revision module (view → proposer → projection)
 src/mempatch_dpa/       DPA authorization kernel (deterministic, not scoring)
-scripts/                7 core + 4 MLX train CLIs
+scripts/                Core CLIs + MLX paper pipeline (see scripts/run_paper_pipeline.sh)
 tests/                  Unit tests + smoke fixtures
 hf_release/mempatch/    Dataset bundle (4000 scenarios)
+config/                 Paper model cards (params, colors)
 data/mempatch/          Tracked audit artifacts
 ```
 

@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from benchmark.api import evaluate_predictions, load_scenarios  # noqa: E402
@@ -19,7 +20,9 @@ from mempatch_learn.runtime.revision_module import run_revision_module_on_scenar
 
 
 def strip_thinking(text: str) -> str:
-    return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+    from mlx_chat_utils import strip_thinking as _strip
+
+    return _strip(text)
 
 
 def extract_json_array(text: str) -> str:
@@ -58,13 +61,10 @@ def run_predictions(args: argparse.Namespace) -> list[dict[str, Any]]:
     sampler = make_sampler(temp=args.temp)
 
     def generate_fn(prompt: str) -> str:
+        from mlx_chat_utils import apply_chat_template_no_think, normalize_generation_text
+
         messages = [{"role": "user", "content": prompt}]
-        tokens = tokenizer.apply_chat_template(
-            messages,
-            tokenize=True,
-            add_generation_prompt=True,
-            enable_thinking=False,
-        )
+        tokens, gen_meta = apply_chat_template_no_think(tokenizer, messages)
         raw = generate(
             model,
             tokenizer,
@@ -72,6 +72,10 @@ def run_predictions(args: argparse.Namespace) -> list[dict[str, Any]]:
             max_tokens=args.max_tokens,
             sampler=sampler,
             verbose=False,
+        )
+        raw = normalize_generation_text(
+            raw,
+            json_brace_prefill=bool(gen_meta.get("json_brace_prefill")),
         )
         try:
             return extract_json_array(raw)

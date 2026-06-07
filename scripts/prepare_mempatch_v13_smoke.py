@@ -3,9 +3,11 @@
 
 Profiles:
   smoke — 500 train / 100 valid, rank-8 LoRA on q/v/o, 64 iters
-  heavy — full 2700 train / 200 valid, rank-16 LoRA on attn+mlp, 1024 iters
+  bench — quick dev train, rank-8, 32 iters
+  paper — paper default, rank-16 attn+mlp, 256 iters
+  heavy — full 2700 train / 200 valid, rank-16 attn+mlp, 1024 iters (legacy)
 
-Use --full-train with --profile heavy for the full train split.
+Use --full-train with --profile paper or heavy for the full train split.
 """
 
 from __future__ import annotations
@@ -104,6 +106,20 @@ MLX_PROFILES: dict[str, dict[str, Any]] = {
         "save_every": 128,
         "steps_per_eval": 128,
         "val_batches": 64,
+        "lora_keys": HEAVY_LORA_KEYS,
+        "lora_rank": 16,
+        "lora_scale": 32.0,
+        "lora_dropout": 0.05,
+    },
+    "paper": {
+        "batch_size": 1,
+        "iters": 256,
+        "learning_rate": 1.0e-5,
+        "max_seq_length": 2048,
+        "grad_accumulation_steps": 4,
+        "save_every": 64,
+        "steps_per_eval": 64,
+        "val_batches": 32,
         "lora_keys": HEAVY_LORA_KEYS,
         "lora_rank": 16,
         "lora_scale": 32.0,
@@ -404,7 +420,7 @@ def main(argv: list[str] | None = None) -> int:
     valid_source = read_jsonl(args.validation_data)
     test_source = read_jsonl(args.test_data)
 
-    valid_quotas = VALID_HEAVY_QUOTAS if args.profile == "heavy" else VALID_QUOTAS
+    valid_quotas = VALID_HEAVY_QUOTAS if args.profile in ("heavy", "paper") else VALID_QUOTAS
 
     if args.full_train:
         train_sampled = list(train_rows)

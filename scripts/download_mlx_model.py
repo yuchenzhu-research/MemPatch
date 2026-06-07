@@ -16,6 +16,10 @@ PRESETS: dict[str, dict[str, str]] = {
         "repo_id": "mlx-community/gemma-3-12b-it-4bit",
         "local_name": "gemma-3-12b-it-4bit",
     },
+    "gemma4-12b": {
+        "repo_id": "mlx-community/gemma-4-12B-it-4bit",
+        "local_name": "gemma-4-12B-it-4bit",
+    },
     "deepseek-r1-14b": {
         "repo_id": "mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit",
         "local_name": "DeepSeek-R1-Distill-Qwen-14B-4bit",
@@ -24,11 +28,20 @@ PRESETS: dict[str, dict[str, str]] = {
         "repo_id": "mlx-community/Qwen3-14B-MLX-4bit",
         "local_name": "Qwen3-14B-MLX-4bit",
     },
+    "qwen3-8b": {
+        "repo_id": "mlx-community/Qwen3-8B-4bit",
+        "local_name": "Qwen3-8B-4bit",
+    },
+    "qwen35-27b": {
+        "repo_id": "mlx-community/Qwen3.5-27B-4bit",
+        "local_name": "Qwen3.5-27B-4bit",
+    },
 }
 
-DEFAULT_TIMEOUT_SECONDS = 30
+DEFAULT_TIMEOUT_SECONDS = 300
 DEFAULT_MAX_WORKERS = 1
 DEFAULT_RETRIES = 10
+HF_MIRROR_ENDPOINT = "https://hf-mirror.com"
 PROXY_ENV_KEYS = ("HTTPS_PROXY", "https_proxy", "HTTP_PROXY", "http_proxy")
 
 KNOWN_REPO_FILES: dict[str, tuple[str, ...]] = {
@@ -61,6 +74,34 @@ KNOWN_REPO_FILES: dict[str, tuple[str, ...]] = {
         "tokenizer_config.json",
     ),
     "mlx-community/Qwen3-14B-MLX-4bit": (
+        "config.json",
+        "merges.txt",
+        "model.safetensors.index.json",
+        "model-00001-of-00002.safetensors",
+        "model-00002-of-00002.safetensors",
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "vocab.json",
+    ),
+    "mlx-community/Qwen3.5-27B-4bit": (
+        "config.json",
+        "model.safetensors.index.json",
+        "model-00001-of-00003.safetensors",
+        "model-00002-of-00003.safetensors",
+        "model-00003-of-00003.safetensors",
+        "tokenizer.json",
+        "tokenizer_config.json",
+    ),
+    "mlx-community/gemma-4-12B-it-4bit": (
+        "config.json",
+        "model.safetensors.index.json",
+        "model-00001-of-00003.safetensors",
+        "model-00002-of-00003.safetensors",
+        "model-00003-of-00003.safetensors",
+        "tokenizer.json",
+        "tokenizer_config.json",
+    ),
+    "mlx-community/Qwen3-8B-4bit": (
         "config.json",
         "merges.txt",
         "model.safetensors.index.json",
@@ -114,6 +155,12 @@ def configure_environment(args: argparse.Namespace) -> None:
 
     if args.disable_xet:
         os.environ["HF_HUB_DISABLE_XET"] = "1"
+
+    if getattr(args, "mirror", False):
+        os.environ["HF_ENDPOINT"] = HF_MIRROR_ENDPOINT
+        if args.transport == "auto":
+            args.transport = "curl"
+        os.environ.setdefault("HF_HUB_DISABLE_XET", "1")
 
 
 def hub_settings(args: argparse.Namespace) -> tuple[str, str | None, int, int]:
@@ -349,6 +396,10 @@ def curl_download_file(
         "--retry-all-errors",
         "--connect-timeout",
         str(timeout),
+        "--speed-limit",
+        "1024",
+        "--speed-time",
+        "120",
         "--output",
         str(partial),
     ]
@@ -363,13 +414,23 @@ def curl_download_file(
 
 
 def cleanup_stale_artifacts(out_dir: Path) -> None:
-    """Remove partial downloads left by interrupted curl runs."""
+    """Remove partial downloads left by interrupted curl or hub runs."""
     if not out_dir.is_dir():
         return
     for path in out_dir.glob("*.incomplete"):
         if path.is_file():
             print(f"  removing stale partial: {path.name}")
             path.unlink()
+    cache_download = out_dir / ".cache" / "huggingface" / "download"
+    if cache_download.is_dir():
+        for path in cache_download.glob("*.incomplete"):
+            if path.is_file():
+                print(f"  removing stale hub partial: {path.name}")
+                path.unlink()
+        for path in cache_download.glob("*.lock"):
+            if path.is_file():
+                print(f"  removing stale hub lock: {path.name}")
+                path.unlink()
 
 
 def expected_weight_shards(out_dir: Path) -> set[str]:
@@ -608,6 +669,11 @@ def parse_args() -> argparse.Namespace:
         "--max-workers",
         type=int,
         help=f"Parallel downloads (default: {DEFAULT_MAX_WORKERS}; use 1 for unstable proxies).",
+    )
+    parser.add_argument(
+        "--mirror",
+        action="store_true",
+        help=f"Use {HF_MIRROR_ENDPOINT} with curl transport (recommended if huggingface.co stalls).",
     )
     parser.add_argument(
         "--disable-xet",

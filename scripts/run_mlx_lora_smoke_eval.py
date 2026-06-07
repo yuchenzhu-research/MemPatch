@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 from benchmark.api import evaluate_predictions, load_scenarios  # noqa: E402
 
@@ -47,25 +48,25 @@ def extract_scenario_id(messages: list[dict[str, str]]) -> str:
 
 
 def strip_thinking(text: str) -> str:
-    return re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
+    from mlx_chat_utils import strip_thinking as _strip
+
+    return _strip(text)
 
 
-def extract_json_object(text: str) -> dict[str, Any]:
-    text = strip_thinking(text)
-    decoder = json.JSONDecoder()
-    for match in re.finditer(r"\{", text):
-        try:
-            obj, _ = decoder.raw_decode(text[match.start() :])
-        except json.JSONDecodeError:
-            continue
-        if isinstance(obj, dict):
-            return obj
-    raise ValueError(f"no JSON object found in model output: {text[:300]!r}")
+def extract_json_object(text: str, *, json_brace_prefill: bool = False) -> dict[str, Any]:
+    from mlx_chat_utils import extract_json_object as _extract
+
+    return _extract(text, json_brace_prefill=json_brace_prefill)
 
 
-def prediction_from_output(scenario_id: str, output: str) -> dict[str, Any]:
+def prediction_from_output(
+    scenario_id: str,
+    output: str,
+    *,
+    json_brace_prefill: bool = False,
+) -> dict[str, Any]:
     try:
-        response = extract_json_object(output)
+        response = extract_json_object(output, json_brace_prefill=json_brace_prefill)
         return {"scenario_id": scenario_id, "response": response}
     except ValueError as exc:
         return {
@@ -76,14 +77,11 @@ def prediction_from_output(scenario_id: str, output: str) -> dict[str, Any]:
         }
 
 
-def prompt_tokens(tokenizer: Any, messages: list[dict[str, str]]) -> list[int]:
+def prompt_tokens(tokenizer: Any, messages: list[dict[str, str]]) -> tuple[list[int], dict[str, Any]]:
+    from mlx_chat_utils import apply_chat_template_no_think
+
     prompt_messages = [m for m in messages if m.get("role") in {"system", "user"}]
-    return tokenizer.apply_chat_template(
-        prompt_messages,
-        tokenize=True,
-        add_generation_prompt=True,
-        enable_thinking=False,
-    )
+    return apply_chat_template_no_think(tokenizer, prompt_messages)
 
 
 def run_predictions(args: argparse.Namespace) -> list[dict[str, Any]]:
@@ -113,7 +111,7 @@ def run_predictions(args: argparse.Namespace) -> list[dict[str, Any]]:
         if not isinstance(messages, list):
             raise ValueError(f"{args.data}: row {index} has no messages list")
         scenario_id = extract_scenario_id(messages)
-        tokens = prompt_tokens(tokenizer, messages)
+        tokens, gen_meta = prompt_tokens(tokenizer, messages)
         output = generate(
             model,
             tokenizer,
@@ -122,7 +120,11 @@ def run_predictions(args: argparse.Namespace) -> list[dict[str, Any]]:
             sampler=sampler,
             verbose=False,
         )
-        pred = prediction_from_output(scenario_id, output)
+        pred = prediction_from_output(
+            scenario_id,
+            output,
+            json_brace_prefill=bool(gen_meta.get("json_brace_prefill")),
+        )
         predictions.append(pred)
         status = "ok" if pred.get("response") else "parse_error"
         print(f"[{len(predictions)}/{len(selected)}] {scenario_id}: {status}", file=sys.stderr)
