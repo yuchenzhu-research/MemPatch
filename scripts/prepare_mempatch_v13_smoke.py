@@ -1,5 +1,12 @@
 #!/usr/bin/env python3
-"""Prepare v1.3 smoke SFT data and MLX LoRA config for decision-boundary probe."""
+"""Prepare MemPatch v1.3 SFT data and MLX LoRA config.
+
+Profiles:
+  smoke — 500 train / 100 valid, rank-8 LoRA on q/v/o, 64 iters
+  heavy — full 2700 train / 200 valid, rank-16 LoRA on attn+mlp, 1024 iters
+
+Use --full-train with --profile heavy for the full train split.
+"""
 
 from __future__ import annotations
 
@@ -25,7 +32,9 @@ Use ask_clarification when user intent, target scope, version, workspace, or can
 Use mark_unresolved when evidence is conflicting or insufficient and no user clarification or policy escalation path applies.
 Use escalate when policy, authority, compliance, security, or human review blocks automatic memory revision.
 Use refuse_due_to_policy only when the requested memory write or action is explicitly forbidden.
-evidence_event_ids must be exact event_id strings from event_trace.
+evidence_event_ids must be exact event_id strings from event_trace; cite only the minimal set that supports the chosen decision and memory_state. Do not cite distractor, background, or out-of-scope events.
+failure_diagnosis must be exactly one enum from required_output_schema; never use empty string, empty list, "none", or null.
+For use_current_memory: pick diagnosis from the evidence pattern (under_update if prior memory is outdated, scope_leakage if version/workspace scope is wrong, wrong_source_attribution if source is misattributed); do not default to stale_memory_reuse.
 answer must be one short sentence.
 Do not explain."""
 
@@ -38,7 +47,55 @@ TRAIN_QUOTAS: dict[str, int] = {
 }
 
 VALID_QUOTAS: dict[str, int] = {d: 20 for d in DECISIONS}
+VALID_HEAVY_QUOTAS: dict[str, int] = {d: 40 for d in DECISIONS}
 HARD_QUOTAS: dict[str, int] = {d: 10 for d in DECISIONS}
+
+HEAVY_LORA_KEYS = [
+    "self_attn.q_proj",
+    "self_attn.k_proj",
+    "self_attn.v_proj",
+    "self_attn.o_proj",
+    "mlp.gate_proj",
+    "mlp.up_proj",
+    "mlp.down_proj",
+]
+
+SMOKE_LORA_KEYS = [
+    "self_attn.q_proj",
+    "self_attn.v_proj",
+    "self_attn.o_proj",
+]
+
+MLX_PROFILES: dict[str, dict[str, Any]] = {
+    "smoke": {
+        "batch_size": 1,
+        "iters": 64,
+        "learning_rate": 1.0e-5,
+        "max_seq_length": 2048,
+        "grad_accumulation_steps": 8,
+        "save_every": 32,
+        "steps_per_eval": 32,
+        "val_batches": 32,
+        "lora_keys": SMOKE_LORA_KEYS,
+        "lora_rank": 8,
+        "lora_scale": 16.0,
+        "lora_dropout": 0.05,
+    },
+    "heavy": {
+        "batch_size": 2,
+        "iters": 1024,
+        "learning_rate": 1.0e-5,
+        "max_seq_length": 2048,
+        "grad_accumulation_steps": 4,
+        "save_every": 128,
+        "steps_per_eval": 128,
+        "val_batches": 64,
+        "lora_keys": HEAVY_LORA_KEYS,
+        "lora_rank": 16,
+        "lora_scale": 32.0,
+        "lora_dropout": 0.05,
+    },
+}
 
 LEAKAGE_MARKERS = (
     "hidden_gold",
@@ -55,31 +112,40 @@ LEAKAGE_MARKERS = (
     "canonical_failure_mode",
 )
 
-def mlx_lora_yaml(*, root: Path, data_dir: Path) -> str:
+def mlx_lora_yaml(
+    *,
+    root: Path,
+    data_dir: Path,
+    adapter_dir: Path,
+    profile: str = "smoke",
+) -> str:
+    if profile not in MLX_PROFILES:
+        raise ValueError(f"unknown MLX profile {profile!r}; expected one of {sorted(MLX_PROFILES)}")
+    cfg = MLX_PROFILES[profile]
     model_dir = root / "local/models/Qwen3-14B-MLX-4bit"
-    adapter_dir = root / "local/adapters/qwen3_14b_mempatch_v13_smoke"
+    keys_yaml = json.dumps(cfg["lora_keys"])
     return f"""model: "{model_dir.resolve()}"
 train: true
 fine_tune_type: lora
 optimizer: adamw
 data: "{data_dir.resolve()}"
 seed: 2027
-batch_size: 1
-iters: 64
-learning_rate: 1.0e-5
-max_seq_length: 2048
-grad_accumulation_steps: 8
+batch_size: {cfg["batch_size"]}
+iters: {cfg["iters"]}
+learning_rate: {cfg["learning_rate"]}
+max_seq_length: {cfg["max_seq_length"]}
+grad_accumulation_steps: {cfg["grad_accumulation_steps"]}
 grad_checkpoint: true
 mask_prompt: true
 adapter_path: "{adapter_dir.resolve()}"
-save_every: 32
-steps_per_eval: 32
-val_batches: 32
+save_every: {cfg["save_every"]}
+steps_per_eval: {cfg["steps_per_eval"]}
+val_batches: {cfg["val_batches"]}
 lora_parameters:
-  keys: ["self_attn.q_proj", "self_attn.v_proj", "self_attn.o_proj"]
-  rank: 8
-  scale: 16.0
-  dropout: 0.05
+  keys: {keys_yaml}
+  rank: {cfg["lora_rank"]}
+  scale: {cfg["lora_scale"]}
+  dropout: {cfg["lora_dropout"]}
 """
 
 
@@ -226,7 +292,7 @@ def print_distribution(label: str, counts: Counter[str]) -> None:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     root = Path(__file__).resolve().parent.parent
-    parser = argparse.ArgumentParser(description="Prepare MemPatch v1.3 smoke SFT bundle.")
+    parser = argparse.ArgumentParser(description="Prepare MemPatch v1.3 SFT bundle and MLX LoRA config.")
     parser.add_argument(
         "--train-data",
         type=Path,
@@ -252,11 +318,29 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         type=Path,
         default=root / "local/logs/qwen3_14b_mempatch_v13_smoke/mlx_lora.yaml",
     )
+    parser.add_argument(
+        "--adapter-dir",
+        type=Path,
+        default=root / "local/adapters/qwen3_14b_mempatch_v13_smoke",
+        help="LoRA adapter output directory written into the MLX config.",
+    )
+    parser.add_argument(
+        "--profile",
+        choices=sorted(MLX_PROFILES),
+        default="smoke",
+        help="MLX LoRA training profile written into the config.",
+    )
+    parser.add_argument(
+        "--full-train",
+        action="store_true",
+        help="Use the full train split instead of the smoke TRAIN_QUOTAS sample.",
+    )
     parser.add_argument("--seed", type=int, default=20270607)
     return parser.parse_args(argv)
 
 
 def main(argv: list[str] | None = None) -> int:
+    root = Path(__file__).resolve().parent.parent
     args = parse_args(argv)
     for path, name in (
         (args.train_data, "train"),
@@ -271,15 +355,22 @@ def main(argv: list[str] | None = None) -> int:
     valid_source = read_jsonl(args.validation_data)
     test_source = read_jsonl(args.test_data)
 
-    train_sampled, _ = sample_quotas(
-        index_by_decision(train_rows),
-        TRAIN_QUOTAS,
-        seed=args.seed,
-        split_name="train",
-    )
+    valid_quotas = VALID_HEAVY_QUOTAS if args.profile == "heavy" else VALID_QUOTAS
+
+    if args.full_train:
+        train_sampled = list(train_rows)
+        random.Random(args.seed).shuffle(train_sampled)
+        train_actual = dict(decision_distribution_scenarios(train_sampled))
+    else:
+        train_sampled, train_actual = sample_quotas(
+            index_by_decision(train_rows),
+            TRAIN_QUOTAS,
+            seed=args.seed,
+            split_name="train",
+        )
     valid_sampled, valid_actual = sample_quotas(
         index_by_decision(valid_source),
-        VALID_QUOTAS,
+        valid_quotas,
         seed=args.seed + 1,
         split_name="validation",
     )
@@ -293,18 +384,31 @@ def main(argv: list[str] | None = None) -> int:
     train_sft = [sft_example(s) for s in train_sampled]
     valid_sft = [sft_example(s) for s in valid_sampled]
     hard50 = [hard_balanced_row(s) for s in hard_sampled]
+    hard50_sft = [sft_example(s) for s in hard_sampled]
 
     out_dir = args.out_dir
     write_jsonl(out_dir / "train.jsonl", train_sft)
     write_jsonl(out_dir / "valid.jsonl", valid_sft)
     write_jsonl(out_dir / "hard_balanced50.jsonl", hard50)
+    write_jsonl(out_dir / "hard_balanced50_sft.jsonl", hard50_sft)
 
     args.mlx_config.parent.mkdir(parents=True, exist_ok=True)
-    args.mlx_config.write_text(mlx_lora_yaml(root=root, data_dir=out_dir), encoding="utf-8")
+    args.mlx_config.write_text(
+        mlx_lora_yaml(
+            root=root,
+            data_dir=out_dir,
+            adapter_dir=args.adapter_dir,
+            profile=args.profile,
+        ),
+        encoding="utf-8",
+    )
 
-    print(f"Wrote {len(train_sft)} train, {len(valid_sft)} valid, {len(hard50)} hard_balanced50 -> {out_dir}")
-    print(f"Wrote MLX config -> {args.mlx_config}")
-    if valid_actual != VALID_QUOTAS:
+    print(
+        f"Wrote {len(train_sft)} train, {len(valid_sft)} valid, "
+        f"{len(hard50)} hard_balanced50, {len(hard50_sft)} hard_balanced50_sft -> {out_dir}"
+    )
+    print(f"Wrote MLX config ({args.profile}) -> {args.mlx_config}")
+    if valid_actual != valid_quotas:
         print(f"validation actual sample counts: {valid_actual}")
     if hard_actual != HARD_QUOTAS:
         print(f"test balanced50 actual sample counts: {hard_actual}")
