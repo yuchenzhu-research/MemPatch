@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # MemPatch paper pipeline (single entry): download → smoke → LoRA → test500 → export/plot
 #
-# Models: Qwen3.5-27B, Gemma-4-12B, DeepSeek-R1-Distill-14B (MLX 4-bit, hf-mirror default)
+# Default models (48GB Mac, same paper LoRA on all rows):
+#   qwen3_14b, gemma3_12b, mistral_nemo_12b, llama3_1_8b
 #
 # Usage:
 #   bash scripts/run_paper_pipeline.sh                    # full run
@@ -10,6 +11,7 @@
 #   bash scripts/run_paper_pipeline.sh --download-bg      # download in background, exit
 #   SKIP_DOWNLOAD=1 bash scripts/run_paper_pipeline.sh    # skip download phase
 #   SKIP_TRAIN=1 bash scripts/run_paper_pipeline.sh       # eval + export only
+#   RESUME_LORA=1 FORCE_TRAIN=1 ...                     # continue LoRA from latest checkpoint
 #   USE_MIRROR=0 bash scripts/run_paper_pipeline.sh       # huggingface.co direct
 set -euo pipefail
 
@@ -20,9 +22,8 @@ export PYTHONPATH="${PYTHONPATH:-$ROOT:$ROOT/src:$ROOT/scripts}"
 USE_MIRROR="${USE_MIRROR:-1}"
 PAPER_TRAIN_PROFILE="${PAPER_TRAIN_PROFILE:-paper}"
 SKIP_DOWNLOAD="${SKIP_DOWNLOAD:-0}"
-SKIP_DEEPSEEK_SMOKE="${SKIP_DEEPSEEK_SMOKE:-0}"
 SKIP_TRAIN="${SKIP_TRAIN:-0}"
-MODELS="${MODELS:-qwen35_27b,gemma4_12b,deepseek_r1}"
+MODELS="${MODELS:-qwen3_14b,gemma3_12b,mistral_nemo_12b,llama3_1_8b}"
 SEED="${SEED:-42}"
 
 RESULTS="${RESULTS:-$ROOT/local/results/paper}"
@@ -30,35 +31,45 @@ PAPER_DATA="${PAPER_DATA:-$ROOT/local/train_data/paper}"
 SHARED_SFT="${SHARED_SFT:-$PAPER_DATA/shared_sft}"
 TEST_BUNDLE="${TEST_BUNDLE:-$PAPER_DATA/test500}"
 LOGS="${LOGS:-$ROOT/local/logs/paper}"
-SMOKE_DIR="$PAPER_DATA/smoke5"
+ADAPTER_ROOT="${ADAPTER_ROOT:-$ROOT/local/adapters}"
 
-DOWNLOAD_PRESETS="qwen35-27b gemma4-12b deepseek-r1-14b"
+DOWNLOAD_PRESETS="qwen3-14b gemma3-12b mistral-nemo-12b llama-3.1-8b-instruct"
 
 model_key_preset() {
   case "$1" in
-    qwen35_27b) echo "qwen35-27b" ;;
+    qwen3_14b) echo "qwen3-14b" ;;
+    gemma3_12b) echo "gemma3-12b" ;;
+    mistral_nemo_12b) echo "mistral-nemo-12b" ;;
+    llama3_1_8b) echo "llama-3.1-8b-instruct" ;;
     gemma4_12b) echo "gemma4-12b" ;;
-    deepseek_r1) echo "deepseek-r1-14b" ;;
     *) echo "unknown model key: $1" >&2; return 1 ;;
   esac
 }
 
 model_key_slug() {
   case "$1" in
-    qwen35_27b) echo "qwen35_27b" ;;
+    qwen3_14b) echo "qwen3_14b" ;;
+    gemma3_12b) echo "gemma3_12b" ;;
+    mistral_nemo_12b) echo "mistral_nemo_12b" ;;
+    llama3_1_8b) echo "llama3_1_8b" ;;
     gemma4_12b) echo "gemma4_12b" ;;
-    deepseek_r1) echo "deepseek_r1_14b" ;;
     *) echo "unknown model key: $1" >&2; return 1 ;;
   esac
 }
 
 model_key_local_name() {
   case "$1" in
-    qwen35_27b) echo "Qwen3.5-27B-4bit" ;;
+    qwen3_14b) echo "Qwen3-14B-MLX-4bit" ;;
+    gemma3_12b) echo "gemma-3-12b-it-4bit" ;;
+    mistral_nemo_12b) echo "Mistral-Nemo-Instruct-2407-4bit" ;;
+    llama3_1_8b) echo "Meta-Llama-3.1-8B-Instruct-4bit" ;;
     gemma4_12b) echo "gemma-4-12B-it-4bit" ;;
-    deepseek_r1) echo "DeepSeek-R1-Distill-Qwen-14B-4bit" ;;
     *) echo "unknown model key: $1" >&2; return 1 ;;
   esac
+}
+
+adapter_train_complete() {
+  [[ -f "$1/adapters.safetensors" ]]
 }
 
 log() { printf '[pipeline] %s\n' "$*"; }
@@ -89,9 +100,11 @@ download_cli_args() {
 
 preset_local_name() {
   case "$1" in
-    qwen35-27b) echo "Qwen3.5-27B-4bit" ;;
+    qwen3-14b) echo "Qwen3-14B-MLX-4bit" ;;
+    gemma3-12b) echo "gemma-3-12b-it-4bit" ;;
+    mistral-nemo-12b) echo "Mistral-Nemo-Instruct-2407-4bit" ;;
+    llama-3.1-8b-instruct) echo "Meta-Llama-3.1-8B-Instruct-4bit" ;;
     gemma4-12b) echo "gemma-4-12B-it-4bit" ;;
-    deepseek-r1-14b) echo "DeepSeek-R1-Distill-Qwen-14B-4bit" ;;
     *) echo "$1" ;;
   esac
 }
@@ -192,54 +205,6 @@ phase_download_background() {
   print_model_status
 }
 
-phase_deepseek_smoke() {
-  if [[ "$SKIP_DEEPSEEK_SMOKE" == "1" ]]; then
-    log "SKIP_DEEPSEEK_SMOKE=1"
-    return 0
-  fi
-  local model_dir="$ROOT/local/models/DeepSeek-R1-Distill-Qwen-14B-4bit"
-  if [[ ! -d "$model_dir" ]]; then
-    log "skip DeepSeek smoke (model not local)"
-    return 0
-  fi
-
-  log "DeepSeek R1 JSON smoke (5 cases)"
-  mkdir -p "$LOGS" "$SMOKE_DIR"
-  local pred="$LOGS/deepseek_smoke5_predictions.jsonl"
-  local metrics="$LOGS/deepseek_smoke5_metrics.json"
-  local adapter_dir="$ROOT/local/adapters/deepseek_r1_14b_pathB_lora"
-  local adapter_args=(--no-adapter)
-  if [[ -d "$adapter_dir" ]]; then
-    adapter_args=(--adapter-path "$adapter_dir")
-  fi
-
-  if [[ ! -f "$SMOKE_DIR/sft.jsonl" ]]; then
-    "$PYTHON" "$ROOT/scripts/build_paper_eval_bundle.py" \
-      --scenarios "$ROOT/hf_release/mempatch/validation/scenarios.jsonl" \
-      --out-dir "$SMOKE_DIR" --limit 5
-  fi
-
-  "$PYTHON" "$ROOT/scripts/run_mlx_lora_smoke_eval.py" \
-    --model "$model_dir" "${adapter_args[@]}" \
-    --data "$SMOKE_DIR/sft.jsonl" \
-    --eval-data "$SMOKE_DIR/scenarios.jsonl" \
-    --limit 5 --out-predictions "$pred" --out-metrics "$metrics" \
-    --max-tokens 256 --temp 0.0
-
-  local ok total
-  read -r ok total <<< "$("$PYTHON" -c "
-import json
-from pathlib import Path
-rows=[json.loads(l) for l in Path('$pred').read_text().splitlines() if l.strip()]
-print(sum(1 for r in rows if r.get('response')), len(rows))
-")"
-  log "DeepSeek smoke: ${ok}/${total} JSON parse ok"
-  if [[ "$ok" -lt 4 ]]; then
-    echo "error: DeepSeek smoke failed — check scripts/mlx_chat_utils.py" >&2
-    exit 1
-  fi
-}
-
 run_path_b() {
   local slug="$1" variant="$2" model_dir="$3" adapter_dir="$4"
   local sft_jsonl="$5" eval_scenarios="$6" split_tag="$7"
@@ -272,6 +237,43 @@ run_path_a() {
     --max-tokens 512 --temp 0.0
 }
 
+write_training_manifest() {
+  local slug="$1" adapter_dir="$2" mlx_config="$3" profile="$4"
+  "$PYTHON" - "$adapter_dir" "$mlx_config" "$profile" "$slug" <<'PY'
+import json
+import re
+import sys
+from datetime import datetime, timezone
+from pathlib import Path
+
+from prepare_mempatch_v13_smoke import MLX_PROFILES
+
+adapter_dir = Path(sys.argv[1])
+config_path = Path(sys.argv[2])
+profile = sys.argv[3]
+slug = sys.argv[4]
+target_iters = int(MLX_PROFILES[profile]["iters"])
+checkpoints = sorted(adapter_dir.glob("[0-9]*_adapters.safetensors"))
+completed_iters = int(checkpoints[-1].name.split("_", 1)[0]) if checkpoints else 0
+yaml_text = config_path.read_text(encoding="utf-8") if config_path.is_file() else ""
+mask_match = re.search(r"^mask_prompt:\s*(\S+)\s*$", yaml_text, re.MULTILINE)
+manifest = {
+    "model": slug,
+    "profile": profile,
+    "target_iters": target_iters,
+    "completed_iters": completed_iters,
+    "checkpoints": [path.name for path in checkpoints],
+    "adapter_config": str(adapter_dir / "adapter_config.json"),
+    "mlx_config": str(config_path),
+    "mask_prompt": mask_match.group(1) if mask_match else None,
+    "updated_at": datetime.now(timezone.utc).isoformat(),
+}
+manifest_path = adapter_dir / "training_manifest.json"
+manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
+print(f"[pipeline] wrote {manifest_path} ({completed_iters}/{target_iters} iters)")
+PY
+}
+
 train_path_b_lora() {
   local slug="$1" model_dir="$2" adapter_dir="$3" mlx_config="$4" profile="$5"
   log "Train Path B LoRA | model=$slug profile=$profile"
@@ -279,7 +281,38 @@ train_path_b_lora() {
     --profile "$profile" --out-dir "$SHARED_SFT" \
     --model-dir "$model_dir" --adapter-dir "$adapter_dir" \
     --mlx-config "$mlx_config" --config-only
+  mkdir -p "$adapter_dir"
+  if [[ "${RESUME_LORA:-0}" == "1" ]]; then
+    "$PYTHON" - "$mlx_config" "$adapter_dir" "$profile" <<'PY'
+import re
+import sys
+from pathlib import Path
+
+from prepare_mempatch_v13_smoke import MLX_PROFILES
+
+config_path = Path(sys.argv[1])
+adapter_dir = Path(sys.argv[2])
+profile = sys.argv[3]
+target_iters = int(MLX_PROFILES[profile]["iters"])
+text = config_path.read_text(encoding="utf-8")
+checkpoints = sorted(adapter_dir.glob("[0-9]*_adapters.safetensors"))
+if not checkpoints:
+    raise SystemExit(f"error: RESUME_LORA=1 but no checkpoint in {adapter_dir}")
+latest = checkpoints[-1]
+done = int(latest.name.split("_", 1)[0])
+remaining = max(target_iters - done, 1)
+text = re.sub(r"^iters:\s*\d+\s*$", f"iters: {remaining}", text, count=1, flags=re.MULTILINE)
+resume_line = f'resume_adapter_file: "{latest.resolve()}"'
+if re.search(r"^resume_adapter_file:", text, re.MULTILINE):
+    text = re.sub(r"^resume_adapter_file:.*$", resume_line, text, count=1, flags=re.MULTILINE)
+else:
+    text = text.rstrip() + "\n" + resume_line + "\n"
+config_path.write_text(text, encoding="utf-8")
+print(f"[pipeline] resume LoRA from iter {done}, train {remaining} more (target {target_iters})")
+PY
+  fi
   "$PYTHON" -m mlx_lm lora --config "$mlx_config"
+  write_training_manifest "$slug" "$adapter_dir" "$mlx_config" "$profile"
 }
 
 phase_train_eval_export() {
@@ -302,7 +335,7 @@ phase_train_eval_export() {
     local slug model_dir
     slug="$(model_key_slug "$key")"
     model_dir="$ROOT/local/models/$(model_key_local_name "$key")"
-    local adapter_dir="$ROOT/local/adapters/${slug}_pathB_lora"
+    local adapter_dir="$ADAPTER_ROOT/${slug}_pathB_lora"
     local mlx_config="$LOGS/$slug/mlx_lora.yaml"
     mkdir -p "$LOGS/$slug"
 
@@ -310,9 +343,16 @@ phase_train_eval_export() {
       echo "error: missing model $model_dir (run download first)" >&2
       exit 1
     fi
+    if [[ "$SKIP_TRAIN" != "1" ]]; then
+      "$PYTHON" "$ROOT/scripts/check_mlx_lora_model.py" "$model_dir"
+    fi
 
     if [[ "$SKIP_TRAIN" != "1" ]]; then
-      train_path_b_lora "$slug" "$model_dir" "$adapter_dir" "$mlx_config" "$PAPER_TRAIN_PROFILE"
+      if adapter_train_complete "$adapter_dir" && [[ "${FORCE_TRAIN:-0}" != "1" ]]; then
+        log "skip LoRA train (adapter exists): $slug"
+      else
+        train_path_b_lora "$slug" "$model_dir" "$adapter_dir" "$mlx_config" "$PAPER_TRAIN_PROFILE"
+      fi
     fi
 
     run_path_b "$slug" lora "$model_dir" "$adapter_dir" \
@@ -361,7 +401,6 @@ main() {
         log "SKIP_DOWNLOAD=1"
         print_model_status
       fi
-      phase_deepseek_smoke
       phase_train_eval_export
       log "Done -> $RESULTS/export/benchmark_paper/"
       ;;

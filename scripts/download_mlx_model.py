@@ -8,6 +8,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import time
 from tempfile import TemporaryDirectory
 from urllib.parse import quote
 
@@ -20,21 +21,21 @@ PRESETS: dict[str, dict[str, str]] = {
         "repo_id": "mlx-community/gemma-4-12B-it-4bit",
         "local_name": "gemma-4-12B-it-4bit",
     },
-    "deepseek-r1-14b": {
-        "repo_id": "mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit",
-        "local_name": "DeepSeek-R1-Distill-Qwen-14B-4bit",
-    },
     "qwen3-14b": {
-        "repo_id": "mlx-community/Qwen3-14B-MLX-4bit",
+        "repo_id": "mlx-community/Qwen3-14B-4bit",
         "local_name": "Qwen3-14B-MLX-4bit",
+    },
+    "mistral-nemo-12b": {
+        "repo_id": "mlx-community/Mistral-Nemo-Instruct-2407-4bit",
+        "local_name": "Mistral-Nemo-Instruct-2407-4bit",
+    },
+    "llama-3.1-8b-instruct": {
+        "repo_id": "mlx-community/Meta-Llama-3.1-8B-Instruct-4bit",
+        "local_name": "Meta-Llama-3.1-8B-Instruct-4bit",
     },
     "qwen3-8b": {
         "repo_id": "mlx-community/Qwen3-8B-4bit",
         "local_name": "Qwen3-8B-4bit",
-    },
-    "qwen35-27b": {
-        "repo_id": "mlx-community/Qwen3.5-27B-4bit",
-        "local_name": "Qwen3.5-27B-4bit",
     },
 }
 
@@ -62,18 +63,7 @@ KNOWN_REPO_FILES: dict[str, tuple[str, ...]] = {
         "tokenizer.model",
         "tokenizer_config.json",
     ),
-    "mlx-community/DeepSeek-R1-Distill-Qwen-14B-4bit": (
-        ".gitattributes",
-        "README.md",
-        "config.json",
-        "model.safetensors.index.json",
-        "model-00001-of-00002.safetensors",
-        "model-00002-of-00002.safetensors",
-        "special_tokens_map.json",
-        "tokenizer.json",
-        "tokenizer_config.json",
-    ),
-    "mlx-community/Qwen3-14B-MLX-4bit": (
+    "mlx-community/Qwen3-14B-4bit": (
         "config.json",
         "merges.txt",
         "model.safetensors.index.json",
@@ -83,12 +73,21 @@ KNOWN_REPO_FILES: dict[str, tuple[str, ...]] = {
         "tokenizer_config.json",
         "vocab.json",
     ),
-    "mlx-community/Qwen3.5-27B-4bit": (
+    "mlx-community/Mistral-Nemo-Instruct-2407-4bit": (
         "config.json",
         "model.safetensors.index.json",
-        "model-00001-of-00003.safetensors",
-        "model-00002-of-00003.safetensors",
-        "model-00003-of-00003.safetensors",
+        "model-00001-of-00002.safetensors",
+        "model-00002-of-00002.safetensors",
+        "special_tokens_map.json",
+        "tokenizer.json",
+        "tokenizer_config.json",
+        "vocab.json",
+    ),
+    "mlx-community/Meta-Llama-3.1-8B-Instruct-4bit": (
+        "config.json",
+        "model.safetensors",
+        "model.safetensors.index.json",
+        "special_tokens_map.json",
         "tokenizer.json",
         "tokenizer_config.json",
     ),
@@ -383,44 +382,61 @@ def curl_download_file(
 
     dest.parent.mkdir(parents=True, exist_ok=True)
     partial = dest.with_name(dest.name + ".incomplete")
-    cmd = [
-        "curl",
-        "--fail",
-        "--location",
-        "--continue-at",
-        "-",
-        "--retry",
-        str(retries),
-        "--retry-delay",
-        "5",
-        "--retry-all-errors",
-        "--connect-timeout",
-        str(timeout),
-        "--speed-limit",
-        "1024",
-        "--speed-time",
-        "120",
-        "--output",
-        str(partial),
-    ]
-    if token:
-        cmd.extend(["--header", f"Authorization: Bearer {token}"])
-    cmd.append(url)
+    if partial.is_file() and partial.stat().st_size > 0:
+        print(
+            f"  resume {dest.name} from {partial.stat().st_size / (1024**2):.1f} MiB "
+            f"({partial.name})"
+        )
 
-    result = subprocess.run(cmd, check=False)
-    if result.returncode != 0:
-        raise SystemExit(f"curl failed with exit code {result.returncode}: {dest.name}")
-    partial.replace(dest)
+    for attempt in range(1, retries + 1):
+        if dest.is_file() and dest.stat().st_size > 0:
+            return
+
+        cmd = [
+            "curl",
+            "--fail",
+            "--location",
+            "--http1.1",
+            "--continue-at",
+            "-",
+            "--connect-timeout",
+            str(timeout),
+            "--speed-limit",
+            "1024",
+            "--speed-time",
+            "120",
+            "--output",
+            str(partial),
+        ]
+        if token:
+            cmd.extend(["--header", f"Authorization: Bearer {token}"])
+        cmd.append(url)
+
+        result = subprocess.run(cmd, check=False)
+        if result.returncode == 0:
+            partial.replace(dest)
+            return
+
+        if partial.is_file() and partial.stat().st_size > 0:
+            print(
+                f"  interrupted {dest.name} at {partial.stat().st_size / (1024**2):.1f} MiB "
+                f"(attempt {attempt}/{retries})"
+            )
+        else:
+            print(f"  failed {dest.name} before progress (attempt {attempt}/{retries})")
+        if attempt < retries:
+            time.sleep(5)
+
+    raise SystemExit(
+        f"curl failed after {retries} attempts: {dest.name} "
+        f"(partial kept at {partial} for resume)"
+    )
 
 
 def cleanup_stale_artifacts(out_dir: Path) -> None:
-    """Remove partial downloads left by interrupted curl or hub runs."""
+    """Remove stale hub-cache locks/partials. Curl *.incomplete files are kept for resume."""
     if not out_dir.is_dir():
         return
-    for path in out_dir.glob("*.incomplete"):
-        if path.is_file():
-            print(f"  removing stale partial: {path.name}")
-            path.unlink()
     cache_download = out_dir / ".cache" / "huggingface" / "download"
     if cache_download.is_dir():
         for path in cache_download.glob("*.incomplete"):

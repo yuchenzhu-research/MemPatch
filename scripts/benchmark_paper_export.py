@@ -91,7 +91,16 @@ def discover_runs(results_dir: Path) -> list[Path]:
 def load_model_cards(path: Path) -> dict[str, Any]:
     if not path.is_file():
         return {}
-    return json.loads(path.read_text(encoding="utf-8"))
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    return {k: v for k, v in raw.items() if not str(k).startswith("_")}
+
+
+def load_selection_protocol(path: Path) -> dict[str, Any]:
+    if not path.is_file():
+        return {}
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    protocol = raw.get("_selection_protocol")
+    return protocol if isinstance(protocol, dict) else {}
 
 
 def bootstrap_ci(
@@ -210,6 +219,9 @@ def build_table2_model_setup(runs: list[EvalRun], model_cards: dict[str, Any]) -
                 "model": model,
                 "display_name": card.get("display_name", model),
                 "family": card.get("family"),
+                "model_generation": card.get("model_generation"),
+                "paper_role": card.get("paper_role"),
+                "selection_note": card.get("selection_note"),
                 "total_params_b": card.get("total_params_b"),
                 "active_params_b": card.get("active_params_b"),
                 "context_length": card.get("context_length"),
@@ -575,7 +587,9 @@ def export_all(
     n_boot: int = 1000,
 ) -> dict[str, Any]:
     root = _root()
-    model_cards = load_model_cards(model_cards_path or root / "config/paper_model_cards.json")
+    cards_path = model_cards_path or root / "config/paper_model_cards.json"
+    model_cards = load_model_cards(cards_path)
+    selection_protocol = load_selection_protocol(cards_path)
     data_dirs = data_dirs or [
         root / "hf_release/mempatch/train",
         root / "hf_release/mempatch/validation",
@@ -586,6 +600,12 @@ def export_all(
 
     out_dir.mkdir(parents=True, exist_ok=True)
     manifest: dict[str, Any] = {"runs": len(runs), "outputs": []}
+    if selection_protocol:
+        (out_dir / "model_selection_protocol.json").write_text(
+            json.dumps(selection_protocol, indent=2) + "\n", encoding="utf-8"
+        )
+        manifest["outputs"].append("model_selection_protocol.json")
+        manifest["model_selection"] = selection_protocol
 
     t1 = build_table1_dataset_stats(data_dirs)
     (out_dir / "table1_dataset_stats.json").write_text(json.dumps(t1, indent=2) + "\n", encoding="utf-8")
@@ -599,6 +619,9 @@ def export_all(
             "model",
             "display_name",
             "family",
+            "model_generation",
+            "paper_role",
+            "selection_note",
             "total_params_b",
             "active_params_b",
             "context_length",

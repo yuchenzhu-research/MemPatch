@@ -26,8 +26,8 @@ def prompt_needs_thinking_close(prompt: str) -> bool:
     return "</think>" not in tail
 
 
-# DeepSeek-R1 opens <think> in the chat template; close it and
-# prefill "{" so generation starts in JSON mode instead of free-form reasoning.
+# Some reasoning models open <think> in the chat template; close it
+# and prefill "{" so generation starts in JSON mode instead of free-form reasoning.
 def apply_chat_template_no_think(
     tokenizer: Any,
     messages: list[dict[str, str]],

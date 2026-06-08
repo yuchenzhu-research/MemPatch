@@ -5,6 +5,7 @@ Profiles:
   smoke — 500 train / 100 valid, rank-8 LoRA on q/v/o, 64 iters
   bench — quick dev train, rank-8, 32 iters
   paper — paper default, rank-16 attn+mlp, 256 iters
+  paper_lite — memory-safe: seq 1024, rank-8 q/v/o, 256 iters
   heavy — full 2700 train / 200 valid, rank-16 attn+mlp, 1024 iters (legacy)
 
 Use --full-train with --profile paper or heavy for the full train split.
@@ -125,6 +126,20 @@ MLX_PROFILES: dict[str, dict[str, Any]] = {
         "lora_scale": 32.0,
         "lora_dropout": 0.05,
     },
+    "paper_lite": {
+        "batch_size": 1,
+        "iters": 256,
+        "learning_rate": 1.0e-5,
+        "max_seq_length": 1024,
+        "grad_accumulation_steps": 8,
+        "save_every": 32,
+        "steps_per_eval": 32,
+        "val_batches": 32,
+        "lora_keys": SMOKE_LORA_KEYS,
+        "lora_rank": 8,
+        "lora_scale": 16.0,
+        "lora_dropout": 0.05,
+    },
 }
 
 LEAKAGE_MARKERS = (
@@ -142,6 +157,15 @@ LEAKAGE_MARKERS = (
     "canonical_failure_mode",
 )
 
+def mlx_mask_prompt_for_model(model_dir: Path) -> bool:
+    """Mistral chat templates can make prompt offsets exceed the full sequence under mask_prompt."""
+    config_path = model_dir / "config.json"
+    if not config_path.is_file():
+        return True
+    model_type = json.loads(config_path.read_text(encoding="utf-8")).get("model_type")
+    return model_type not in {"mistral"}
+
+
 def mlx_lora_yaml(
     *,
     root: Path,
@@ -155,6 +179,7 @@ def mlx_lora_yaml(
     cfg = MLX_PROFILES[profile]
     if model_dir is None:
         model_dir = root / "local/models/Qwen3-14B-MLX-4bit"
+    mask_prompt = mlx_mask_prompt_for_model(model_dir)
     keys_yaml = json.dumps(cfg["lora_keys"])
     return f"""model: "{model_dir.resolve()}"
 train: true
@@ -168,7 +193,7 @@ learning_rate: {cfg["learning_rate"]}
 max_seq_length: {cfg["max_seq_length"]}
 grad_accumulation_steps: {cfg["grad_accumulation_steps"]}
 grad_checkpoint: true
-mask_prompt: true
+mask_prompt: {"true" if mask_prompt else "false"}
 adapter_path: "{adapter_dir.resolve()}"
 save_every: {cfg["save_every"]}
 steps_per_eval: {cfg["steps_per_eval"]}
@@ -420,7 +445,11 @@ def main(argv: list[str] | None = None) -> int:
     valid_source = read_jsonl(args.validation_data)
     test_source = read_jsonl(args.test_data)
 
-    valid_quotas = VALID_HEAVY_QUOTAS if args.profile in ("heavy", "paper") else VALID_QUOTAS
+    valid_quotas = (
+        VALID_HEAVY_QUOTAS
+        if args.profile in ("heavy", "paper", "paper_lite")
+        else VALID_QUOTAS
+    )
 
     if args.full_train:
         train_sampled = list(train_rows)

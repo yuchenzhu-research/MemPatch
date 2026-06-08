@@ -15,7 +15,8 @@ from pathlib import Path
 FAMILY_FALLBACK = {
     "qwen": "#E87722",
     "gemma": "#2A9D8F",
-    "deepseek": "#7B61FF",
+    "mistral": "#FF7000",
+    "llama": "#4267B2",
     "other": "#6C757D",
 }
 

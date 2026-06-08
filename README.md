@@ -81,12 +81,20 @@ PYTHONPATH=.:src python scripts/run_mempatch_revision_module.py \
   --scripted-actions tests/fixtures/scripted_noop_actions.json
 ```
 
-## MLX paper experiments (Qwen3.5 / Gemma 4 / DeepSeek-R1)
+## MLX paper experiments (Qwen3 / Gemma 3 / Mistral Nemo / Llama 3.1)
 
-Single entry script (download → LoRA 256 iters → test500 → figures):
+Default matrix: four open models at 8B–14B with identical `paper` LoRA (256 iters):
 
 ```bash
 bash scripts/run_paper_pipeline.sh
+SKIP_DOWNLOAD=1 bash scripts/run_paper_pipeline.sh
+```
+
+Download new weights only:
+
+```bash
+.venv/bin/python scripts/download_mlx_model.py --preset mistral-nemo-12b --mirror --disable-xet
+.venv/bin/python scripts/download_mlx_model.py --preset llama-3.1-8b-instruct --mirror --disable-xet
 ```
 
 ## Layout

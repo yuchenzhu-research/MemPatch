@@ -21,6 +21,12 @@ llm = [
     "anthropic>=0.25",
     "google-genai>=1.0",
 ]
+mlx = [
+    "mlx>=0.31",
+    # PyPI 0.31.3 may lack gemma4_unified remap; main branch required for Gemma 4 LoRA.
+    "mlx-lm @ git+https://github.com/ml-explore/mlx-lm.git@main",
+    "transformers>=5.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["src", "."]
