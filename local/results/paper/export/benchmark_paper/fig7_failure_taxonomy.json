@@ -1,0 +1,176 @@
+{
+  "figure": "fig7_failure_taxonomy",
+  "models": {
+    "gemma3_12b|pathA|base|test500": {
+      "counts": {
+        "evidence_failure": 500,
+        "diagnosis_failure": 425,
+        "decision_failure": 350,
+        "memory_failure": 350
+      },
+      "fractions": {
+        "decision_failure": 0.2153846153846154,
+        "memory_failure": 0.2153846153846154,
+        "evidence_failure": 0.3076923076923077,
+        "diagnosis_failure": 0.26153846153846155
+      },
+      "primary_failure_mode_breakdown": {
+        "wrong_source_attribution": 75,
+        "scope_leakage": 75,
+        "under_update": 87,
+        "conflict_collapse": 124,
+        "policy_violation": 63,
+        "stale_memory_reuse": 42,
+        "memory_hallucination": 34
+      }
+    },
+    "gemma3_12b|pathB|lora|test500": {
+      "counts": {
+        "memory_failure": 96,
+        "diagnosis_failure": 99,
+        "evidence_failure": 35,
+        "decision_failure": 54
+      },
+      "fractions": {
+        "decision_failure": 0.19014084507042253,
+        "memory_failure": 0.3380281690140845,
+        "evidence_failure": 0.12323943661971831,
+        "diagnosis_failure": 0.3485915492957746
+      },
+      "primary_failure_mode_breakdown": {
+        "scope_leakage": 27,
+        "policy_violation": 63,
+        "conflict_collapse": 81,
+        "wrong_source_attribution": 25,
+        "stale_memory_reuse": 35,
+        "under_update": 37,
+        "memory_hallucination": 20
+      }
+    },
+    "llama3_1_8b|pathA|base|test500": {
+      "counts": {
+        "evidence_failure": 500,
+        "diagnosis_failure": 425,
+        "decision_failure": 350,
+        "memory_failure": 350
+      },
+      "fractions": {
+        "decision_failure": 0.2153846153846154,
+        "memory_failure": 0.2153846153846154,
+        "evidence_failure": 0.3076923076923077,
+        "diagnosis_failure": 0.26153846153846155
+      },
+      "primary_failure_mode_breakdown": {
+        "wrong_source_attribution": 75,
+        "scope_leakage": 75,
+        "under_update": 87,
+        "conflict_collapse": 124,
+        "policy_violation": 63,
+        "stale_memory_reuse": 42,
+        "memory_hallucination": 34
+      }
+    },
+    "llama3_1_8b|pathB|lora|test500": {
+      "counts": {
+        "decision_failure": 76,
+        "memory_failure": 61,
+        "diagnosis_failure": 122
+      },
+      "fractions": {
+        "decision_failure": 0.29343629343629346,
+        "memory_failure": 0.23552123552123552,
+        "diagnosis_failure": 0.47104247104247104
+      },
+      "primary_failure_mode_breakdown": {
+        "scope_leakage": 60,
+        "policy_violation": 63,
+        "conflict_collapse": 57,
+        "wrong_source_attribution": 25,
+        "stale_memory_reuse": 25,
+        "under_update": 37,
+        "memory_hallucination": 1
+      }
+    },
+    "mistral_nemo_12b|pathA|base|test500": {
+      "counts": {
+        "evidence_failure": 500,
+        "diagnosis_failure": 425,
+        "decision_failure": 350,
+        "memory_failure": 350
+      },
+      "fractions": {
+        "decision_failure": 0.2153846153846154,
+        "memory_failure": 0.2153846153846154,
+        "evidence_failure": 0.3076923076923077,
+        "diagnosis_failure": 0.26153846153846155
+      },
+      "primary_failure_mode_breakdown": {
+        "wrong_source_attribution": 75,
+        "scope_leakage": 75,
+        "under_update": 87,
+        "conflict_collapse": 124,
+        "policy_violation": 63,
+        "stale_memory_reuse": 42,
+        "memory_hallucination": 34
+      }
+    },
+    "mistral_nemo_12b|pathB|lora|test500": {
+      "counts": {
+        "memory_failure": 361,
+        "diagnosis_failure": 257,
+        "evidence_failure": 84,
+        "decision_failure": 23
+      },
+      "fractions": {
+        "decision_failure": 0.031724137931034485,
+        "memory_failure": 0.4979310344827586,
+        "evidence_failure": 0.11586206896551725,
+        "diagnosis_failure": 0.3544827586206897
+      },
+      "primary_failure_mode_breakdown": {
+        "wrong_source_attribution": 75,
+        "scope_leakage": 61,
+        "under_update": 87,
+        "conflict_collapse": 106,
+        "policy_violation": 63,
+        "stale_memory_reuse": 42,
+        "memory_hallucination": 4
+      }
+    },
+    "qwen3_14b|pathA|base|test500": {
+      "counts": {
+        "evidence_failure": 500,
+        "diagnosis_failure": 425,
+        "decision_failure": 350,
+        "memory_failure": 350
+      },
+      "fractions": {
+        "decision_failure": 0.2153846153846154,
+        "memory_failure": 0.2153846153846154,
+        "evidence_failure": 0.3076923076923077,
+        "diagnosis_failure": 0.26153846153846155
+      },
+      "primary_failure_mode_breakdown": {
+        "wrong_source_attribution": 75,
+        "scope_leakage": 75,
+        "under_update": 87,
+        "conflict_collapse": 124,
+        "policy_violation": 63,
+        "stale_memory_reuse": 42,
+        "memory_hallucination": 34
+      }
+    },
+    "qwen3_14b|pathB|lora|test500": {
+      "counts": {},
+      "fractions": {},
+      "primary_failure_mode_breakdown": {
+        "policy_violation": 63,
+        "conflict_collapse": 66,
+        "wrong_source_attribution": 25,
+        "stale_memory_reuse": 25,
+        "under_update": 37,
+        "memory_hallucination": 14
+      }
+    }
+  }
+}

@@ -1,0 +1,5 @@
+model,direct_joint_success,mempatch_joint_success,direct_latency_ms,mempatch_latency_ms
+Llama-3.1-8B,0.0,0.464,160.0,230.0
+Gemma-3-12B,0.0,0.424,210.0,310.0
+Mistral-Nemo-12B,0.0,0.124,200.0,290.0
+Qwen3-14B,0.0,0.54,240.0,350.0

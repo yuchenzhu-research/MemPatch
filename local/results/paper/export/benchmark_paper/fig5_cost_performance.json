@@ -1,0 +1,45 @@
+{
+  "figure": "fig5_cost_performance",
+  "points": [
+    {
+      "model": "gemma3_12b",
+      "display_name": "Gemma 3 12B",
+      "family": "gemma",
+      "family_color": "#2A9D8F",
+      "active_params_b": 12.0,
+      "total_params_b": 12.0,
+      "joint_revision_success": 0.424,
+      "latency_ms_per_case": null
+    },
+    {
+      "model": "llama3_1_8b",
+      "display_name": "Llama 3.1 8B Instruct",
+      "family": "llama",
+      "family_color": "#4267B2",
+      "active_params_b": 8.0,
+      "total_params_b": 8.0,
+      "joint_revision_success": 0.464,
+      "latency_ms_per_case": null
+    },
+    {
+      "model": "mistral_nemo_12b",
+      "display_name": "Mistral Nemo 12B Instruct",
+      "family": "mistral",
+      "family_color": "#FF7000",
+      "active_params_b": 12.0,
+      "total_params_b": 12.0,
+      "joint_revision_success": 0.124,
+      "latency_ms_per_case": null
+    },
+    {
+      "model": "qwen3_14b",
+      "display_name": "Qwen3-14B",
+      "family": "qwen",
+      "family_color": "#F4A261",
+      "active_params_b": 14.0,
+      "total_params_b": 14.0,
+      "joint_revision_success": 0.54,
+      "latency_ms_per_case": null
+    }
+  ]
+}

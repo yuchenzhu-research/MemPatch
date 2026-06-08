@@ -153,6 +153,11 @@ def load_eval_run(pred_path: Path, scenarios_path: Path | None = None) -> EvalRu
     scenarios = load_scenarios(scenarios_path)
     predictions = load_predictions(pred_path)
     result = evaluate_predictions(scenarios, predictions, strict=False, allow_missing=True)
+    scen_by_id = {s["scenario_id"]: s for s in scenarios}
+    for r in result["scored_predictions"]:
+        sid = r["scenario_id"]
+        if sid in scen_by_id:
+            r["difficulty"] = scen_by_id[sid].get("difficulty")
     return EvalRun(
         model=model,
         path=path,
@@ -164,8 +169,6 @@ def load_eval_run(pred_path: Path, scenarios_path: Path | None = None) -> EvalRu
         headline=result["headline_metrics"],
         count=result["count"],
     )
-
-
 def subset_metrics(scored: list[dict[str, Any]], predicate) -> dict[str, float]:
     rows = [r for r in scored if predicate(r)]
     if not rows:

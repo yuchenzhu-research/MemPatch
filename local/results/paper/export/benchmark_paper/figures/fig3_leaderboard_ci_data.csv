@@ -1,0 +1,5 @@
+model,direct_joint_success,mempatch_joint_success,ci_low,ci_high
+Llama-3.1-8B,0.0,0.464,0.42,0.506
+Gemma-3-12B,0.0,0.424,0.38,0.47
+Mistral-Nemo-12B,0.0,0.124,0.096,0.154
+Qwen3-14B,0.0,0.54,0.496,0.584

@@ -1,0 +1,42 @@
+{
+  "figure": "fig2_leaderboard_ci",
+  "metric": "joint_revision_success",
+  "path": "B",
+  "variant": "lora",
+  "split": null,
+  "n_bootstrap": 1000,
+  "bars": [
+    {
+      "model": "qwen3_14b",
+      "score": 0.54,
+      "ci_low": 0.496,
+      "ci_high": 0.584,
+      "n": 500,
+      "metric": "joint_revision_success"
+    },
+    {
+      "model": "llama3_1_8b",
+      "score": 0.464,
+      "ci_low": 0.42,
+      "ci_high": 0.506,
+      "n": 500,
+      "metric": "joint_revision_success"
+    },
+    {
+      "model": "gemma3_12b",
+      "score": 0.424,
+      "ci_low": 0.38,
+      "ci_high": 0.47,
+      "n": 500,
+      "metric": "joint_revision_success"
+    },
+    {
+      "model": "mistral_nemo_12b",
+      "score": 0.124,
+      "ci_low": 0.096,
+      "ci_high": 0.154,
+      "n": 500,
+      "metric": "joint_revision_success"
+    }
+  ]
+}
