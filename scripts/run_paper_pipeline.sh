@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# MemPatch paper pipeline (single entry): download → smoke → LoRA → test500 → export/plot
+# MemPatch paper pipeline (single entry): download → LoRA → test500 → export/plot
 #
 # Default models (48GB Mac, same paper LoRA on all rows):
 #   qwen3_14b, gemma3_12b, mistral_nemo_12b, llama3_1_8b
@@ -11,7 +11,6 @@
 #   bash scripts/run_paper_pipeline.sh --download-bg      # download in background, exit
 #   SKIP_DOWNLOAD=1 bash scripts/run_paper_pipeline.sh    # skip download phase
 #   SKIP_TRAIN=1 bash scripts/run_paper_pipeline.sh       # eval + export only
-#   RESUME_LORA=1 FORCE_TRAIN=1 ...                     # continue LoRA from latest checkpoint
 #   USE_MIRROR=0 bash scripts/run_paper_pipeline.sh       # huggingface.co direct
 set -euo pipefail
 
@@ -31,7 +30,6 @@ PAPER_DATA="${PAPER_DATA:-$ROOT/local/train_data/paper}"
 SHARED_SFT="${SHARED_SFT:-$PAPER_DATA/shared_sft}"
 TEST_BUNDLE="${TEST_BUNDLE:-$PAPER_DATA/test500}"
 LOGS="${LOGS:-$ROOT/local/logs/paper}"
-ADAPTER_ROOT="${ADAPTER_ROOT:-$ROOT/local/adapters}"
 
 DOWNLOAD_PRESETS="qwen3-14b gemma3-12b mistral-nemo-12b llama-3.1-8b-instruct"
 
@@ -41,7 +39,6 @@ model_key_preset() {
     gemma3_12b) echo "gemma3-12b" ;;
     mistral_nemo_12b) echo "mistral-nemo-12b" ;;
     llama3_1_8b) echo "llama-3.1-8b-instruct" ;;
-    gemma4_12b) echo "gemma4-12b" ;;
     *) echo "unknown model key: $1" >&2; return 1 ;;
   esac
 }
@@ -52,7 +49,6 @@ model_key_slug() {
     gemma3_12b) echo "gemma3_12b" ;;
     mistral_nemo_12b) echo "mistral_nemo_12b" ;;
     llama3_1_8b) echo "llama3_1_8b" ;;
-    gemma4_12b) echo "gemma4_12b" ;;
     *) echo "unknown model key: $1" >&2; return 1 ;;
   esac
 }
@@ -63,13 +59,8 @@ model_key_local_name() {
     gemma3_12b) echo "gemma-3-12b-it-4bit" ;;
     mistral_nemo_12b) echo "Mistral-Nemo-Instruct-2407-4bit" ;;
     llama3_1_8b) echo "Meta-Llama-3.1-8B-Instruct-4bit" ;;
-    gemma4_12b) echo "gemma-4-12B-it-4bit" ;;
     *) echo "unknown model key: $1" >&2; return 1 ;;
   esac
-}
-
-adapter_train_complete() {
-  [[ -f "$1/adapters.safetensors" ]]
 }
 
 log() { printf '[pipeline] %s\n' "$*"; }
@@ -104,7 +95,6 @@ preset_local_name() {
     gemma3-12b) echo "gemma-3-12b-it-4bit" ;;
     mistral-nemo-12b) echo "Mistral-Nemo-Instruct-2407-4bit" ;;
     llama-3.1-8b-instruct) echo "Meta-Llama-3.1-8B-Instruct-4bit" ;;
-    gemma4-12b) echo "gemma-4-12B-it-4bit" ;;
     *) echo "$1" ;;
   esac
 }
@@ -237,43 +227,6 @@ run_path_a() {
     --max-tokens 512 --temp 0.0
 }
 
-write_training_manifest() {
-  local slug="$1" adapter_dir="$2" mlx_config="$3" profile="$4"
-  "$PYTHON" - "$adapter_dir" "$mlx_config" "$profile" "$slug" <<'PY'
-import json
-import re
-import sys
-from datetime import datetime, timezone
-from pathlib import Path
-
-from prepare_mempatch_v13_smoke import MLX_PROFILES
-
-adapter_dir = Path(sys.argv[1])
-config_path = Path(sys.argv[2])
-profile = sys.argv[3]
-slug = sys.argv[4]
-target_iters = int(MLX_PROFILES[profile]["iters"])
-checkpoints = sorted(adapter_dir.glob("[0-9]*_adapters.safetensors"))
-completed_iters = int(checkpoints[-1].name.split("_", 1)[0]) if checkpoints else 0
-yaml_text = config_path.read_text(encoding="utf-8") if config_path.is_file() else ""
-mask_match = re.search(r"^mask_prompt:\s*(\S+)\s*$", yaml_text, re.MULTILINE)
-manifest = {
-    "model": slug,
-    "profile": profile,
-    "target_iters": target_iters,
-    "completed_iters": completed_iters,
-    "checkpoints": [path.name for path in checkpoints],
-    "adapter_config": str(adapter_dir / "adapter_config.json"),
-    "mlx_config": str(config_path),
-    "mask_prompt": mask_match.group(1) if mask_match else None,
-    "updated_at": datetime.now(timezone.utc).isoformat(),
-}
-manifest_path = adapter_dir / "training_manifest.json"
-manifest_path.write_text(json.dumps(manifest, indent=2, sort_keys=True) + "\n", encoding="utf-8")
-print(f"[pipeline] wrote {manifest_path} ({completed_iters}/{target_iters} iters)")
-PY
-}
-
 train_path_b_lora() {
   local slug="$1" model_dir="$2" adapter_dir="$3" mlx_config="$4" profile="$5"
   log "Train Path B LoRA | model=$slug profile=$profile"
@@ -281,38 +234,7 @@ train_path_b_lora() {
     --profile "$profile" --out-dir "$SHARED_SFT" \
     --model-dir "$model_dir" --adapter-dir "$adapter_dir" \
     --mlx-config "$mlx_config" --config-only
-  mkdir -p "$adapter_dir"
-  if [[ "${RESUME_LORA:-0}" == "1" ]]; then
-    "$PYTHON" - "$mlx_config" "$adapter_dir" "$profile" <<'PY'
-import re
-import sys
-from pathlib import Path
-
-from prepare_mempatch_v13_smoke import MLX_PROFILES
-
-config_path = Path(sys.argv[1])
-adapter_dir = Path(sys.argv[2])
-profile = sys.argv[3]
-target_iters = int(MLX_PROFILES[profile]["iters"])
-text = config_path.read_text(encoding="utf-8")
-checkpoints = sorted(adapter_dir.glob("[0-9]*_adapters.safetensors"))
-if not checkpoints:
-    raise SystemExit(f"error: RESUME_LORA=1 but no checkpoint in {adapter_dir}")
-latest = checkpoints[-1]
-done = int(latest.name.split("_", 1)[0])
-remaining = max(target_iters - done, 1)
-text = re.sub(r"^iters:\s*\d+\s*$", f"iters: {remaining}", text, count=1, flags=re.MULTILINE)
-resume_line = f'resume_adapter_file: "{latest.resolve()}"'
-if re.search(r"^resume_adapter_file:", text, re.MULTILINE):
-    text = re.sub(r"^resume_adapter_file:.*$", resume_line, text, count=1, flags=re.MULTILINE)
-else:
-    text = text.rstrip() + "\n" + resume_line + "\n"
-config_path.write_text(text, encoding="utf-8")
-print(f"[pipeline] resume LoRA from iter {done}, train {remaining} more (target {target_iters})")
-PY
-  fi
   "$PYTHON" -m mlx_lm lora --config "$mlx_config"
-  write_training_manifest "$slug" "$adapter_dir" "$mlx_config" "$profile"
 }
 
 phase_train_eval_export() {
@@ -335,7 +257,7 @@ phase_train_eval_export() {
     local slug model_dir
     slug="$(model_key_slug "$key")"
     model_dir="$ROOT/local/models/$(model_key_local_name "$key")"
-    local adapter_dir="$ADAPTER_ROOT/${slug}_pathB_lora"
+    local adapter_dir="$ROOT/local/adapters/${slug}_pathB_lora"
     local mlx_config="$LOGS/$slug/mlx_lora.yaml"
     mkdir -p "$LOGS/$slug"
 
@@ -343,16 +265,9 @@ phase_train_eval_export() {
       echo "error: missing model $model_dir (run download first)" >&2
       exit 1
     fi
-    if [[ "$SKIP_TRAIN" != "1" ]]; then
-      "$PYTHON" "$ROOT/scripts/check_mlx_lora_model.py" "$model_dir"
-    fi
 
     if [[ "$SKIP_TRAIN" != "1" ]]; then
-      if adapter_train_complete "$adapter_dir" && [[ "${FORCE_TRAIN:-0}" != "1" ]]; then
-        log "skip LoRA train (adapter exists): $slug"
-      else
-        train_path_b_lora "$slug" "$model_dir" "$adapter_dir" "$mlx_config" "$PAPER_TRAIN_PROFILE"
-      fi
+      train_path_b_lora "$slug" "$model_dir" "$adapter_dir" "$mlx_config" "$PAPER_TRAIN_PROFILE"
     fi
 
     run_path_b "$slug" lora "$model_dir" "$adapter_dir" \
