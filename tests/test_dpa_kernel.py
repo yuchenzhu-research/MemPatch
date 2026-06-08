@@ -1,10 +1,10 @@
 from __future__ import annotations
 
-from retracemem.authorization import authorize
+from mempatch_dpa.authorization import authorize
 
-from retrace_learn.runtime.dpa_runtime import run_actions
-from retrace_learn.runtime.views import actions_to_proposal_batches, build_view
-from retrace_learn.schemas import RevisionAction
+from mempatch_learn.runtime.dpa_runtime import run_actions
+from mempatch_learn.runtime.views import actions_to_proposal_batches, build_view
+from mempatch_learn.schemas import RevisionAction
 
 
 def _base_evidence() -> list[dict[str, str]]:

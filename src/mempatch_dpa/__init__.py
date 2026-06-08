@@ -1,6 +1,6 @@
 """MemPatch deterministic authorization kernel (DPA, memory store, commit path)."""
 
-from retracemem.authorization import (
+from mempatch_dpa.authorization import (
     authorize,
     EvidenceProposalBatch,
     AuthorizationResult,

@@ -4,9 +4,9 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from retracemem.methods.contracts import SharedCandidateView
+from mempatch_dpa.methods.contracts import SharedCandidateView
 
-from retrace_learn.runtime.views import build_view
+from mempatch_learn.runtime.views import build_view
 
 _REPLACEMENT_KEYWORDS = (
     "update",

@@ -8,10 +8,10 @@ from benchmark.general_taxonomy import (
     PRIMARY_MEMORY_STATUSES,
 )
 from benchmark.public_view import public_scenario_view
-from retrace_learn.runtime.benchmark_projection import project_to_benchmark_response
-from retrace_learn.runtime.dpa_runtime import ParseResult, RuntimeResult
-from retrace_learn.runtime.revision_module import run_revision_module_on_scenario
-from retrace_learn.schemas import RevisionAction
+from mempatch_learn.runtime.benchmark_projection import project_to_benchmark_response
+from mempatch_learn.runtime.dpa_runtime import ParseResult, RuntimeResult
+from mempatch_learn.runtime.revision_module import run_revision_module_on_scenario
+from mempatch_learn.schemas import RevisionAction
 
 
 def _runtime_result(**kwargs: object) -> RuntimeResult:

@@ -3,9 +3,9 @@ requires = ["setuptools>=77.0.3"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "retracemem"
+name = "mempatch"
 version = "0.1.0"
-description = "Evidence-preserving reversible belief revision for dynamic agent memory."
+description = "MemPatch benchmark and rapid memory integration revision module."
 requires-python = ">=3.10"
 dependencies = [
     "python-dotenv>=1.0,<2",
@@ -24,7 +24,7 @@ llm = [
 
 [tool.setuptools.packages.find]
 where = ["src", "."]
-include = ["retracemem*", "retrace_learn*", "benchmark*"]
+include = ["mempatch_dpa*", "mempatch_learn*", "benchmark*"]
 
 [tool.pyright]
 include = ["benchmark", "scripts", "src"]

@@ -10,8 +10,8 @@ This repo ships:
 |-----------|----------|
 | **MemPatch-Bench** (evaluator + taxonomy) | `benchmark/` |
 | **Scenario generator** (v1.3) | `benchmark/generation/` |
-| **Revision module** (view → DPA → response) | `src/retrace_learn/runtime/` |
-| **DPA kernel** | `src/retracemem/` |
+| **Revision module** (learned proposer + projection) | `src/mempatch_learn/` |
+| **DPA kernel** (deterministic verifier; not the benchmark scorer) | `src/mempatch_dpa/` |
 | **Dataset release** | `hf_release/mempatch/` |
 
 ## Install
@@ -84,13 +84,13 @@ PYTHONPATH=.:src python scripts/run_mempatch_revision_module.py \
 ## Layout
 
 ```
-benchmark/           Evaluator API, taxonomy, model runner, generation/
-src/retrace_learn/     Revision module (runtime/)
-src/retracemem/        DPA authorization kernel
-scripts/               7 core (eval, generate, audit, validate, package, runners) + 4 MLX train CLIs
-tests/                 Unit tests + smoke fixtures
-hf_release/mempatch/   Dataset bundle (4000 scenarios)
-data/mempatch/         Tracked audit artifacts
+benchmark/              MemPatch-Bench: evaluator, taxonomy, scenario generator
+src/mempatch_learn/     Revision module (view → proposer → projection)
+src/mempatch_dpa/       DPA authorization kernel (deterministic, not scoring)
+scripts/                7 core + 4 MLX train CLIs
+tests/                  Unit tests + smoke fixtures
+hf_release/mempatch/    Dataset bundle (4000 scenarios)
+data/mempatch/          Tracked audit artifacts
 ```
 
 See `AGENTS.md` for agent workflow and pre-commit cache cleanup.

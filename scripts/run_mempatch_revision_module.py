@@ -14,14 +14,14 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
 
 from benchmark.api import load_scenarios  # noqa: E402
 from benchmark.model_runner import call_model  # noqa: E402
-from retrace_learn.runtime.learned_proposer import (  # noqa: E402
+from mempatch_learn.runtime.learned_proposer import (  # noqa: E402
     LearnedTypedRevisionProposer,
     ScriptedProposer,
     build_proposer_prompt,
 )
-from retrace_learn.runtime.revision_module import run_revision_module_on_scenario  # noqa: E402
-from retrace_learn.runtime.scenario_revision import build_scenario_revision_view  # noqa: E402
-from retrace_learn.schemas import RevisionAction  # noqa: E402
+from mempatch_learn.runtime.revision_module import run_revision_module_on_scenario  # noqa: E402
+from mempatch_learn.runtime.scenario_revision import build_scenario_revision_view  # noqa: E402
+from mempatch_learn.schemas import RevisionAction  # noqa: E402
 
 
 def _load_done_ids(path: Path) -> set[str]:

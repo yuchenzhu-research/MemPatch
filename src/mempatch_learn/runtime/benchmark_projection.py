@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING, Any
 from benchmark.general_taxonomy import DECISIONS, PRIMARY_FAILURE_MODES, PRIMARY_MEMORY_STATUSES
 
 if TYPE_CHECKING:
-    from retrace_learn.runtime.dpa_runtime import RuntimeResult
+    from mempatch_learn.runtime.dpa_runtime import RuntimeResult
 
 BENCHMARK_STATUS_BY_DPA_STATUS = {
     "AUTHORIZED": "current",

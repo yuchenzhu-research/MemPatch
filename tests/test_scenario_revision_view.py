@@ -2,8 +2,8 @@ from __future__ import annotations
 
 import json
 
-from retrace_learn.runtime.revision_module import run_revision_module_on_scenario
-from retrace_learn.runtime.scenario_revision import build_scenario_revision_view
+from mempatch_learn.runtime.revision_module import run_revision_module_on_scenario
+from mempatch_learn.runtime.scenario_revision import build_scenario_revision_view
 
 
 def _replacement_scenario() -> dict:

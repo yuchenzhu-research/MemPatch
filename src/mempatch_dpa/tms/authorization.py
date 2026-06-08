@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from retracemem.memory.belief_store import BeliefStore
-from retracemem.memory.episode_ledger import EpisodeLedger
-from retracemem.memory.temporal_validity import TemporalValidity
-from retracemem.schemas import (
+from mempatch_dpa.memory.belief_store import BeliefStore
+from mempatch_dpa.memory.episode_ledger import EpisodeLedger
+from mempatch_dpa.memory.temporal_validity import TemporalValidity
+from mempatch_dpa.schemas import (
     AuthorizationStatus,
     AuthorizationTrace,
     DefeatPath,
@@ -336,7 +336,7 @@ class DefeatPathAuthorizationAlgorithm:
         )
 
 
-# Legacy import alias. ``retracemem.tms.__init__`` re-exports the name
+# Legacy import alias. ``mempatch_dpa.tms.__init__`` re-exports the name
 # ``AuthorizationEngine`` so downstream packages keep importing the package
 # without ImportError at module load time. The alias only preserves the *name*;
 # the underlying behavior is the new typed-graph DPA.

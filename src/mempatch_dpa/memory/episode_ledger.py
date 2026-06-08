@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from retracemem.schemas import EvidenceNode
+from mempatch_dpa.schemas import EvidenceNode
 
 
 class EpisodeLedger:

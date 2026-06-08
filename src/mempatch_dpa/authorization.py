@@ -3,12 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from retracemem.memory.belief_store import BeliefStore
-from retracemem.memory.episode_ledger import EpisodeLedger
-from retracemem.methods.contracts import SharedCandidateView
-from retracemem.schemas import AuthorizationStatus, EvidenceEdge
-from retracemem.tms.authorization import DefeatPathAuthorizationAlgorithm
-from retracemem.tms.gate import RevisionGate
+from mempatch_dpa.memory.belief_store import BeliefStore
+from mempatch_dpa.memory.episode_ledger import EpisodeLedger
+from mempatch_dpa.methods.contracts import SharedCandidateView
+from mempatch_dpa.schemas import AuthorizationStatus, EvidenceEdge
+from mempatch_dpa.tms.authorization import DefeatPathAuthorizationAlgorithm
+from mempatch_dpa.tms.gate import RevisionGate
 
 
 @dataclass(frozen=True)

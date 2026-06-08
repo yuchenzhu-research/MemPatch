@@ -18,7 +18,7 @@ from dataclasses import dataclass, field
 from enum import Enum
 from typing import Any
 
-from retracemem.schemas import (
+from mempatch_dpa.schemas import (
     BeliefNode,
     ConditionNode,
     DependencyEdge,

@@ -1,8 +1,6 @@
 """Build MemPatch v1.3 scenario records from blueprint instances.
 
-The upstream ``UnifiedRendererV13`` (ReTrace blueprint repo) is not vendored
-here. This module defines the contract and metadata envelope; rendering raises
-``RendererNotAvailableError`` until upstream is wired in.
+The in-repo v1.3 unified renderer produces benchmark-valid scenarios.
 """
 
 from __future__ import annotations
@@ -87,7 +85,7 @@ def build_scenario_metadata(
 ) -> dict[str, Any]:
     decision = variant.decision
     return {
-        "schema_version": "retrace_bench_general_1",
+        "schema_version": "mempatch_bench_general_1",
         "renderer": RENDERER,
         "benchmark_version": BENCHMARK_VERSION,
         "split": blueprint.split,

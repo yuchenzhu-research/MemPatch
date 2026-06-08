@@ -6,10 +6,10 @@ from typing import Any
 
 from benchmark.public_view import public_scenario_view
 
-from retrace_learn.runtime.benchmark_projection import project_to_benchmark_response
-from retrace_learn.runtime.dpa_runtime import run_from_text
-from retrace_learn.runtime.learned_proposer import TypedRevisionProposer
-from retrace_learn.runtime.scenario_revision import build_scenario_revision_view
+from mempatch_learn.runtime.benchmark_projection import project_to_benchmark_response
+from mempatch_learn.runtime.dpa_runtime import run_from_text
+from mempatch_learn.runtime.learned_proposer import TypedRevisionProposer
+from mempatch_learn.runtime.scenario_revision import build_scenario_revision_view
 
 
 def _noop_actions_text(new_evidence_id: str) -> str:

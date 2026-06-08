@@ -18,10 +18,10 @@ import json
 from dataclasses import dataclass
 from typing import Any, Callable, Protocol
 
-from retracemem.methods.contracts import SharedCandidateView
+from mempatch_dpa.methods.contracts import SharedCandidateView
 
-from retrace_learn.schemas import RevisionAction
-from retrace_learn.runtime.dpa_runtime import ParseResult, parse_actions
+from mempatch_learn.schemas import RevisionAction
+from mempatch_learn.runtime.dpa_runtime import ParseResult, parse_actions
 
 GENERATE_FN = Callable[[str], str]
 
@@ -178,7 +178,7 @@ class OracleProposer:
         metadata: dict[str, Any] | None = None,
     ) -> ProposalOutput:
         # TODO: Replay ground-truth gold revision actions for the given view
-        from retrace_learn.runtime.dpa_runtime import ParseResult
+        from mempatch_learn.runtime.dpa_runtime import ParseResult
         return ProposalOutput(raw_text="[]", parse_result=ParseResult(valid_json=True, schema_valid=True, actions=()))
 
 
@@ -197,5 +197,5 @@ class ReplayProposer:
         metadata: dict[str, Any] | None = None,
     ) -> ProposalOutput:
         # TODO: Replay matching proposal for the given view
-        from retrace_learn.runtime.dpa_runtime import ParseResult
+        from mempatch_learn.runtime.dpa_runtime import ParseResult
         return ProposalOutput(raw_text="[]", parse_result=ParseResult(valid_json=True, schema_valid=True, actions=()))

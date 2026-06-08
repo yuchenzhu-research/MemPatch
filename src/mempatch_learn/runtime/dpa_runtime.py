@@ -5,7 +5,7 @@ and ``authorize`` (DPA), and yields legal memory-state transitions ``T`` for
 ``ProjectToBenchmarkResponse``. The model proposes; DPA authorizes; the
 benchmark evaluates the resulting ``memory_state``.
 
-This wraps the deterministic kernel (``retracemem.authorize``) with the
+This wraps the deterministic kernel (``mempatch_dpa.authorize``) with the
 MemPatch JSON parsing front-end. It is the program-only runtime that turns
 a (possibly model-generated) action payload into final belief statuses plus a
 fully auditable trace. It never learns and never overrides DPA: it parses,
@@ -16,16 +16,16 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any
 
-from retracemem.authorization import authorize
-from retracemem.methods.contracts import SharedCandidateView
-from retracemem.action_parser import (
+from mempatch_dpa.authorization import authorize
+from mempatch_dpa.methods.contracts import SharedCandidateView
+from mempatch_dpa.action_parser import (
     ParseErrorCode,
     StructuredParseError,
     extract_json_array,
 )
 
-from retrace_learn.schemas import RevisionAction, SchemaValidationError
-from retrace_learn.runtime.engine_errors import (
+from mempatch_learn.schemas import RevisionAction, SchemaValidationError
+from mempatch_learn.runtime.engine_errors import (
     EngineError,
     EngineStage,
     ErrorSeverity,
@@ -33,7 +33,7 @@ from retrace_learn.runtime.engine_errors import (
     PARSER_ITEM_NOT_OBJECT,
     PARSER_SCHEMA_VIOLATION,
 )
-from retrace_learn.runtime.views import actions_to_proposal_batches
+from mempatch_learn.runtime.views import actions_to_proposal_batches
 
 
 @dataclass(frozen=True)

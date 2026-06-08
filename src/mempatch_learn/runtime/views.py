@@ -1,7 +1,7 @@
 """Bridge between MemPatch Revision Module views/actions and DPA projection.
 
 This module is the only place that translates the dict-shaped training data
-into the canonical ``retracemem`` dataclasses consumed by ``authorize(...)``.
+into the canonical ``mempatch_dpa`` dataclasses consumed by ``authorize(...)``.
 Keeping the translation here means the learned components never hand-roll
 ``EvidenceEdge`` / ``SharedCandidateView`` construction, so the deterministic
 kernel stays the single source of truth.
@@ -10,9 +10,9 @@ from __future__ import annotations
 
 from typing import Any
 
-from retracemem.authorization import EvidenceProposalBatch
-from retracemem.methods.contracts import SharedCandidateView
-from retracemem.schemas import (
+from mempatch_dpa.authorization import EvidenceProposalBatch
+from mempatch_dpa.methods.contracts import SharedCandidateView
+from mempatch_dpa.schemas import (
     BeliefNode,
     ConditionNode,
     DependencyEdge,
@@ -20,10 +20,10 @@ from retracemem.schemas import (
     EvidenceNode,
 )
 
-from retrace_learn.schemas import RevisionAction
+from mempatch_learn.schemas import RevisionAction
 
 DEFAULT_SESSION = "session_0"
-DEFAULT_DATASET = "retrace_learn_synthetic"
+DEFAULT_DATASET = "mempatch_synthetic"
 
 
 def evidence_node_from_dict(d: dict[str, Any]) -> EvidenceNode:
@@ -65,7 +65,7 @@ def dependency_edge_from_dict(d: dict[str, Any]) -> DependencyEdge:
         edge_id=d["edge_id"],
         belief_id=d["belief_id"],
         condition_id=d["condition_id"],
-        inducer=d.get("inducer", "retrace_learn_extractor"),
+        inducer=d.get("inducer", "mempatch_extractor"),
         edge_type=d.get("edge_type", "REQUIRES"),
         supporting_evidence_ids=tuple(d.get("supporting_evidence_ids", ()) or ()),
         confidence=d.get("confidence"),
@@ -123,7 +123,7 @@ def build_view(
 def actions_to_proposal_batches(
     actions: list[RevisionAction],
     *,
-    verifier: str = "retrace_learn_proposer",
+    verifier: str = "mempatch_proposer",
     edge_id_prefix: str = "edge_rl",
     model_call_trace_id: str | None = None,
 ) -> tuple[EvidenceProposalBatch, ...]:
@@ -164,6 +164,6 @@ def actions_to_proposal_batches(
         EvidenceProposalBatch(
             edges=tuple(edges),
             model_call_trace_id=model_call_trace_id,
-            metadata={"proposer": "retrace_learn"},
+            metadata={"proposer": "mempatch"},
         ),
     )

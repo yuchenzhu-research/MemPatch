@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-from retracemem.memory.belief_store import BeliefStore
-from retracemem.schemas import (
+from mempatch_dpa.memory.belief_store import BeliefStore
+from mempatch_dpa.schemas import (
     DependencyEdge,
     EvidenceEdge,
     EvidenceEdgeType,
@@ -16,7 +16,7 @@ class GateDecision:
 
     The gate never decides authorization. It only certifies that an edge is
     well-formed with respect to the typed graph schema in
-    ``retracemem.schemas`` and to the current contents of ``BeliefStore``.
+    ``mempatch_dpa.schemas`` and to the current contents of ``BeliefStore``.
 
     ``reason`` is a stable machine-readable token (snake_case) so that
     tests and downstream tooling can assert on it without parsing prose.

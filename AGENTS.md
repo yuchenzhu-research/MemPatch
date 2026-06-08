@@ -20,8 +20,8 @@ Do **not** `git add local/` — all generated models, adapters, and scratch data
 **MemPatch: Benchmarking and Improving Rapid Memory Integration in LLM Agents**
 
 - **MemPatch-Bench** — `response` interface + `hidden_gold` scoring (`benchmark/api.py`)
-- **MemPatch Revision Module** — `src/retrace_learn/runtime/` (view → policy → DPA → projection)
-- **DPA** — deterministic verifier (`retracemem.authorize`)
+- **MemPatch Revision Module** — `src/mempatch_learn/` (view → policy → DPA → projection)
+- **DPA** — deterministic verifier (`mempatch_dpa.authorize`)
 
 Public evaluator: `from benchmark.api import evaluate_predictions, load_scenarios`
 

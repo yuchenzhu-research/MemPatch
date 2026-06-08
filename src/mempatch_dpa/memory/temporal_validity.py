@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Iterable
 
-from retracemem.memory.episode_ledger import EpisodeLedger
-from retracemem.schemas import DefeatPath, EvidenceEdge
+from mempatch_dpa.memory.episode_ledger import EpisodeLedger
+from mempatch_dpa.schemas import DefeatPath, EvidenceEdge
 
 
 class MissingEvidenceError(KeyError):
