@@ -275,19 +275,6 @@ phase_train_eval_export() {
     run_path_a "$slug" "$model_dir" "$TEST_BUNDLE/scenarios.jsonl" test500
   done
 
-  log "export benchmark-paper assets"
-  "$PYTHON" "$ROOT/scripts/export_benchmark_paper_assets.py" \
-    --results-dir "$RESULTS" \
-    --out-dir "$RESULTS/export/benchmark_paper" \
-    --primary-split test500
-
-  if "$PYTHON" -c "import matplotlib" 2>/dev/null; then
-    "$PYTHON" "$ROOT/scripts/plot_benchmark_paper_figures.py" \
-      --export-dir "$RESULTS/export/benchmark_paper" \
-      --out-dir "$RESULTS/export/benchmark_paper/figures"
-  else
-    log "matplotlib not installed; skip PNG (pip install matplotlib)"
-  fi
 }
 
 main() {

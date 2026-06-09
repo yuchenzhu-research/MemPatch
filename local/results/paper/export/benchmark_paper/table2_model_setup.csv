@@ -1,5 +1,0 @@
-model,display_name,family,model_generation,paper_role,selection_note,total_params_b,active_params_b,context_length,license,quantization,eval_path,eval_variant,eval_split
-gemma3_12b,Gemma 3 12B,gemma,Gemma 3,main,Google ~12B instruct tier; mlx-community/gemma-3-12b-it-4bit,12.0,12.0,8192,Gemma Terms,4-bit MLX,A,base,test500
-llama3_1_8b,Llama 3.1 8B Instruct,llama,Llama 3.1,main,Meta ~8B instruct; mlx-community/Meta-Llama-3.1-8B-Instruct-4bit,8.0,8.0,131072,Llama 3.1 Community,4-bit MLX,A,base,test500
-mistral_nemo_12b,Mistral Nemo 12B Instruct,mistral,Nemo 2407,main,Mistral ~12B instruct; mlx-community/Mistral-Nemo-Instruct-2407-4bit,12.0,12.0,128000,Apache-2.0,4-bit MLX,A,base,test500
-qwen3_14b,Qwen3-14B,qwen,Qwen3,main,Qwen-family ~14B tier; mlx-community/Qwen3-14B-4bit,14.0,14.0,32768,Apache-2.0,4-bit MLX,A,base,test500

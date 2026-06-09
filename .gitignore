@@ -78,7 +78,3 @@ hf_token*
 .cache/huggingface/
 huggingface/
 hf_home/
-
-# Explicitly allow tracking local evaluation results
-!local/results/
-!local/results/**
