@@ -108,14 +108,16 @@ for fold in $(seq 0 $((KFOLDS - 1))); do
   done
 done
 
-echo "======== baselines ========"
-if [[ -f "$LINUX_DIR/run_baseline_matrix.sh" ]]; then
+echo "======== 8+1 baseline matrix (11 baselines + lora_best) ========"
+# Build matching SFT bundle for lora_best row in baseline matrix.
+"$PYTHON" "$ROOT/scripts/data/build_paper_eval_bundle.py" \
+  --scenarios "$TEST_SCENARIOS" \
+  --out-dir "$SMOKE_SFT_DIR" \
+  --limit "$EVAL_LIMIT"
+
+BASELINE_SET="${BASELINE_SET:-all}" INCLUDE_LORA=1 RESUME=0 \
   SLUG="$SLUG" EVAL_LIMIT="$EVAL_LIMIT" TEST_SFT_DIR="$SMOKE_SFT_DIR" \
-    bash "$LINUX_DIR/run_baseline_matrix.sh"
-else
-  echo "skip: run_baseline_matrix.sh not present yet."
-  echo "smoke covered structured_direct via test eval prompt (same as base JSON port)."
-  echo "full 8+1 baselines: implement run_baseline_matrix.sh before paper table."
-fi
+  EVAL_SCENARIOS="$SMOKE_SFT_DIR/scenarios.jsonl" \
+  bash "$LINUX_DIR/run_baseline_matrix.sh"
 
 echo "Smoke OK — artifacts under $RESULT_DIR and $OUT_DIR"

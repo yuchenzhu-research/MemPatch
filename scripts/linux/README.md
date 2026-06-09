@@ -18,7 +18,7 @@ Mac MLX scripts under `scripts/workflows/` stay unchanged; use this directory on
         │
 (5) test500 eval   run_hf_test_eval.py  base (NO_ADAPTER) + lora (best ckpt)
         │
-(6) baselines      (next) 8 external + mempatch_lora row — same predictions contract
+(6) baselines      run_baseline_matrix.sh — 11 baselines + mempatch_lora_best
         │
 (7) score          evaluate_mempatch_predictions.py  → headline table
 ```
@@ -62,7 +62,8 @@ SLUG=llama3_1_8b bash scripts/linux/run_smoke_test.sh
 Smoke defaults: `TRAIN_ITERS=10`, `SAVE_EVERY=2`, `RUN_ID=smoke10`, `KFOLDS=5`, `EVAL_LIMIT=20`.
 Override example: `TRAIN_ITERS=10 SAVE_EVERY=2 SLUG=gemma3_12b bash scripts/linux/run_smoke_test.sh`
 
-8+1 baselines: `run_baseline_matrix.sh` is not in repo yet; smoke skips that step with a notice.
+8+1 baselines: `run_baseline_matrix.sh` runs **11 baselines + `mempatch_lora_best`** (same JSON schema).
+Paper main table uses 8 from `PAPER_MAIN_BASELINE_IDS`; appendix adds `bm25_rag`, `mem0g`, `oracle_memory_state`.
 
 ## Quick start (one model)
 
