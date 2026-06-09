@@ -19,4 +19,6 @@ fi
   "bitsandbytes>=0.45" \
   "datasets>=3.0"
 
-echo "Setup OK. Next: huggingface-cli login && bash scripts/linux/01_audit.sh"
+echo "Setup OK. Next:"
+echo "  export HF_TOKEN=hf_... && hf auth login --token \"\$HF_TOKEN\""
+echo "  bash scripts/linux/01_audit.sh"

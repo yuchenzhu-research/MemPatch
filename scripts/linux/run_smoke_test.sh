@@ -11,27 +11,47 @@ set -euo pipefail
 source "$(dirname "$0")/env.sh"
 source "$LINUX_DIR/lib_selection.sh"
 
+# Smoke profile always wins over env.sh paper defaults (TRAIN_ITERS=256, etc.).
+# Override with SMOKE_* env vars if needed, e.g. SMOKE_TRAIN_ITERS=16.
 SLUG="${SLUG:-llama3_1_8b}"
-RUN_ID="${RUN_ID:-smoke10}"
-TRAIN_ITERS="${TRAIN_ITERS:-10}"
-SAVE_EVERY="${SAVE_EVERY:-2}"
-SAVE_TOTAL_LIMIT="${SAVE_TOTAL_LIMIT:-10}"
-KFOLDS="${KFOLDS:-5}"
-EVAL_LIMIT="${EVAL_LIMIT:-20}"
-RESUME_PROBE_STEPS="${RESUME_PROBE_STEPS:-4}"
+export RUN_ID="${SMOKE_RUN_ID:-smoke10}"
+export TRAIN_ITERS="${SMOKE_TRAIN_ITERS:-10}"
+export SAVE_EVERY="${SMOKE_SAVE_EVERY:-2}"
+export SAVE_TOTAL_LIMIT="${SMOKE_SAVE_TOTAL_LIMIT:-10}"
+export KFOLDS="${SMOKE_KFOLDS:-5}"
+export EVAL_LIMIT="${SMOKE_EVAL_LIMIT:-20}"
+RESUME_PROBE_STEPS="${SMOKE_RESUME_PROBE_STEPS:-4}"
+FULL_TRAIN_ITERS="$TRAIN_ITERS"
 
 RESULT_DIR="$RESULTS_ROOT/$SLUG"
 SMOKE_SFT_DIR="${LOCAL_ROOT}/train_data/paper/test${EVAL_LIMIT}"
 
 echo "======== CUDA probe ========"
 "$PYTHON" - <<'PY'
+import sys
 import torch
+
 print("torch:", torch.__version__)
 print("cuda:", torch.version.cuda)
 print("available:", torch.cuda.is_available())
-if torch.cuda.is_available():
-    print("device:", torch.cuda.get_device_name(0))
+if not torch.cuda.is_available():
+    print("error: no CUDA GPU — smoke requires a GPU node (AutoDL PyTorch+CUDA image).", file=sys.stderr)
+    sys.exit(1)
+print("device:", torch.cuda.get_device_name(0))
 PY
+
+echo "======== Hugging Face auth probe ========"
+if [[ -n "${HF_TOKEN:-}" ]]; then
+  HF_TOKEN="$HF_TOKEN" "$PYTHON" -c 'import os; from huggingface_hub import login; login(token=os.environ["HF_TOKEN"], add_to_git_credential=False)'
+  echo "HF_TOKEN applied."
+elif ! "$PYTHON" -c "from huggingface_hub import HfApi; HfApi().whoami()" 2>/dev/null; then
+  echo "error: Hugging Face not authenticated." >&2
+  echo "  export HF_TOKEN=hf_...  (accept Llama/Gemma licenses on huggingface.co first)" >&2
+  echo "  or: hf auth login" >&2
+  exit 1
+else
+  echo "HF session OK."
+fi
 
 echo "======== audit ========"
 bash "$LINUX_DIR/01_audit.sh"
@@ -45,7 +65,7 @@ if [[ "$PARTIAL_ITERS" -ge "$TRAIN_ITERS" ]]; then
   PARTIAL_ITERS=$((TRAIN_ITERS / 2))
 fi
 
-echo "-- partial train: ${PARTIAL_ITERS} steps -> resume -> ${TRAIN_ITERS} steps"
+echo "-- partial train: ${PARTIAL_ITERS} steps -> resume -> ${FULL_TRAIN_ITERS} steps"
 TRAIN_ITERS="$PARTIAL_ITERS" KFOLD_FOLD=0 bash "$LINUX_DIR/03_train_fold.sh"
 RESUME_FROM="$OUT_DIR/checkpoint-${PARTIAL_ITERS}"
 if [[ ! -d "$RESUME_FROM" ]]; then
@@ -53,9 +73,9 @@ if [[ ! -d "$RESUME_FROM" ]]; then
   ls -la "$OUT_DIR" >&2 || true
   exit 1
 fi
-TRAIN_ITERS="$TRAIN_ITERS" RESUME_FROM="$RESUME_FROM" KFOLD_FOLD=0 bash "$LINUX_DIR/03_train_fold.sh"
+TRAIN_ITERS="$FULL_TRAIN_ITERS" RESUME_FROM="$RESUME_FROM" KFOLD_FOLD=0 bash "$LINUX_DIR/03_train_fold.sh"
 
-echo "======== remaining folds (full ${TRAIN_ITERS} steps each) ========"
+echo "======== remaining folds (full ${FULL_TRAIN_ITERS} steps each) ========"
 for fold in $(seq 1 $((KFOLDS - 1))); do
   echo "---- fold $fold ----"
   unset RESUME_FROM
@@ -83,7 +103,7 @@ TEST_SFT_DIR="$SMOKE_SFT_DIR" EVAL_LIMIT="$EVAL_LIMIT" \
 
 echo "======== per-fold with/without (LoRA ckpt @ step ${SAVE_EVERY}) ========"
 for fold in $(seq 0 $((KFOLDS - 1))); do
-  CKPT_DIR="$ADAPTER_ROOT/${SLUG}_pathB_lora/fold${fold}/${RUN_ID}/checkpoint-${TRAIN_ITERS}"
+  CKPT_DIR="$ADAPTER_ROOT/${SLUG}_pathB_lora/fold${fold}/${RUN_ID}/checkpoint-${FULL_TRAIN_ITERS}"
   if [[ ! -d "$CKPT_DIR" ]]; then
     CKPT_DIR="$(ls -d "$ADAPTER_ROOT/${SLUG}_pathB_lora/fold${fold}/${RUN_ID}"/checkpoint-* 2>/dev/null | tail -1)"
   fi

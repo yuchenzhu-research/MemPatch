@@ -53,14 +53,19 @@ mkdir -p "$LOCAL_ROOT" "$HF_HOME"
 cd MemPatch
 git pull
 bash scripts/linux/00_setup.sh
-huggingface-cli login
 
-# One command: 10-step train, resume probe, 5-fold, pick-best, with/without eval (20 cases)
+# Non-interactive HF auth (accept gated model licenses on huggingface.co first)
+export HF_TOKEN=hf_...
+hf auth login --token "$HF_TOKEN"
+
+# One command: 10-step train, resume probe, 5-fold, pick-best, with/without, 8+1 baselines (20 cases)
 SLUG=llama3_1_8b bash scripts/linux/run_smoke_test.sh
 ```
 
-Smoke defaults: `TRAIN_ITERS=10`, `SAVE_EVERY=2`, `RUN_ID=smoke10`, `KFOLDS=5`, `EVAL_LIMIT=20`.
-Override example: `TRAIN_ITERS=10 SAVE_EVERY=2 SLUG=gemma3_12b bash scripts/linux/run_smoke_test.sh`
+**Requires:** CUDA GPU node (CPU-only cloud will fail at CUDA probe). Llama/Gemma need HF gated access.
+
+Smoke defaults (always override `env.sh` paper values): `SMOKE_TRAIN_ITERS=10`, `SMOKE_SAVE_EVERY=2`, `SMOKE_RUN_ID=smoke10`, `SMOKE_KFOLDS=5`, `SMOKE_EVAL_LIMIT=20`.
+Override example: `SMOKE_TRAIN_ITERS=16 SLUG=gemma3_12b bash scripts/linux/run_smoke_test.sh`
 
 8+1 baselines: `run_baseline_matrix.sh` runs **11 baselines + `mempatch_lora_best`** (same JSON schema).
 Paper main table uses 8 from `PAPER_MAIN_BASELINE_IDS`; appendix adds `bm25_rag`, `mem0g`, `oracle_memory_state`.
