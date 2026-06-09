@@ -1,5 +1,0 @@
-model,display_name,family,total_params_b,active_params_b,latency_ms_per_case
-qwen3_14b,Qwen3-14B,qwen,14.0,14.0,
-gemma3_12b,Gemma-3-12B,gemma,12.0,12.0,
-mistral_nemo_12b,Mistral-Nemo-12B,mistral,12.0,12.0,
-llama3_1_8b,Llama-3.1-8B,llama,8.0,8.0,

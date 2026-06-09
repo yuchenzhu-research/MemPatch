@@ -1,9 +1,0 @@
-model,display_name,path,method,variant,split,count,joint_revision_success,memory_state_accuracy
-gemma3_12b,Gemma-3-12B,A,Direct,base,test500,500,0.0,0.7666666666666708
-gemma3_12b,Gemma-3-12B,B,MemPatch,lora,test500,500,0.424,0.9353333333333358
-llama3_1_8b,Llama-3.1-8B,A,Direct,base,test500,500,0.0,0.7666666666666708
-llama3_1_8b,Llama-3.1-8B,B,MemPatch,lora,test500,500,0.464,0.9593333333333336
-mistral_nemo_12b,Mistral-Nemo-12B,A,Direct,base,test500,500,0.0,0.7666666666666708
-mistral_nemo_12b,Mistral-Nemo-12B,B,MemPatch,lora,test500,500,0.124,0.47200000000000075
-qwen3_14b,Qwen3-14B,A,Direct,base,test500,500,0.0,0.7666666666666708
-qwen3_14b,Qwen3-14B,B,MemPatch,lora,test500,500,0.54,1.0

@@ -6,10 +6,10 @@ One evaluator (`benchmark.api.evaluate_predictions`) scores every run. Outputs g
 
 | Line | Script | What it does | Trained? |
 |------|--------|--------------|----------|
-| **External memory baselines** | `run_mempatch_memory_baselines.py` | `build_prompt` → MLX → five-field JSON. Backends: `base`, `full`, `rag`, `mem0`. | No |
-| **DirectJudge** | `run_mempatch_model.py` | API/MLX provider → five-field JSON (same schema as baselines). | Optional |
-| **Path A** (`\baseproj{}`) | `run_mlx_revision_module_eval.py` | Revision view → **typed actions JSON** → DPA → projection → five fields. | No (base MLX) |
-| **Path B** (`\adapted{}`) | `run_mlx_lora_smoke_eval.py` | SFT prompt → MLX+LoRA → **direct five-field JSON**. | Yes (LoRA) |
+| **External memory baselines** | `eval/run_mempatch_memory_baselines.py` | `build_prompt` → MLX → five-field JSON. Backends: `base`, `full`, `rag`, `mem0`. | No |
+| **DirectJudge** | `eval/run_mempatch_model.py` | API/MLX provider → five-field JSON (same schema as baselines). | Optional |
+| **Path A** | `eval/run_mlx_revision_module_eval.py` | Revision view → **typed actions JSON** → DPA → projection → five fields. | No (base MLX) |
+| **Path B** | `eval/run_mlx_lora_smoke_eval.py` | SFT prompt → MLX+LoRA → **direct five-field JSON**. | Yes (LoRA) |
 
 **Fair comparisons**
 
@@ -41,27 +41,28 @@ One evaluator (`benchmark.api.evaluate_predictions`) scores every run. Outputs g
 
 ## Script categories
 
-### Eval runners
+### Eval runners (`scripts/eval/`)
 - `run_mempatch_memory_baselines.py` — RAG / full / mem0 / base
 - `run_mlx_revision_module_eval.py` — Path A
 - `run_mlx_lora_smoke_eval.py` — Path B
 - `run_mempatch_model.py` — DirectJudge (API)
 - `run_mempatch_revision_module.py` — revision module (scripted/prompt policy)
-- `evaluate_mempatch_predictions.py` — score existing JSONL
 
-### Memory baseline helpers
+### Workflows (`scripts/workflows/`)
+- `evaluate_mempatch_predictions.py` — score existing JSONL
+- `audit_decision_boundary.py` — pre-training audit gate
+- `validate_mempatch_bench_dataset.py` — release validation
+- `run_paper_pipeline.sh` — audit → download → train Path B → Path A+B eval on test500
+
+### Memory baseline helpers (`scripts/memory/`)
 - `mempatch_memory_context.py` — context builders
 - `mempatch_mem0_local.py` — local Mem0 config (no OpenAI)
 
-### MLX utilities
+### MLX utilities (`scripts/mlx/`)
 - `mlx_chat_utils.py`, `download_mlx_model.py`, `check_mlx_lora_model.py`
 
-### Data / release
-- `generate_mempatch.py`, `audit_decision_boundary.py`, `validate_mempatch_bench_dataset.py`
-- `prepare_mempatch_v13_smoke.py`, `build_paper_eval_bundle.py`, `package_mempatch_release.py`
+### Data / release (`scripts/data/`)
+- `generate_mempatch.py`, `prepare_mempatch_v13_smoke.py`, `build_paper_eval_bundle.py`, `package_mempatch_release.py`
 
-### Pipeline
-- `run_paper_pipeline.sh` — audit → download → train Path B → Path A+B eval on test500
-
-### Analysis
+### Analysis (`scripts/analysis/`)
 - `analyze_mlx_lora_errors.py` — per-case error breakdown (optional)
