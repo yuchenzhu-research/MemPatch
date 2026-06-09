@@ -13,7 +13,7 @@ rm -rf .pycache_compile .pytest_cache
 find benchmark scripts src tests -type d -name __pycache__ -exec rm -rf {} + 2>/dev/null || true
 ```
 
-The `find` covers all `scripts/` subdirectories (`eval/`, `workflows/`, `data/`, `mlx/`, `memory/`, `analysis/`).
+The `find` covers all `scripts/` subdirectories (`eval/`, `workflows/`, `data/`, `mlx_support/`, `memory/`, `analysis/`).
 
 Do **not** `git add local/` — all generated models, adapters, and scratch data stay gitignored.
 

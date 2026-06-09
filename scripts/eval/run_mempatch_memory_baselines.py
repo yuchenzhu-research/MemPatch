@@ -49,7 +49,7 @@ def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def prediction_from_output(scenario_id: str, output: str, *, json_brace_prefill: bool = False) -> dict[str, Any]:
-    from scripts.mlx.mlx_chat_utils import extract_json_object as mlx_extract_json_object
+    from scripts.mlx_support.mlx_chat_utils import extract_json_object as mlx_extract_json_object
 
     try:
         response = mlx_extract_json_object(output, json_brace_prefill=json_brace_prefill)
@@ -71,7 +71,7 @@ def run_predictions(args: argparse.Namespace) -> list[dict[str, Any]]:
     from mlx_lm import generate, load
     from mlx_lm.generate import make_sampler
 
-    from scripts.mlx.mlx_chat_utils import apply_chat_template_no_think, normalize_generation_text
+    from scripts.mlx_support.mlx_chat_utils import apply_chat_template_no_think, normalize_generation_text
 
     scenarios = load_scenarios(args.data)
     if args.limit is not None:

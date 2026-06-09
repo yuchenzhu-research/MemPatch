@@ -51,13 +51,13 @@ def extract_scenario_id(messages: list[dict[str, str]]) -> str:
 
 
 def strip_thinking(text: str) -> str:
-    from scripts.mlx.mlx_chat_utils import strip_thinking as _strip
+    from scripts.mlx_support.mlx_chat_utils import strip_thinking as _strip
 
     return _strip(text)
 
 
 def extract_json_object(text: str, *, json_brace_prefill: bool = False) -> dict[str, Any]:
-    from scripts.mlx.mlx_chat_utils import extract_json_object as _extract
+    from scripts.mlx_support.mlx_chat_utils import extract_json_object as _extract
 
     return _extract(text, json_brace_prefill=json_brace_prefill)
 
@@ -81,7 +81,7 @@ def prediction_from_output(
 
 
 def prompt_tokens(tokenizer: Any, messages: list[dict[str, str]]) -> tuple[list[int], dict[str, Any]]:
-    from scripts.mlx.mlx_chat_utils import apply_chat_template_no_think
+    from scripts.mlx_support.mlx_chat_utils import apply_chat_template_no_think
 
     prompt_messages = [m for m in messages if m.get("role") in {"system", "user"}]
     return apply_chat_template_no_think(tokenizer, prompt_messages)

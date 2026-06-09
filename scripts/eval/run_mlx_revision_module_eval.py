@@ -22,7 +22,7 @@ from mempatch_learn.runtime.revision_module import run_revision_module_on_scenar
 
 
 def strip_thinking(text: str) -> str:
-    from scripts.mlx.mlx_chat_utils import strip_thinking as _strip
+    from scripts.mlx_support.mlx_chat_utils import strip_thinking as _strip
 
     return _strip(text)
 
@@ -63,7 +63,7 @@ def run_predictions(args: argparse.Namespace) -> list[dict[str, Any]]:
     sampler = make_sampler(temp=args.temp)
 
     def generate_fn(prompt: str) -> str:
-        from scripts.mlx.mlx_chat_utils import apply_chat_template_no_think, normalize_generation_text
+        from scripts.mlx_support.mlx_chat_utils import apply_chat_template_no_think, normalize_generation_text
 
         messages = [{"role": "user", "content": prompt}]
         tokens, gen_meta = apply_chat_template_no_think(tokenizer, messages)

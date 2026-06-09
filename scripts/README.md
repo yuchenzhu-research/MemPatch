@@ -12,7 +12,7 @@ scripts/
   workflows/            audit, validate, evaluate, paper pipeline
   eval/                 model runners (API, MLX, memory baselines)
   data/                 dataset generation, SFT prep, release packaging
-  mlx/                  MLX download + chat utilities
+  mlx_support/                  MLX download + chat utilities
   memory/               external memory baseline context builders
   analysis/             post-hoc error analysis
 ```
@@ -78,7 +78,7 @@ RAG, Full, Base, and Mem0 backends all funnel through `benchmark.model_runner.bu
 - `memory/mempatch_mem0_local.py` — local Mem0 config (no OpenAI)
 
 ### MLX utilities
-- `mlx/mlx_chat_utils.py`, `mlx/download_mlx_model.py`, `mlx/check_mlx_lora_model.py`
+- `mlx_support/mlx_chat_utils.py`, `mlx_support/download_mlx_model.py`, `mlx_support/check_mlx_lora_model.py`
 
 ### Data / release
 - `data/generate_mempatch.py`, `data/prepare_mempatch_v13_smoke.py`

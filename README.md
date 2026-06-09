@@ -37,7 +37,7 @@ scripts/                      thin CLIs that wire runners to the evaluator
   eval/                       produce predictions.jsonl
   workflows/                  audit, validate, score, paper pipeline
   data/                       generate, package, bundle datasets
-  mlx/                        MLX download + chat helpers
+  mlx_support/                        MLX download + chat helpers
   memory/                     RAG / full / mem0 context builders
   analysis/                   optional error breakdowns
 ```
@@ -166,8 +166,8 @@ SKIP_DOWNLOAD=1 bash scripts/workflows/run_paper_pipeline.sh
 Download weights only:
 
 ```bash
-.venv/bin/python scripts/mlx/download_mlx_model.py --preset mistral-nemo-12b --mirror --disable-xet
-.venv/bin/python scripts/mlx/download_mlx_model.py --preset llama-3.1-8b-instruct --mirror --disable-xet
+.venv/bin/python scripts/mlx_support/download_mlx_model.py --preset mistral-nemo-12b --mirror --disable-xet
+.venv/bin/python scripts/mlx_support/download_mlx_model.py --preset llama-3.1-8b-instruct --mirror --disable-xet
 ```
 
 ## Local workspace (`local/`, gitignored)
@@ -197,7 +197,7 @@ scripts/
   eval/                 prediction runners
   workflows/            audit, validate, score, paper pipeline
   data/                 generate, package, bundle
-  mlx/                  MLX utilities
+  mlx_support/                  MLX utilities
   memory/               external memory baseline helpers
   analysis/             optional diagnostics
 tests/                  unit tests + smoke fixtures

@@ -103,7 +103,7 @@ preset_status() {
   local preset="$1"
   local local_name
   local_name="$(preset_local_name "$preset")"
-  if [[ -d "$ROOT/local/models/$local_name" ]] && "$PYTHON" "$ROOT/scripts/mlx/download_mlx_model.py" \
+  if [[ -d "$ROOT/local/models/$local_name" ]] && "$PYTHON" "$ROOT/scripts/mlx_support/download_mlx_model.py" \
       --preset "$preset" --verify-local >/dev/null 2>&1; then
     echo "complete"
   elif [[ -d "$ROOT/local/models/$local_name" ]]; then
@@ -137,7 +137,7 @@ phase_check_downloadable() {
   mirror_args
   for preset in $DOWNLOAD_PRESETS; do
     log "  check preset=$preset"
-    "$PYTHON" "$ROOT/scripts/mlx/download_mlx_model.py" \
+    "$PYTHON" "$ROOT/scripts/mlx_support/download_mlx_model.py" \
       --preset "$preset" --check "${MIRROR_ARGS[@]}"
   done
 }
@@ -154,9 +154,9 @@ download_preset() {
   fi
 
   log "downloading preset=$preset -> $local_name (mirror=$USE_MIRROR)"
-  "$PYTHON" "$ROOT/scripts/mlx/download_mlx_model.py" \
+  "$PYTHON" "$ROOT/scripts/mlx_support/download_mlx_model.py" \
     --preset "$preset" "${DOWNLOAD_CLI[@]}"
-  "$PYTHON" "$ROOT/scripts/mlx/download_mlx_model.py" \
+  "$PYTHON" "$ROOT/scripts/mlx_support/download_mlx_model.py" \
     --preset "$preset" --verify-local
 }
 
@@ -176,7 +176,7 @@ download_preset_background() {
 
   mkdir -p "$LOGS"
   log "background download preset=$preset -> $log_file"
-  nohup "$PYTHON" "$ROOT/scripts/mlx/download_mlx_model.py" \
+  nohup "$PYTHON" "$ROOT/scripts/mlx_support/download_mlx_model.py" \
     --preset "$preset" "${DOWNLOAD_CLI[@]}" >>"$log_file" 2>&1 &
   log "  pid=$! log=$log_file"
 }
