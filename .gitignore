@@ -57,6 +57,7 @@ runs/
 !hf_release/mempatch/**/dataset_info.json
 !hf_release/mempatch/VERSION
 outputs/
+Montreal/
 
 # Secrets / credentials / tokens — never commit any of these.
 .env.*
@@ -81,4 +82,3 @@ hf_home/
 # Explicitly allow tracking local evaluation results
 !local/results/
 !local/results/**
-

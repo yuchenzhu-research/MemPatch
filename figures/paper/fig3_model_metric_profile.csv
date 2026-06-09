@@ -1,0 +1,21 @@
+metric,metric_label,model,display_name,direct,mempatch,gain
+decision_macro_f1,Decision F1,qwen3_14b,Qwen3-14B,0.0923076923076923,1.0,0.9076923076923077
+decision_macro_f1,Decision F1,gemma3_12b,Gemma-3-12B,0.0923076923076923,0.8990301816102548,0.8067224893025625
+decision_macro_f1,Decision F1,mistral_nemo_12b,Mistral-Nemo-12B,0.0923076923076923,0.9534871963396446,0.8611795040319523
+decision_macro_f1,Decision F1,llama3_1_8b,Llama-3.1-8B,0.0923076923076923,0.8646839879411546,0.7723762956334623
+memory_state_accuracy,Memory State Acc.,qwen3_14b,Qwen3-14B,0.7666666666666708,1.0,0.23333333333332917
+memory_state_accuracy,Memory State Acc.,gemma3_12b,Gemma-3-12B,0.7666666666666708,0.9353333333333358,0.16866666666666497
+memory_state_accuracy,Memory State Acc.,mistral_nemo_12b,Mistral-Nemo-12B,0.7666666666666708,0.47200000000000075,-0.2946666666666701
+memory_state_accuracy,Memory State Acc.,llama3_1_8b,Llama-3.1-8B,0.7666666666666708,0.9593333333333336,0.19266666666666277
+evidence_f1,Evidence F1,qwen3_14b,Qwen3-14B,0.0,1.0,1.0
+evidence_f1,Evidence F1,gemma3_12b,Gemma-3-12B,0.0,0.965,0.965
+evidence_f1,Evidence F1,mistral_nemo_12b,Mistral-Nemo-12B,0.0,0.916,0.916
+evidence_f1,Evidence F1,llama3_1_8b,Llama-3.1-8B,0.0,1.0,1.0
+failure_diagnosis_accuracy,Diagnosis Acc.,qwen3_14b,Qwen3-14B,0.15,0.986,0.836
+failure_diagnosis_accuracy,Diagnosis Acc.,gemma3_12b,Gemma-3-12B,0.15,0.564,0.4139999999999999
+failure_diagnosis_accuracy,Diagnosis Acc.,mistral_nemo_12b,Mistral-Nemo-12B,0.15,0.422,0.272
+failure_diagnosis_accuracy,Diagnosis Acc.,llama3_1_8b,Llama-3.1-8B,0.15,0.622,0.472
+joint_revision_success,Joint Success,qwen3_14b,Qwen3-14B,0.0,0.54,0.54
+joint_revision_success,Joint Success,gemma3_12b,Gemma-3-12B,0.0,0.424,0.424
+joint_revision_success,Joint Success,mistral_nemo_12b,Mistral-Nemo-12B,0.0,0.124,0.124
+joint_revision_success,Joint Success,llama3_1_8b,Llama-3.1-8B,0.0,0.464,0.464

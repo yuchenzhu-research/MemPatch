@@ -27,6 +27,12 @@ mlx = [
     "mlx-lm @ git+https://github.com/ml-explore/mlx-lm.git@main",
     "transformers>=5.0",
 ]
+mem0 = [
+    "mem0ai",
+    "chromadb",
+    "ollama",
+    "sentence-transformers>=3.0",
+]
 
 [tool.setuptools.packages.find]
 where = ["src", "."]

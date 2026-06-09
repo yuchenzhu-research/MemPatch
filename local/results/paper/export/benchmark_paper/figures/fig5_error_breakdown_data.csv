@@ -1,8 +1,0 @@
-failure_mode,direct_count,direct_percentage,mempatch_count,mempatch_percentage
-Conflict Collapse,124,24.8,66,28.695652173913043
-Under Update,87,17.4,37,16.08695652173913
-Wrong Source Attribution,75,15.0,25,10.869565217391305
-Scope Leakage,75,15.0,0,0.0
-Policy Violation,63,12.6,63,27.391304347826086
-Stale Memory Reuse,42,8.4,25,10.869565217391305
-Memory Hallucination,34,6.800000000000001,14,6.086956521739131
