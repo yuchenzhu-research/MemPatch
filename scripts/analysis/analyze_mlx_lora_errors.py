@@ -17,7 +17,11 @@ from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts._root import REPO_ROOT, bootstrap_from
+
+bootstrap_from(__file__)
 
 from benchmark.api import evaluate_predictions, load_predictions, load_scenarios  # noqa: E402
 from benchmark.general_taxonomy import canonical_hidden_gold_fields  # noqa: E402
@@ -398,7 +402,7 @@ def print_report(report: dict[str, Any], *, show_cases: int = 0) -> None:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    root = Path(__file__).resolve().parent.parent
+    root = REPO_ROOT
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--data",

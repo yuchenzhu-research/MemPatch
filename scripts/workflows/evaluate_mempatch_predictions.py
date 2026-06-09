@@ -7,7 +7,7 @@ against a scenarios file.
 
 Example::
 
-    PYTHONPATH=. python scripts/evaluate_mempatch_predictions.py \
+    PYTHONPATH=. python scripts/workflows/evaluate_mempatch_predictions.py \
         --data hf_release/mempatch/test/scenarios.jsonl \
         --predictions path/to/predictions.jsonl \
         --out-metrics local/mempatch/my_model.metrics.json \
@@ -23,7 +23,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts._root import bootstrap_from
+
+bootstrap_from(__file__)
 
 from benchmark.api import (  # noqa: E402
     HEADLINE_METRICS,

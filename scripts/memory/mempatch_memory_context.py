@@ -13,7 +13,7 @@ from typing import Any
 
 from benchmark.public_view import public_scenario_view
 
-from mempatch_mem0_local import EmbedderProvider, create_local_memory
+from scripts.memory.mempatch_mem0_local import EmbedderProvider, create_local_memory
 
 BACKENDS = ("base", "full", "rag", "mem0")
 
@@ -200,7 +200,7 @@ def retrieve_mem0_context(
     """Ingest trace events into Mem0 OSS and return retrieved context."""
     import tempfile
 
-    from mempatch_mem0_local import DEFAULT_OLLAMA_URL
+    from scripts.memory.mempatch_mem0_local import DEFAULT_OLLAMA_URL
 
     with tempfile.TemporaryDirectory(prefix=f"mempatch-mem0-{scenario_id}-") as chroma_dir:
         memory, active_config = create_local_memory(

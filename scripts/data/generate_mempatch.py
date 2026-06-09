@@ -5,16 +5,21 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import sys
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts._root import bootstrap_from
+
+bootstrap_from(__file__)
 
 from benchmark.generation.blueprints import RENDERER, validate_registry
 from benchmark.generation.export_jsonl import export_splits
 from benchmark.generation.scenario_builder import build_scenario
 from benchmark.generation.split_sampler import FULL_QUOTAS, PILOT_QUOTAS, pilot_blueprints, sample_split
-from scripts.validate_mempatch_bench_dataset import validate_one
+from scripts.workflows.validate_mempatch_bench_dataset import validate_one
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:

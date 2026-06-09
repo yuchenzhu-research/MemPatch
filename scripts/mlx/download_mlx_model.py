@@ -6,7 +6,14 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts._root import REPO_ROOT, bootstrap_from
+
+bootstrap_from(__file__)
 import subprocess
 import time
 from tempfile import TemporaryDirectory
@@ -629,7 +636,7 @@ def download(repo_id: str, out_dir: Path, args: argparse.Namespace) -> None:
 
 
 def parse_args() -> argparse.Namespace:
-    root = Path(__file__).resolve().parent.parent
+    root = REPO_ROOT
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--preset",

@@ -7,15 +7,21 @@ import argparse
 import hashlib
 import json
 import re
-import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts._root import bootstrap_from
+
+bootstrap_from(__file__)
 
 from benchmark.general_taxonomy import DECISIONS, canonical_hidden_gold_fields
-from scripts.validate_mempatch_bench_dataset import _is_background_event
+from scripts.workflows.validate_mempatch_bench_dataset import _is_background_event
 
 NON_ANSWER_DECISIONS = ("ask_clarification", "escalate", "mark_unresolved")
 DEFAULT_JACCARD_WARN = 0.35

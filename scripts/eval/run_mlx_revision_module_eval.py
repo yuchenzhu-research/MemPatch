@@ -10,9 +10,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts._root import REPO_ROOT, bootstrap_from
+
+bootstrap_from(__file__, src=True)
 
 from benchmark.api import evaluate_predictions, load_scenarios  # noqa: E402
 from mempatch_learn.runtime.learned_proposer import LearnedTypedRevisionProposer  # noqa: E402
@@ -20,7 +22,7 @@ from mempatch_learn.runtime.revision_module import run_revision_module_on_scenar
 
 
 def strip_thinking(text: str) -> str:
-    from mlx_chat_utils import strip_thinking as _strip
+    from scripts.mlx.mlx_chat_utils import strip_thinking as _strip
 
     return _strip(text)
 
@@ -61,7 +63,7 @@ def run_predictions(args: argparse.Namespace) -> list[dict[str, Any]]:
     sampler = make_sampler(temp=args.temp)
 
     def generate_fn(prompt: str) -> str:
-        from mlx_chat_utils import apply_chat_template_no_think, normalize_generation_text
+        from scripts.mlx.mlx_chat_utils import apply_chat_template_no_think, normalize_generation_text
 
         messages = [{"role": "user", "content": prompt}]
         tokens, gen_meta = apply_chat_template_no_think(tokenizer, messages)
@@ -127,7 +129,7 @@ def write_metrics(args: argparse.Namespace, predictions: list[dict[str, Any]]) -
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    root = Path(__file__).resolve().parent.parent
+    root = REPO_ROOT
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--data", type=Path, required=True, help="Scenario JSONL slice.")
     parser.add_argument("--model", type=Path, required=True)

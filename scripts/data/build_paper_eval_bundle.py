@@ -5,17 +5,21 @@ from __future__ import annotations
 
 import argparse
 import json
-import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+import sys
 
-from prepare_mempatch_v13_smoke import read_jsonl, sft_example, write_jsonl
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts._root import REPO_ROOT, bootstrap_from
+
+bootstrap_from(__file__)
+
+from scripts.data.prepare_mempatch_v13_smoke import read_jsonl, sft_example, write_jsonl
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    root = Path(__file__).resolve().parent.parent
+    root = REPO_ROOT
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--scenarios",

@@ -11,7 +11,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts._root import REPO_ROOT, bootstrap_from
+
+bootstrap_from(__file__)
 
 from benchmark.general_taxonomy import BENCH_SCHEMA_VERSION
 
@@ -167,7 +171,7 @@ def main(argv: list[str] | None = None) -> int:
     for rel, digest in sorted(checksums.items()):
         print(f"  {rel}: {digest[:16]}... n={manifest['public_split_name_counts'].get(rel.split('/')[0])}")
 
-    repo_root = Path(__file__).resolve().parent.parent
+    repo_root = REPO_ROOT
     python = sys.executable
     if args.validate:
         failed = False

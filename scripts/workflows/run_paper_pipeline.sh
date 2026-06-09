@@ -5,16 +5,16 @@
 #   qwen3_14b, gemma3_12b, mistral_nemo_12b, llama3_1_8b
 #
 # Usage:
-#   bash scripts/run_paper_pipeline.sh                    # full run
-#   bash scripts/run_paper_pipeline.sh --check-only       # dataset + HF mirror check
-#   bash scripts/run_paper_pipeline.sh --download-only    # download + verify only
-#   bash scripts/run_paper_pipeline.sh --download-bg      # download in background, exit
-#   SKIP_DOWNLOAD=1 bash scripts/run_paper_pipeline.sh    # skip download phase
-#   SKIP_TRAIN=1 bash scripts/run_paper_pipeline.sh       # eval + export only
-#   USE_MIRROR=0 bash scripts/run_paper_pipeline.sh       # huggingface.co direct
+#   bash scripts/workflows/run_paper_pipeline.sh                    # full run
+#   bash scripts/workflows/run_paper_pipeline.sh --check-only       # dataset + HF mirror check
+#   bash scripts/workflows/run_paper_pipeline.sh --download-only    # download + verify only
+#   bash scripts/workflows/run_paper_pipeline.sh --download-bg      # download in background, exit
+#   SKIP_DOWNLOAD=1 bash scripts/workflows/run_paper_pipeline.sh    # skip download phase
+#   SKIP_TRAIN=1 bash scripts/workflows/run_paper_pipeline.sh       # eval + export only
+#   USE_MIRROR=0 bash scripts/workflows/run_paper_pipeline.sh       # huggingface.co direct
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PYTHON="${PYTHON:-$ROOT/.venv/bin/python}"
 export PYTHONPATH="${PYTHONPATH:-$ROOT:$ROOT/src:$ROOT/scripts}"
 
@@ -103,7 +103,7 @@ preset_status() {
   local preset="$1"
   local local_name
   local_name="$(preset_local_name "$preset")"
-  if [[ -d "$ROOT/local/models/$local_name" ]] && "$PYTHON" "$ROOT/scripts/download_mlx_model.py" \
+  if [[ -d "$ROOT/local/models/$local_name" ]] && "$PYTHON" "$ROOT/scripts/mlx/download_mlx_model.py" \
       --preset "$preset" --verify-local >/dev/null 2>&1; then
     echo "complete"
   elif [[ -d "$ROOT/local/models/$local_name" ]]; then
@@ -126,7 +126,7 @@ print_model_status() {
 
 phase_audit_dataset() {
   log "Dataset audit (4000 scenarios, decision-boundary gate)"
-  PYTHONPATH=.:src "$PYTHON" "$ROOT/scripts/audit_decision_boundary.py" \
+  PYTHONPATH=.:src "$PYTHON" "$ROOT/scripts/workflows/audit_decision_boundary.py" \
     --data "$ROOT/hf_release/mempatch/train" \
     --data "$ROOT/hf_release/mempatch/validation" \
     --data "$ROOT/hf_release/mempatch/test"
@@ -137,7 +137,7 @@ phase_check_downloadable() {
   mirror_args
   for preset in $DOWNLOAD_PRESETS; do
     log "  check preset=$preset"
-    "$PYTHON" "$ROOT/scripts/download_mlx_model.py" \
+    "$PYTHON" "$ROOT/scripts/mlx/download_mlx_model.py" \
       --preset "$preset" --check "${MIRROR_ARGS[@]}"
   done
 }
@@ -154,9 +154,9 @@ download_preset() {
   fi
 
   log "downloading preset=$preset -> $local_name (mirror=$USE_MIRROR)"
-  "$PYTHON" "$ROOT/scripts/download_mlx_model.py" \
+  "$PYTHON" "$ROOT/scripts/mlx/download_mlx_model.py" \
     --preset "$preset" "${DOWNLOAD_CLI[@]}"
-  "$PYTHON" "$ROOT/scripts/download_mlx_model.py" \
+  "$PYTHON" "$ROOT/scripts/mlx/download_mlx_model.py" \
     --preset "$preset" --verify-local
 }
 
@@ -176,7 +176,7 @@ download_preset_background() {
 
   mkdir -p "$LOGS"
   log "background download preset=$preset -> $log_file"
-  nohup "$PYTHON" "$ROOT/scripts/download_mlx_model.py" \
+  nohup "$PYTHON" "$ROOT/scripts/mlx/download_mlx_model.py" \
     --preset "$preset" "${DOWNLOAD_CLI[@]}" >>"$log_file" 2>&1 &
   log "  pid=$! log=$log_file"
 }
@@ -204,7 +204,7 @@ run_path_b() {
   [[ "$variant" == "lora" ]] && adapter_args=(--adapter-path "$adapter_dir")
 
   log "Path B | model=$slug variant=$variant split=$split_tag"
-  "$PYTHON" "$ROOT/scripts/run_mlx_lora_smoke_eval.py" \
+  "$PYTHON" "$ROOT/scripts/eval/run_mlx_lora_smoke_eval.py" \
     --data "$sft_jsonl" --model "$model_dir" "${adapter_args[@]}" \
     --out-predictions "$out_dir/pathB_${variant}_${split_tag}_predictions.jsonl" \
     --eval-data "$eval_scenarios" \
@@ -218,7 +218,7 @@ run_path_a() {
   local out_dir="$RESULTS/$slug"
   mkdir -p "$out_dir"
   log "Path A | model=$slug split=$split_tag"
-  "$PYTHON" "$ROOT/scripts/run_mlx_revision_module_eval.py" \
+  "$PYTHON" "$ROOT/scripts/eval/run_mlx_revision_module_eval.py" \
     --data "$eval_scenarios" --model "$model_dir" --no-adapter \
     --out-predictions "$out_dir/pathA_base_${split_tag}_predictions.jsonl" \
     --eval-data "$eval_scenarios" \
@@ -230,7 +230,7 @@ run_path_a() {
 train_path_b_lora() {
   local slug="$1" model_dir="$2" adapter_dir="$3" mlx_config="$4" profile="$5"
   log "Train Path B LoRA | model=$slug profile=$profile"
-  "$PYTHON" "$ROOT/scripts/prepare_mempatch_v13_smoke.py" \
+  "$PYTHON" "$ROOT/scripts/data/prepare_mempatch_v13_smoke.py" \
     --profile "$profile" --out-dir "$SHARED_SFT" \
     --model-dir "$model_dir" --adapter-dir "$adapter_dir" \
     --mlx-config "$mlx_config" --config-only
@@ -242,11 +242,11 @@ phase_train_eval_export() {
   IFS=',' read -r -a MODEL_KEYS <<< "$MODELS"
 
   log "build test500 eval bundle"
-  "$PYTHON" "$ROOT/scripts/build_paper_eval_bundle.py" --out-dir "$TEST_BUNDLE"
+  "$PYTHON" "$ROOT/scripts/data/build_paper_eval_bundle.py" --out-dir "$TEST_BUNDLE"
 
   if [[ "$SKIP_TRAIN" != "1" ]]; then
     log "shared SFT quotas (profile=$PAPER_TRAIN_PROFILE)"
-    "$PYTHON" "$ROOT/scripts/prepare_mempatch_v13_smoke.py" \
+    "$PYTHON" "$ROOT/scripts/data/prepare_mempatch_v13_smoke.py" \
       --profile "$PAPER_TRAIN_PROFILE" --out-dir "$SHARED_SFT" \
       --model-dir "$ROOT/local/models/$(model_key_local_name "${MODEL_KEYS[0]}")" \
       --adapter-dir "$ROOT/local/adapters/paper_placeholder" \

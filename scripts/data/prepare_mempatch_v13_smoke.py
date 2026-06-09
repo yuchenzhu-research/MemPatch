@@ -22,7 +22,11 @@ from collections import Counter
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts._root import REPO_ROOT, bootstrap_from
+
+bootstrap_from(__file__)
 
 from benchmark.general_taxonomy import DECISIONS, canonical_hidden_gold_fields
 from benchmark.model_runner import build_prompt
@@ -348,7 +352,7 @@ def print_distribution(label: str, counts: Counter[str]) -> None:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    root = Path(__file__).resolve().parent.parent
+    root = REPO_ROOT
     parser = argparse.ArgumentParser(description="Prepare MemPatch v1.3 SFT bundle and MLX LoRA config.")
     parser.add_argument(
         "--train-data",
@@ -423,7 +427,7 @@ def write_mlx_config(root: Path, args: argparse.Namespace) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    root = Path(__file__).resolve().parent.parent
+    root = REPO_ROOT
     args = parse_args(argv)
     if args.config_only:
         if not (args.out_dir / "train.jsonl").is_file():

@@ -10,8 +10,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts._root import REPO_ROOT, bootstrap_from
+
+bootstrap_from(__file__)
 
 from benchmark.api import evaluate_predictions, load_scenarios  # noqa: E402
 
@@ -48,13 +51,13 @@ def extract_scenario_id(messages: list[dict[str, str]]) -> str:
 
 
 def strip_thinking(text: str) -> str:
-    from mlx_chat_utils import strip_thinking as _strip
+    from scripts.mlx.mlx_chat_utils import strip_thinking as _strip
 
     return _strip(text)
 
 
 def extract_json_object(text: str, *, json_brace_prefill: bool = False) -> dict[str, Any]:
-    from mlx_chat_utils import extract_json_object as _extract
+    from scripts.mlx.mlx_chat_utils import extract_json_object as _extract
 
     return _extract(text, json_brace_prefill=json_brace_prefill)
 
@@ -78,7 +81,7 @@ def prediction_from_output(
 
 
 def prompt_tokens(tokenizer: Any, messages: list[dict[str, str]]) -> tuple[list[int], dict[str, Any]]:
-    from mlx_chat_utils import apply_chat_template_no_think
+    from scripts.mlx.mlx_chat_utils import apply_chat_template_no_think
 
     prompt_messages = [m for m in messages if m.get("role") in {"system", "user"}]
     return apply_chat_template_no_think(tokenizer, prompt_messages)
@@ -163,7 +166,7 @@ def write_metrics(args: argparse.Namespace, predictions: list[dict[str, Any]]) -
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    root = Path(__file__).resolve().parent.parent
+    root = REPO_ROOT
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--data",

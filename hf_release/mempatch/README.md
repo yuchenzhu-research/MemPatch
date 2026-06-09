@@ -137,7 +137,7 @@ Aggregate pattern x decision counts across all splits:
 Run the release-blocking audit:
 
 ```bash
-PYTHONPATH=.:src python scripts/audit_decision_boundary.py \
+PYTHONPATH=.:src python scripts/workflows/audit_decision_boundary.py \
   --data hf_release/mempatch/train/scenarios.jsonl \
   --data hf_release/mempatch/validation/scenarios.jsonl \
   --data hf_release/mempatch/test/scenarios.jsonl \
@@ -186,11 +186,11 @@ print(result["headline_metrics"])
 Regenerate the release:
 
 ```bash
-PYTHONPATH=.:src python scripts/generate_mempatch.py \
+PYTHONPATH=.:src python scripts/data/generate_mempatch.py \
   --full --out-dir hf_release/mempatch \
   --manifest-out hf_release/mempatch/manifest.json
 
-PYTHONPATH=.:src python scripts/package_mempatch_release.py \
+PYTHONPATH=.:src python scripts/data/package_mempatch_release.py \
   --input-dir hf_release/mempatch \
   --out-dir hf_release/mempatch \
   --validate

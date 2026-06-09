@@ -10,7 +10,7 @@ Backends (all use the same MLX answer model and ``build_prompt`` schema):
 
 Example::
 
-  PYTHONPATH=.:src .venv/bin/python scripts/run_mempatch_memory_baselines.py \\
+  PYTHONPATH=.:src .venv/bin/python scripts/eval/run_mempatch_memory_baselines.py \\
     --data hf_release/mempatch/test/scenarios.jsonl \\
     --backend rag --limit 50 \\
     --model local/models/Meta-Llama-3.1-8B-Instruct-4bit \\
@@ -26,8 +26,11 @@ import sys
 from pathlib import Path
 from typing import Any
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts._root import REPO_ROOT, bootstrap_from
+
+bootstrap_from(__file__)
 
 from benchmark.api import evaluate_predictions, load_scenarios  # noqa: E402
 from benchmark.model_runner import (  # noqa: E402
@@ -35,7 +38,7 @@ from benchmark.model_runner import (  # noqa: E402
     canonical_response,
     extract_json_object,
 )
-from mempatch_memory_context import BACKENDS, build_baseline_view  # noqa: E402
+from scripts.memory.mempatch_memory_context import BACKENDS, build_baseline_view  # noqa: E402
 
 
 def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
@@ -46,7 +49,7 @@ def write_jsonl(path: Path, rows: list[dict[str, Any]]) -> None:
 
 
 def prediction_from_output(scenario_id: str, output: str, *, json_brace_prefill: bool = False) -> dict[str, Any]:
-    from mlx_chat_utils import extract_json_object as mlx_extract_json_object
+    from scripts.mlx.mlx_chat_utils import extract_json_object as mlx_extract_json_object
 
     try:
         response = mlx_extract_json_object(output, json_brace_prefill=json_brace_prefill)
@@ -68,7 +71,7 @@ def run_predictions(args: argparse.Namespace) -> list[dict[str, Any]]:
     from mlx_lm import generate, load
     from mlx_lm.generate import make_sampler
 
-    from mlx_chat_utils import apply_chat_template_no_think, normalize_generation_text
+    from scripts.mlx.mlx_chat_utils import apply_chat_template_no_think, normalize_generation_text
 
     scenarios = load_scenarios(args.data)
     if args.limit is not None:
@@ -166,7 +169,7 @@ def write_metrics(args: argparse.Namespace, predictions: list[dict[str, Any]]) -
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    root = Path(__file__).resolve().parent.parent
+    root = REPO_ROOT
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument(
         "--data",

@@ -43,13 +43,13 @@ jobs:
 
       - name: Evaluator smoke
         run: |
-          python scripts/evaluate_mempatch_predictions.py \
+          python scripts/workflows/evaluate_mempatch_predictions.py \
             --data tests/fixtures/smoke_scenarios.jsonl \
             --predictions tests/fixtures/smoke_predictions.jsonl
 
       - name: Revision module smoke
         run: |
-          python scripts/run_mempatch_revision_module.py \
+          python scripts/eval/run_mempatch_revision_module.py \
             --data tests/fixtures/smoke_scenarios.jsonl \
             --out-predictions /tmp/revision_module_smoke.jsonl \
             --max-cases 1 \
@@ -58,7 +58,7 @@ jobs:
 
       - name: Direct runner prompt stats
         run: |
-          python scripts/run_mempatch_model.py \
+          python scripts/eval/run_mempatch_model.py \
             --data tests/fixtures/smoke_scenarios.jsonl \
             --provider openai \
             --model gpt-4o-mini \
@@ -68,7 +68,7 @@ jobs:
 
       - name: Revision proposer prompt stats
         run: |
-          python scripts/run_mempatch_revision_module.py \
+          python scripts/eval/run_mempatch_revision_module.py \
             --data tests/fixtures/smoke_scenarios.jsonl \
             --out-predictions /tmp/revision_prompt_stats.jsonl \
             --max-cases 1 \
