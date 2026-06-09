@@ -41,6 +41,29 @@ local/logs/kfold/{slug}_fold{N}/           trainer_metrics.json
 local/results/{slug}/                      predictions + metrics JSON
 ```
 
+## Cursor Cloud / AutoDL smoke (run before full paper)
+
+**Fix:** `06_eval_test.sh` reads `checkpoint_selection.json` (not subprocess `export`).
+
+```bash
+export LOCAL_ROOT=/root/autodl-tmp/mempatch_local   # or Cursor cloud data path
+export HF_HOME=$LOCAL_ROOT/hf_cache
+mkdir -p "$LOCAL_ROOT" "$HF_HOME"
+
+cd MemPatch
+git pull
+bash scripts/linux/00_setup.sh
+huggingface-cli login
+
+# One command: 10-step train, resume probe, 5-fold, pick-best, with/without eval (20 cases)
+SLUG=llama3_1_8b bash scripts/linux/run_smoke_test.sh
+```
+
+Smoke defaults: `TRAIN_ITERS=10`, `SAVE_EVERY=2`, `RUN_ID=smoke10`, `KFOLDS=5`, `EVAL_LIMIT=20`.
+Override example: `TRAIN_ITERS=10 SAVE_EVERY=2 SLUG=gemma3_12b bash scripts/linux/run_smoke_test.sh`
+
+8+1 baselines: `run_baseline_matrix.sh` is not in repo yet; smoke skips that step with a notice.
+
 ## Quick start (one model)
 
 ```bash

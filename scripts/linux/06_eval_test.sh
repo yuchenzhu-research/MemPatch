@@ -18,11 +18,12 @@ if [[ ! -f "$TEST_SFT_DIR/sft.jsonl" ]]; then
     --out-dir "$TEST_SFT_DIR"
 fi
 
-# Resolve best checkpoint if not exported.
+# Resolve best checkpoint from JSON (subprocess export from 05_pick_best.sh is unreliable).
+source "$LINUX_DIR/lib_selection.sh"
 if [[ -z "${BEST_CHECKPOINT:-}" ]]; then
-  bash "$LINUX_DIR/05_pick_best.sh"
+  BEST_CHECKPOINT="$(ensure_selection "$SLUG")"
 fi
-ADAPTER_PATH="${BEST_CHECKPOINT:?set BEST_CHECKPOINT or run 05_pick_best.sh}"
+ADAPTER_PATH="${BEST_CHECKPOINT:?missing checkpoint; run 05_pick_best.sh first}"
 
 run_variant() {
   local variant="$1"
@@ -31,16 +32,20 @@ run_variant() {
   local metrics="$RESULT_DIR/test500_${variant}_metrics.json"
   local extra=("$@")
 
-  "$PYTHON" "$LINUX_DIR/run_hf_test_eval.py" \
-    --data "$TEST_SFT_DIR/sft.jsonl" \
-    --eval-data "$TEST_SCENARIOS" \
-    --model-id "$HF_MODEL" \
-    --out-predictions "$pred" \
-    --out-metrics "$metrics" \
-    --split-tag "test500_${variant}" \
-    --model-tag "$SLUG" \
-    --variant-tag "$variant" \
-    "${extra[@]}"
+  EVAL_ARGS=(
+    --data "$TEST_SFT_DIR/sft.jsonl"
+    --eval-data "$TEST_SCENARIOS"
+    --model-id "$HF_MODEL"
+    --out-predictions "$pred"
+    --out-metrics "$metrics"
+    --split-tag "test500_${variant}"
+    --model-tag "$SLUG"
+    --variant-tag "$variant"
+  )
+  if [[ -n "${EVAL_LIMIT:-}" ]]; then
+    EVAL_ARGS+=(--limit "$EVAL_LIMIT")
+  fi
+  "$PYTHON" "$LINUX_DIR/run_hf_test_eval.py" "${EVAL_ARGS[@]}" "${extra[@]}"
 
   "$PYTHON" "$ROOT/scripts/workflows/evaluate_mempatch_predictions.py" \
     --data "$TEST_SCENARIOS" \

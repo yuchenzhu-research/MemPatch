@@ -70,6 +70,8 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--max-seq-length", type=int, default=2048)
     parser.add_argument("--lora-rank", type=int, default=16)
     parser.add_argument("--learning-rate", type=float, default=1e-5)
+    parser.add_argument("--save-total-limit", type=int, default=8)
+    parser.add_argument("--resume-from-checkpoint", type=Path, default=None)
     args = parser.parse_args(argv)
 
     import torch
@@ -117,6 +119,9 @@ def main(argv: list[str] | None = None) -> int:
     train_ds = Dataset.from_list(train_rows)
     valid_ds = Dataset.from_list(valid_rows)
 
+    warmup_steps = 0 if args.max_steps <= 16 else max(1, int(args.max_steps * 0.03))
+    logging_steps = min(16, max(1, args.save_steps))
+
     training_args = TrainingArguments(
         output_dir=str(args.output_dir),
         max_steps=args.max_steps,
@@ -124,12 +129,12 @@ def main(argv: list[str] | None = None) -> int:
         gradient_accumulation_steps=4,
         learning_rate=args.learning_rate,
         lr_scheduler_type="cosine",
-        warmup_ratio=0.03,
-        logging_steps=16,
+        warmup_steps=warmup_steps,
+        logging_steps=logging_steps,
         save_steps=args.save_steps,
         eval_strategy="steps",
         eval_steps=args.eval_steps,
-        save_total_limit=4,
+        save_total_limit=args.save_total_limit,
         bf16=True,
         seed=args.seed,
         report_to=[],
@@ -144,7 +149,11 @@ def main(argv: list[str] | None = None) -> int:
         processing_class=tokenizer,
     )
 
-    trainer.train()
+    resume = str(args.resume_from_checkpoint) if args.resume_from_checkpoint else None
+    if resume and not Path(resume).is_dir():
+        print(f"error: resume checkpoint not found: {resume}", file=sys.stderr)
+        return 1
+    trainer.train(resume_from_checkpoint=resume)
 
     checkpoint_rows: list[dict[str, Any]] = []
     for checkpoint in sorted(args.output_dir.glob("checkpoint-*"), key=lambda p: int(p.name.split("-")[-1])):

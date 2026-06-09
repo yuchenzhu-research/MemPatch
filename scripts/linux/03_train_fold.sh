@@ -19,15 +19,22 @@ fi
 
 mkdir -p "$OUT_DIR" "$LOG_DIR"
 
-"$PYTHON" "$LINUX_DIR/train_qlora.py" \
-  --model-id "$HF_MODEL" \
-  --train-data "$SFT_DIR/train.jsonl" \
-  --valid-data "$SFT_DIR/valid.jsonl" \
-  --output-dir "$OUT_DIR" \
-  --log-dir "$LOG_DIR" \
-  --max-steps "$TRAIN_ITERS" \
-  --save-steps "$SAVE_EVERY" \
-  --eval-steps "$SAVE_EVERY" \
+TRAIN_ARGS=(
+  --model-id "$HF_MODEL"
+  --train-data "$SFT_DIR/train.jsonl"
+  --valid-data "$SFT_DIR/valid.jsonl"
+  --output-dir "$OUT_DIR"
+  --log-dir "$LOG_DIR"
+  --max-steps "$TRAIN_ITERS"
+  --save-steps "$SAVE_EVERY"
+  --eval-steps "$SAVE_EVERY"
+  --save-total-limit "${SAVE_TOTAL_LIMIT:-8}"
   --seed "$SEED"
+)
+if [[ -n "${RESUME_FROM:-}" ]]; then
+  TRAIN_ARGS+=(--resume-from-checkpoint "$RESUME_FROM")
+fi
+
+"$PYTHON" "$LINUX_DIR/train_qlora.py" "${TRAIN_ARGS[@]}"
 
 echo "Adapter checkpoints: $OUT_DIR"

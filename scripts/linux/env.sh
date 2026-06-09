@@ -16,6 +16,8 @@ export SEED="${SEED:-42}"
 export RUN_ID="${RUN_ID:-full256}"
 export TRAIN_ITERS="${TRAIN_ITERS:-256}"
 export SAVE_EVERY="${SAVE_EVERY:-64}"
+export SAVE_TOTAL_LIMIT="${SAVE_TOTAL_LIMIT:-8}"
+export EVAL_LIMIT="${EVAL_LIMIT:-}"
 
 # Local artifact layout (under repo-root local/, gitignored)
 export LOCAL_ROOT="${LOCAL_ROOT:-$ROOT/local}"
