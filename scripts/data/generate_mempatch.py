@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate MemPatch v1.3 pilot/full JSONL (train/validation/test)."""
+"""Generate MemPatch v1.3 pilot/full JSONL (train/test)."""
 
 from __future__ import annotations
 
@@ -33,7 +33,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--full",
         action="store_true",
-        help="Use full quotas (train 2700 / validation 800 / test 500) instead of pilot",
+        help="Use full quotas (train 3500 / test 500) instead of pilot",
     )
     parser.add_argument(
         "--dry-run",
@@ -61,9 +61,18 @@ def main(argv: list[str] | None = None) -> int:
     print("Registry validation: OK")
 
     quotas = FULL_QUOTAS if args.full else PILOT_QUOTAS
-    samples = pilot_blueprints() if not args.full else [
-        item for split, split_quotas in quotas.items() for item in sample_split(split, split_quotas)
-    ]
+    if args.full:
+        samples = [
+            item
+            for split, split_quotas in quotas.items()
+            for item in sample_split(
+                split,
+                split_quotas,
+                difficulty="L4" if split == "test" else "L3",
+            )
+        ]
+    else:
+        samples = pilot_blueprints()
 
     plan = {
         "renderer": RENDERER,

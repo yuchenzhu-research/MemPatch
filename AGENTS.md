@@ -28,7 +28,7 @@ Do **not** `git add local/` — all generated models, adapters, and scratch data
 
 Public evaluator: `from benchmark.api import evaluate_predictions, load_scenarios`
 
-Data flow: `scenarios.jsonl` → runner (`scripts/eval/`) → `predictions.jsonl` → `benchmark.api` → metrics.
+Data flow: `scenarios.jsonl` → `scripts/eval/run_lora_test_eval.py` → `predictions.jsonl` → `benchmark.api` → metrics.
 
 ## Unified paper
 
@@ -42,8 +42,7 @@ Data flow: `scenarios.jsonl` → runner (`scripts/eval/`) → `predictions.jsonl
 
 | Split | Full size | Role |
 |-------|----------:|------|
-| `train` | 2700 | SFT only |
-| `validation` | 800 | Dev eval |
+| `train` | 3500 | SFT + stratified k-fold held-out (MLX val loss) |
 | `test` | 500 | Held-out final eval |
 
 Generate: `scripts/data/generate_mempatch.py --full --out-dir hf_release/mempatch`  
@@ -68,19 +67,14 @@ Gold: canonical `hidden_gold` fields via `benchmark.general_taxonomy.canonical_h
 
 The model proposes; DPA authorizes; the benchmark evaluates `memory_state`. Call only `authorize(...)`.
 
-## Baselines and experiment scripts
+## Scripts (minimal)
 
-| Line | Script |
+| Role | Script |
 |------|--------|
-| External memory (RAG / full / mem0 / base) | `scripts/eval/run_mempatch_memory_baselines.py` |
-| DirectJudge | `scripts/eval/run_mempatch_model.py` |
-| Path A (typed actions + DPA) | `scripts/eval/run_mlx_revision_module_eval.py` |
-| Path B (LoRA, direct JSON) | `scripts/eval/run_mlx_lora_smoke_eval.py` |
-| Revision module (scripted/prompt) | `scripts/eval/run_mempatch_revision_module.py --policy scripted\|prompt` |
-| Score existing predictions | `scripts/workflows/evaluate_mempatch_predictions.py` |
-| Paper pipeline | `scripts/workflows/run_paper_pipeline.sh` |
-
-RAG/full baselines: `scripts/memory/mempatch_memory_context.py` filters context, then `benchmark.model_runner.build_prompt` embeds `required_output_schema` — model output must be JSON.
+| Score predictions | `scripts/workflows/evaluate_mempatch_predictions.py` |
+| Train Path B LoRA | `scripts/workflows/run_kfold_train.sh` |
+| Eval test500 | `scripts/workflows/run_eval_test.sh` |
+| SFT + MLX config | `scripts/data/prepare_mempatch_v13_smoke.py` |
 
 ## Local workspace
 
@@ -93,5 +87,5 @@ rm -rf .pycache_compile .pytest_cache
 env PYTHONPYCACHEPREFIX=.pycache_compile .venv/bin/python -m compileall -q benchmark scripts src tests
 PYTHONPATH=.:src .venv/bin/python -m pytest -q
 PYTHONPATH=.:src .venv/bin/python scripts/workflows/audit_decision_boundary.py \
-  --data hf_release/mempatch/train --data hf_release/mempatch/validation --data hf_release/mempatch/test
+  --data hf_release/mempatch/train --data hf_release/mempatch/test
 ```

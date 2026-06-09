@@ -6,7 +6,7 @@ Profiles:
   bench — quick dev train, rank-8, 32 iters
   paper — paper default, rank-16 attn+mlp, 256 iters
   paper_lite — memory-safe: seq 1024, rank-8 q/v/o, 256 iters
-  heavy — full 2700 train / 200 valid, rank-16 attn+mlp, 1024 iters (legacy)
+  heavy — full train / k-fold valid, rank-16 attn+mlp, 1024 iters (legacy)
 
 Use --full-train with --profile paper or heavy for the full train split.
 """
@@ -34,14 +34,15 @@ from benchmark.public_view import public_scenario_view
 
 SYSTEM_PROMPT_V13_SMOKE = """You are MemPatch Revision Policy.
 Return only one strict JSON object.
-Choose decision carefully; do not default to use_current_memory.
-Use ask_clarification when user intent, target scope, version, workspace, or candidate memory is ambiguous or missing.
-Use mark_unresolved when evidence is conflicting or insufficient and no user clarification or policy escalation path applies.
-Use escalate when policy, authority, compliance, security, or human review blocks automatic memory revision.
-Use refuse_due_to_policy only when the requested memory write or action is explicitly forbidden.
+Apply this decision tree in order (first match wins):
+1) refuse_due_to_policy — the requested write/action is explicitly forbidden by policy events.
+2) escalate — human review, compliance, or authority gate blocks automatic revision (not mere ambiguity).
+3) ask_clarification — required target/scope/version/workspace/slot is missing from the user request.
+4) mark_unresolved — verified in-scope evidence conflicts and cannot be merged without new facts.
+5) use_current_memory — sufficient verified evidence supports answering from current memory.
+Do not default to use_current_memory when steps 1–4 apply.
 evidence_event_ids must be exact event_id strings from event_trace; cite only the minimal set that supports the chosen decision and memory_state. Do not cite distractor, background, or out-of-scope events.
-failure_diagnosis must be exactly one enum from required_output_schema; never use empty string, empty list, "none", or null.
-For use_current_memory: pick diagnosis from the evidence pattern (under_update if prior memory is outdated, scope_leakage if version/workspace scope is wrong, wrong_source_attribution if source is misattributed); do not default to stale_memory_reuse.
+failure_diagnosis must be exactly one enum string from required_output_schema; never use empty string, empty list, "none", or null.
 answer must be one short sentence.
 Do not explain."""
 
@@ -53,9 +54,8 @@ TRAIN_QUOTAS: dict[str, int] = {
     "refuse_due_to_policy": 100,
 }
 
-VALID_QUOTAS: dict[str, int] = {d: 20 for d in DECISIONS}
-VALID_HEAVY_QUOTAS: dict[str, int] = {d: 40 for d in DECISIONS}
 HARD_QUOTAS: dict[str, int] = {d: 10 for d in DECISIONS}
+DEFAULT_K_FOLDS = 5
 
 HEAVY_LORA_KEYS = [
     "self_attn.q_proj",
@@ -170,6 +170,32 @@ def mlx_mask_prompt_for_model(model_dir: Path) -> bool:
     return model_type not in {"mistral"}
 
 
+def stratified_kfold(
+    rows: list[dict[str, Any]],
+    *,
+    fold_index: int,
+    k_folds: int,
+    seed: int,
+) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
+    if not 0 <= fold_index < k_folds:
+        raise ValueError(f"fold_index must be in [0, {k_folds}), got {fold_index}")
+    rng = random.Random(seed)
+    train_part: list[dict[str, Any]] = []
+    valid_part: list[dict[str, Any]] = []
+    buckets = index_by_decision(rows)
+    for decision in DECISIONS:
+        pool = list(buckets.get(decision, []))
+        rng.shuffle(pool)
+        for i, row in enumerate(pool):
+            if i % k_folds == fold_index:
+                valid_part.append(row)
+            else:
+                train_part.append(row)
+    rng.shuffle(train_part)
+    rng.shuffle(valid_part)
+    return train_part, valid_part
+
+
 def mlx_lora_yaml(
     *,
     root: Path,
@@ -177,6 +203,7 @@ def mlx_lora_yaml(
     adapter_dir: Path,
     profile: str = "smoke",
     model_dir: Path | None = None,
+    resume_from: Path | None = None,
 ) -> str:
     if profile not in MLX_PROFILES:
         raise ValueError(f"unknown MLX profile {profile!r}; expected one of {sorted(MLX_PROFILES)}")
@@ -185,6 +212,9 @@ def mlx_lora_yaml(
         model_dir = root / "local/models/Qwen3-14B-MLX-4bit"
     mask_prompt = mlx_mask_prompt_for_model(model_dir)
     keys_yaml = json.dumps(cfg["lora_keys"])
+    resume_line = ""
+    if resume_from is not None:
+        resume_line = f'resume_adapter_file: "{resume_from.resolve()}"\n'
     return f"""model: "{model_dir.resolve()}"
 train: true
 fine_tune_type: lora
@@ -199,7 +229,7 @@ grad_accumulation_steps: {cfg["grad_accumulation_steps"]}
 grad_checkpoint: true
 mask_prompt: {"true" if mask_prompt else "false"}
 adapter_path: "{adapter_dir.resolve()}"
-save_every: {cfg["save_every"]}
+{resume_line}save_every: {cfg["save_every"]}
 steps_per_eval: {cfg["steps_per_eval"]}
 val_batches: {cfg["val_batches"]}
 lora_parameters:
@@ -360,11 +390,6 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=root / "hf_release/mempatch/train/scenarios.jsonl",
     )
     parser.add_argument(
-        "--validation-data",
-        type=Path,
-        default=root / "hf_release/mempatch/validation/scenarios.jsonl",
-    )
-    parser.add_argument(
         "--test-data",
         type=Path,
         default=root / "hf_release/mempatch/test/scenarios.jsonl",
@@ -407,71 +432,85 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Use the full train split instead of the smoke TRAIN_QUOTAS sample.",
     )
+    parser.add_argument("--k-folds", type=int, default=DEFAULT_K_FOLDS)
+    parser.add_argument("--fold", type=int, default=0, help="Held-out fold index for valid.jsonl (MLX loss only).")
+    parser.add_argument(
+        "--run-id",
+        default=None,
+        help="Unique adapter subdirectory so new runs do not overwrite prior checkpoints.",
+    )
+    parser.add_argument(
+        "--resume-from",
+        type=Path,
+        default=None,
+        help="Optional adapter .safetensors to warm-start (writes into a new --run-id directory).",
+    )
     parser.add_argument("--seed", type=int, default=20270607)
     return parser.parse_args(argv)
 
 
-def write_mlx_config(root: Path, args: argparse.Namespace) -> None:
+def resolve_adapter_dir(args: argparse.Namespace) -> Path:
+    from datetime import datetime, timezone
+
+    run_id = args.run_id or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
+    return args.adapter_dir / f"fold{args.fold}" / run_id
+
+
+def write_mlx_config(root: Path, args: argparse.Namespace, *, adapter_dir: Path) -> None:
     args.mlx_config.parent.mkdir(parents=True, exist_ok=True)
     args.mlx_config.write_text(
         mlx_lora_yaml(
             root=root,
             data_dir=args.out_dir,
-            adapter_dir=args.adapter_dir,
+            adapter_dir=adapter_dir,
             profile=args.profile,
             model_dir=args.model_dir,
+            resume_from=args.resume_from,
         ),
         encoding="utf-8",
     )
     print(f"Wrote MLX config ({args.profile}) -> {args.mlx_config}")
+    print(f"Adapter output dir (isolated): {adapter_dir}")
 
 
 def main(argv: list[str] | None = None) -> int:
     root = REPO_ROOT
     args = parse_args(argv)
+    adapter_dir = resolve_adapter_dir(args)
+
     if args.config_only:
         if not (args.out_dir / "train.jsonl").is_file():
             print(f"error: --config-only requires {args.out_dir}/train.jsonl", file=sys.stderr)
             return 1
-        write_mlx_config(root, args)
+        write_mlx_config(root, args, adapter_dir=adapter_dir)
         return 0
 
-    for path, name in (
-        (args.train_data, "train"),
-        (args.validation_data, "validation"),
-        (args.test_data, "test"),
-    ):
+    for path, name in ((args.train_data, "train"), (args.test_data, "test")):
         if not path.is_file():
             print(f"error: {name} scenarios not found: {path}", file=sys.stderr)
             return 1
 
     train_rows = read_jsonl(args.train_data)
-    valid_source = read_jsonl(args.validation_data)
     test_source = read_jsonl(args.test_data)
 
-    valid_quotas = (
-        VALID_HEAVY_QUOTAS
-        if args.profile in ("heavy", "paper", "paper_lite")
-        else VALID_QUOTAS
-    )
-
     if args.full_train:
-        train_sampled = list(train_rows)
-        random.Random(args.seed).shuffle(train_sampled)
-        train_actual = dict(decision_distribution_scenarios(train_sampled))
+        pool = list(train_rows)
+        random.Random(args.seed).shuffle(pool)
+        train_actual = dict(decision_distribution_scenarios(pool))
     else:
-        train_sampled, train_actual = sample_quotas(
+        pool, train_actual = sample_quotas(
             index_by_decision(train_rows),
             TRAIN_QUOTAS,
             seed=args.seed,
             split_name="train",
         )
-    valid_sampled, valid_actual = sample_quotas(
-        index_by_decision(valid_source),
-        valid_quotas,
+    train_sampled, valid_sampled = stratified_kfold(
+        pool,
+        fold_index=args.fold,
+        k_folds=args.k_folds,
         seed=args.seed + 1,
-        split_name="validation",
     )
+    valid_actual = dict(decision_distribution_scenarios(valid_sampled))
     hard_sampled, hard_actual = sample_quotas(
         index_by_decision(test_source),
         HARD_QUOTAS,
@@ -490,14 +529,13 @@ def main(argv: list[str] | None = None) -> int:
     write_jsonl(out_dir / "hard_balanced50.jsonl", hard50)
     write_jsonl(out_dir / "hard_balanced50_sft.jsonl", hard50_sft)
 
-    write_mlx_config(root, args)
+    write_mlx_config(root, args, adapter_dir=adapter_dir)
 
     print(
-        f"Wrote {len(train_sft)} train, {len(valid_sft)} valid, "
+        f"Wrote {len(train_sft)} train, {len(valid_sft)} valid (fold {args.fold}/{args.k_folds}), "
         f"{len(hard50)} hard_balanced50, {len(hard50_sft)} hard_balanced50_sft -> {out_dir}"
     )
-    if valid_actual != valid_quotas:
-        print(f"validation actual sample counts: {valid_actual}")
+    print(f"k-fold valid counts: {valid_actual}")
     if hard_actual != HARD_QUOTAS:
         print(f"test balanced50 actual sample counts: {hard_actual}")
 

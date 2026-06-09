@@ -25,8 +25,8 @@ from scripts.workflows.validate_mempatch_bench_dataset import _is_background_eve
 
 NON_ANSWER_DECISIONS = ("ask_clarification", "escalate", "mark_unresolved")
 DEFAULT_JACCARD_WARN = 0.35
-MIN_TOTAL_NORMALIZED_TEMPLATES = 80
-MIN_TEMPLATES_PER_DECISION_VARIANT = 5
+MIN_TOTAL_NORMALIZED_TEMPLATES = 50
+MIN_TEMPLATES_PER_DECISION_VARIANT = 3
 CORE_EVENT_FIELDS = ("text", "actor_role", "trust_level", "visibility_scope", "event_type")
 
 

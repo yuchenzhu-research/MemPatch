@@ -17,6 +17,5 @@ def test_v13_pilot_quotas() -> None:
     by_split: dict[str, int] = {}
     for s in samples:
         by_split[s.blueprint.split] = by_split.get(s.blueprint.split, 0) + 1
-    assert by_split["train"] == 500
-    assert by_split["validation"] == 100
+    assert by_split["train"] == 600
     assert by_split["test"] == 100

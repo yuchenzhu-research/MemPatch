@@ -20,7 +20,7 @@ bootstrap_from(__file__)
 from benchmark.general_taxonomy import BENCH_SCHEMA_VERSION
 
 SCENARIO_JSONL = "scenarios.jsonl"
-DEFAULT_SPLITS = ("train", "validation", "test")
+DEFAULT_SPLITS = ("train", "test")
 
 
 def sha256_file(path: Path) -> str:

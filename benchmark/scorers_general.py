@@ -17,33 +17,20 @@ from benchmark.general_taxonomy import (
 # per-example raw signals). decision_macro_f1 is the primary decision metric
 # because it is robust to the dominant use_current_memory class.
 HEADLINE_METRICS = (
+    "joint_revision_success",
     "decision_macro_f1",
-    "non_answer_decision_accuracy",
     "memory_state_accuracy",
     "evidence_f1",
     "failure_diagnosis_accuracy",
     "stale_reuse_rate",
-    "joint_revision_success",
-    "structural_revision_success",
-    "minimal_evidence_exact_match",
-    "evidence_precision",
-    "overcitation_rate",
-    "counterevidence_recall",
-    "answer_state_consistency",
-    "scope_authority_accuracy",
-    "latest_event_shortcut_failure_rate",
 )
 
-# Auxiliary / diagnostic raw signals. Reported for completeness but not as the
-# headline numbers. In particular black_box_decision_accuracy can be dominated
-# by the majority use_current_memory class, so it is auxiliary, not headline.
+# Appendix / Path-A diagnostics — not primary paper columns.
 AUXILIARY_METRICS = (
-    "black_box_decision_accuracy",
-    "decision_balanced_accuracy",
-    "use_current_memory_accuracy",
+    "structural_revision_success",
     "answer_key_fact_accuracy",
-    "answer_exact_match",
     "format_failure_rate",
+    "non_answer_decision_accuracy",
 )
 
 

@@ -1,14 +1,12 @@
 {
   "data_files": {
     "test": "test/scenarios.jsonl",
-    "train": "train/scenarios.jsonl",
-    "validation": "validation/scenarios.jsonl"
+    "train": "train/scenarios.jsonl"
   },
   "dataset_name": "MemPatch",
   "public_split_name_counts": {
     "test": 500,
-    "train": 2700,
-    "validation": 800
+    "train": 3500
   },
   "total_public_examples": 4000,
   "version": "1.3.0"

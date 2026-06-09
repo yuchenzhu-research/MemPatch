@@ -177,7 +177,9 @@ def build_prompt(public_view: dict[str, Any]) -> str:
             "Answer as strict JSON only. Do not use Markdown fences. "
             "Use only the visible scenario content. Do not use external knowledge. "
             "Use exact enum strings. Do not invent memory IDs or event IDs. "
-            "Cite only minimal supporting event IDs."
+            "Cite only minimal supporting event IDs. "
+            "Decision order: refuse_due_to_policy, escalate, ask_clarification, "
+            "mark_unresolved, use_current_memory (first applicable wins)."
         ),
         "required_output_schema": {
             "answer": "short final answer/action text",

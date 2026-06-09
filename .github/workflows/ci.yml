@@ -37,42 +37,8 @@ jobs:
         run: |
           env PYTHONPYCACHEPREFIX=.pycache_compile PYTHONPATH=.:src python -m pytest -q
 
-      - name: Generation registry smoke
-        run: |
-          PYTHONPATH=.:src python -m pytest tests/test_generation_registry.py -q
-
       - name: Evaluator smoke
         run: |
-          python scripts/workflows/evaluate_mempatch_predictions.py \
+          PYTHONPATH=.:src python scripts/workflows/evaluate_mempatch_predictions.py \
             --data tests/fixtures/smoke_scenarios.jsonl \
             --predictions tests/fixtures/smoke_predictions.jsonl
-
-      - name: Revision module smoke
-        run: |
-          python scripts/eval/run_mempatch_revision_module.py \
-            --data tests/fixtures/smoke_scenarios.jsonl \
-            --out-predictions /tmp/revision_module_smoke.jsonl \
-            --max-cases 1 \
-            --policy scripted \
-            --scripted-actions tests/fixtures/scripted_noop_actions.json
-
-      - name: Direct runner prompt stats
-        run: |
-          python scripts/eval/run_mempatch_model.py \
-            --data tests/fixtures/smoke_scenarios.jsonl \
-            --provider openai \
-            --model gpt-4o-mini \
-            --out-predictions /tmp/direct_prompt_stats.jsonl \
-            --max-cases 1 \
-            --print-prompt-stats
-
-      - name: Revision proposer prompt stats
-        run: |
-          python scripts/eval/run_mempatch_revision_module.py \
-            --data tests/fixtures/smoke_scenarios.jsonl \
-            --out-predictions /tmp/revision_prompt_stats.jsonl \
-            --max-cases 1 \
-            --policy prompt \
-            --provider openai \
-            --model gpt-4o-mini \
-            --print-prompt-stats

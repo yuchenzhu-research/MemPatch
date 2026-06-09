@@ -52,7 +52,7 @@ Every experiment line follows the same contract:
 hf_release/mempatch/{split}/scenarios.jsonl
         │
         ▼
-scripts/eval/* runner          (or scripts/workflows/evaluate_mempatch_predictions.py on existing files)
+scripts/eval/run_lora_test_eval.py  →  scripts/workflows/evaluate_mempatch_predictions.py
         │
         ▼
 predictions.jsonl              { "scenario_id", "response": { five fields } }
@@ -64,23 +64,9 @@ benchmark.api.evaluate_predictions()
 metrics JSON / headline table
 ```
 
-Runners live under `scripts/eval/`; scoring always goes through `benchmark.api` (CLI wrapper: `scripts/workflows/evaluate_mempatch_predictions.py`).
+Scoring always goes through `benchmark.api` (CLI: `scripts/workflows/evaluate_mempatch_predictions.py`). Training: `scripts/workflows/run_kfold_train.sh`. See `scripts/README.md`.
 
-## Experiment lines
-
-External memory baselines (RAG, full-context, mem0, base) and DirectJudge all call `build_prompt()` from `benchmark.model_runner`. The prompt embeds `required_output_schema` with the five response fields and valid enum strings — the model must return **strict JSON**, not free text. See `scripts/memory/mempatch_memory_context.py` for per-backend context filtering before `build_prompt`.
-
-| Line | Script | Mechanism | Trained? |
-|------|--------|-----------|----------|
-| **External memory** (`base`, `full`, `rag`, `mem0`) | `scripts/eval/run_mempatch_memory_baselines.py` | filtered public view → `build_prompt` → MLX → five-field JSON | No |
-| **DirectJudge** | `scripts/eval/run_mempatch_model.py` | API/MLX provider → same five-field JSON schema | Optional |
-| **Path A** (base projection) | `scripts/eval/run_mlx_revision_module_eval.py` | revision view → typed actions JSON → DPA → projection → five fields | No (base MLX) |
-| **Path B** (adapted) | `scripts/eval/run_mlx_lora_smoke_eval.py` | SFT prompt → MLX+LoRA → direct five-field JSON | Yes (LoRA) |
-| **Revision module (dev)** | `scripts/eval/run_mempatch_revision_module.py` | scripted or prompt policy; same DPA → projection stack | Optional |
-
-Fair comparisons: RAG/full/mem0 vs Path B (same JSON protocol); Path A vs Path B (same stack, training differs).
-
-Headline metric: `joint_revision_success` (decision + memory_state + evidence F1=1 + answer consistency + no stale reuse). Full metric definitions: `benchmark/scorers_general.py`, `scripts/README.md`.
+Headline metrics: `joint_revision_success`, `decision_macro_f1`, `memory_state_accuracy`, `evidence_f1`, `failure_diagnosis_accuracy`, `stale_reuse_rate`.
 
 ## Install
 
@@ -95,11 +81,10 @@ LLM baselines: `pip install -e ".[dev,llm]"`
 
 | Split | Rows | Use |
 |-------|-----:|-----|
-| `train` | 2700 | Fine-tuning only |
-| `validation` | 800 | Dev eval |
+| `train` | 3500 | SFT; stratified 5-fold for checkpoint selection |
 | `test` | 500 | Held-out final eval |
 
-v1.3 uses 7 primary failure modes, 8 pattern families, and 6 domains. Difficulty labels: train/validation `L3`; test `L4`.
+v1.3 uses 7 primary failure modes, 8 pattern families, and 6 domains. Difficulty: train `L3`; test `L4`.
 
 Regenerate:
 
@@ -112,7 +97,6 @@ Audit gate (must pass before training):
 ```bash
 PYTHONPATH=.:src python scripts/workflows/audit_decision_boundary.py \
   --data hf_release/mempatch/train \
-  --data hf_release/mempatch/validation \
   --data hf_release/mempatch/test
 ```
 
@@ -144,31 +128,15 @@ PYTHONPATH=.:src python scripts/workflows/evaluate_mempatch_predictions.py \
   --predictions tests/fixtures/smoke_predictions.jsonl
 ```
 
-## Revision module smoke
+## Train + eval (Path B LoRA)
 
 ```bash
-PYTHONPATH=.:src python scripts/eval/run_mempatch_revision_module.py \
-  --data tests/fixtures/smoke_scenarios.jsonl \
-  --out-predictions /tmp/revision_smoke.jsonl \
-  --max-cases 1 --policy scripted \
-  --scripted-actions tests/fixtures/scripted_noop_actions.json
+RUN_ID=full256 KFOLD_FOLD=0 bash scripts/workflows/run_kfold_train.sh qwen3_14b
+ADAPTER=local/adapters/qwen3_14b_pathB_lora/fold0/full256 \
+  bash scripts/workflows/run_eval_test.sh
 ```
 
-## MLX paper experiments (Qwen3 / Gemma 3 / Mistral Nemo / Llama 3.1)
-
-Default matrix: four open models at 8B–14B with identical `paper` LoRA (256 iters):
-
-```bash
-bash scripts/workflows/run_paper_pipeline.sh
-SKIP_DOWNLOAD=1 bash scripts/workflows/run_paper_pipeline.sh
-```
-
-Download weights only:
-
-```bash
-.venv/bin/python scripts/mlx_support/download_mlx_model.py --preset mistral-nemo-12b --mirror --disable-xet
-.venv/bin/python scripts/mlx_support/download_mlx_model.py --preset llama-3.1-8b-instruct --mirror --disable-xet
-```
+Download MLX base weights into `local/models/` via [MLX Community on Hugging Face](https://huggingface.co/mlx-community) (e.g. `Qwen3-14B-MLX-4bit`).
 
 ## Local workspace (`local/`, gitignored)
 
@@ -179,9 +147,7 @@ local/
   models/           MLX base weights (e.g. Qwen3-14B-MLX-4bit)
   adapters/         LoRA checkpoints per backbone
   data/             SFT bundles, smoke slices, eval subsets
-  runs/
-    paper/          paper pipeline predictions + metrics
-    baselines/      RAG / full / mem0 / base runs
+  runs/             eval outputs
   logs/             training and pipeline logs
 ```
 

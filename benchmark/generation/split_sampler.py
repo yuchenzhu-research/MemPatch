@@ -18,27 +18,19 @@ from benchmark.general_taxonomy import DECISIONS
 
 SPLIT_SEED_NAMESPACE = "mempatch_v13"
 
-# Standard ML splits: train (SFT) / validation (dev eval) / test (held-out eval).
+# Train (SFT + k-fold dev) / test (held-out final eval). No separate validation split.
 SPLIT_RANGES: dict[str, tuple[int, int]] = {
-    "train": (200_001, 202_700),
-    "validation": (202_701, 203_500),
+    "train": (200_001, 203_500),
     "test": (203_501, 204_000),
 }
 
 PILOT_QUOTAS: dict[str, dict[str, int]] = {
     "train": {
-        "use_current_memory": 100,
-        "mark_unresolved": 100,
-        "ask_clarification": 100,
-        "escalate": 100,
-        "refuse_due_to_policy": 100,
-    },
-    "validation": {
-        "use_current_memory": 20,
-        "mark_unresolved": 20,
-        "ask_clarification": 20,
-        "escalate": 20,
-        "refuse_due_to_policy": 20,
+        "use_current_memory": 120,
+        "mark_unresolved": 120,
+        "ask_clarification": 120,
+        "escalate": 120,
+        "refuse_due_to_policy": 120,
     },
     "test": {
         "use_current_memory": 20,
@@ -51,18 +43,11 @@ PILOT_QUOTAS: dict[str, dict[str, int]] = {
 
 FULL_QUOTAS: dict[str, dict[str, int]] = {
     "train": {
-        "use_current_memory": 600,
-        "mark_unresolved": 600,
-        "ask_clarification": 600,
-        "escalate": 600,
-        "refuse_due_to_policy": 300,
-    },
-    "validation": {
-        "use_current_memory": 400,
-        "mark_unresolved": 150,
-        "ask_clarification": 100,
-        "escalate": 75,
-        "refuse_due_to_policy": 75,
+        "use_current_memory": 1000,
+        "mark_unresolved": 750,
+        "ask_clarification": 700,
+        "escalate": 675,
+        "refuse_due_to_policy": 375,
     },
     "test": {
         "use_current_memory": 150,
@@ -136,5 +121,7 @@ def sample_split(
 def pilot_blueprints() -> list[SampledBlueprint]:
     out: list[SampledBlueprint] = []
     for split, quotas in PILOT_QUOTAS.items():
-        out.extend(sample_split(split, quotas))
+        out.extend(
+            sample_split(split, quotas, difficulty="L4" if split == "test" else "L3")
+        )
     return out

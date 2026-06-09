@@ -14,8 +14,6 @@ configs:
   data_files:
   - split: train
     path: train/scenarios.jsonl
-  - split: validation
-    path: validation/scenarios.jsonl
   - split: test
     path: test/scenarios.jsonl
 ---
@@ -61,13 +59,12 @@ v1.3 fixes the label coverage and public decision boundary:
 
 | Split | Rows | Purpose |
 |-------|-----:|---------|
-| `train` | 2700 | Fine-tuning / SFT only |
-| `validation` | 800 | Development eval |
-| `test` | 500 | Held-out final eval (L4-heavy) |
+| `train` | 3500 | SFT + stratified k-fold held-out |
+| `test` | 500 | Held-out final eval (L4) |
 
-**Total: 4000.** Renderer: `unified_renderer_v13`. All five `expected_decision` labels in every split.
+**Total: 4000.** Renderer: `unified_renderer_v13`.
 
-Use the current split names only: `train`, `validation`, `test`.
+Use split names: `train`, `test`.
 Do not use the old `main` / `hard` naming in new experiments.
 
 ## v1.3 Taxonomy Coverage
@@ -80,8 +77,7 @@ The v1.3 release uses primary labels from the broader taxonomy:
   `memory_hallucination`
 - 8 primary pattern families
 - 6 primary domains
-- difficulty is represented with short labels: `train` and `validation` are
-  `L3`; `test` is `L4`
+- difficulty: `train` is `L3`; `test` is `L4`
 
 Additional taxonomy labels in the code are reserved for future releases and are
 not present as v1.3 gold labels.
@@ -90,8 +86,7 @@ not present as v1.3 gold labels.
 
 | split | use_current_memory | mark_unresolved | ask_clarification | escalate | refuse_due_to_policy | total |
 |-------|-------------------:|----------------:|------------------:|---------:|---------------------:|------:|
-| train | 600 | 600 | 600 | 600 | 300 | 2700 |
-| validation | 400 | 150 | 100 | 75 | 75 | 800 |
+| train | 1000 | 750 | 700 | 675 | 375 | 3500 |
 | test | 150 | 100 | 100 | 75 | 75 | 500 |
 
 ## Pattern Distribution
@@ -138,9 +133,8 @@ Run the release-blocking audit:
 
 ```bash
 PYTHONPATH=.:src python scripts/workflows/audit_decision_boundary.py \
-  --data hf_release/mempatch/train/scenarios.jsonl \
-  --data hf_release/mempatch/validation/scenarios.jsonl \
-  --data hf_release/mempatch/test/scenarios.jsonl \
+  --data hf_release/mempatch/train \
+  --data hf_release/mempatch/test \
   --out-json local/results/post_marker_fix_audit.json \
   --out-md local/results/post_marker_fix_audit.md
 ```
