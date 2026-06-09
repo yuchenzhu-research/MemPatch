@@ -314,16 +314,20 @@ def evaluate_predictions(
         if norm is None:
             continue
         response = norm["response"]
+        row_errors: list[str] = []
         _validate_response(
             sid,
             response,
             _scenario_event_ids(scenario),
             _scenario_memory_ids(scenario),
-            errors,
+            row_errors,
             warnings,
         )
-        if not isinstance(response, dict) or not response:
+        errors.extend(row_errors)
+        if not isinstance(response, dict):
             continue
+        if not response:
+            response = {}
         gold = scenario.get("hidden_gold", {}) or {}
         rubric = gold.get("rubric", {}) or {}
         row = {
@@ -337,8 +341,10 @@ def evaluate_predictions(
                 or rubric.get("decision_aliases")
                 or scenario.get("decision_aliases")
             ),
+            "validation_errors": list(row_errors),
         }
         row["metrics"] = score_prediction(scenario, row)
+        row["metrics"]["response_schema_compliance_rate"] = float(len(row_errors) == 0)
         scored_rows.append(row)
 
     if strict and errors:

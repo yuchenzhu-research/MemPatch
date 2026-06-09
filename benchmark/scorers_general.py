@@ -23,6 +23,7 @@ HEADLINE_METRICS = (
     "evidence_f1",
     "failure_diagnosis_accuracy",
     "stale_reuse_rate",
+    "response_schema_compliance_rate",
 )
 
 # Appendix / Path-A diagnostics — not primary paper columns.

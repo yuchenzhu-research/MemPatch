@@ -1,4 +1,6 @@
 local/
+# Local Mac MLX scratch workflows (not part of the Linux paper pipeline).
+scripts/_mac/
 artifacts/
 analysis/
 data_external/

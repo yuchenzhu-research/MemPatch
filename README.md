@@ -66,7 +66,7 @@ metrics JSON / headline table
 
 Scoring always goes through `benchmark.api` (CLI: `scripts/workflows/evaluate_mempatch_predictions.py`). Training: `scripts/workflows/run_kfold_train.sh`. See `scripts/README.md`.
 
-Headline metrics: `joint_revision_success`, `decision_macro_f1`, `memory_state_accuracy`, `evidence_f1`, `failure_diagnosis_accuracy`, `stale_reuse_rate`.
+Headline metrics: `joint_revision_success`, `decision_macro_f1`, `memory_state_accuracy`, `evidence_f1`, `failure_diagnosis_accuracy`, `stale_reuse_rate`, `response_schema_compliance_rate`.
 
 ## Install
 

@@ -77,6 +77,39 @@ def test_prediction_expected_fields_do_not_score_as_response_fallback() -> None:
     assert metrics["failure_diagnosis_accuracy"] == 0.0
 
 
+def test_invalid_evidence_ids_lower_schema_compliance() -> None:
+    result = evaluate_predictions(
+        [_scenario()],
+        [
+            {
+                "scenario_id": "case_000001",
+                "response": {
+                    "answer": "New value",
+                    "decision": "use_current_memory",
+                    "memory_state": {"m1": "blocked"},
+                    "evidence_event_ids": ["e-hallucinated"],
+                    "failure_diagnosis": "stale_memory_reuse",
+                },
+            }
+        ],
+        strict=False,
+    )
+    row = result["scored_predictions"][0]
+    assert row["metrics"]["response_schema_compliance_rate"] == 0.0
+    assert result["headline_metrics"]["response_schema_compliance_rate"] == 0.0
+    assert result["headline_metrics"]["joint_revision_success"] == 0.0
+
+
+def test_empty_response_still_scores_with_schema_violation() -> None:
+    result = evaluate_predictions(
+        [_scenario()],
+        [{"scenario_id": "case_000001", "response": {}}],
+        strict=False,
+    )
+    assert result["count"] == 1
+    assert result["headline_metrics"]["response_schema_compliance_rate"] == 0.0
+
+
 def test_public_api_exposes_v13_primary_taxonomy_only() -> None:
     assert FAILURE_MODES == PRIMARY_FAILURE_MODES
     assert MEMORY_STATUSES == PRIMARY_MEMORY_STATUSES
