@@ -109,7 +109,7 @@ class V13BlueprintInstance:
 
     @property
     def scenario_id(self) -> str:
-        return f"case-{self.scenario_num:06d}"
+        return f"case-{self.scenario_num}"
 
 
 def _variant(

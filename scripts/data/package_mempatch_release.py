@@ -31,15 +31,6 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def read_jsonl_count(path: Path) -> int:
-    count = 0
-    with path.open("r", encoding="utf-8") as f:
-        for line in f:
-            if line.strip():
-                count += 1
-    return count
-
-
 def discover_splits(input_dir: Path, splits: tuple[str, ...]) -> dict[str, Path]:
     found: dict[str, Path] = {}
     for split in splits:
@@ -67,11 +58,7 @@ def build_manifest(
     manifest["schema_version"] = BENCH_SCHEMA_VERSION
     manifest["dataset"] = dataset_name
     manifest["data_files"] = {split: f"{split}/{SCENARIO_JSONL}" for split in split_paths}
-    manifest["public_split_name_counts"] = {
-        split: read_jsonl_count(path) for split, path in split_paths.items()
-    }
-    manifest["public_total"] = sum(manifest["public_split_name_counts"].values())
-    if "train" in manifest["public_split_name_counts"]:
+    if "train" in split_paths:
         manifest["notes"] = {
             **(manifest.get("notes") or {}),
             "train": "SFT-only; not for benchmark leaderboard eval",
@@ -158,8 +145,6 @@ def main(argv: list[str] | None = None) -> int:
         "dataset_name": args.dataset_name,
         "version": args.release_version,
         "data_files": manifest["data_files"],
-        "public_split_name_counts": manifest["public_split_name_counts"],
-        "total_public_examples": manifest["public_total"],
     }
     (out_dir / "dataset_info.json").write_text(
         json.dumps(dataset_info, indent=2, sort_keys=True) + "\n",
@@ -169,7 +154,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"Packaged {len(split_paths)} split(s) into {out_dir}")
     print(f"checksums: {out_dir / 'checksums.json'}")
     for rel, digest in sorted(checksums.items()):
-        print(f"  {rel}: {digest[:16]}... n={manifest['public_split_name_counts'].get(rel.split('/')[0])}")
+        print(f"  {rel}: {digest[:16]}...")
 
     repo_root = REPO_ROOT
     python = sys.executable

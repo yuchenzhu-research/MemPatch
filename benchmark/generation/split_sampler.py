@@ -20,8 +20,8 @@ SPLIT_SEED_NAMESPACE = "mempatch_v13"
 
 # Train (SFT + k-fold dev) / test (held-out final eval). No separate validation split.
 SPLIT_RANGES: dict[str, tuple[int, int]] = {
-    "train": (200_001, 203_500),
-    "test": (203_501, 204_000),
+    "train": (1, 3500),
+    "test": (3501, 4000),
 }
 
 PILOT_QUOTAS: dict[str, dict[str, int]] = {

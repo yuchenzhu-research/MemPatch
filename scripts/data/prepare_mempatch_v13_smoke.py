@@ -531,17 +531,19 @@ def main(argv: list[str] | None = None) -> int:
 
     write_mlx_config(root, args, adapter_dir=adapter_dir)
 
-    print(
-        f"Wrote {len(train_sft)} train, {len(valid_sft)} valid (fold {args.fold}/{args.k_folds}), "
-        f"{len(hard50)} hard_balanced50, {len(hard50_sft)} hard_balanced50_sft -> {out_dir}"
-    )
-    print(f"k-fold valid counts: {valid_actual}")
-    if hard_actual != HARD_QUOTAS:
-        print(f"test balanced50 actual sample counts: {hard_actual}")
-
-    print_distribution("train", decision_distribution_sft(train_sft))
-    print_distribution("valid", decision_distribution_sft(valid_sft))
-    print_distribution("hard_balanced50 (gold in source)", decision_distribution_scenarios(hard_sampled))
+    if args.full_train:
+        print(f"Wrote k-fold fold {args.fold}/{args.k_folds} -> {out_dir}")
+    else:
+        print(
+            f"Wrote {len(train_sft)} train, {len(valid_sft)} valid (fold {args.fold}/{args.k_folds}), "
+            f"{len(hard50)} hard_balanced50, {len(hard50_sft)} hard_balanced50_sft -> {out_dir}"
+        )
+        print(f"k-fold valid counts: {valid_actual}")
+        if hard_actual != HARD_QUOTAS:
+            print(f"test balanced50 actual sample counts: {hard_actual}")
+        print_distribution("train", decision_distribution_sft(train_sft))
+        print_distribution("valid", decision_distribution_sft(valid_sft))
+        print_distribution("hard_balanced50 (gold in source)", decision_distribution_scenarios(hard_sampled))
     return 0
 
 

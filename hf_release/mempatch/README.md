@@ -57,15 +57,14 @@ v1.3 fixes the label coverage and public decision boundary:
 
 ## Splits
 
-| Split | Rows | Purpose |
-|-------|-----:|---------|
-| `train` | 3500 | SFT + stratified k-fold held-out |
-| `test` | 500 | Held-out final eval (L4) |
+| Split | Purpose |
+|-------|---------|
+| `train` | SFT + stratified k-fold held-out |
+| `test` | Held-out final eval (L4) |
 
-**Total: 4000.** Renderer: `unified_renderer_v13`.
-
-Use split names: `train`, `test`.
-Do not use the old `main` / `hard` naming in new experiments.
+Renderer: `unified_renderer_v13`. Scenario IDs are contiguous: `case-1` … `case-N`
+(train first, then test). Use split names `train` and `test` only — not the old
+`main` / `hard` naming.
 
 ## v1.3 Taxonomy Coverage
 
@@ -81,51 +80,6 @@ The v1.3 release uses primary labels from the broader taxonomy:
 
 Additional taxonomy labels in the code are reserved for future releases and are
 not present as v1.3 gold labels.
-
-## Decision Distribution
-
-| split | use_current_memory | mark_unresolved | ask_clarification | escalate | refuse_due_to_policy | total |
-|-------|-------------------:|----------------:|------------------:|---------:|---------------------:|------:|
-| train | 1000 | 750 | 700 | 675 | 375 | 3500 |
-| test | 150 | 100 | 100 | 75 | 75 | 500 |
-
-## Pattern Distribution
-
-Aggregate pattern x decision counts across all splits:
-
-| pattern | use_current_memory | mark_unresolved | ask_clarification | escalate | refuse_due_to_policy | total |
-|---------|-------------------:|----------------:|------------------:|---------:|---------------------:|------:|
-| authority_conflict | 0 | 142 | 200 | 250 | 0 | 592 |
-| ci_failed_after_claim | 0 | 282 | 0 | 250 | 0 | 532 |
-| closed_as_duplicate_not_fixed | 0 | 142 | 200 | 0 | 0 | 342 |
-| label_state_mismatch | 383 | 0 | 0 | 0 | 224 | 607 |
-| maintainer_correction_over_user_claim | 384 | 0 | 200 | 0 | 0 | 584 |
-| negative_evidence_required | 0 | 284 | 0 | 0 | 0 | 284 |
-| security_policy_override | 0 | 0 | 0 | 250 | 226 | 476 |
-| version_scope_leakage | 383 | 0 | 200 | 0 | 0 | 583 |
-
-## Variant Distribution
-
-| decision_variant | decision | rows |
-|------------------|----------|-----:|
-| verified_maintainer_overrides_user | use_current_memory | 384 |
-| verified_release_confirms_stable | use_current_memory | 383 |
-| verified_auditor_signoff | use_current_memory | 383 |
-| missing_target_on_update_request | ask_clarification | 200 |
-| ambiguous_scope_no_verified_ruling | ask_clarification | 200 |
-| multiple_matching_memories | ask_clarification | 200 |
-| user_intent_ambiguous_action | ask_clarification | 200 |
-| human_review_gate_active | escalate | 250 |
-| compliance_block_with_sufficient_evidence | escalate | 250 |
-| protected_prod_memory | escalate | 250 |
-| credential_forbidden_write | refuse_due_to_policy | 226 |
-| compliance_do_not_store | refuse_due_to_policy | 224 |
-| dual_verified_no_policy_gate | mark_unresolved | 142 |
-| duplicate_ticket_assumed_fixed | mark_unresolved | 142 |
-| passive_monitor_gap | mark_unresolved | 142 |
-| trust_chain_broken | mark_unresolved | 142 |
-| ci_contradiction_independent | mark_unresolved | 141 |
-| ci_monitor_gap | mark_unresolved | 141 |
 
 ## Boundary Audit
 
@@ -200,5 +154,5 @@ than as final benchmark evidence.
 
 ## Files
 
-- `train/scenarios.jsonl`, `validation/scenarios.jsonl`, `test/scenarios.jsonl`
+- `train/scenarios.jsonl`, `test/scenarios.jsonl`
 - `manifest.json`, `checksums.json`, `dataset_info.json`
