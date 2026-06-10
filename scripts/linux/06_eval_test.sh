@@ -29,10 +29,16 @@ RESULT_DIR="${SMOKE_RESULT_DIR:-$RESULTS_ROOT/$SLUG}"
 mkdir -p "$RESULT_DIR"
 
 if [[ ! -f "$TEST_SFT_DIR/sft.jsonl" ]]; then
-  echo "Building test SFT bundle -> $TEST_SFT_DIR"
+  echo "Building test SFT bundle -> $TEST_SFT_DIR (from $TEST_SCENARIOS)"
   "$PYTHON" "$ROOT/scripts/data/build_paper_eval_bundle.py" \
     --scenarios "$TEST_SCENARIOS" \
     --out-dir "$TEST_SFT_DIR"
+fi
+
+# Gold labels for scoring always come from the bundled test split when present.
+EVAL_SCENARIOS="$TEST_SCENARIOS"
+if [[ -f "$TEST_SFT_DIR/scenarios.jsonl" ]]; then
+  EVAL_SCENARIOS="$TEST_SFT_DIR/scenarios.jsonl"
 fi
 
 # Resolve best checkpoint from JSON (subprocess export from 05_pick_best.sh is unreliable).
@@ -51,7 +57,7 @@ run_variant() {
 
   EVAL_ARGS=(
     --data "$TEST_SFT_DIR/sft.jsonl"
-    --eval-data "$TEST_SCENARIOS"
+    --eval-data "$EVAL_SCENARIOS"
     --model-id "$HF_MODEL"
     --out-predictions "$pred"
     --out-metrics "$metrics"

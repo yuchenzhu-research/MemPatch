@@ -157,7 +157,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--adapter-path", type=Path, default=None)
     parser.add_argument("--no-adapter", action="store_true")
     parser.add_argument("--out-predictions", type=Path, required=True)
-    parser.add_argument("--eval-data", type=Path, default=root / "hf_release/mempatch/test/scenarios.jsonl")
+    parser.add_argument(
+        "--eval-data",
+        type=Path,
+        default=root / "local/data/mempatch/test/scenarios.jsonl",
+    )
     parser.add_argument("--out-metrics", type=Path, default=None)
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--max-tokens", type=int, default=256)

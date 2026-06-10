@@ -40,8 +40,30 @@ export HF_ENDPOINT="${HF_ENDPOINT-https://hf-mirror.com}"
 export HF_HUB_DISABLE_XET="${HF_HUB_DISABLE_XET:-1}"
 export HF_DOWNLOAD_WORKERS="${HF_DOWNLOAD_WORKERS:-1}"
 
-export TEST_SCENARIOS="${TEST_SCENARIOS:-$ROOT/hf_release/mempatch/test/scenarios.jsonl}"
 export TEST_SFT_DIR="${TEST_SFT_DIR:-$LOCAL_ROOT/train_data/paper/test500}"
+
+# Resolve gold scenarios for test500 eval (hf_release is optional on servers).
+resolve_test_scenarios() {
+  if [[ -n "${TEST_SCENARIOS:-}" && -f "$TEST_SCENARIOS" ]]; then
+    return 0
+  fi
+  local candidate
+  for candidate in \
+    "$TEST_SFT_DIR/scenarios.jsonl" \
+    "$LOCAL_ROOT/data/mempatch/test/scenarios.jsonl" \
+    "$ROOT/local/data/mempatch/test/scenarios.jsonl" \
+    "$ROOT/hf_release/mempatch/test/scenarios.jsonl"; do
+    if [[ -f "$candidate" ]]; then
+      export TEST_SCENARIOS="$candidate"
+      return 0
+    fi
+  done
+  echo "error: test scenarios.jsonl not found." >&2
+  echo "  Generate: python scripts/data/generate_mempatch.py --full --out-dir $LOCAL_ROOT/data/mempatch" >&2
+  echo "  Or copy hf_release/mempatch/test/scenarios.jsonl into the tree." >&2
+  return 1
+}
+resolve_test_scenarios
 
 mkdir -p "$TRAIN_DATA_ROOT" "$ADAPTER_ROOT" "$RESULTS_ROOT" "$LOG_ROOT" "$HF_CACHE" "$LOCAL_MODEL_ROOT"
 
