@@ -19,6 +19,8 @@ fi
   "bitsandbytes>=0.45" \
   "datasets>=3.0"
 
-echo "Setup OK. Next:"
-echo "  export HF_TOKEN=hf_... && hf auth login --token \"\$HF_TOKEN\""
+echo "Setup OK. Next (AutoDL often needs mirror):"
+echo "  export HF_ENDPOINT=https://hf-mirror.com"
+echo "  export HF_TOKEN=hf_..."
+echo "  bash scripts/linux/hf_login.sh"
 echo "  bash scripts/linux/01_audit.sh"

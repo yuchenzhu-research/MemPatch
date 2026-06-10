@@ -80,6 +80,11 @@ def main(argv: list[str] | None = None) -> int:
     from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TrainingArguments
     from trl import SFTTrainer
 
+    from scripts.linux.hf_hub import hub_kwargs, log_hub_config
+
+    log_hub_config(args.model_id)
+    hub = hub_kwargs(args.model_id)
+
     args.output_dir.mkdir(parents=True, exist_ok=True)
     args.log_dir.mkdir(parents=True, exist_ok=True)
 
@@ -90,7 +95,7 @@ def main(argv: list[str] | None = None) -> int:
         bnb_4bit_use_double_quant=True,
     )
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_id, trust_remote_code=True)
+    tokenizer = AutoTokenizer.from_pretrained(args.model_id, trust_remote_code=True, **hub)
     if tokenizer.pad_token is None:
         tokenizer.pad_token = tokenizer.eos_token
 
@@ -100,6 +105,7 @@ def main(argv: list[str] | None = None) -> int:
         device_map="auto",
         trust_remote_code=True,
         torch_dtype=torch.bfloat16,
+        **hub,
     )
     model = prepare_model_for_kbit_training(model)
     model = get_peft_model(

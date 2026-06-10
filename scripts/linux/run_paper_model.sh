@@ -1,15 +1,10 @@
 #!/usr/bin/env bash
-# Full paper pipeline for one model slug on Linux.
+# Back-compat wrapper -> run_model.sh
 #
 #   SLUG=gemma3_12b bash scripts/linux/run_paper_model.sh
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
-
 SLUG="${SLUG:?set SLUG}"
-
+PHASES="${PHASES:-auto}"
 bash "$LINUX_DIR/01_audit.sh"
-bash "$LINUX_DIR/04_train_all_folds.sh"
-bash "$LINUX_DIR/05_pick_best.sh"
-bash "$LINUX_DIR/06_eval_test.sh"
-
-echo "Done: $SLUG — results in $RESULTS_ROOT/$SLUG"
+SLUG="$SLUG" PHASES="$PHASES" bash "$LINUX_DIR/run_model.sh"
