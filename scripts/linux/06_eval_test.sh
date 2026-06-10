@@ -71,7 +71,7 @@ run_variant() {
   "$PYTHON" "$LINUX_DIR/run_hf_test_eval.py" "${EVAL_ARGS[@]}" "${extra[@]}"
 
   "$PYTHON" "$ROOT/scripts/workflows/evaluate_mempatch_predictions.py" \
-    --data "$TEST_SCENARIOS" \
+    --data "$EVAL_SCENARIOS" \
     --predictions "$pred" \
     --no-strict \
     --print-table
