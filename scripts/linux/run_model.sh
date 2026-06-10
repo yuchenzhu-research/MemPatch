@@ -55,7 +55,7 @@ run_train() {
 }
 
 run_pick() {
-  log "pick best fold + checkpoint (5 folds x 4 ckpts)"
+  log "pick best fold + checkpoint (${KFOLDS} folds x $((TRAIN_ITERS / SAVE_EVERY)) ckpts)"
   SLUG="$SLUG" bash "$LINUX_DIR/05_pick_best.sh" | tee -a "$PIPELINE_LOG"
   log "pick done"
 }

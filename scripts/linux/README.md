@@ -44,13 +44,13 @@ tail -f /root/autodl-tmp/mempatch_local/logs/pipeline.log
 
 ```text
 prefetch   snapshot_download -> LOCAL_MODEL_ROOT/{hub-id-as-dir}/
-train      5-fold QLoRA, saves @ 64/128/192/256 -> trainer_metrics.json
+train      5-fold QLoRA, saves every 64 steps up to 384 -> trainer_metrics.json
 pick       best fold (lowest val loss) + best checkpoint on that fold
 eval       test500 without adapter + with best LoRA
 baselines  11 baselines + mempatch_lora_best (RESUME=1)
 ```
 
-**Selection:** 5 folds × 4 checkpoints = **20 candidates**; pick lowest valid loss fold, then lowest valid loss step on that fold.
+**Selection:** 5 folds × 6 checkpoints = **30 candidates**; pick lowest valid loss fold, then lowest valid loss step on that fold.
 
 ## Status / resume
 
@@ -100,7 +100,7 @@ bash scripts/linux/clean_llama_local.sh
 
 ```text
 LOCAL_MODEL_ROOT/              full HF weights (use these, not hub cache)
-local/adapters/{slug}_pathB_lora/fold{N}/full256/checkpoint-{64,128,192,256}
+local/adapters/{slug}_pathB_lora/fold{N}/full384/checkpoint-{64,128,...,384}
 local/logs/kfold/{slug}_fold{N}/trainer_metrics.json
 local/results/{slug}/          predictions + metrics + selection JSON
 local/logs/pipeline.log        unified log
