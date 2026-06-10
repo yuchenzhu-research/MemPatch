@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Run paper 8+1 matrix on Linux HF: 11 baselines + optional mempact_lora best ckpt.
 #
-#   SLUG=llama3_1_8b EVAL_LIMIT=20 bash scripts/linux/run_baseline_matrix.sh
+#   SLUG=mistral_nemo_12b EVAL_LIMIT=20 bash scripts/linux/run_baseline_matrix.sh
 #
 # Env:
 #   BASELINE_SET=paper|all|main   (default: all = 11 baselines)

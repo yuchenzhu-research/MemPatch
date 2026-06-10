@@ -4,11 +4,9 @@
 phase_prefetch_done() {
   local slug="${1:?slug}"
   local hub_id local_dir
-  hub_id="$(resolve_hf_model_hub "$slug")"
+  hub_id="$(resolve_hf_model_hub "$slug")" || return 1
   local_dir="$(local_model_dir_for_hub "$hub_id")"
-  [[ -f "$local_dir/config.json" ]] || return 1
-  compgen -G "$local_dir/model*.safetensors" >/dev/null \
-    || compgen -G "$local_dir/model-*-of-*.safetensors" >/dev/null
+  model_dir_complete "$local_dir"
 }
 
 phase_train_done() {
@@ -41,8 +39,9 @@ phase_baselines_done() {
 
 print_model_status() {
   local slug="${1:?slug}"
+  require_paper_slug "$slug"
   local hub_id
-  hub_id="$(resolve_hf_model "$slug")"
+  hub_id="$(resolve_hf_model "$slug")" || return 1
   echo "slug=$slug model=$hub_id"
   phase_prefetch_done "$slug" && echo "  prefetch: OK" || echo "  prefetch: MISSING"
   phase_train_done "$slug" && echo "  train (5-fold): OK" || echo "  train (5-fold): incomplete"

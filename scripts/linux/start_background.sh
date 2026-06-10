@@ -10,7 +10,7 @@ ROOT="$(cd "$LINUX_DIR/../.." && pwd)"
 
 export LOCAL_ROOT="${LOCAL_ROOT:-/root/autodl-tmp/mempatch_local}"
 export HF_HOME="${HF_HOME:-$LOCAL_ROOT/hf_cache}"
-export HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}"
+export HF_ENDPOINT="${HF_ENDPOINT-https://hf-mirror.com}"
 export HF_HUB_DISABLE_XET="${HF_HUB_DISABLE_XET:-1}"
 export PYTHON="${PYTHON:-$ROOT/.venv/bin/python}"
 export PIPELINE_LOG="${PIPELINE_LOG:-$LOCAL_ROOT/logs/pipeline.log}"

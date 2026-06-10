@@ -19,6 +19,7 @@ QLoRA train → pick best (5 folds × 4 checkpoints) → test500 with/without Lo
 export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
 export HF_HOME=$LOCAL_ROOT/hf_cache
 export HF_ENDPOINT=https://hf-mirror.com
+export HF_DOWNLOAD_WORKERS=1
 export HF_TOKEN=hf_...
 
 cd /root/autodl-tmp/MemPatch
@@ -29,6 +30,7 @@ screen -dmS mempatch bash -lc '
   export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
   export HF_HOME=$LOCAL_ROOT/hf_cache
   export HF_ENDPOINT=https://hf-mirror.com
+  export HF_DOWNLOAD_WORKERS=1
   export HF_TOKEN=hf_...
   cd /root/autodl-tmp/MemPatch
   SLUGS=(mistral_nemo_12b gemma3_12b qwen3_14b) bash scripts/linux/run_paper_three.sh
@@ -56,6 +58,25 @@ baselines  11 baselines + mempatch_lora_best (RESUME=1)
 bash scripts/linux/status_models.sh
 SLUG=mistral_nemo_12b bash scripts/linux/status_models.sh
 ```
+
+## Download triage
+
+Start with one model and probe access before downloading weights:
+
+```bash
+export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
+export HF_HOME=$LOCAL_ROOT/hf_cache
+export HF_ENDPOINT=https://hf-mirror.com
+export HF_HUB_DISABLE_XET=1
+export HF_DOWNLOAD_WORKERS=1
+export HF_TOKEN=hf_...
+
+cd /root/autodl-tmp/MemPatch
+SLUG=mistral_nemo_12b HF_PREFETCH_PROBE_ONLY=1 bash scripts/linux/prefetch_model.sh
+SLUG=mistral_nemo_12b bash scripts/linux/prefetch_model.sh
+```
+
+If `gemma3_12b` fails at the probe, accept the Gemma terms on Hugging Face with the same account used by `HF_TOKEN`. If `hf-mirror.com` still hangs at `Fetching files: 0%`, retry the same command with `HF_ENDPOINT=` to use the official endpoint.
 
 Mistral training already done on server → only runs prefetch (if needed), eval, baselines:
 
@@ -104,5 +125,3 @@ Override: `export HF_MODEL_GEMMA3_12B=/path/to/local/dir`
 | `05_pick_best.sh` | Pick fold + checkpoint |
 | `06_eval_test.sh` | test500 base + lora |
 | `run_baseline_matrix.sh` | 11+1 baselines |
-
-Smoke: `SLUG=mistral_nemo_12b bash scripts/linux/run_smoke_test.sh`

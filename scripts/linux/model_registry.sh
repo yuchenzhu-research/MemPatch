@@ -1,13 +1,26 @@
 #!/usr/bin/env bash
 # Hugging Face hub IDs for Linux CUDA paper models (3 backbones; Llama omitted).
 
+PAPER_SLUGS=(mistral_nemo_12b gemma3_12b qwen3_14b)
+
+require_paper_slug() {
+  local slug="${1:?slug}"
+  local allowed
+  for allowed in "${PAPER_SLUGS[@]}"; do
+    [[ "$slug" == "$allowed" ]] && return 0
+  done
+  echo "unsupported Linux paper slug: $slug" >&2
+  echo "allowed slugs: ${PAPER_SLUGS[*]}" >&2
+  return 1
+}
+
 resolve_hf_model_hub() {
   local slug="${1:?slug}"
+  require_paper_slug "$slug" || return 1
   case "$slug" in
     qwen3_14b) echo "OpenPipe/Qwen3-14B-Instruct" ;;
     gemma3_12b) echo "google/gemma-3-12b-it" ;;
     mistral_nemo_12b) echo "mistralai/Mistral-Nemo-Instruct-2407" ;;
-    llama3_1_8b) echo "meta-llama/Meta-Llama-3.1-8B-Instruct" ;;
     *)
       echo "unknown slug: $slug" >&2
       return 1
@@ -21,6 +34,34 @@ local_model_dir_for_hub() {
   echo "${LOCAL_MODEL_ROOT:-${LOCAL_ROOT:?}/models}/${safe}"
 }
 
+model_dir_complete() {
+  local model_dir="${1:?model dir}"
+  [[ -f "$model_dir/config.json" ]] || return 1
+
+  "$PYTHON" - "$model_dir" <<'PY'
+import json
+import sys
+from pathlib import Path
+
+model_dir = Path(sys.argv[1])
+index_path = model_dir / "model.safetensors.index.json"
+single_path = model_dir / "model.safetensors"
+
+if single_path.is_file():
+    raise SystemExit(0)
+if not index_path.is_file():
+    raise SystemExit(1)
+
+try:
+    payload = json.loads(index_path.read_text())
+    shards = set(payload["weight_map"].values())
+except (OSError, KeyError, TypeError, ValueError):
+    raise SystemExit(1)
+
+raise SystemExit(0 if shards and all((model_dir / shard).is_file() for shard in shards) else 1)
+PY
+}
+
 resolve_hf_model() {
   local slug="${1:?slug}"
   local upper
@@ -31,14 +72,12 @@ resolve_hf_model() {
     return 0
   fi
   local hub_id
-  hub_id="$(resolve_hf_model_hub "$slug")"
+  hub_id="$(resolve_hf_model_hub "$slug")" || return 1
   local local_dir
   local_dir="$(local_model_dir_for_hub "$hub_id")"
-  if [[ -f "$local_dir/config.json" ]]; then
+  if model_dir_complete "$local_dir"; then
     echo "$local_dir"
     return 0
   fi
   echo "$hub_id"
 }
-
-PAPER_SLUGS=(mistral_nemo_12b gemma3_12b qwen3_14b)

@@ -19,7 +19,7 @@ fi
 import os
 import sys
 
-endpoint = os.environ.get("HF_ENDPOINT", "https://huggingface.co")
+endpoint = os.environ.get("HF_ENDPOINT") or "https://huggingface.co"
 print("probing:", endpoint)
 try:
     from huggingface_hub import HfApi

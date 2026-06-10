@@ -31,8 +31,10 @@ export PIPELINE_LOG="${PIPELINE_LOG:-$LOCAL_ROOT/logs/pipeline.log}"
 
 # AutoDL: HF mirror + disable xet CDN (hangs at "Fetching N files: 0%").
 # Do NOT default to HF_HUB_OFFLINE — use prefetch_model.sh -> LOCAL_MODEL_ROOT instead.
-export HF_ENDPOINT="${HF_ENDPOINT:-https://hf-mirror.com}"
+# Set HF_ENDPOINT= to force the official Hugging Face endpoint.
+export HF_ENDPOINT="${HF_ENDPOINT-https://hf-mirror.com}"
 export HF_HUB_DISABLE_XET="${HF_HUB_DISABLE_XET:-1}"
+export HF_DOWNLOAD_WORKERS="${HF_DOWNLOAD_WORKERS:-1}"
 
 export TEST_SCENARIOS="${TEST_SCENARIOS:-$ROOT/hf_release/mempatch/test/scenarios.jsonl}"
 export TEST_SFT_DIR="${TEST_SFT_DIR:-$LOCAL_ROOT/train_data/paper/test500}"
