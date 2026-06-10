@@ -16,7 +16,7 @@ from scripts._root import REPO_ROOT, bootstrap_from
 bootstrap_from(__file__)
 
 from benchmark.api import evaluate_predictions, load_scenarios  # noqa: E402
-from scripts.mlx_support.mlx_chat_utils import apply_chat_template_no_think, extract_json_object
+from scripts.mlx_support.mlx_chat_utils import extract_json_object
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -53,54 +53,30 @@ def prediction_from_output(scenario_id: str, output: str, *, json_brace_prefill:
 
 
 def run_predictions(args: argparse.Namespace) -> list[dict[str, Any]]:
-    import torch
-    from peft import PeftModel
-    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+    from scripts.linux.hf_inference import generate_from_messages, load_hf_model
 
     rows = read_jsonl(args.data)
     if args.limit is not None:
         rows = rows[: args.limit]
 
-    bnb_config = BitsAndBytesConfig(
-        load_in_4bit=True,
-        bnb_4bit_quant_type="nf4",
-        bnb_4bit_compute_dtype=torch.bfloat16,
-        bnb_4bit_use_double_quant=True,
-    )
-
     print(f"Loading model: {args.model_id}", file=sys.stderr)
-    tokenizer = AutoTokenizer.from_pretrained(args.model_id, trust_remote_code=True)
-    model = AutoModelForCausalLM.from_pretrained(
-        args.model_id,
-        quantization_config=bnb_config,
-        device_map="auto",
-        trust_remote_code=True,
-        torch_dtype=torch.bfloat16,
-    )
     if args.adapter_path is not None:
         print(f"Loading adapter: {args.adapter_path}", file=sys.stderr)
-        model = PeftModel.from_pretrained(model, str(args.adapter_path))
     else:
         print("Loading without adapter", file=sys.stderr)
+    model, tokenizer = load_hf_model(args.model_id, args.adapter_path)
 
-    model.eval()
     predictions: list[dict[str, Any]] = []
     for index, row in enumerate(rows, start=1):
         messages = row["messages"]
         scenario_id = extract_scenario_id(messages)
-        prompt_messages = [m for m in messages if m.get("role") in {"system", "user"}]
-        input_ids, gen_meta = apply_chat_template_no_think(tokenizer, prompt_messages)
-        input_tensor = torch.tensor([input_ids], dtype=torch.long, device=model.device)
-        with torch.no_grad():
-            output_ids = model.generate(
-                input_tensor,
-                max_new_tokens=args.max_tokens,
-                do_sample=args.temp > 0,
-                temperature=args.temp if args.temp > 0 else None,
-                pad_token_id=tokenizer.pad_token_id or tokenizer.eos_token_id,
-            )
-        new_tokens = output_ids[0, input_tensor.shape[1] :]
-        text = tokenizer.decode(new_tokens, skip_special_tokens=True)
+        text, gen_meta = generate_from_messages(
+            model,
+            tokenizer,
+            messages,
+            max_tokens=args.max_tokens,
+            temp=args.temp,
+        )
         pred = prediction_from_output(
             scenario_id,
             text,

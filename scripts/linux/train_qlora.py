@@ -77,7 +77,7 @@ def main(argv: list[str] | None = None) -> int:
     import torch
     from datasets import Dataset
     from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
-    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig, TrainingArguments
+    from transformers import AutoModelForCausalLM, BitsAndBytesConfig, TrainingArguments
     from trl import SFTTrainer
 
     from scripts.linux.hf_hub import hub_kwargs, log_hub_config
@@ -95,16 +95,17 @@ def main(argv: list[str] | None = None) -> int:
         bnb_4bit_use_double_quant=True,
     )
 
-    tokenizer = AutoTokenizer.from_pretrained(args.model_id, trust_remote_code=True, **hub)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+    from scripts.linux.hf_inference import load_hf_tokenizer, suppress_bitsandbytes_warnings
+
+    suppress_bitsandbytes_warnings()
+    tokenizer = load_hf_tokenizer(args.model_id, hub)
 
     model = AutoModelForCausalLM.from_pretrained(
         args.model_id,
         quantization_config=bnb_config,
         device_map="auto",
         trust_remote_code=True,
-        torch_dtype=torch.bfloat16,
+        dtype=torch.bfloat16,
         **hub,
     )
     model = prepare_model_for_kbit_training(model)

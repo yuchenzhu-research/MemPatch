@@ -2,19 +2,63 @@
 
 from __future__ import annotations
 
+import warnings
 from pathlib import Path
 from typing import Any
 
 from scripts.mlx_support.mlx_chat_utils import apply_chat_template_no_think
 
+_WARNINGS_CONFIGURED = False
+
+
+def suppress_bitsandbytes_warnings() -> None:
+    """Hide noisy third-party FutureWarnings during 4-bit load/generate."""
+    global _WARNINGS_CONFIGURED
+    if _WARNINGS_CONFIGURED:
+        return
+    warnings.filterwarnings(
+        "ignore",
+        message=r".*_check_is_size will be removed.*",
+        category=FutureWarning,
+    )
+    _WARNINGS_CONFIGURED = True
+
+
+def _is_mistral_model(model_id: str) -> bool:
+    text = model_id.lower()
+    return "mistral" in text or "nemo" in text
+
+
+def tokenizer_load_kwargs(model_id: str, hub: dict[str, Any] | None = None) -> dict[str, Any]:
+    out = dict(hub or {})
+    if _is_mistral_model(model_id):
+        out.setdefault("fix_mistral_regex", True)
+    return out
+
+
+def load_hf_tokenizer(model_id: str, hub: dict[str, Any] | None = None) -> Any:
+    from transformers import AutoTokenizer
+
+    suppress_bitsandbytes_warnings()
+    kwargs = {"trust_remote_code": True, **tokenizer_load_kwargs(model_id, hub)}
+    try:
+        tokenizer = AutoTokenizer.from_pretrained(model_id, **kwargs)
+    except TypeError:
+        kwargs.pop("fix_mistral_regex", None)
+        tokenizer = AutoTokenizer.from_pretrained(model_id, **kwargs)
+    if tokenizer.pad_token is None:
+        tokenizer.pad_token = tokenizer.eos_token
+    return tokenizer
+
 
 def load_hf_model(model_id: str, adapter_path: Path | None = None) -> tuple[Any, Any]:
     import torch
     from peft import PeftModel
-    from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+    from transformers import AutoModelForCausalLM, BitsAndBytesConfig
 
     from scripts.linux.hf_hub import hub_kwargs, log_hub_config
 
+    suppress_bitsandbytes_warnings()
     log_hub_config(model_id)
     hub = hub_kwargs(model_id)
 
@@ -24,15 +68,13 @@ def load_hf_model(model_id: str, adapter_path: Path | None = None) -> tuple[Any,
         bnb_4bit_compute_dtype=torch.bfloat16,
         bnb_4bit_use_double_quant=True,
     )
-    tokenizer = AutoTokenizer.from_pretrained(model_id, trust_remote_code=True, **hub)
-    if tokenizer.pad_token is None:
-        tokenizer.pad_token = tokenizer.eos_token
+    tokenizer = load_hf_tokenizer(model_id, hub)
     model = AutoModelForCausalLM.from_pretrained(
         model_id,
         quantization_config=bnb_config,
         device_map="auto",
         trust_remote_code=True,
-        torch_dtype=torch.bfloat16,
+        dtype=torch.bfloat16,
         **hub,
     )
     if adapter_path is not None:
@@ -51,12 +93,15 @@ def generate_from_messages(
 ) -> tuple[str, dict[str, Any]]:
     import torch
 
+    suppress_bitsandbytes_warnings()
     prompt_messages = [m for m in messages if m.get("role") in {"system", "user"}]
     input_ids, gen_meta = apply_chat_template_no_think(tokenizer, prompt_messages)
     input_tensor = torch.tensor([input_ids], dtype=torch.long, device=model.device)
+    attention_mask = torch.ones_like(input_tensor)
     with torch.no_grad():
         output_ids = model.generate(
             input_tensor,
+            attention_mask=attention_mask,
             max_new_tokens=max_tokens,
             do_sample=temp > 0,
             temperature=temp if temp > 0 else None,
