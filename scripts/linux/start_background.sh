@@ -23,7 +23,7 @@ fi
 mkdir -p "$LOCAL_ROOT/logs" "$LOCAL_ROOT/models" "$LOCAL_ROOT/hf_cache"
 chmod +x "$LINUX_DIR"/*.sh 2>/dev/null || true
 
-RUNNER="$LOCAL_ROOT/run_paper_three.sh"
+RUNNER="$LOCAL_ROOT/run_paper_campaign.sh"
 cat >"$RUNNER" <<EOF
 #!/usr/bin/env bash
 set -eo pipefail

@@ -15,22 +15,20 @@ QLoRA train → pick best (5-fold × 384 steps) → smoke (1 case) → test500 M
 | screen died | Python process crashed on HF error | `run_model.sh` phases + `pipeline.log` |
 | Restart from scratch | No phase detection | `PHASES=auto` skips completed steps |
 
-## Paper campaign (recommended)
+## One command (full paper)
 
-Mistral: skip train if done → smoke → full eval → 8 baselines.  
-Gemma + Qwen: full train → smoke → full eval → 8 baselines.
+Order: **mistral 8+1** → **gemma train+8+1** → **qwen train+8+1**.  
+`PHASES=auto` skips finished steps (mistral train/pick/smoke already done).
 
 ```bash
 export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
 export HF_HOME=$LOCAL_ROOT/hf_cache
 export HF_TOKEN=hf_...
 cd /root/autodl-tmp/MemPatch
+git pull
 
-# Mistral only (already trained):
-SLUG=mistral_nemo_12b PHASES=smoke,eval,baselines bash scripts/linux/run_model.sh
-
-# Or full campaign in background:
-bash scripts/linux/start_background.sh
+bash scripts/linux/run_paper_campaign.sh
+# or background: bash scripts/linux/start_background.sh
 ```
 
 screen -ls

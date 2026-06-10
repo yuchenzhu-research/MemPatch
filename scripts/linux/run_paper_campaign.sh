@@ -1,16 +1,14 @@
 #!/usr/bin/env bash
-# Paper campaign: mistral experiments first, then train+eval gemma+qwen.
-#
-# Mistral (train already done): smoke -> full MemPatch w/o+w/ LoRA -> 8 baselines
-# Gemma + Qwen: full 5-fold train -> smoke -> full eval -> 8 baselines
+# One-shot paper pipeline (fixed order):
+#   1. mistral_nemo_12b  — 8+1 on test500 (skips done train/pick/smoke)
+#   2. gemma3_12b        — train 5-fold → smoke → 8+1
+#   3. qwen3_14b         — train 5-fold → smoke → 8+1
 #
 #   export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
 #   export HF_TOKEN=hf_...
 #   bash scripts/linux/run_paper_campaign.sh
 #
-# Env:
-#   EXPERIMENT_SLUGS   default: mistral_nemo_12b
-#   TRAIN_SLUGS        default: gemma3_12b qwen3_14b
+# Background: bash scripts/linux/start_background.sh
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 source "$LINUX_DIR/lib_phases.sh"
@@ -18,35 +16,22 @@ source "$LINUX_DIR/lib_phases.sh"
 PIPELINE_LOG="${PIPELINE_LOG:-$LOCAL_ROOT/logs/pipeline.log}"
 mkdir -p "$(dirname "$PIPELINE_LOG")"
 
-EXPERIMENT_SLUGS=(${EXPERIMENT_SLUGS:-mistral_nemo_12b})
-TRAIN_SLUGS=(${TRAIN_SLUGS:-gemma3_12b qwen3_14b})
+# Fixed backbone order — do not reorder without editing this script.
+SLUGS=(mistral_nemo_12b gemma3_12b qwen3_14b)
 
 log() {
   echo "[$(date '+%F %T')] campaign: $*" | tee -a "$PIPELINE_LOG"
 }
 
-run_experiment_only() {
-  local slug="$1"
-  log "===== $slug: skip train if done; smoke -> eval -> baselines ====="
-  SLUG="$slug" PHASES=smoke,eval,baselines bash "$LINUX_DIR/run_model.sh"
-}
-
-run_full_pipeline() {
-  local slug="$1"
-  log "===== $slug: prefetch/train/pick -> smoke -> eval -> baselines ====="
-  SLUG="$slug" PHASES=auto bash "$LINUX_DIR/run_model.sh"
-}
-
-log "start EXPERIMENT_SLUGS=${EXPERIMENT_SLUGS[*]} TRAIN_SLUGS=${TRAIN_SLUGS[*]}"
+log "start order: ${SLUGS[*]} (PHASES=auto per model)"
 
 bash "$LINUX_DIR/01_audit.sh" 2>&1 | tee -a "$PIPELINE_LOG"
 
-for slug in "${EXPERIMENT_SLUGS[@]}"; do
-  run_experiment_only "$slug"
-done
-
-for slug in "${TRAIN_SLUGS[@]}"; do
-  run_full_pipeline "$slug"
+for slug in "${SLUGS[@]}"; do
+  log "===== $slug (auto: skip finished phases) ====="
+  print_model_status "$slug" | tee -a "$PIPELINE_LOG"
+  SLUG="$slug" PHASES=auto bash "$LINUX_DIR/run_model.sh" 2>&1 | tee -a "$PIPELINE_LOG"
+  print_model_status "$slug" | tee -a "$PIPELINE_LOG"
 done
 
 log "campaign complete. Results: $RESULTS_ROOT/"
