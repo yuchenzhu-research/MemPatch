@@ -25,7 +25,7 @@ done
 SLUG="${SLUG:?set SLUG}"
 EVAL_PREFIX="${EVAL_PREFIX:-test500}"
 HF_MODEL="$(resolve_hf_model "$SLUG")"
-RESULT_DIR="$RESULTS_ROOT/$SLUG"
+RESULT_DIR="${SMOKE_RESULT_DIR:-$RESULTS_ROOT/$SLUG}"
 mkdir -p "$RESULT_DIR"
 
 if [[ ! -f "$TEST_SFT_DIR/sft.jsonl" ]]; then
