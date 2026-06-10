@@ -3,7 +3,7 @@
 #
 #   SLUG=mistral_nemo_12b bash scripts/linux/run_model.sh
 #   SLUG=gemma3_12b PHASES=prefetch,train,pick,eval,baselines bash scripts/linux/run_model.sh
-#   SLUG=mistral_nemo_12b PHASES=eval,baselines bash scripts/linux/run_model.sh
+#   SLUG=mistral_nemo_12b PHASES=smoke,eval,baselines bash scripts/linux/run_model.sh
 #
 # PHASES=auto (default): run any phase not yet complete.
 set -euo pipefail
@@ -26,6 +26,7 @@ want_phase() {
       prefetch) phase_prefetch_done "$SLUG" || return 0 ;;
       train) phase_train_done "$SLUG" || return 0 ;;
       pick) phase_pick_done "$SLUG" || return 0 ;;
+      smoke) phase_smoke_done "$SLUG" || return 0 ;;
       eval) phase_eval_done "$SLUG" || return 0 ;;
       baselines) phase_baselines_done "$SLUG" || return 0 ;;
     esac
@@ -60,15 +61,24 @@ run_pick() {
   log "pick done"
 }
 
+run_smoke() {
+  log "smoke: MemPatch w/o + w/ LoRA and 8 baselines (${SMOKE_LIMIT} case each)"
+  SLUG="$SLUG" bash "$LINUX_DIR/run_smoke.sh" | tee -a "$PIPELINE_LOG"
+  log "smoke done"
+}
+
 run_eval() {
-  log "eval test500 without + with LoRA"
-  SLUG="$SLUG" bash "$LINUX_DIR/06_eval_test.sh" | tee -a "$PIPELINE_LOG"
-  log "eval done"
+  log "mempatch test500 without + with LoRA (full)"
+  unset EVAL_LIMIT
+  EVAL_PREFIX=test500 SLUG="$SLUG" bash "$LINUX_DIR/06_eval_test.sh" | tee -a "$PIPELINE_LOG"
+  log "mempatch eval done"
 }
 
 run_baselines() {
-  log "baselines 11 + mempatch_lora_best"
-  SLUG="$SLUG" RESUME=1 bash "$LINUX_DIR/run_baseline_matrix.sh" | tee -a "$PIPELINE_LOG"
+  log "8 paper baselines on test500 (BASELINE_SET=${BASELINE_SET:-main})"
+  unset EVAL_LIMIT
+  BASELINE_SET="${BASELINE_SET:-main}" INCLUDE_LORA=0 \
+    SLUG="$SLUG" RESUME=1 bash "$LINUX_DIR/run_baseline_matrix.sh" | tee -a "$PIPELINE_LOG"
   log "baselines done"
 }
 
@@ -78,6 +88,7 @@ print_model_status "$SLUG" | tee -a "$PIPELINE_LOG"
 if want_phase prefetch; then run_prefetch; fi
 if want_phase train; then run_train; fi
 if want_phase pick; then run_pick; fi
+if want_phase smoke; then run_smoke; fi
 if want_phase eval; then run_eval; fi
 if want_phase baselines; then run_baselines; fi
 

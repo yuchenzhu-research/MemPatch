@@ -2,11 +2,28 @@
 # test500: base model + best LoRA checkpoint.
 #
 #   SLUG=gemma3_12b bash scripts/linux/06_eval_test.sh
+#   SLUG=mistral_nemo_12b bash scripts/linux/06_eval_test.sh --variant base
 # Optional: BEST_FOLD=0 BEST_CHECKPOINT=... (from 05_pick_best.sh)
+# Env: EVAL_PREFIX=test500  EVAL_LIMIT=1  (smoke uses smoke_test500)
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 
+VARIANT_FILTER=""
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    --variant)
+      VARIANT_FILTER="${2:?base or lora}"
+      shift 2
+      ;;
+    *)
+      echo "unknown arg: $1" >&2
+      exit 1
+      ;;
+  esac
+done
+
 SLUG="${SLUG:?set SLUG}"
+EVAL_PREFIX="${EVAL_PREFIX:-test500}"
 HF_MODEL="$(resolve_hf_model "$SLUG")"
 RESULT_DIR="$RESULTS_ROOT/$SLUG"
 mkdir -p "$RESULT_DIR"
@@ -28,8 +45,8 @@ ADAPTER_PATH="${BEST_CHECKPOINT:?missing checkpoint; run 05_pick_best.sh first}"
 run_variant() {
   local variant="$1"
   shift
-  local pred="$RESULT_DIR/test500_${variant}_predictions.jsonl"
-  local metrics="$RESULT_DIR/test500_${variant}_metrics.json"
+  local pred="$RESULT_DIR/${EVAL_PREFIX}_${variant}_predictions.jsonl"
+  local metrics="$RESULT_DIR/${EVAL_PREFIX}_${variant}_metrics.json"
   local extra=("$@")
 
   EVAL_ARGS=(
@@ -38,7 +55,7 @@ run_variant() {
     --model-id "$HF_MODEL"
     --out-predictions "$pred"
     --out-metrics "$metrics"
-    --split-tag "test500_${variant}"
+    --split-tag "${EVAL_PREFIX}_${variant}"
     --model-tag "$SLUG"
     --variant-tag "$variant"
   )
@@ -54,8 +71,12 @@ run_variant() {
     --print-table
 }
 
-echo "===== base (without adapter) ====="
-run_variant base --no-adapter
+if [[ -z "$VARIANT_FILTER" || "$VARIANT_FILTER" == "base" ]]; then
+  echo "===== base (without adapter) ====="
+  run_variant base --no-adapter
+fi
 
-echo "===== lora_best (with adapter) ====="
-run_variant lora_best --adapter-path "$ADAPTER_PATH"
+if [[ -z "$VARIANT_FILTER" || "$VARIANT_FILTER" == "lora" ]]; then
+  echo "===== lora_best (with adapter) ====="
+  run_variant lora_best --adapter-path "$ADAPTER_PATH"
+fi

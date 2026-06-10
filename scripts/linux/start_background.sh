@@ -35,7 +35,7 @@ export HF_HUB_DISABLE_XET="$HF_HUB_DISABLE_XET"
 export PYTHON="$PYTHON"
 export PIPELINE_LOG="$PIPELINE_LOG"
 cd "$ROOT"
-exec bash "$LINUX_DIR/run_paper_three.sh" >>"\$PIPELINE_LOG" 2>&1
+exec bash "$LINUX_DIR/run_paper_campaign.sh" >>"\$PIPELINE_LOG" 2>&1
 EOF
 chmod +x "$RUNNER"
 

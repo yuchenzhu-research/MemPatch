@@ -32,9 +32,14 @@ phase_eval_done() {
     && [[ -f "$RESULTS_ROOT/$slug/test500_lora_best_predictions.jsonl" ]]
 }
 
+phase_smoke_done() {
+  local slug="${1:?slug}"
+  [[ -f "$RESULTS_ROOT/$slug/smoke.done" ]]
+}
+
 phase_baselines_done() {
   local slug="${1:?slug}"
-  [[ -f "$RESULTS_ROOT/$slug/mempatch_lora_best_predictions.jsonl" ]]
+  [[ -f "$RESULTS_ROOT/$slug/baselines_full.done" ]]
 }
 
 print_model_status() {
@@ -46,6 +51,7 @@ print_model_status() {
   phase_prefetch_done "$slug" && echo "  prefetch: OK" || echo "  prefetch: MISSING"
   phase_train_done "$slug" && echo "  train (5-fold): OK" || echo "  train (5-fold): incomplete"
   phase_pick_done "$slug" && echo "  pick (fold+ckpt): OK" || echo "  pick: MISSING"
-  phase_eval_done "$slug" && echo "  eval (with/without): OK" || echo "  eval: incomplete"
-  phase_baselines_done "$slug" && echo "  baselines (11+1): OK" || echo "  baselines: incomplete"
+  phase_smoke_done "$slug" && echo "  smoke (8+memPatch x1): OK" || echo "  smoke: incomplete"
+  phase_eval_done "$slug" && echo "  mempatch eval (w/o + w/ LoRA, 500): OK" || echo "  mempatch eval: incomplete"
+  phase_baselines_done "$slug" && echo "  baselines (8 x 500): OK" || echo "  baselines: incomplete"
 }

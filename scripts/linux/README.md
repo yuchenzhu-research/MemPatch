@@ -1,6 +1,8 @@
 # Linux CUDA paper pipeline
 
-QLoRA train → pick best (5 folds × 4 checkpoints) → test500 with/without LoRA → 11+1 baselines.
+QLoRA train → pick best (5-fold × 384 steps) → smoke (1 case) → test500 MemPatch w/o+w/ LoRA → 8 baselines.
+
+**8+1 layout:** 8 main baselines (`BASELINE_SET=main`) + MemPatch method (without LoRA + with best LoRA in `06_eval_test.sh`).
 
 **Three backbones (no Llama):** `mistral_nemo_12b`, `gemma3_12b`, `qwen3_14b`
 
@@ -13,28 +15,23 @@ QLoRA train → pick best (5 folds × 4 checkpoints) → test500 with/without Lo
 | screen died | Python process crashed on HF error | `run_model.sh` phases + `pipeline.log` |
 | Restart from scratch | No phase detection | `PHASES=auto` skips completed steps |
 
-## One command (start with Mistral)
+## Paper campaign (recommended)
+
+Mistral: skip train if done → smoke → full eval → 8 baselines.  
+Gemma + Qwen: full train → smoke → full eval → 8 baselines.
 
 ```bash
 export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
 export HF_HOME=$LOCAL_ROOT/hf_cache
-export HF_ENDPOINT=https://hf-mirror.com
-export HF_DOWNLOAD_WORKERS=1
 export HF_TOKEN=hf_...
-
 cd /root/autodl-tmp/MemPatch
-git pull
-bash scripts/linux/00_setup.sh
 
-screen -dmS mempatch bash -lc '
-  export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
-  export HF_HOME=$LOCAL_ROOT/hf_cache
-  export HF_ENDPOINT=https://hf-mirror.com
-  export HF_DOWNLOAD_WORKERS=1
-  export HF_TOKEN=hf_...
-  cd /root/autodl-tmp/MemPatch
-  SLUGS=(mistral_nemo_12b gemma3_12b qwen3_14b) bash scripts/linux/run_paper_three.sh
-'
+# Mistral only (already trained):
+SLUG=mistral_nemo_12b PHASES=smoke,eval,baselines bash scripts/linux/run_model.sh
+
+# Or full campaign in background:
+bash scripts/linux/start_background.sh
+```
 
 screen -ls
 tail -f /root/autodl-tmp/mempatch_local/logs/pipeline.log

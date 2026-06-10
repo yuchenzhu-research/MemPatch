@@ -7,7 +7,7 @@ ROOT="$(cd "$LINUX_DIR/../.." && pwd)"
 
 export ROOT
 export PYTHON="${PYTHON:-$ROOT/.venv/bin/python}"
-export PYTHONPATH="${PYTHONPATH:-$ROOT:$ROOT/src:$ROOT/scripts}"
+export PYTHONPATH="${PYTHONPATH:-$ROOT:$ROOT/mempatch:$ROOT/src:$ROOT/scripts}"
 
 # Paper protocol (matches MLX profile `paper` in prepare_mempatch_v13_smoke.py)
 export PROFILE="${PROFILE:-paper}"
@@ -18,6 +18,10 @@ export TRAIN_ITERS="${TRAIN_ITERS:-384}"
 export SAVE_EVERY="${SAVE_EVERY:-64}"
 export SAVE_TOTAL_LIMIT="${SAVE_TOTAL_LIMIT:-8}"
 export EVAL_LIMIT="${EVAL_LIMIT:-}"
+export SMOKE_LIMIT="${SMOKE_LIMIT:-1}"
+export BASELINE_SET="${BASELINE_SET:-main}"
+export INCLUDE_LORA="${INCLUDE_LORA:-0}"
+export PRED_TAG_PREFIX="${PRED_TAG_PREFIX:-baseline_}"
 
 # Local artifact layout (under repo-root local/, gitignored)
 export LOCAL_ROOT="${LOCAL_ROOT:-$ROOT/local}"

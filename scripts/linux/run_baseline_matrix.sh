@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
-# Run paper 8+1 matrix on Linux HF: 11 baselines + optional mempact_lora best ckpt.
+# Run paper baseline matrix on Linux HF (default: 8 main baselines).
+# MemPatch with/without LoRA is run via 06_eval_test.sh (not duplicated here).
 #
 #   SLUG=mistral_nemo_12b EVAL_LIMIT=20 bash scripts/linux/run_baseline_matrix.sh
 #
@@ -14,9 +15,10 @@ source "$LINUX_DIR/lib_selection.sh"
 SLUG="${SLUG:?set SLUG}"
 HF_MODEL="$(resolve_hf_model "$SLUG")"
 RESULT_DIR="$RESULTS_ROOT/$SLUG"
-BASELINE_SET="${BASELINE_SET:-all}"
-INCLUDE_LORA="${INCLUDE_LORA:-1}"
+BASELINE_SET="${BASELINE_SET:-main}"
+INCLUDE_LORA="${INCLUDE_LORA:-0}"
 RESUME="${RESUME:-0}"
+PRED_TAG_PREFIX="${PRED_TAG_PREFIX:-baseline_}"
 EVAL_SCENARIOS="${EVAL_SCENARIOS:-${TEST_SCENARIOS}}"
 if [[ -n "${TEST_SFT_DIR:-}" && -f "${TEST_SFT_DIR}/scenarios.jsonl" ]]; then
   EVAL_SCENARIOS="$TEST_SFT_DIR/scenarios.jsonl"
@@ -46,7 +48,7 @@ PY
 
 RUN_ONE() {
   local baseline="$1"
-  local tag="baseline_${baseline}"
+  local tag="${PRED_TAG_PREFIX}${baseline}"
   local pred="$RESULT_DIR/${tag}_predictions.jsonl"
   local metrics="$RESULT_DIR/${tag}_metrics.json"
   local extra=()
@@ -109,4 +111,8 @@ if [[ -f "$LINUX_DIR/aggregate_baseline_table.py" ]]; then
   echo "Wrote $RESULT_DIR/baseline_matrix.md"
 fi
 
-echo "Baseline matrix done: ${#BASELINES[@]} baselines + lora=${INCLUDE_LORA}"
+if [[ -z "${EVAL_LIMIT:-}" ]]; then
+  date -Iseconds >"$RESULT_DIR/baselines_full.done"
+fi
+
+echo "Baseline matrix done: ${#BASELINES[@]} baselines (set=${BASELINE_SET}) + lora=${INCLUDE_LORA}"
