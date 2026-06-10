@@ -25,7 +25,14 @@ log() {
 
 log "start order: ${SLUGS[*]} (PHASES=auto per model)"
 
-bash "$LINUX_DIR/01_audit.sh" 2>&1 | tee -a "$PIPELINE_LOG"
+if AUDIT_TRAIN="$(resolve_split_dir train)" && AUDIT_TEST="$(resolve_split_dir test)"; then
+  log "audit train=$AUDIT_TRAIN test=$AUDIT_TEST"
+  AUDIT_TRAIN="$AUDIT_TRAIN" AUDIT_TEST="$AUDIT_TEST" bash "$LINUX_DIR/01_audit.sh" 2>&1 | tee -a "$PIPELINE_LOG"
+else
+  log "WARN: audit skipped — full train/test scenarios not found."
+  log "  Run once: cp -a ../MemPatch.bak/hf_release/mempatch $LOCAL_ROOT/data/"
+  log "  Or: python scripts/data/generate_mempatch.py --full --out-dir $LOCAL_ROOT/data/mempatch"
+fi
 
 for slug in "${SLUGS[@]}"; do
   log "===== $slug (auto: skip finished phases) ====="

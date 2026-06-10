@@ -13,10 +13,15 @@ MLX_CONFIG="$LOG_ROOT/${SLUG}_fold${KFOLD_FOLD}_${RUN_ID}.yaml"
 
 mkdir -p "$SFT_DIR" "$LOG_ROOT"
 
+resolve_train_scenarios
+resolve_test_scenarios
+
 # MLX yaml is a side effect; Linux training reads JSONL only.
 "$PYTHON" "$ROOT/scripts/data/prepare_mempatch_v13_smoke.py" \
   --profile "$PROFILE" \
   --full-train \
+  --train-data "$TRAIN_SCENARIOS" \
+  --test-data "$TEST_SCENARIOS" \
   --out-dir "$SFT_DIR" \
   --model-dir "$LOCAL_ROOT/models/_placeholder" \
   --adapter-dir "$ADAPTER_DIR" \

@@ -42,7 +42,23 @@ export HF_DOWNLOAD_WORKERS="${HF_DOWNLOAD_WORKERS:-1}"
 
 export TEST_SFT_DIR="${TEST_SFT_DIR:-$LOCAL_ROOT/train_data/paper/test500}"
 
-# Resolve gold scenarios for test500 eval (hf_release is optional on servers).
+# Resolve dataset paths (hf_release optional; MemPatch.bak clone is a common fallback).
+resolve_split_dir() {
+  local split="${1:?train|test}"
+  local dir
+  for dir in \
+    "$LOCAL_ROOT/data/mempatch/$split" \
+    "$ROOT/local/data/mempatch/$split" \
+    "$ROOT/hf_release/mempatch/$split" \
+    "$ROOT/../MemPatch.bak/hf_release/mempatch/$split"; do
+    if [[ -f "$dir/scenarios.jsonl" ]]; then
+      echo "$dir"
+      return 0
+    fi
+  done
+  return 1
+}
+
 resolve_test_scenarios() {
   if [[ -n "${TEST_SCENARIOS:-}" && -f "$TEST_SCENARIOS" ]]; then
     return 0
@@ -52,7 +68,8 @@ resolve_test_scenarios() {
     "$TEST_SFT_DIR/scenarios.jsonl" \
     "$LOCAL_ROOT/data/mempatch/test/scenarios.jsonl" \
     "$ROOT/local/data/mempatch/test/scenarios.jsonl" \
-    "$ROOT/hf_release/mempatch/test/scenarios.jsonl"; do
+    "$ROOT/hf_release/mempatch/test/scenarios.jsonl" \
+    "$ROOT/../MemPatch.bak/hf_release/mempatch/test/scenarios.jsonl"; do
     if [[ -f "$candidate" ]]; then
       export TEST_SCENARIOS="$candidate"
       return 0
@@ -60,9 +77,31 @@ resolve_test_scenarios() {
   done
   echo "error: test scenarios.jsonl not found." >&2
   echo "  Generate: python scripts/data/generate_mempatch.py --full --out-dir $LOCAL_ROOT/data/mempatch" >&2
-  echo "  Or copy hf_release/mempatch/test/scenarios.jsonl into the tree." >&2
+  echo "  Or: cp -a ../MemPatch.bak/hf_release/mempatch $LOCAL_ROOT/data/" >&2
   return 1
 }
+
+resolve_train_scenarios() {
+  if [[ -n "${TRAIN_SCENARIOS:-}" && -f "$TRAIN_SCENARIOS" ]]; then
+    return 0
+  fi
+  local candidate
+  for candidate in \
+    "$LOCAL_ROOT/data/mempatch/train/scenarios.jsonl" \
+    "$ROOT/local/data/mempatch/train/scenarios.jsonl" \
+    "$ROOT/hf_release/mempatch/train/scenarios.jsonl" \
+    "$ROOT/../MemPatch.bak/hf_release/mempatch/train/scenarios.jsonl"; do
+    if [[ -f "$candidate" ]]; then
+      export TRAIN_SCENARIOS="$candidate"
+      return 0
+    fi
+  done
+  echo "error: train scenarios.jsonl not found." >&2
+  echo "  Generate: python scripts/data/generate_mempatch.py --full --out-dir $LOCAL_ROOT/data/mempatch" >&2
+  echo "  Or: cp -a ../MemPatch.bak/hf_release/mempatch $LOCAL_ROOT/data/" >&2
+  return 1
+}
+
 resolve_test_scenarios
 
 mkdir -p "$TRAIN_DATA_ROOT" "$ADAPTER_ROOT" "$RESULTS_ROOT" "$LOG_ROOT" "$HF_CACHE" "$LOCAL_MODEL_ROOT"
