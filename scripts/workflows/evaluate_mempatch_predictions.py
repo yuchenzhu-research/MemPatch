@@ -7,8 +7,8 @@ against a scenarios file.
 
 Example::
 
-    PYTHONPATH=. python scripts/workflows/evaluate_mempatch_predictions.py \
-        --data hf_release/mempatch/test/scenarios.jsonl \
+    python scripts/workflows/evaluate_mempatch_predictions.py \
+        --data local/data/mempatch/test/scenarios.jsonl \
         --predictions path/to/predictions.jsonl \
         --out-metrics local/mempatch/my_model.metrics.json \
         --out-scored local/mempatch/my_model.scored.jsonl \

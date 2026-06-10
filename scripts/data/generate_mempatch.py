@@ -27,8 +27,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--out-dir",
         type=Path,
-        default=Path("hf_release/mempatch"),
-        help="Output directory for split JSONL (default: hf_release/mempatch)",
+        default=Path("local/data/mempatch"),
+        help="Output directory for split JSONL (default: local/data/mempatch)",
     )
     parser.add_argument(
         "--full",

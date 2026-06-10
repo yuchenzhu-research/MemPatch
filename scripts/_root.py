@@ -7,6 +7,8 @@ from pathlib import Path
 
 SCRIPTS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPTS_DIR.parent
+MEMPATCH_DIR = REPO_ROOT / "mempatch"
+# Back-compat symlink for local-only CUDA scripts: src -> mempatch
 SRC_DIR = REPO_ROOT / "src"
 
 
@@ -23,7 +25,7 @@ def repo_root_for(caller: str | Path) -> Path:
 
 
 def bootstrap_from(caller: str | Path, *, src: bool = False) -> tuple[Path, Path]:
-    """Insert repo/scripts (and optional src) on sys.path for a script under scripts/."""
+    """Insert repo root, scripts/, and optionally mempatch/ on sys.path."""
     repo = repo_root_for(caller)
     scripts = repo / "scripts"
     for entry in (repo, scripts):
@@ -31,7 +33,8 @@ def bootstrap_from(caller: str | Path, *, src: bool = False) -> tuple[Path, Path
         if text not in sys.path:
             sys.path.insert(0, text)
     if src:
-        text = str(repo / "src")
-        if text not in sys.path:
-            sys.path.insert(0, text)
+        for subdir in (MEMPATCH_DIR, SRC_DIR):
+            text = str(subdir)
+            if subdir.exists() and text not in sys.path:
+                sys.path.insert(0, text)
     return repo, scripts

@@ -6,9 +6,8 @@ Profiles:
   bench — quick dev train, rank-8, 32 iters
   paper — paper default, rank-16 attn+mlp, 256 iters
   paper_lite — memory-safe: seq 1024, rank-8 q/v/o, 256 iters
-  heavy — full train / k-fold valid, rank-16 attn+mlp, 1024 iters (legacy)
 
-Use --full-train with --profile paper or heavy for the full train split.
+Use --full-train with --profile paper for the full train split.
 """
 
 from __future__ import annotations
@@ -100,20 +99,6 @@ MLX_PROFILES: dict[str, dict[str, Any]] = {
         "lora_keys": SMOKE_LORA_KEYS,
         "lora_rank": 8,
         "lora_scale": 16.0,
-        "lora_dropout": 0.05,
-    },
-    "heavy": {
-        "batch_size": 2,
-        "iters": 1024,
-        "learning_rate": 1.0e-5,
-        "max_seq_length": 2048,
-        "grad_accumulation_steps": 4,
-        "save_every": 128,
-        "steps_per_eval": 128,
-        "val_batches": 64,
-        "lora_keys": HEAVY_LORA_KEYS,
-        "lora_rank": 16,
-        "lora_scale": 32.0,
         "lora_dropout": 0.05,
     },
     "paper": {
@@ -387,12 +372,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--train-data",
         type=Path,
-        default=root / "hf_release/mempatch/train/scenarios.jsonl",
+        default=root / "local/data/mempatch/train/scenarios.jsonl",
     )
     parser.add_argument(
         "--test-data",
         type=Path,
-        default=root / "hf_release/mempatch/test/scenarios.jsonl",
+        default=root / "local/data/mempatch/test/scenarios.jsonl",
     )
     parser.add_argument(
         "--out-dir",

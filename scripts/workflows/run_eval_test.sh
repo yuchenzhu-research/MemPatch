@@ -11,7 +11,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PYTHON="${PYTHON:-$ROOT/.venv/bin/python}"
-export PYTHONPATH="${PYTHONPATH:-$ROOT:$ROOT/src:$ROOT/scripts}"
+export PYTHONPATH="${PYTHONPATH:-$ROOT:$ROOT/mempatch:$ROOT/scripts}"
 
 SLUG="${SLUG:-qwen3_14b}"
 VARIANT="${VARIANT:-lora}"
@@ -19,7 +19,7 @@ MODEL="${MODEL:-$ROOT/local/models/Qwen3-14B-MLX-4bit}"
 OUT="${OUT:-$ROOT/local/results/$SLUG}"
 TEST_SFT_DIR="${TEST_SFT_DIR:-$ROOT/local/train_data/paper/test500}"
 SFT_DATA="${SFT_DATA:-$TEST_SFT_DIR/sft.jsonl}"
-EVAL_DATA="${EVAL_DATA:-$ROOT/hf_release/mempatch/test/scenarios.jsonl}"
+EVAL_DATA="${EVAL_DATA:-$ROOT/local/data/mempatch/test/scenarios.jsonl}"
 
 if [[ ! -f "$SFT_DATA" ]]; then
   echo "Building test SFT bundle -> $TEST_SFT_DIR"

@@ -10,7 +10,7 @@ Typical usage::
         load_scenarios, load_predictions, evaluate_predictions,
     )
 
-    scenarios = load_scenarios("hf_release/mempatch/test/scenarios.jsonl")
+    scenarios = load_scenarios("local/data/mempatch/test/scenarios.jsonl")
     predictions = load_predictions("my_model.predictions.jsonl")
     result = evaluate_predictions(scenarios, predictions, strict=True)
     print(result["headline_metrics"])

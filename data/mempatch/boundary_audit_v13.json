@@ -355,7 +355,7 @@
   "datasets": [
     {
       "split": "train",
-      "path": "hf_release/mempatch/train/scenarios.jsonl",
+      "path": "local/data/mempatch/train/scenarios.jsonl",
       "count": 2700,
       "decision_counts": {
         "use_current_memory": 600,
@@ -793,7 +793,7 @@
     },
     {
       "split": "validation",
-      "path": "hf_release/mempatch/validation/scenarios.jsonl",
+      "path": "local/data/mempatch/validation/scenarios.jsonl",
       "count": 800,
       "decision_counts": {
         "use_current_memory": 400,
@@ -1231,7 +1231,7 @@
     },
     {
       "split": "test",
-      "path": "hf_release/mempatch/test/scenarios.jsonl",
+      "path": "local/data/mempatch/test/scenarios.jsonl",
       "count": 500,
       "decision_counts": {
         "use_current_memory": 150,

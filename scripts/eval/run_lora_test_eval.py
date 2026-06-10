@@ -198,7 +198,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--eval-data",
         type=Path,
-        default=root / "hf_release/mempatch/test/scenarios.jsonl",
+        default=root / "local/data/mempatch/test/scenarios.jsonl",
         help="Scenario JSONL used for scoring. Use --eval-data '' to skip metrics.",
     )
     parser.add_argument(

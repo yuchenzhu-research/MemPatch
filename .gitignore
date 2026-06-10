@@ -4,14 +4,21 @@ scripts/_mac/
 artifacts/
 analysis/
 data_external/
-# Plural `references/` is tracked lightweight notes/registries; do not ignore it.
-# Use `.external_repos/` or `.reference_cache/` for local source inspection.
-# `reference/` remains ignored as a legacy local-only clone/cache path.
 reference/
 reference_downloads/
 benchmark_downloads/
 .external_repos/
 .reference_cache/
+
+# Agent / paper drafts — not part of the public benchmark release.
+AGENTS.md
+Montreal/
+
+# Dataset bundle — regenerate locally or fetch from the public dataset host.
+hf_release/
+
+# Private CUDA training pipeline (local-only paths; not required for benchmark eval).
+scripts/linux/
 
 # Python/build/editor caches.
 .pycache_compile/
@@ -48,18 +55,10 @@ runs/
 *.tar.gz
 *.jsonl.gz
 
-# JSONL is ignored by default; only active fixtures and release bundles
-# are allowlisted below.
+# JSONL is ignored by default; only smoke fixtures are allowlisted.
 *.jsonl
-!tests/**/*.jsonl
-!hf_release/mempatch/**/scenarios.jsonl
-!hf_release/mempatch/**/manifest.json
-!hf_release/mempatch/**/checksums.json
-!hf_release/mempatch/**/README.md
-!hf_release/mempatch/**/dataset_info.json
-!hf_release/mempatch/VERSION
+!mempatch/tests/**/*.jsonl
 outputs/
-Montreal/
 
 # Secrets / credentials / tokens — never commit any of these.
 .env.*

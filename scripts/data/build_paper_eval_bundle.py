@@ -24,7 +24,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--scenarios",
         type=Path,
-        default=root / "hf_release/mempatch/test/scenarios.jsonl",
+        default=root / "local/data/mempatch/test/scenarios.jsonl",
     )
     parser.add_argument(
         "--out-dir",

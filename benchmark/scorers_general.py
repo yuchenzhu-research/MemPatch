@@ -494,7 +494,7 @@ def aggregate_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
         mode_rows = [r for r in rows if r.get("primary_failure_mode") == mode]
         per_failure_mode[mode] = {
             "count": len(mode_rows),
-            "black_box_decision_accuracy": sum(r.get("metrics", {}).get("black_box_decision_accuracy", 0.0) for r in mode_rows) / len(mode_rows),
+            "joint_revision_success": sum(r.get("metrics", {}).get("joint_revision_success", 0.0) for r in mode_rows) / len(mode_rows),
             "memory_state_accuracy": sum(r.get("metrics", {}).get("memory_state_accuracy", 0.0) for r in mode_rows) / len(mode_rows),
             "evidence_f1": sum(r.get("metrics", {}).get("evidence_f1", 0.0) for r in mode_rows) / len(mode_rows),
             "failure_diagnosis_accuracy": sum(r.get("metrics", {}).get("failure_diagnosis_accuracy", 0.0) for r in mode_rows) / len(mode_rows),
@@ -514,7 +514,7 @@ def aggregate_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
         domain_rows = [r for r in rows if r.get("domain") == domain]
         per_domain[domain] = {
             "count": len(domain_rows),
-            "black_box_decision_accuracy": sum(r.get("metrics", {}).get("black_box_decision_accuracy", 0.0) for r in domain_rows) / len(domain_rows),
+            "joint_revision_success": sum(r.get("metrics", {}).get("joint_revision_success", 0.0) for r in domain_rows) / len(domain_rows),
             "memory_state_accuracy": sum(r.get("metrics", {}).get("memory_state_accuracy", 0.0) for r in domain_rows) / len(domain_rows),
             "evidence_f1": sum(r.get("metrics", {}).get("evidence_f1", 0.0) for r in domain_rows) / len(domain_rows),
             "failure_diagnosis_accuracy": sum(r.get("metrics", {}).get("failure_diagnosis_accuracy", 0.0) for r in domain_rows) / len(domain_rows),

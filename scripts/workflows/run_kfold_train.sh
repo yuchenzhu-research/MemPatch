@@ -8,7 +8,7 @@ set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)"
 PYTHON="${PYTHON:-$ROOT/.venv/bin/python}"
-export PYTHONPATH="${PYTHONPATH:-$ROOT:$ROOT/src:$ROOT/scripts}"
+export PYTHONPATH="${PYTHONPATH:-$ROOT:$ROOT/mempatch:$ROOT/scripts}"
 
 SLUG="${1:?usage: run_kfold_train.sh <qwen3_14b|gemma3_12b|mistral_nemo_12b|llama3_1_8b>}"
 PROFILE="${PROFILE:-paper}"

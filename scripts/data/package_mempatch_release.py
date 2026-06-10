@@ -78,7 +78,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--out-dir",
         type=Path,
         required=True,
-        help="Release bundle directory (e.g. hf_release/mempatch)",
+        help="Release bundle directory (e.g. local/data/mempatch)",
     )
     parser.add_argument(
         "--splits",
