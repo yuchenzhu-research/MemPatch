@@ -17,9 +17,6 @@ Montreal/
 # Dataset bundle — regenerate locally or fetch from the public dataset host.
 hf_release/
 
-# Private CUDA training pipeline (local-only paths; not required for benchmark eval).
-scripts/linux/
-
 # Python/build/editor caches.
 .pycache_compile/
 .pytest_cache/

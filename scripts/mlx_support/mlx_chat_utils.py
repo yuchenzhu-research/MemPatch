@@ -10,6 +10,17 @@ THINKING_CLOSE_SUFFIX = "\n</think>\n"
 JSON_BRACE_PREFILL = "{"
 
 
+def _coerce_token_ids(value: Any) -> list[int]:
+    """Normalize tokenizer / apply_chat_template outputs to flat token ids."""
+    if hasattr(value, "input_ids"):
+        value = value.input_ids
+    if isinstance(value, list) and value and isinstance(value[0], list):
+        value = value[0]
+    if hasattr(value, "ids") and not isinstance(value, (list, str, bytes)):
+        value = value.ids
+    return [int(token) for token in value]
+
+
 def strip_thinking(text: str) -> str:
     text = re.sub(r"<think>.*?</think>", "", text, flags=re.DOTALL).strip()
     if text.startswith("Okay,") or text.startswith("Let me "):
@@ -51,21 +62,20 @@ def apply_chat_template_no_think(
                 add_generation_prompt=True,
                 enable_thinking=False,
             )
-            return tokens, meta
+            return _coerce_token_ids(tokens), meta
         except TypeError:
             pass
 
     if hasattr(tokenizer, "encode"):
         encoded = tokenizer.encode(prompt)
-        tokens = encoded if isinstance(encoded, list) else list(encoded)
-        return tokens, meta
+        return _coerce_token_ids(encoded), meta
 
     tokens = tokenizer.apply_chat_template(
         [{"role": "user", "content": prompt}],
         tokenize=True,
         add_generation_prompt=False,
     )
-    return tokens, meta
+    return _coerce_token_ids(tokens), meta
 
 
 def normalize_generation_text(text: str, *, json_brace_prefill: bool = False) -> str:
