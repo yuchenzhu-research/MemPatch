@@ -19,8 +19,7 @@ fi
   "bitsandbytes>=0.45" \
   "datasets>=3.0"
 
-echo "Setup OK. Next (AutoDL often needs mirror):"
-echo "  export HF_ENDPOINT=https://hf-mirror.com"
-echo "  export HF_TOKEN=hf_..."
-echo "  bash scripts/linux/hf_login.sh"
+echo "Setup OK. Next:"
+echo "  export LOCAL_ROOT=/root/autodl-tmp/mempatch_local"
 echo "  bash scripts/linux/01_audit.sh"
+echo "  bash scripts/linux/run_paper_campaign.sh"

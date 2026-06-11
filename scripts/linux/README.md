@@ -13,7 +13,7 @@ $LOCAL_ROOT/data/mempatch/train/scenarios.jsonl   # 3500, L3
 $LOCAL_ROOT/data/mempatch/test/scenarios.jsonl    # 500, L4 (never for checkpoint pick)
 ```
 
-No runtime HF dataset download when these files exist. HF is only for **base model weight prefetch**.
+No runtime HF dataset download when these files exist. With local base weights under `$LOCAL_ROOT/models/`, no Hugging Face login is required.
 
 ## Full paper
 

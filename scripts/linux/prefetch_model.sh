@@ -49,12 +49,14 @@ except Exception as exc:
     print(f"error: cannot access {repo_id}: {exc}", file=sys.stderr)
     if repo_id.startswith("google/gemma"):
         print(
-            "hint: Gemma is gated on Hugging Face. Accept the model terms on huggingface.co, "
-            "export HF_TOKEN, then retry. If hf-mirror.com still fails, run with HF_ENDPOINT=.",
+            "hint: place local weights under",
+            local_dir,
+            "or set HF_MODEL_GEMMA3_12B to your model directory.",
             file=sys.stderr,
         )
     print(
-        "hint: verify with: bash scripts/linux/hf_login.sh",
+        "hint: prefetch skips download when the local model dir is complete; "
+        "set HF_MODEL_<SLUG> to point at an existing checkout.",
         file=sys.stderr,
     )
     sys.exit(1)
