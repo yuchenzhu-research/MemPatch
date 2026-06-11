@@ -27,14 +27,14 @@ from huggingface_hub import HfApi, snapshot_download
 
 repo_id = "${HF_MODEL}"
 local_dir = "${LOCAL_DIR}"
-endpoint = os.environ.get("HF_ENDPOINT") or None
+endpoint = (os.environ.get("HF_ENDPOINT") or "").strip() or "https://hf-mirror.com"
 token = os.environ.get("HF_TOKEN") or os.environ.get("HUGGING_FACE_HUB_TOKEN")
 workers = int(os.environ.get("HF_DOWNLOAD_WORKERS", "4"))
 
 print(
     "HF prefetch config:",
     f"repo={repo_id}",
-    f"endpoint={endpoint or 'https://huggingface.co'}",
+    f"endpoint={endpoint}",
     f"token={'set' if token else 'missing'}",
     f"HF_HUB_DISABLE_XET={os.environ.get('HF_HUB_DISABLE_XET', '')}",
     f"workers={workers}",
