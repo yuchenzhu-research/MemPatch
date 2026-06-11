@@ -81,3 +81,24 @@ resolve_hf_model() {
   fi
   echo "$hub_id"
 }
+
+# Training max_seq_length: Gemma 12B @ 2048 often OOMs on 32GB during in-train eval.
+# Override globally with TRAIN_MAX_SEQ_LENGTH or per slug with TRAIN_MAX_SEQ_LENGTH_<SLUG>.
+train_max_seq_length_for_slug() {
+  local slug="${1:?slug}"
+  if [[ -n "${TRAIN_MAX_SEQ_LENGTH:-}" ]]; then
+    echo "$TRAIN_MAX_SEQ_LENGTH"
+    return 0
+  fi
+  local upper var
+  upper="$(echo "$slug" | tr '[:lower:]' '[:upper:]')"
+  var="TRAIN_MAX_SEQ_LENGTH_${upper}"
+  if [[ -n "${!var:-}" ]]; then
+    echo "${!var}"
+    return 0
+  fi
+  case "$slug" in
+    gemma3_12b) echo "${TRAIN_MAX_SEQ_LENGTH_GEMMA:-1536}" ;;
+    *) echo 2048 ;;
+  esac
+}

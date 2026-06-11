@@ -32,6 +32,8 @@ bash scripts/linux/run_paper_campaign.sh
 prefetch → multitask train (512 steps) → pick checkpoint → Path A/Path B test500 → baselines
 ```
 
+32GB GPUs: Gemma trains at `max_seq_length=1536` by default (`TRAIN_MAX_SEQ_LENGTH` / `TRAIN_MAX_SEQ_LENGTH_GEMMA` to override). Training uses gradient checkpointing, eval batch size 1, and `prediction_loss_only` to limit VRAM during in-train eval.
+
 ```bash
 SLUG=mistral_nemo_12b PHASES=train,pick,eval,baselines bash scripts/linux/run_model.sh
 ```

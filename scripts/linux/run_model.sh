@@ -3,12 +3,13 @@
 #
 #   SLUG=mistral_nemo_12b bash scripts/linux/run_model.sh
 #   SLUG=gemma3_12b PHASES=prefetch,train,pick,eval,baselines bash scripts/linux/run_model.sh
-#   SLUG=mistral_nemo_12b PHASES=smoke,eval,baselines bash scripts/linux/run_model.sh
+#   SLUG=mistral_nemo_12b PHASES=smoke bash scripts/linux/run_model.sh  # optional manual only
 #
 # PHASES=auto (default): run any phase not yet complete.
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 source "$LINUX_DIR/lib_phases.sh"
+source "$LINUX_DIR/lib_gpu.sh"
 
 SLUG="${SLUG:?set SLUG}"
 PHASES="${PHASES:-auto}"
@@ -26,7 +27,7 @@ want_phase() {
       prefetch) phase_prefetch_done "$SLUG" || return 0 ;;
       train) phase_train_done "$SLUG" || return 0 ;;
       pick) phase_pick_done "$SLUG" || return 0 ;;
-      smoke) phase_smoke_done "$SLUG" || return 0 ;;
+      smoke) return 1 ;;
       eval) phase_eval_done "$SLUG" || return 0 ;;
       baselines) phase_baselines_done "$SLUG" || return 0 ;;
     esac
@@ -51,6 +52,7 @@ run_train() {
   fi
   SPLIT_INDEX="$split_idx" bash "$LINUX_DIR/02_prepare_split.sh"
   SPLIT_INDEX="$split_idx" bash "$LINUX_DIR/03_train.sh"
+  release_gpu
   log "train done"
 }
 
@@ -67,15 +69,18 @@ run_smoke() {
 }
 
 run_eval() {
+  release_gpu
   log "Path B direct-response test500 without + with LoRA (no DPA ablation)"
   unset EVAL_LIMIT
   EVAL_PREFIX=test500 SLUG="$SLUG" bash "$LINUX_DIR/06_eval_test.sh" | tee -a "$PIPELINE_LOG"
   log "Path A LoRA test500 (paired typed-actions: full DPA + no-DPA ablation)"
   EVAL_PREFIX=test500_path_a SLUG="$SLUG" bash "$LINUX_DIR/07_eval_path_a.sh" --variant lora | tee -a "$PIPELINE_LOG"
+  release_gpu
   log "Path A + Path B eval done"
 }
 
 run_baselines() {
+  release_gpu
   log "public-data paper baselines on test500 (BASELINE_SET=${BASELINE_SET:-main})"
   unset EVAL_LIMIT
   BASELINE_SET="${BASELINE_SET:-main}" INCLUDE_LORA=0 \
@@ -89,9 +94,10 @@ print_model_status "$SLUG" | tee -a "$PIPELINE_LOG"
 if want_phase prefetch; then run_prefetch; fi
 if want_phase train; then run_train; fi
 if want_phase pick; then run_pick; fi
-if want_phase smoke; then run_smoke; fi
 if want_phase eval; then run_eval; fi
 if want_phase baselines; then run_baselines; fi
+if [[ "$PHASES" != "auto" ]] && want_phase smoke; then run_smoke; fi
 
+release_gpu
 log "===== pipeline end ====="
 print_model_status "$SLUG" | tee -a "$PIPELINE_LOG"

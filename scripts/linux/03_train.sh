@@ -19,6 +19,9 @@ fi
 
 mkdir -p "$OUT_DIR" "$LOG_DIR"
 
+MAX_SEQ_LEN="$(train_max_seq_length_for_slug "$SLUG")"
+echo "train max_seq_length=$MAX_SEQ_LEN (slug=$SLUG)"
+
 TRAIN_ARGS=(
   --model-id "$HF_MODEL"
   --train-data "$SFT_DIR/train.jsonl"
@@ -29,6 +32,8 @@ TRAIN_ARGS=(
   --save-steps "$SAVE_EVERY"
   --eval-steps "$SAVE_EVERY"
   --save-total-limit "${SAVE_TOTAL_LIMIT:-4}"
+  --max-seq-length "$MAX_SEQ_LEN"
+  --eval-accumulation-steps "${TRAIN_EVAL_ACCUMULATION_STEPS:-8}"
   --seed "$SEED"
 )
 if [[ -n "${RESUME_FROM:-}" ]]; then

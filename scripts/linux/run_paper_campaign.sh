@@ -1,15 +1,16 @@
 #!/usr/bin/env bash
 # One-shot paper pipeline in fixed backbone order. Each model runs:
-# prefetch → fixed-split train → checkpoint pick → smoke → Path A DPA/no-DPA + Path B → baselines.
+# prefetch → fixed-split train → checkpoint pick → Path A DPA/no-DPA + Path B → baselines.
+# (smoke is manual-only: PHASES=smoke bash scripts/linux/run_model.sh)
 #
 #   export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
-#   export HF_TOKEN=hf_...
 #   bash scripts/linux/run_paper_campaign.sh
 #
 # Background: bash scripts/linux/start_background.sh
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 source "$LINUX_DIR/lib_phases.sh"
+source "$LINUX_DIR/lib_gpu.sh"
 
 PIPELINE_LOG="${PIPELINE_LOG:-$LOCAL_ROOT/logs/pipeline.log}"
 mkdir -p "$(dirname "$PIPELINE_LOG")"
@@ -36,6 +37,7 @@ for slug in "${SLUGS[@]}"; do
   print_model_status "$slug" | tee -a "$PIPELINE_LOG"
   SLUG="$slug" PHASES=auto bash "$LINUX_DIR/run_model.sh" 2>&1 | tee -a "$PIPELINE_LOG"
   print_model_status "$slug" | tee -a "$PIPELINE_LOG"
+  release_gpu
 done
 
 log "campaign complete. Results: $RESULTS_ROOT/"

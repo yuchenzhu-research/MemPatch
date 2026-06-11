@@ -73,6 +73,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--lora-rank", type=int, default=16)
     parser.add_argument("--learning-rate", type=float, default=1e-5)
     parser.add_argument("--save-total-limit", type=int, default=8)
+    parser.add_argument("--eval-accumulation-steps", type=int, default=8)
     parser.add_argument("--resume-from-checkpoint", type=Path, default=None)
     args = parser.parse_args(argv)
 
@@ -122,6 +123,10 @@ def main(argv: list[str] | None = None) -> int:
             task_type="CAUSAL_LM",
         ),
     )
+    if hasattr(model, "gradient_checkpointing_enable"):
+        model.gradient_checkpointing_enable()
+    if getattr(model, "config", None) is not None:
+        model.config.use_cache = False
 
     train_rows = [format_example(r, tokenizer) for r in read_jsonl(args.train_data)]
     valid_rows = [format_example(r, tokenizer) for r in read_jsonl(args.valid_data)]
@@ -149,6 +154,20 @@ def main(argv: list[str] | None = None) -> int:
         "report_to": [],
         "remove_unused_columns": False,
     }
+    if "per_device_eval_batch_size" in sft_parameters:
+        sft_config_kwargs["per_device_eval_batch_size"] = 1
+    if "eval_accumulation_steps" in sft_parameters:
+        sft_config_kwargs["eval_accumulation_steps"] = max(1, args.eval_accumulation_steps)
+    if "dataloader_pin_memory" in sft_parameters:
+        sft_config_kwargs["dataloader_pin_memory"] = False
+    if "dataloader_num_workers" in sft_parameters:
+        sft_config_kwargs["dataloader_num_workers"] = 0
+    if "gradient_checkpointing" in sft_parameters:
+        sft_config_kwargs["gradient_checkpointing"] = True
+    if "gradient_checkpointing_kwargs" in sft_parameters:
+        sft_config_kwargs["gradient_checkpointing_kwargs"] = {"use_reentrant": False}
+    if "prediction_loss_only" in sft_parameters:
+        sft_config_kwargs["prediction_loss_only"] = True
     if "eval_strategy" in sft_parameters:
         sft_config_kwargs["eval_strategy"] = "steps"
     elif "evaluation_strategy" in sft_parameters:
@@ -199,6 +218,17 @@ def main(argv: list[str] | None = None) -> int:
     else:
         raise RuntimeError("installed TRL SFTTrainer accepts neither processing_class nor tokenizer")
 
+    from transformers import TrainerCallback
+
+    class ReleaseCudaCacheCallback(TrainerCallback):
+        def on_evaluate(self, args, state, control, **kwargs):
+            import gc
+
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+
+    trainer_kwargs["callbacks"] = [ReleaseCudaCacheCallback()]
     trainer = SFTTrainer(**trainer_kwargs)
     trainer.train(resume_from_checkpoint=resume)
 
@@ -232,6 +262,9 @@ def main(argv: list[str] | None = None) -> int:
             "lora_rank": args.lora_rank,
             "lora_alpha": args.lora_rank * 2,
             "learning_rate": args.learning_rate,
+            "eval_accumulation_steps": args.eval_accumulation_steps,
+            "gradient_checkpointing": True,
+            "prediction_loss_only": True,
             "seed": args.seed,
             "resume_from_checkpoint": resume,
             "resume_global_step": resume_global_step,
@@ -245,6 +278,14 @@ def main(argv: list[str] | None = None) -> int:
     metrics_path = args.log_dir / "trainer_metrics.json"
     metrics_path.write_text(json.dumps(metrics_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(f"Wrote {metrics_path}")
+
+    del trainer
+    del model
+    import gc
+
+    gc.collect()
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
     return 0
 
 

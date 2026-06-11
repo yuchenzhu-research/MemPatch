@@ -69,7 +69,6 @@ print_model_status() {
   phase_prefetch_done "$slug" && echo "  prefetch: OK" || echo "  prefetch: MISSING"
   phase_train_done "$slug" && echo "  train (single split, $TRAIN_ITERS steps): OK" || echo "  train: incomplete"
   phase_pick_done "$slug" && echo "  pick (checkpoint): OK" || echo "  pick: MISSING"
-  phase_smoke_done "$slug" && echo "  smoke: OK" || echo "  smoke: incomplete"
   phase_eval_done "$slug" && echo "  Path A DPA + Path B direct (500): OK" || echo "  Path A/B eval: incomplete"
   phase_baselines_done "$slug" && echo "  public baselines: OK" || echo "  baselines: incomplete"
 }
