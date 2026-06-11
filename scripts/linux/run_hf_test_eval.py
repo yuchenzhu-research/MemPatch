@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""HF transformers inference on test SFT bundle + benchmark.api scoring."""
+"""HF Path B direct-response inference + benchmark.api scoring (no DPA)."""
 
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ bootstrap_from(__file__)
 
 from benchmark.api import evaluate_predictions, load_scenarios  # noqa: E402
 from scripts.mlx_support.mlx_chat_utils import extract_json_object
+from scripts.linux.response_schema_projection import project_response_schema
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -44,12 +45,29 @@ def extract_scenario_id(messages: list[dict[str, str]]) -> str:
     return scenario_id
 
 
-def prediction_from_output(scenario_id: str, output: str, *, json_brace_prefill: bool = False) -> dict[str, Any]:
+def prediction_from_output(
+    scenario_id: str,
+    output: str,
+    *,
+    json_brace_prefill: bool = False,
+    scenario_public_view: dict[str, Any] | None = None,
+) -> dict[str, Any]:
     try:
         response = extract_json_object(output, json_brace_prefill=json_brace_prefill)
-        return {"scenario_id": scenario_id, "response": response}
+        prediction = {"scenario_id": scenario_id, "response": response}
     except ValueError as exc:
-        return {"scenario_id": scenario_id, "response": {}, "raw_output": output, "parse_error": str(exc)}
+        prediction = {
+            "scenario_id": scenario_id,
+            "response": {},
+            "raw_output": output,
+            "parse_error": str(exc),
+        }
+    if scenario_public_view is not None:
+        prediction["raw_response"] = prediction["response"]
+        prediction["response"], prediction["schema_repairs"] = project_response_schema(
+            prediction["response"], scenario_public_view
+        )
+    return prediction
 
 
 def run_predictions(args: argparse.Namespace) -> list[dict[str, Any]]:
@@ -70,6 +88,8 @@ def run_predictions(args: argparse.Namespace) -> list[dict[str, Any]]:
     for index, row in enumerate(rows, start=1):
         messages = row["messages"]
         scenario_id = extract_scenario_id(messages)
+        user = next(m for m in messages if m.get("role") == "user")
+        scenario_public_view = json.loads(user["content"])
         text, gen_meta = generate_from_messages(
             model,
             tokenizer,
@@ -81,6 +101,7 @@ def run_predictions(args: argparse.Namespace) -> list[dict[str, Any]]:
             scenario_id,
             text,
             json_brace_prefill=bool(gen_meta.get("json_brace_prefill")),
+            scenario_public_view=scenario_public_view,
         )
         pred["raw_output"] = text
         pred["gen_meta"] = gen_meta
@@ -97,6 +118,16 @@ def write_metrics(args: argparse.Namespace, predictions: list[dict[str, Any]]) -
     scenario_ids = {p.get("scenario_id") for p in predictions}
     scenarios = [s for s in load_scenarios(args.eval_data) if s.get("scenario_id") in scenario_ids]
     result = evaluate_predictions(scenarios, predictions, strict=False, allow_missing=True)
+    raw_predictions = [
+        {"scenario_id": row.get("scenario_id"), "response": row.get("raw_response", {})}
+        for row in predictions
+    ]
+    raw_result = evaluate_predictions(
+        scenarios,
+        raw_predictions,
+        strict=False,
+        allow_missing=True,
+    )
 
     run_tag = args.split_tag or "eval"
     result_dir = args.out_metrics.parent if args.out_metrics is not None else args.out_predictions.parent
@@ -118,6 +149,14 @@ def write_metrics(args: argparse.Namespace, predictions: list[dict[str, Any]]) -
             "temp": args.temp,
             "eval_data": str(args.eval_data),
             "sft_data": str(args.data),
+            "schema_projection": "public_only_v1",
+            "raw_response_schema_compliance_rate": raw_result["headline_metrics"].get(
+                "response_schema_compliance_rate"
+            ),
+            "raw_validation_error_count": len(raw_result.get("errors") or []),
+            "projected_repair_row_count": sum(
+                bool(row.get("schema_repairs")) for row in predictions
+            ),
         },
     )
     for name, path in paths.items():

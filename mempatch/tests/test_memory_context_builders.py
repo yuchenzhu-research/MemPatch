@@ -8,6 +8,7 @@ from benchmark.api import load_scenarios
 from benchmark.model_runner import build_prompt
 from scripts.memory.context_builders import (
     BASELINE_IDS,
+    DIAGNOSTIC_UPPER_BOUND_IDS,
     PAPER_MAIN_BASELINE_IDS,
     build_baseline_prompt,
     build_baseline_view,
@@ -29,6 +30,7 @@ def test_all_baseline_ids_build_prompt() -> None:
 
 def test_paper_main_baselines_subset() -> None:
     assert set(PAPER_MAIN_BASELINE_IDS).issubset(set(BASELINE_IDS))
+    assert set(PAPER_MAIN_BASELINE_IDS).isdisjoint(DIAGNOSTIC_UPPER_BOUND_IDS)
 
 
 def test_vanilla_rag_filters_events() -> None:

@@ -30,7 +30,7 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--slug", required=True)
     parser.add_argument("--adapter-root", type=Path, required=True)
     parser.add_argument("--log-root", type=Path, required=True)
-    parser.add_argument("--run-id", default="full384")
+    parser.add_argument("--run-id", default="full512")
     parser.add_argument("--k-folds", type=int, default=5)
     parser.add_argument("--out", type=Path, required=True)
     args = parser.parse_args(argv)

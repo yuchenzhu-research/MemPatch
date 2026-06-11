@@ -1,11 +1,11 @@
 #!/usr/bin/env bash
-# Run paper baseline matrix on Linux HF (default: 8 main baselines).
-# MemPatch with/without LoRA is run via 06_eval_test.sh (not duplicated here).
+# Run paper baseline matrix on Linux HF (default: public-data main baselines).
+# Path B with/without LoRA is run via 06_eval_test.sh (not duplicated here).
 #
 #   SLUG=mistral_nemo_12b EVAL_LIMIT=20 bash scripts/linux/run_baseline_matrix.sh
 #
 # Env:
-#   BASELINE_SET=paper|all|main   (default: all = 11 baselines)
+#   BASELINE_SET=paper|all|main   (default: main = 7 public-data baselines)
 #   INCLUDE_LORA=1               (default: 1 — run lora_best row)
 #   RESUME=1                     resume incremental JSONL per baseline
 set -euo pipefail

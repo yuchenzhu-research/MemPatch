@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run Path B LoRA on test split and score with benchmark.api."""
+"""Run the Path B direct-response LoRA ablation and score with benchmark.api."""
 
 from __future__ import annotations
 

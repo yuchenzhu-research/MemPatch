@@ -1,8 +1,9 @@
 # Linux CUDA paper pipeline
 
-QLoRA train → pick best (5-fold × 384 steps) → smoke (1 case) → test500 MemPatch w/o+w/ LoRA → 8 baselines.
+QLoRA train once on a fixed stratified 80/20 split → select among steps
+128/256/384/512 → smoke → test500 Path B w/o+w/ LoRA → 7 public-data baselines.
 
-**8+1 layout:** 8 main baselines (`BASELINE_SET=main`) + MemPatch method (without LoRA + with best LoRA in `06_eval_test.sh`).
+**7+1 layout:** 7 main baselines (`BASELINE_SET=main`) + Path B direct-response method (without LoRA + with LoRA in `06_eval_test.sh`). Hidden-gold oracle diagnostics are excluded.
 
 **Three backbones (no Llama):** `mistral_nemo_12b`, `gemma3_12b`, `qwen3_14b`
 
@@ -17,8 +18,8 @@ QLoRA train → pick best (5-fold × 384 steps) → smoke (1 case) → test500 M
 
 ## One command (full paper)
 
-Order: **mistral 8+1** → **gemma train+8+1** → **qwen train+8+1**.  
-`PHASES=auto` skips finished steps (mistral train/pick/smoke already done).
+Order: **mistral** → **gemma** → **qwen**. `PHASES=auto` skips artifacts
+already completed for the active `RUN_ID`.
 
 ```bash
 export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
@@ -39,13 +40,15 @@ tail -f /root/autodl-tmp/mempatch_local/logs/pipeline.log
 
 ```text
 prefetch   snapshot_download -> LOCAL_MODEL_ROOT/{hub-id-as-dir}/
-train      5-fold QLoRA, saves every 64 steps up to 384 -> trainer_metrics.json
-pick       best fold (lowest val loss) + best checkpoint on that fold
-eval       test500 without adapter + with best LoRA
-baselines  11 baselines + mempatch_lora_best (RESUME=1)
+train      one QLoRA run, saves every 128 steps up to 512 -> trainer_metrics.json
+pick       lowest validation loss among checkpoints 128/256/384/512
+eval       Path B direct-response test500 without adapter + with LoRA; no DPA
+baselines  7 public-data main baselines (RESUME=1)
 ```
 
-**Selection:** 5 folds × 6 checkpoints = **30 candidates**; pick lowest valid loss fold, then lowest valid loss step on that fold.
+**Selection:** this protocol intentionally avoids repeated k-fold training.
+`VALIDATION_PART=0` identifies the fixed stratified 80/20 split; only one model is
+trained. Test500 is not used for checkpoint selection.
 
 ## Status / resume
 
@@ -95,8 +98,8 @@ bash scripts/linux/clean_llama_local.sh
 
 ```text
 LOCAL_MODEL_ROOT/              full HF weights (use these, not hub cache)
-local/adapters/{slug}_pathB_lora/fold{N}/full384/checkpoint-{64,128,...,384}
-local/logs/kfold/{slug}_fold{N}/trainer_metrics.json
+local/adapters/{slug}_pathB_lora/fold0/full512/checkpoint-{128,256,384,512}
+local/logs/kfold/{slug}_fold0/full512/trainer_metrics.json
 local/results/{slug}/          predictions + metrics + selection JSON
 local/logs/pipeline.log        unified log
 ```
@@ -119,4 +122,4 @@ Override: `export HF_MODEL_GEMMA3_12B=/path/to/local/dir`
 | `04_train_all_folds.sh` | Train all folds (used internally by `run_model.sh`) |
 | `05_pick_best.sh` | Pick fold + checkpoint |
 | `06_eval_test.sh` | test500 base + lora |
-| `run_baseline_matrix.sh` | 11+1 baselines |
+| `run_baseline_matrix.sh` | 7 public-data main baselines by default |

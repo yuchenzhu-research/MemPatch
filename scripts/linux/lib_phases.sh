@@ -11,25 +11,36 @@ phase_prefetch_done() {
 
 phase_train_done() {
   local slug="${1:?slug}"
-  local fold
-  for fold in $(seq 0 $((KFOLDS - 1))); do
-    [[ -f "$LOG_ROOT/${slug}_fold${fold}/trainer_metrics.json" ]] || return 1
-    local ckpt_count
-    ckpt_count="$(find "$ADAPTER_ROOT/${slug}_pathB_lora/fold${fold}/${RUN_ID}" -maxdepth 1 -type d -name 'checkpoint-*' 2>/dev/null | wc -l)"
-    [[ "$ckpt_count" -ge 1 ]] || return 1
-  done
+  [[ -f "$LOG_ROOT/${slug}_fold${VALIDATION_PART}/${RUN_ID}/trainer_metrics.json" ]] || return 1
+  local ckpt_count
+  ckpt_count="$(find "$ADAPTER_ROOT/${slug}_pathB_lora/fold${VALIDATION_PART}/${RUN_ID}" -maxdepth 1 -type d -name 'checkpoint-*' 2>/dev/null | wc -l)"
+  [[ "$ckpt_count" -ge 1 ]]
 }
 
 phase_pick_done() {
   local slug="${1:?slug}"
-  [[ -f "$RESULTS_ROOT/$slug/kfold_selection.json" ]] \
-    && [[ -f "$RESULTS_ROOT/$slug/checkpoint_selection.json" ]]
+  local selection="$RESULTS_ROOT/$slug/checkpoint_selection.json"
+  [[ -f "$selection" ]] || return 1
+  "$PYTHON" - "$selection" "$RUN_ID" <<'PY'
+import json, sys
+payload = json.load(open(sys.argv[1]))
+raise SystemExit(0 if sys.argv[2] in str(payload.get("checkpoint_dir", "")) else 1)
+PY
 }
 
 phase_eval_done() {
   local slug="${1:?slug}"
   [[ -f "$RESULTS_ROOT/$slug/test500_base_predictions.jsonl" ]] \
-    && [[ -f "$RESULTS_ROOT/$slug/test500_lora_best_predictions.jsonl" ]]
+    && [[ -f "$RESULTS_ROOT/$slug/test500_lora_best_predictions.jsonl" ]] \
+    && [[ -f "$RESULTS_ROOT/$slug/test500_lora_best_manifest.json" ]] || return 1
+  "$PYTHON" - "$RESULTS_ROOT/$slug/test500_lora_best_manifest.json" "$RUN_ID" <<'PY'
+import json, sys
+payload = json.load(open(sys.argv[1]))
+meta = payload.get("run_meta") or {}
+ok = sys.argv[2] in str(meta.get("adapter_path", ""))
+ok = ok and meta.get("schema_projection") == "public_only_v1"
+raise SystemExit(0 if ok else 1)
+PY
 }
 
 phase_smoke_done() {
@@ -49,9 +60,9 @@ print_model_status() {
   hub_id="$(resolve_hf_model "$slug")" || return 1
   echo "slug=$slug model=$hub_id"
   phase_prefetch_done "$slug" && echo "  prefetch: OK" || echo "  prefetch: MISSING"
-  phase_train_done "$slug" && echo "  train (5-fold): OK" || echo "  train (5-fold): incomplete"
-  phase_pick_done "$slug" && echo "  pick (fold+ckpt): OK" || echo "  pick: MISSING"
-  phase_smoke_done "$slug" && echo "  smoke (8+memPatch x1): OK" || echo "  smoke: incomplete"
-  phase_eval_done "$slug" && echo "  mempatch eval (w/o + w/ LoRA, 500): OK" || echo "  mempatch eval: incomplete"
-  phase_baselines_done "$slug" && echo "  baselines (8 x 500): OK" || echo "  baselines: incomplete"
+  phase_train_done "$slug" && echo "  train (single split, $TRAIN_ITERS steps): OK" || echo "  train: incomplete"
+  phase_pick_done "$slug" && echo "  pick (checkpoint): OK" || echo "  pick: MISSING"
+  phase_smoke_done "$slug" && echo "  smoke: OK" || echo "  smoke: incomplete"
+  phase_eval_done "$slug" && echo "  Path B eval (w/o + w/ LoRA, 500): OK" || echo "  Path B eval: incomplete"
+  phase_baselines_done "$slug" && echo "  public baselines: OK" || echo "  baselines: incomplete"
 }

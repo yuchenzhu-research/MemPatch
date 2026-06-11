@@ -37,5 +37,5 @@ for pat in "${patterns[@]}"; do
   shopt -u nullglob
 done
 
-echo "kept: kfold_selection.json checkpoint_selection.json (pick results)"
+echo "kept: checkpoint_selection.json (selection result)"
 echo "kept: adapters under $ADAPTER_ROOT/${SLUG}_pathB_lora/"

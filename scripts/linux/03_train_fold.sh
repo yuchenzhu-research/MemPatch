@@ -10,7 +10,7 @@ KFOLD_FOLD="${KFOLD_FOLD:?set KFOLD_FOLD}"
 HF_MODEL="$(resolve_hf_model "$SLUG")"
 SFT_DIR="$TRAIN_DATA_ROOT/${SLUG}_fold${KFOLD_FOLD}"
 OUT_DIR="$ADAPTER_ROOT/${SLUG}_pathB_lora/fold${KFOLD_FOLD}/${RUN_ID}"
-LOG_DIR="$LOG_ROOT/${SLUG}_fold${KFOLD_FOLD}"
+LOG_DIR="$LOG_ROOT/${SLUG}_fold${KFOLD_FOLD}/${RUN_ID}"
 
 if [[ ! -f "$SFT_DIR/train.jsonl" ]]; then
   echo "Missing $SFT_DIR/train.jsonl — run 02_prepare_kfold.sh first" >&2

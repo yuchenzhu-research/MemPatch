@@ -14,7 +14,17 @@ from scripts._root import bootstrap_from
 
 bootstrap_from(__file__)
 
-from benchmark.api import HEADLINE_METRICS  # noqa: E402
+from scripts.memory.context_builders import DIAGNOSTIC_UPPER_BOUND_IDS  # noqa: E402
+
+PAPER_METRICS = (
+    "decision_macro_f1",
+    "memory_state_accuracy",
+    "response_schema_compliance_rate",
+    "evidence_f1",
+    "failure_diagnosis_accuracy",
+    "joint_revision_success",
+    "stale_reuse_rate",
+)
 
 
 def load_metrics(path: Path) -> dict | None:
@@ -32,10 +42,12 @@ def main(argv: list[str] | None = None) -> int:
 
     rows: list[tuple[str, dict]] = []
     for metrics_path in sorted(args.results_dir.glob("*_metrics.json")):
+        name = metrics_path.name.replace("_metrics.json", "")
+        if name.removeprefix("baseline_") in DIAGNOSTIC_UPPER_BOUND_IDS:
+            continue
         metrics = load_metrics(metrics_path)
         if not metrics:
             continue
-        name = metrics_path.name.replace("_metrics.json", "")
         rows.append((name, metrics))
 
     if not rows:
@@ -43,11 +55,11 @@ def main(argv: list[str] | None = None) -> int:
         return 1
 
     lines = [
-        "| method | " + " | ".join(HEADLINE_METRICS) + " |",
-        "|" + "|".join(["---"] * (len(HEADLINE_METRICS) + 1)) + "|",
+        "| method | " + " | ".join(PAPER_METRICS) + " |",
+        "|" + "|".join(["---"] * (len(PAPER_METRICS) + 1)) + "|",
     ]
     for name, metrics in rows:
-        cells = [f"{metrics.get(k, 0.0):.3f}" for k in HEADLINE_METRICS]
+        cells = [f"{metrics.get(k, 0.0):.3f}" for k in PAPER_METRICS]
         lines.append(f"| {name} | " + " | ".join(cells) + " |")
 
     args.out.parent.mkdir(parents=True, exist_ok=True)

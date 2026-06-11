@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build train.jsonl + valid.jsonl for one k-fold (reuses shared data prep).
+# Build the fixed stratified train.jsonl + valid.jsonl split.
 #
 #   KFOLD_FOLD=0 SLUG=gemma3_12b bash scripts/linux/02_prepare_kfold.sh
 set -euo pipefail
@@ -27,7 +27,7 @@ resolve_test_scenarios
   --adapter-dir "$ADAPTER_DIR" \
   --mlx-config "$MLX_CONFIG" \
   --seed "$SEED" \
-  --k-folds "$KFOLDS" \
+  --k-folds "$VALIDATION_PARTS" \
   --fold "$KFOLD_FOLD" \
   --run-id "$RUN_ID"
 

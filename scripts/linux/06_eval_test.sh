@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# test500: base model + best LoRA checkpoint.
+# Path B direct-response test500: base model + selected LoRA checkpoint, no DPA.
 #
 #   SLUG=gemma3_12b bash scripts/linux/06_eval_test.sh
 #   SLUG=mistral_nemo_12b bash scripts/linux/06_eval_test.sh --variant base

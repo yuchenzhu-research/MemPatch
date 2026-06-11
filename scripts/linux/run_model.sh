@@ -42,40 +42,39 @@ run_prefetch() {
 }
 
 run_train() {
-  log "train 5-fold start"
-  for fold in $(seq 0 $((KFOLDS - 1))); do
-    if [[ -f "$LOG_ROOT/${SLUG}_fold${fold}/trainer_metrics.json" ]]; then
-      log "fold $fold already trained, skip"
-      continue
-    fi
-    log "fold $fold prepare+train"
-    KFOLD_FOLD="$fold" bash "$LINUX_DIR/02_prepare_kfold.sh"
-    KFOLD_FOLD="$fold" bash "$LINUX_DIR/03_train_fold.sh"
-  done
-  log "train 5-fold done"
+  local fold="$VALIDATION_PART"
+  local metrics="$LOG_ROOT/${SLUG}_fold${fold}/${RUN_ID}/trainer_metrics.json"
+  log "single-split train start (validation_part=$fold/$VALIDATION_PARTS, steps=$TRAIN_ITERS)"
+  if [[ -f "$metrics" ]]; then
+    log "single-split run already trained, skip"
+    return
+  fi
+  KFOLD_FOLD="$fold" bash "$LINUX_DIR/02_prepare_kfold.sh"
+  KFOLD_FOLD="$fold" bash "$LINUX_DIR/03_train_fold.sh"
+  log "single-split train done"
 }
 
 run_pick() {
-  log "pick best fold + checkpoint (${KFOLDS} folds x $((TRAIN_ITERS / SAVE_EVERY)) ckpts)"
+  log "pick checkpoint on fixed validation split ($((TRAIN_ITERS / SAVE_EVERY)) candidates)"
   SLUG="$SLUG" bash "$LINUX_DIR/05_pick_best.sh" | tee -a "$PIPELINE_LOG"
   log "pick done"
 }
 
 run_smoke() {
-  log "smoke: MemPatch w/o + w/ LoRA and 8 baselines (${SMOKE_LIMIT} case each)"
+  log "smoke: Path B w/o + w/ LoRA and public-data baselines (${SMOKE_LIMIT} case each)"
   SLUG="$SLUG" bash "$LINUX_DIR/run_smoke.sh" | tee -a "$PIPELINE_LOG"
   log "smoke done"
 }
 
 run_eval() {
-  log "mempatch test500 without + with LoRA (full)"
+  log "Path B direct-response test500 without + with LoRA (no DPA)"
   unset EVAL_LIMIT
   EVAL_PREFIX=test500 SLUG="$SLUG" bash "$LINUX_DIR/06_eval_test.sh" | tee -a "$PIPELINE_LOG"
   log "mempatch eval done"
 }
 
 run_baselines() {
-  log "8 paper baselines on test500 (BASELINE_SET=${BASELINE_SET:-main})"
+  log "public-data paper baselines on test500 (BASELINE_SET=${BASELINE_SET:-main})"
   unset EVAL_LIMIT
   BASELINE_SET="${BASELINE_SET:-main}" INCLUDE_LORA=0 \
     SLUG="$SLUG" RESUME=1 bash "$LINUX_DIR/run_baseline_matrix.sh" | tee -a "$PIPELINE_LOG"

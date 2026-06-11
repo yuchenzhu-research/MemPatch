@@ -30,7 +30,7 @@ BASELINE_IDS: tuple[str, ...] = (
     "oracle_memory_state",
 )
 
-# Paper main table (8) — oracle_evidence is appendix upper bound but included in matrix.
+# Paper baselines contain only methods that use public scenario fields.
 PAPER_MAIN_BASELINE_IDS: tuple[str, ...] = (
     "structured_direct",
     "full_context",
@@ -39,12 +39,16 @@ PAPER_MAIN_BASELINE_IDS: tuple[str, ...] = (
     "summary_memory",
     "mem0",
     "a_mem",
-    "oracle_evidence",
 )
 
 PAPER_APPENDIX_BASELINE_IDS: tuple[str, ...] = (
     "bm25_rag",
     "mem0g",
+)
+
+# Hidden-gold diagnostic upper bounds. These are never paper baselines.
+DIAGNOSTIC_UPPER_BOUND_IDS: tuple[str, ...] = (
+    "oracle_evidence",
     "oracle_memory_state",
 )
 

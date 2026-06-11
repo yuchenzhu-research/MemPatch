@@ -9,14 +9,15 @@ export ROOT
 export PYTHON="${PYTHON:-$ROOT/.venv/bin/python}"
 export PYTHONPATH="${PYTHONPATH:-$ROOT:$ROOT/mempatch:$ROOT/src:$ROOT/scripts}"
 
-# Paper protocol (matches MLX profile `paper` in prepare_mempatch_v13_smoke.py)
+# Paper protocol: one fixed stratified train/validation split per backbone.
 export PROFILE="${PROFILE:-paper}"
-export KFOLDS="${KFOLDS:-5}"
+export VALIDATION_PARTS="${VALIDATION_PARTS:-5}"
+export VALIDATION_PART="${VALIDATION_PART:-0}"
 export SEED="${SEED:-42}"
-export RUN_ID="${RUN_ID:-full384}"
-export TRAIN_ITERS="${TRAIN_ITERS:-384}"
-export SAVE_EVERY="${SAVE_EVERY:-64}"
-export SAVE_TOTAL_LIMIT="${SAVE_TOTAL_LIMIT:-8}"
+export RUN_ID="${RUN_ID:-full512}"
+export TRAIN_ITERS="${TRAIN_ITERS:-512}"
+export SAVE_EVERY="${SAVE_EVERY:-128}"
+export SAVE_TOTAL_LIMIT="${SAVE_TOTAL_LIMIT:-4}"
 export EVAL_LIMIT="${EVAL_LIMIT:-}"
 export SMOKE_LIMIT="${SMOKE_LIMIT:-1}"
 export BASELINE_SET="${BASELINE_SET:-main}"

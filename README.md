@@ -48,7 +48,18 @@ benchmark.api.evaluate_predictions()
 metrics JSON / headline table
 ```
 
-Headline metrics: `joint_revision_success`, `decision_macro_f1`, `memory_state_accuracy`, `evidence_f1`, `failure_diagnosis_accuracy`, `stale_reuse_rate`, `response_schema_compliance_rate`.
+Paper metric hierarchy:
+
+| Tier | Metrics | Interpretation |
+|------|---------|----------------|
+| Primary effects | `decision_macro_f1`, `memory_state_accuracy` | Balanced decision quality and memory revision correctness |
+| Primary validity gate | `response_schema_compliance_rate` | Operational validity; report both raw and projected rates |
+| Secondary | `evidence_f1`, `failure_diagnosis_accuracy` | Evidence selection and diagnostic quality |
+| Confirmatory strict composite | `joint_revision_success` | Exact all-or-nothing success; expected to be sparse on L4 |
+| Safety / diagnostics | `stale_reuse_rate`, answer and per-mode metrics | Failure analysis rather than the main efficacy claim |
+
+The strict joint metric is not relaxed after evaluation. Sparse or zero values
+are reported alongside component metrics instead of changing the scorer.
 
 ## Install
 
@@ -63,7 +74,7 @@ Optional LLM baselines: `pip install -e ".[dev,llm]"` (export provider API keys 
 
 | Split | Rows | Use |
 |-------|-----:|-----|
-| `train` | 3500 | SFT; stratified 5-fold for checkpoint selection |
+| `train` | 3500 | SFT; one fixed stratified 80/20 train/validation split |
 | `test` | 500 | Held-out final eval |
 
 v1.3 uses 7 primary failure modes, 8 pattern families, and 6 domains. Difficulty: train `L3`; test `L4`.
@@ -112,7 +123,7 @@ python scripts/workflows/evaluate_mempatch_predictions.py \
   --predictions mempatch/tests/fixtures/smoke_predictions.jsonl
 ```
 
-## Train + eval (Path B LoRA, MLX)
+## Train + eval (Path B ablation, MLX)
 
 ```bash
 RUN_ID=full256 KFOLD_FOLD=0 bash scripts/workflows/run_kfold_train.sh qwen3_14b
@@ -164,10 +175,14 @@ All local runs use 4-bit MLX weights and temperature 0. Full hyperparameters bel
 |------------|-------------------|
 | **MemPatch** | Project name; PyPI package `mempatch` |
 | **MemPatch-Bench** | `benchmark/` — dataset view + `evaluate_predictions` |
-| **MemPatch revision module** | `mempatch.revision` — view → proposer → projection |
+| **MemPatch revision module** | `mempatch.revision` — view → proposer → DPA → projection |
 | **DPA** (Defeat-Path Authorization) | `mempatch.dpa.authorize` |
-| **Path A** | Typed action proposer + DPA projection |
-| **Path B** | LoRA JSON proposer + same DPA projection |
+| **Path A (full MemPatch)** | Revision view → typed action proposer → DPA → benchmark projection |
+| **Path B (ablation)** | Direct five-field response JSON without the typed revision/DPA stack |
+
+The current Linux `test500_base` and `test500_lora_best` runs are Path B
+direct-response evaluations. The typed proposer and DPA runtime exist in
+`mempatch/revision/`, but are not yet wired into the Linux evaluator.
 
 ## Citation
 

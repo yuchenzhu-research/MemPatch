@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Pick checkpoint directory with lowest validation loss on the winning fold."""
+"""Pick the checkpoint with lowest validation loss on the fixed split."""
 
 from __future__ import annotations
 

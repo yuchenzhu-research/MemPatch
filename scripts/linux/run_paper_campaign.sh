@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # One-shot paper pipeline (fixed order):
-#   1. mistral_nemo_12b  — 8+1 on test500 (skips done train/pick/smoke)
-#   2. gemma3_12b        — train 5-fold → smoke → 8+1
-#   3. qwen3_14b         — train 5-fold → smoke → 8+1
+#   1. mistral_nemo_12b  — public baselines + Path B on test500
+#   2. gemma3_12b        — single-split train → smoke → baselines + Path B
+#   3. qwen3_14b         — single-split train → smoke → baselines + Path B
 #
 #   export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
 #   export HF_TOKEN=hf_...

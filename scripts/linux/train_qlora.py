@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""QLoRA SFT for one k-fold (paper profile: rank-16 attn+mlp, 384 steps)."""
+"""QLoRA SFT for one fixed train/validation split."""
 
 from __future__ import annotations
 
@@ -63,9 +63,9 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--valid-data", type=Path, required=True)
     parser.add_argument("--output-dir", type=Path, required=True)
     parser.add_argument("--log-dir", type=Path, required=True)
-    parser.add_argument("--max-steps", type=int, default=384)
-    parser.add_argument("--save-steps", type=int, default=64)
-    parser.add_argument("--eval-steps", type=int, default=64)
+    parser.add_argument("--max-steps", type=int, default=512)
+    parser.add_argument("--save-steps", type=int, default=128)
+    parser.add_argument("--eval-steps", type=int, default=128)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--max-seq-length", type=int, default=2048)
     parser.add_argument("--lora-rank", type=int, default=16)
