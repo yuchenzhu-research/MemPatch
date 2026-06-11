@@ -72,7 +72,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         "--input-dir",
         type=Path,
         required=True,
-        help="Directory containing {train,validation,test}/scenarios.jsonl",
+        help="Directory containing {train,test}/scenarios.jsonl",
     )
     parser.add_argument(
         "--out-dir",
@@ -83,7 +83,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument(
         "--splits",
         default=",".join(DEFAULT_SPLITS),
-        help="Comma-separated splits to include if present (default: train,validation,test)",
+        help="Comma-separated splits to include if present (default: train,test)",
     )
     parser.add_argument("--release-version", default="1.3.0")
     parser.add_argument("--dataset-name", default="MemPatch")

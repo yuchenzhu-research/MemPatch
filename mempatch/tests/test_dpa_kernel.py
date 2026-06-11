@@ -144,6 +144,53 @@ def test_uncertain_marks_belief_unresolved() -> None:
     assert runtime.excluded_belief_ids == ("b1",)
 
 
+def test_unknown_evidence_is_rejected_before_dpa() -> None:
+    view = _build_view(with_replacement=False)
+    runtime = run_actions(
+        view,
+        [
+            RevisionAction(
+                action_type="UNCERTAIN",
+                target_belief_id="b1",
+                evidence_ids=("e_hallucinated",),
+            )
+        ],
+    )
+
+    assert runtime.final_belief_statuses == {"b1": "AUTHORIZED"}
+    assert runtime.admitted_actions == ()
+    assert runtime.rejected_actions[0].evidence_ids == ("e_hallucinated",)
+    assert runtime.gate_errors[0].message == "unknown_evidence_id"
+
+
+def test_unknown_evidence_in_no_revision_is_rejected() -> None:
+    view = _build_view(with_replacement=False)
+    runtime = run_actions(
+        view,
+        [RevisionAction(action_type="NO_REVISION", evidence_ids=("e_missing",))],
+    )
+
+    assert runtime.final_belief_statuses == {"b1": "AUTHORIZED"}
+    assert runtime.gate_errors[0].message == "unknown_evidence_id"
+
+
+def test_multi_evidence_action_uses_latest_cited_temporal_anchor() -> None:
+    view = _build_view(with_replacement=False)
+    runtime = run_actions(
+        view,
+        [
+            RevisionAction(
+                action_type="UNCERTAIN",
+                target_belief_id="b1",
+                evidence_ids=("e0", "e1"),
+            )
+        ],
+    )
+
+    assert runtime.gate_decisions[0]["evidence_id"] == "e1"
+    assert runtime.parse_result.actions[0].evidence_ids == ("e0", "e1")
+
+
 def test_supersede_precedence_over_prerequisite_block() -> None:
     view = build_view(
         instance_id="precedence_case",

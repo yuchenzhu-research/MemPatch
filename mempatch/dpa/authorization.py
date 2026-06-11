@@ -116,13 +116,14 @@ def authorize(
                 admitted = True
                 reason = "Bypassed RevisionGate (Ablation)"
             else:
-                decision = gate.admit_evidence_edge(edge, store)
+                decision = gate.admit_evidence_edge(edge, store, ledger)
                 admitted = decision.admitted
                 reason = decision.reason
             proposal = {
                 "edge_id": edge.edge_id,
                 "edge_type": edge.edge_type.value,
                 "target_id": edge.target_id,
+                "evidence_id": edge.evidence_id,
                 "admitted": admitted,
                 "gate_reason": reason,
                 "model_call_trace_id": batch.model_call_trace_id,

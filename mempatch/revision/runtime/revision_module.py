@@ -35,6 +35,7 @@ def run_revision_module_on_scenario(
     proposer: TypedRevisionProposer | None = None,
     raw_response: dict[str, Any] | None = None,
     fallback_answer: str = "",
+    include_audit: bool = False,
 ) -> dict[str, Any]:
     """Run View Builder → Policy (actions) → DPA projection → benchmark response."""
     view = build_scenario_revision_view(scenario)
@@ -52,4 +53,7 @@ def run_revision_module_on_scenario(
         scenario_public_view=public_view,
         fallback_answer=fallback_answer,
     )
-    return {"scenario_id": scenario["scenario_id"], "response": response}
+    prediction = {"scenario_id": scenario["scenario_id"], "response": response}
+    if include_audit:
+        prediction["dpa_audit"] = runtime_result.to_dict()
+    return prediction

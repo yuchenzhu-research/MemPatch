@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 
 from mempatch.revision.runtime.revision_module import run_revision_module_on_scenario
+from mempatch.revision.runtime.learned_proposer import build_proposer_prompt
 from mempatch.revision.runtime.scenario_revision import build_scenario_revision_view
 
 
@@ -169,3 +170,12 @@ def test_realistic_bench_scenario_has_conditions_and_optional_replacements() -> 
     )
     assert "hidden_gold" not in payload
     assert "expected_" not in payload
+
+
+def test_proposer_prompt_contains_full_public_evidence_ledger() -> None:
+    view = build_scenario_revision_view(_condition_scenario())
+    prompt = build_proposer_prompt(view)
+
+    assert '"evidence_id": "e_init"' in prompt
+    assert '"evidence_id": "e_latest"' in prompt
+    assert '"as_of_evidence_id": "e_latest"' in prompt

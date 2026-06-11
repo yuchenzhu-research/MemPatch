@@ -1,13 +1,8 @@
 #!/usr/bin/env python3
-"""Prepare MemPatch v1.3 SFT data and MLX LoRA config.
+"""Prepare MemPatch v1.3 multitask SFT JSONL (Path B response + Path A typed actions).
 
-Profiles:
-  smoke — 500 train / 100 valid, rank-8 LoRA on q/v/o, 64 iters
-  bench — quick dev train, rank-8, 32 iters
-  paper — paper default, rank-16 attn+mlp, 256 iters
-  paper_lite — memory-safe: seq 1024, rank-8 q/v/o, 256 iters
-
-Use --full-train with --profile paper for the full train split.
+Default (smoke): quota-sampled train/val from the train split plus a balanced sample from test.
+``--full-train``: fixed stratified 80/20 partition within train3500 (Linux paper protocol).
 """
 
 from __future__ import annotations
@@ -27,9 +22,17 @@ from scripts._root import REPO_ROOT, bootstrap_from
 
 bootstrap_from(__file__)
 
-from benchmark.general_taxonomy import DECISIONS, canonical_hidden_gold_fields
+from benchmark.general_taxonomy import (
+    DECISIONS,
+    PRIMARY_FAILURE_MODES,
+    PRIMARY_MEMORY_STATUSES,
+    canonical_hidden_gold_fields,
+)
 from benchmark.model_runner import build_prompt
 from benchmark.public_view import public_scenario_view
+from mempatch.revision.runtime.learned_proposer import actions_to_json, build_proposer_prompt
+from mempatch.revision.runtime.scenario_revision import build_scenario_revision_view
+from mempatch.revision.schemas import RevisionAction
 
 SYSTEM_PROMPT_V13_SMOKE = """You are MemPatch Revision Policy.
 Return only one strict JSON object.
@@ -53,83 +56,8 @@ TRAIN_QUOTAS: dict[str, int] = {
     "refuse_due_to_policy": 100,
 }
 
-HARD_QUOTAS: dict[str, int] = {d: 10 for d in DECISIONS}
-DEFAULT_K_FOLDS = 5
-
-HEAVY_LORA_KEYS = [
-    "self_attn.q_proj",
-    "self_attn.k_proj",
-    "self_attn.v_proj",
-    "self_attn.o_proj",
-    "mlp.gate_proj",
-    "mlp.up_proj",
-    "mlp.down_proj",
-]
-
-SMOKE_LORA_KEYS = [
-    "self_attn.q_proj",
-    "self_attn.v_proj",
-    "self_attn.o_proj",
-]
-
-MLX_PROFILES: dict[str, dict[str, Any]] = {
-    "bench": {
-        "batch_size": 1,
-        "iters": 32,
-        "learning_rate": 1.0e-5,
-        "max_seq_length": 2048,
-        "grad_accumulation_steps": 4,
-        "save_every": 16,
-        "steps_per_eval": 16,
-        "val_batches": 16,
-        "lora_keys": SMOKE_LORA_KEYS,
-        "lora_rank": 8,
-        "lora_scale": 16.0,
-        "lora_dropout": 0.05,
-    },
-    "smoke": {
-        "batch_size": 1,
-        "iters": 64,
-        "learning_rate": 1.0e-5,
-        "max_seq_length": 2048,
-        "grad_accumulation_steps": 8,
-        "save_every": 32,
-        "steps_per_eval": 32,
-        "val_batches": 32,
-        "lora_keys": SMOKE_LORA_KEYS,
-        "lora_rank": 8,
-        "lora_scale": 16.0,
-        "lora_dropout": 0.05,
-    },
-    "paper": {
-        "batch_size": 1,
-        "iters": 256,
-        "learning_rate": 1.0e-5,
-        "max_seq_length": 2048,
-        "grad_accumulation_steps": 4,
-        "save_every": 64,
-        "steps_per_eval": 64,
-        "val_batches": 32,
-        "lora_keys": HEAVY_LORA_KEYS,
-        "lora_rank": 16,
-        "lora_scale": 32.0,
-        "lora_dropout": 0.05,
-    },
-    "paper_lite": {
-        "batch_size": 1,
-        "iters": 256,
-        "learning_rate": 1.0e-5,
-        "max_seq_length": 1024,
-        "grad_accumulation_steps": 8,
-        "save_every": 32,
-        "steps_per_eval": 32,
-        "val_batches": 32,
-        "lora_keys": SMOKE_LORA_KEYS,
-        "lora_rank": 8,
-        "lora_scale": 16.0,
-        "lora_dropout": 0.05,
-    },
-}
+TEST_BALANCED_QUOTAS: dict[str, int] = {d: 10 for d in DECISIONS}
+DEFAULT_SPLIT_PARTS = 5
 
 LEAKAGE_MARKERS = (
     "hidden_gold",
@@ -146,24 +74,20 @@ LEAKAGE_MARKERS = (
     "canonical_failure_mode",
 )
 
-def mlx_mask_prompt_for_model(model_dir: Path) -> bool:
-    """Mistral chat templates can make prompt offsets exceed the full sequence under mask_prompt."""
-    config_path = model_dir / "config.json"
-    if not config_path.is_file():
-        return True
-    model_type = json.loads(config_path.read_text(encoding="utf-8")).get("model_type")
-    return model_type not in {"mistral"}
-
-
-def stratified_kfold(
+def fixed_stratified_split(
     rows: list[dict[str, Any]],
     *,
-    fold_index: int,
-    k_folds: int,
+    split_index: int,
+    split_parts: int,
     seed: int,
 ) -> tuple[list[dict[str, Any]], list[dict[str, Any]]]:
-    if not 0 <= fold_index < k_folds:
-        raise ValueError(f"fold_index must be in [0, {k_folds}), got {fold_index}")
+    """Deterministic 80/20-style partition within one split (not cross-validation).
+
+    Each decision bucket is shuffled with ``seed``, then every ``split_parts``-th
+    row (starting at ``split_index``) is held out for val loss only.
+    """
+    if not 0 <= split_index < split_parts:
+        raise ValueError(f"split_index must be in [0, {split_parts}), got {split_index}")
     rng = random.Random(seed)
     train_part: list[dict[str, Any]] = []
     valid_part: list[dict[str, Any]] = []
@@ -172,57 +96,13 @@ def stratified_kfold(
         pool = list(buckets.get(decision, []))
         rng.shuffle(pool)
         for i, row in enumerate(pool):
-            if i % k_folds == fold_index:
+            if i % split_parts == split_index:
                 valid_part.append(row)
             else:
                 train_part.append(row)
     rng.shuffle(train_part)
     rng.shuffle(valid_part)
     return train_part, valid_part
-
-
-def mlx_lora_yaml(
-    *,
-    root: Path,
-    data_dir: Path,
-    adapter_dir: Path,
-    profile: str = "smoke",
-    model_dir: Path | None = None,
-    resume_from: Path | None = None,
-) -> str:
-    if profile not in MLX_PROFILES:
-        raise ValueError(f"unknown MLX profile {profile!r}; expected one of {sorted(MLX_PROFILES)}")
-    cfg = MLX_PROFILES[profile]
-    if model_dir is None:
-        model_dir = root / "local/models/Qwen3-14B-MLX-4bit"
-    mask_prompt = mlx_mask_prompt_for_model(model_dir)
-    keys_yaml = json.dumps(cfg["lora_keys"])
-    resume_line = ""
-    if resume_from is not None:
-        resume_line = f'resume_adapter_file: "{resume_from.resolve()}"\n'
-    return f"""model: "{model_dir.resolve()}"
-train: true
-fine_tune_type: lora
-optimizer: adamw
-data: "{data_dir.resolve()}"
-seed: 2027
-batch_size: {cfg["batch_size"]}
-iters: {cfg["iters"]}
-learning_rate: {cfg["learning_rate"]}
-max_seq_length: {cfg["max_seq_length"]}
-grad_accumulation_steps: {cfg["grad_accumulation_steps"]}
-grad_checkpoint: true
-mask_prompt: {"true" if mask_prompt else "false"}
-adapter_path: "{adapter_dir.resolve()}"
-{resume_line}save_every: {cfg["save_every"]}
-steps_per_eval: {cfg["steps_per_eval"]}
-val_batches: {cfg["val_batches"]}
-lora_parameters:
-  keys: {keys_yaml}
-  rank: {cfg["lora_rank"]}
-  scale: {cfg["lora_scale"]}
-  dropout: {cfg["lora_dropout"]}
-"""
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -321,6 +201,7 @@ def sft_example(scenario: dict[str, Any]) -> dict[str, Any]:
     assert_no_leakage(user_content, scenario_id=str(scenario["scenario_id"]))
     response = gold_to_response(scenario)
     return {
+        "task_type": "path_b_response",
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT_V13_SMOKE},
             {"role": "user", "content": user_content},
@@ -332,7 +213,104 @@ def sft_example(scenario: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def hard_balanced_row(scenario: dict[str, Any]) -> dict[str, Any]:
+def gold_to_revision_actions(scenario: dict[str, Any]) -> list[RevisionAction]:
+    """Derive typed-action supervision from scenario hidden gold."""
+    gold = canonical_hidden_gold_fields(scenario.get("hidden_gold") or {})
+    view = build_scenario_revision_view(scenario)
+    evidence_ids = tuple(str(value) for value in gold["expected_evidence_event_ids"])
+    if not evidence_ids:
+        evidence_ids = (view.new_evidence.evidence_id,)
+
+    conditions_by_belief = dict(view.candidate_conditions_by_belief)
+    public_memories = {
+        str(memory["memory_id"]): memory
+        for memory in (scenario.get("public_input") or {}).get("initial_memory") or []
+        if memory.get("memory_id")
+    }
+    actions: list[RevisionAction] = []
+    for memory_id, status in gold["expected_memory_state"].items():
+        memory_id = str(memory_id)
+        memory = public_memories.get(memory_id) or {}
+        text = str(memory.get("text") or "")
+        if status == "blocked":
+            conditions = conditions_by_belief.get(memory_id) or ()
+            if not conditions:
+                raise ValueError(
+                    f"{scenario['scenario_id']}: blocked belief {memory_id!r} has no public condition"
+                )
+            actions.append(
+                RevisionAction(
+                    action_type="BLOCKS",
+                    target_condition_id=conditions[0].condition_id,
+                    evidence_ids=evidence_ids,
+                    rationale="The cited public evidence activates the required condition block.",
+                )
+            )
+        elif status == "unresolved":
+            actions.append(
+                RevisionAction(
+                    action_type="UNCERTAIN",
+                    target_belief_id=memory_id,
+                    evidence_ids=evidence_ids,
+                    rationale="The cited public evidence leaves this belief unresolved.",
+                )
+            )
+        elif (
+            status == "current"
+            and gold["expected_decision"] == "use_current_memory"
+            and not text.startswith("Condition rule:")
+            and not text.startswith("Distractor info:")
+        ):
+            actions.append(
+                RevisionAction(
+                    action_type="REAFFIRMS",
+                    target_belief_id=memory_id,
+                    evidence_ids=evidence_ids,
+                    rationale="The cited verified evidence reaffirms the current belief.",
+                )
+            )
+
+    if not actions:
+        actions.append(
+            RevisionAction(
+                action_type="NO_REVISION",
+                evidence_ids=evidence_ids,
+                rationale="No DPA core transition is required for this policy outcome.",
+            )
+        )
+    for action in actions:
+        action.validate()
+    return actions
+
+
+def typed_action_sft_example(scenario: dict[str, Any]) -> dict[str, Any]:
+    view = build_scenario_revision_view(scenario)
+    user_content = build_proposer_prompt(view)
+    assert_no_leakage(user_content, scenario_id=str(scenario["scenario_id"]))
+    return {
+        "task_type": "path_a_typed_actions",
+        "messages": [
+            {
+                "role": "system",
+                "content": (
+                    "You are the typed-action proposer for MemPatch Path A. "
+                    "Return only the requested JSON array and copy every ID exactly."
+                ),
+            },
+            {"role": "user", "content": user_content},
+            {
+                "role": "assistant",
+                "content": actions_to_json(gold_to_revision_actions(scenario)),
+            },
+        ],
+    }
+
+
+def multitask_sft_examples(scenario: dict[str, Any]) -> list[dict[str, Any]]:
+    return [sft_example(scenario), typed_action_sft_example(scenario)]
+
+
+def test_balanced_row(scenario: dict[str, Any]) -> dict[str, Any]:
     view = public_scenario_view(scenario)
     return {
         "scenario_id": scenario["scenario_id"],
@@ -343,8 +321,21 @@ def hard_balanced_row(scenario: dict[str, Any]) -> dict[str, Any]:
 def decision_distribution_sft(rows: list[dict[str, Any]]) -> Counter[str]:
     counts: Counter[str] = Counter()
     for row in rows:
+        if row.get("task_type") != "path_b_response":
+            continue
         assistant = next(m["content"] for m in row["messages"] if m["role"] == "assistant")
         counts[json.loads(assistant).get("decision", "<missing>")] += 1
+    return counts
+
+
+def action_distribution_sft(rows: list[dict[str, Any]]) -> Counter[str]:
+    counts: Counter[str] = Counter()
+    for row in rows:
+        if row.get("task_type") != "path_a_typed_actions":
+            continue
+        assistant = next(m["content"] for m in row["messages"] if m["role"] == "assistant")
+        for action in json.loads(assistant):
+            counts[str(action.get("action_type", "<missing>"))] += 1
     return counts
 
 
@@ -354,6 +345,36 @@ def decision_distribution_scenarios(rows: list[dict[str, Any]]) -> Counter[str]:
         decision = scenario_decision(row) or "<missing>"
         counts[decision] += 1
     return counts
+
+
+def assert_label_coverage(rows: list[dict[str, Any]], *, split_name: str) -> None:
+    """Fail before training if a fixed partition drops a required target label."""
+    decisions: set[str] = set()
+    diagnoses: set[str] = set()
+    memory_statuses: set[str] = set()
+    for row in rows:
+        gold = canonical_hidden_gold_fields(row.get("hidden_gold") or {})
+        decision = gold.get("expected_decision")
+        diagnosis = gold.get("expected_failure_diagnosis")
+        if isinstance(decision, str):
+            decisions.add(decision)
+        if isinstance(diagnosis, str):
+            diagnoses.add(diagnosis)
+        memory_statuses.update(
+            status
+            for status in gold.get("expected_memory_state", {}).values()
+            if isinstance(status, str)
+        )
+
+    missing = {
+        "decision": sorted(set(DECISIONS) - decisions),
+        "failure_diagnosis": sorted(set(PRIMARY_FAILURE_MODES) - diagnoses),
+        "memory_status": sorted(set(PRIMARY_MEMORY_STATUSES) - memory_statuses),
+    }
+    missing = {name: labels for name, labels in missing.items() if labels}
+    if missing:
+        details = ", ".join(f"{name}={labels}" for name, labels in missing.items())
+        raise ValueError(f"{split_name} partition is missing required labels: {details}")
 
 
 def print_distribution(label: str, counts: Counter[str]) -> None:
@@ -368,7 +389,7 @@ def print_distribution(label: str, counts: Counter[str]) -> None:
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     root = REPO_ROOT
-    parser = argparse.ArgumentParser(description="Prepare MemPatch v1.3 SFT bundle and MLX LoRA config.")
+    parser = argparse.ArgumentParser(description="Prepare MemPatch v1.3 multitask SFT JSONL.")
     parser.add_argument(
         "--train-data",
         type=Path,
@@ -385,90 +406,28 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=root / "local/train_data/mempatch_v13_smoke",
     )
     parser.add_argument(
-        "--mlx-config",
-        type=Path,
-        default=root / "local/logs/qwen3_14b_mempatch_v13_smoke/mlx_lora.yaml",
-    )
-    parser.add_argument(
-        "--adapter-dir",
-        type=Path,
-        default=root / "local/adapters/qwen3_14b_mempatch_v13_smoke",
-        help="LoRA adapter output directory written into the MLX config.",
-    )
-    parser.add_argument(
-        "--model-dir",
-        type=Path,
-        default=root / "local/models/Qwen3-14B-MLX-4bit",
-        help="Base MLX model directory for the LoRA config.",
-    )
-    parser.add_argument(
-        "--config-only",
-        action="store_true",
-        help="Only write mlx_lora.yaml (reuse existing SFT JSONL in --out-dir).",
-    )
-    parser.add_argument(
-        "--profile",
-        choices=sorted(MLX_PROFILES),
-        default="smoke",
-        help="MLX LoRA training profile written into the config.",
-    )
-    parser.add_argument(
         "--full-train",
         action="store_true",
         help="Use the full train split instead of the smoke TRAIN_QUOTAS sample.",
     )
-    parser.add_argument("--k-folds", type=int, default=DEFAULT_K_FOLDS)
-    parser.add_argument("--fold", type=int, default=0, help="Held-out fold index for valid.jsonl (MLX loss only).")
     parser.add_argument(
-        "--run-id",
-        default=None,
-        help="Unique adapter subdirectory so new runs do not overwrite prior checkpoints.",
+        "--split-parts",
+        type=int,
+        default=DEFAULT_SPLIT_PARTS,
+        help="Fixed partition count (5 → 80/20 train/val within the train split).",
     )
     parser.add_argument(
-        "--resume-from",
-        type=Path,
-        default=None,
-        help="Optional adapter .safetensors to warm-start (writes into a new --run-id directory).",
+        "--split-index",
+        type=int,
+        default=0,
+        help="Which 1/N partition is held out for val loss (default 0).",
     )
     parser.add_argument("--seed", type=int, default=20270607)
     return parser.parse_args(argv)
 
 
-def resolve_adapter_dir(args: argparse.Namespace) -> Path:
-    from datetime import datetime, timezone
-
-    run_id = args.run_id or datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%SZ")
-    return args.adapter_dir / f"fold{args.fold}" / run_id
-
-
-def write_mlx_config(root: Path, args: argparse.Namespace, *, adapter_dir: Path) -> None:
-    args.mlx_config.parent.mkdir(parents=True, exist_ok=True)
-    args.mlx_config.write_text(
-        mlx_lora_yaml(
-            root=root,
-            data_dir=args.out_dir,
-            adapter_dir=adapter_dir,
-            profile=args.profile,
-            model_dir=args.model_dir,
-            resume_from=args.resume_from,
-        ),
-        encoding="utf-8",
-    )
-    print(f"Wrote MLX config ({args.profile}) -> {args.mlx_config}")
-    print(f"Adapter output dir (isolated): {adapter_dir}")
-
-
 def main(argv: list[str] | None = None) -> int:
-    root = REPO_ROOT
     args = parse_args(argv)
-    adapter_dir = resolve_adapter_dir(args)
-
-    if args.config_only:
-        if not (args.out_dir / "train.jsonl").is_file():
-            print(f"error: --config-only requires {args.out_dir}/train.jsonl", file=sys.stderr)
-            return 1
-        write_mlx_config(root, args, adapter_dir=adapter_dir)
-        return 0
 
     for path, name in ((args.train_data, "train"), (args.test_data, "test")):
         if not path.is_file():
@@ -489,46 +448,52 @@ def main(argv: list[str] | None = None) -> int:
             seed=args.seed,
             split_name="train",
         )
-    train_sampled, valid_sampled = stratified_kfold(
+    train_sampled, valid_sampled = fixed_stratified_split(
         pool,
-        fold_index=args.fold,
-        k_folds=args.k_folds,
+        split_index=args.split_index,
+        split_parts=args.split_parts,
         seed=args.seed + 1,
     )
+    assert_label_coverage(train_sampled, split_name="train")
+    assert_label_coverage(valid_sampled, split_name="val")
     valid_actual = dict(decision_distribution_scenarios(valid_sampled))
-    hard_sampled, hard_actual = sample_quotas(
+    test_sampled, test_actual = sample_quotas(
         index_by_decision(test_source),
-        HARD_QUOTAS,
+        TEST_BALANCED_QUOTAS,
         seed=args.seed + 2,
         split_name="test",
     )
 
-    train_sft = [sft_example(s) for s in train_sampled]
-    valid_sft = [sft_example(s) for s in valid_sampled]
-    hard50 = [hard_balanced_row(s) for s in hard_sampled]
-    hard50_sft = [sft_example(s) for s in hard_sampled]
+    train_sft = [example for scenario in train_sampled for example in multitask_sft_examples(scenario)]
+    valid_sft = [example for scenario in valid_sampled for example in multitask_sft_examples(scenario)]
+    test_balanced = [test_balanced_row(s) for s in test_sampled]
+    test_balanced_sft = [sft_example(s) for s in test_sampled]
 
     out_dir = args.out_dir
     write_jsonl(out_dir / "train.jsonl", train_sft)
     write_jsonl(out_dir / "valid.jsonl", valid_sft)
-    write_jsonl(out_dir / "hard_balanced50.jsonl", hard50)
-    write_jsonl(out_dir / "hard_balanced50_sft.jsonl", hard50_sft)
-
-    write_mlx_config(root, args, adapter_dir=adapter_dir)
+    write_jsonl(out_dir / "test_balanced50.jsonl", test_balanced)
+    write_jsonl(out_dir / "test_balanced50_sft.jsonl", test_balanced_sft)
 
     if args.full_train:
-        print(f"Wrote k-fold fold {args.fold}/{args.k_folds} -> {out_dir}")
+        print(
+            f"Wrote fixed split {args.split_index}/{args.split_parts} "
+            f"({len(train_sft)} train, {len(valid_sft)} val) -> {out_dir}"
+        )
     else:
         print(
-            f"Wrote {len(train_sft)} train, {len(valid_sft)} valid (fold {args.fold}/{args.k_folds}), "
-            f"{len(hard50)} hard_balanced50, {len(hard50_sft)} hard_balanced50_sft -> {out_dir}"
+            f"Wrote {len(train_sft)} train, {len(valid_sft)} valid "
+            f"(split {args.split_index}/{args.split_parts}), "
+            f"{len(test_balanced)} test_balanced50, {len(test_balanced_sft)} test_balanced50_sft -> {out_dir}"
         )
-        print(f"k-fold valid counts: {valid_actual}")
-        if hard_actual != HARD_QUOTAS:
-            print(f"test balanced50 actual sample counts: {hard_actual}")
+        print(f"val partition counts: {valid_actual}")
+        if test_actual != TEST_BALANCED_QUOTAS:
+            print(f"test_balanced50 actual sample counts: {test_actual}")
         print_distribution("train", decision_distribution_sft(train_sft))
         print_distribution("valid", decision_distribution_sft(valid_sft))
-        print_distribution("hard_balanced50 (gold in source)", decision_distribution_scenarios(hard_sampled))
+        print(f"train typed-action distribution: {dict(action_distribution_sft(train_sft))}")
+        print(f"valid typed-action distribution: {dict(action_distribution_sft(valid_sft))}")
+        print_distribution("test_balanced50 (gold in source)", decision_distribution_scenarios(test_sampled))
     return 0
 
 

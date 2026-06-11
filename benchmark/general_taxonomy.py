@@ -100,7 +100,7 @@ def normalize_difficulty(value: object) -> str:
 
 
 def canonical_hidden_gold_fields(gold: dict) -> dict:
-    """Read canonical v1.1 hidden_gold fields."""
+    """Read canonical v1.3 hidden_gold fields."""
     return {
         "expected_decision": gold.get("expected_decision"),
         "expected_answer": gold.get("expected_answer"),

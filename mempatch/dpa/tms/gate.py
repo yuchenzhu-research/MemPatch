@@ -3,6 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from mempatch.dpa.memory.belief_store import BeliefStore
+from mempatch.dpa.memory.episode_ledger import EpisodeLedger
 from mempatch.dpa.schemas import (
     DependencyEdge,
     EvidenceEdge,
@@ -98,11 +99,14 @@ class RevisionGate:
         self,
         edge: EvidenceEdge,
         store: BeliefStore,
+        ledger: EpisodeLedger | None = None,
     ) -> GateDecision:
         if not edge.edge_id:
             return GateDecision(False, "empty_edge_id")
         if not edge.evidence_id:
             return GateDecision(False, "missing_evidence_id")
+        if ledger is not None and edge.evidence_id not in ledger:
+            return GateDecision(False, "unknown_evidence_id")
         if not edge.verifier:
             # Provenance is first-class.
             return GateDecision(False, "missing_verifier_provenance")

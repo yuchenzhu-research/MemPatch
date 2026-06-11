@@ -90,12 +90,17 @@ def generate_from_messages(
     *,
     max_tokens: int = 256,
     temp: float = 0.0,
+    json_prefill: str = "{",
 ) -> tuple[str, dict[str, Any]]:
     import torch
 
     suppress_bitsandbytes_warnings()
     prompt_messages = [m for m in messages if m.get("role") in {"system", "user"}]
-    input_ids, gen_meta = apply_chat_template_no_think(tokenizer, prompt_messages)
+    input_ids, gen_meta = apply_chat_template_no_think(
+        tokenizer,
+        prompt_messages,
+        json_prefill=json_prefill,
+    )
     input_tensor = torch.tensor([input_ids], dtype=torch.long, device=model.device)
     attention_mask = torch.ones_like(input_tensor)
     with torch.no_grad():

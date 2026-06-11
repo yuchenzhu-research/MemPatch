@@ -4,6 +4,9 @@ from __future__ import annotations
 
 import json
 import re
+import shutil
+import tempfile
+from pathlib import Path
 from typing import Any
 
 THINKING_CLOSE_SUFFIX = "\n</think>\n"
@@ -42,9 +45,11 @@ def prompt_needs_thinking_close(prompt: str) -> bool:
 def apply_chat_template_no_think(
     tokenizer: Any,
     messages: list[dict[str, str]],
+    *,
+    json_prefill: str = JSON_BRACE_PREFILL,
 ) -> tuple[list[int], dict[str, Any]]:
     """Return prompt token ids and generation metadata."""
-    meta: dict[str, Any] = {"json_brace_prefill": False}
+    meta: dict[str, Any] = {"json_brace_prefill": False, "json_prefill": ""}
     prompt = tokenizer.apply_chat_template(
         messages,
         tokenize=False,
@@ -52,8 +57,9 @@ def apply_chat_template_no_think(
     )
 
     if prompt_needs_thinking_close(prompt):
-        prompt = prompt + THINKING_CLOSE_SUFFIX + JSON_BRACE_PREFILL
-        meta["json_brace_prefill"] = True
+        prompt = prompt + THINKING_CLOSE_SUFFIX + json_prefill
+        meta["json_prefill"] = json_prefill
+        meta["json_brace_prefill"] = json_prefill == JSON_BRACE_PREFILL
     else:
         try:
             tokens = tokenizer.apply_chat_template(
@@ -96,3 +102,30 @@ def extract_json_object(text: str, *, json_brace_prefill: bool = False) -> dict[
         if isinstance(obj, dict):
             return obj
     raise ValueError(f"no JSON object found in model output: {text[:300]!r}")
+
+
+def resolve_mlx_adapter_dir(adapter_path: Path | str) -> Path:
+    """mlx_lm expects a directory with adapter_config.json + adapters.safetensors."""
+    path = Path(adapter_path)
+    if path.is_dir():
+        if not (path / "adapter_config.json").is_file():
+            raise FileNotFoundError(f"adapter_config.json missing under {path}")
+        return path
+
+    if path.suffix != ".safetensors" or not path.is_file():
+        raise FileNotFoundError(f"adapter path does not exist: {path}")
+
+    parent = path.parent
+    config = parent / "adapter_config.json"
+    if not config.is_file():
+        raise FileNotFoundError(f"adapter_config.json missing under {parent}")
+
+    default_weights = parent / "adapters.safetensors"
+    if path.name == "adapters.safetensors" or path.resolve() == default_weights.resolve():
+        return parent
+
+    # mlx_lm only reads adapters.safetensors; stage a numbered checkpoint if needed.
+    staging = Path(tempfile.mkdtemp(prefix="mlx_adapter_"))
+    shutil.copy2(config, staging / "adapter_config.json")
+    shutil.copy2(path, staging / "adapters.safetensors")
+    return staging

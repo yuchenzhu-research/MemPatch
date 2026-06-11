@@ -19,7 +19,11 @@ from benchmark.api import evaluate_predictions, load_scenarios  # noqa: E402
 from scripts.data.prepare_mempatch_v13_smoke import SYSTEM_PROMPT_V13_SMOKE  # noqa: E402
 from scripts.linux.hf_inference import generate_from_messages, load_hf_model  # noqa: E402
 from scripts.linux.run_hf_test_eval import prediction_from_output, write_jsonl  # noqa: E402
-from scripts.memory.context_builders import BASELINE_IDS, build_baseline_prompt  # noqa: E402
+from scripts.memory.context_builders import (  # noqa: E402
+    BASELINE_DISPLAY_NAMES,
+    BASELINE_IDS,
+    build_baseline_prompt,
+)
 
 
 def read_done_ids(path: Path) -> set[str]:
@@ -107,6 +111,7 @@ def write_metrics(args: argparse.Namespace, predictions: list[dict[str, Any]]) -
         run_meta={
             "backend": "hf",
             "baseline": args.baseline,
+            "baseline_display_name": BASELINE_DISPLAY_NAMES[args.baseline],
             "model_id": args.model_id,
             "adapter_path": str(args.adapter_path) if args.adapter_path else None,
             "model_tag": args.model_tag,

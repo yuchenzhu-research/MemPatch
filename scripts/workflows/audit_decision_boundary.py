@@ -59,7 +59,7 @@ def infer_split_label(path: Path, scenario: dict[str, Any]) -> str:
     if split:
         return str(split)
     parent = path.parent.name
-    if parent in {"train", "validation", "test", "main", "hard"}:
+    if parent in {"train", "test"}:
         return parent
     return path.stem
 

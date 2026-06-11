@@ -2,13 +2,13 @@
 
 **MemPatch: Benchmarking and Improving Rapid Memory Integration in LLM Agents**
 
-RMI is the ability of an LLM agent to revise which beliefs remain usable (`current`, `outdated`, `blocked`, `unresolved`, …) when new evidence arrives — not blindly append text.
+RMI is the ability of an LLM agent to revise which memories remain usable (`current`, `blocked`, `unresolved`, `out_of_scope`, or `should_not_store`) when new evidence arrives, rather than blindly appending text.
 
 | Component | Location |
 |-----------|----------|
 | **MemPatch-Bench** (dataset view + scoring) | `benchmark/` |
 | **Scenario generator** (v1.3) | `benchmark/generation/` |
-| **Revision module** (Path A/B) | `mempatch/revision/` (`import mempatch.revision`) |
+| **Revision module** (Path A) | `mempatch/revision/` (`import mempatch.revision`) |
 | **DPA kernel** (deterministic verifier) | `mempatch/dpa/` (`import mempatch.dpa`) |
 | **Regression tests** | `mempatch/tests/` |
 | **Reproducibility CLIs** | `scripts/` |
@@ -23,12 +23,12 @@ benchmark/                    dataset format, public view, scoring ONLY
   public_view.py              model-visible scenario fields (no hidden_gold)
   model_runner.py             optional JSON prompt adapter for baselines (NOT revision)
 
-mempatch/revision/           Path A/B method (view → proposer → DPA → projection)
+mempatch/revision/           Path A method (view → proposer → DPA → projection)
 mempatch/dpa/                DPA authorization kernel (authorize)
 scripts/                      thin CLIs that wire runners to the evaluator
 ```
 
-**No overlap:** `benchmark/` scores any compliant `predictions.jsonl`. `mempatch/` implements how Path A/B produce those predictions. External baselines use `benchmark.model_runner.build_prompt` as a JSON port, not the revision stack.
+**No overlap:** `benchmark/` scores any compliant `predictions.jsonl`. `mempatch/` implements the typed Path A revision stack. Linux evaluates full Path A, a paired no-DPA action projection, and direct-response Path B. External baselines use `benchmark.model_runner.build_prompt` as a JSON adapter, not the revision stack.
 
 ## Data flow
 
@@ -36,7 +36,7 @@ scripts/                      thin CLIs that wire runners to the evaluator
 {split}/scenarios.jsonl          # local or downloaded bundle
         │
         ▼
-scripts/eval/run_lora_test_eval.py  →  scripts/workflows/evaluate_mempatch_predictions.py
+scripts/linux/run_hf_path_a_eval.py / run_hf_test_eval.py
         │
         ▼
 predictions.jsonl              { "scenario_id", "response": { five fields } }
@@ -74,10 +74,12 @@ Optional LLM baselines: `pip install -e ".[dev,llm]"` (export provider API keys 
 
 | Split | Rows | Use |
 |-------|-----:|-----|
-| `train` | 3500 | SFT; one fixed stratified 80/20 train/validation split |
-| `test` | 500 | Held-out final eval |
+| `train` | 3500 scenarios | L3 fixed 80/20 split; each train/val scenario yields Path A and Path B SFT rows |
+| `test` | 500 | Held-out L4 final eval (never used for training or checkpoint selection) |
 
-v1.3 uses 7 primary failure modes, 8 pattern families, and 6 domains. Difficulty: train `L3`; test `L4`.
+v1.3 uses 7 primary failure modes, 8 pattern families, and 6 domains. **Train is L3; test is L4** — test measures generalization to a harder distribution, not memorization of training cases.
+
+The fixed partition is stratified by decision. SFT preparation additionally fails if either the SFT-train or held-out val partition omits any required decision, failure-diagnosis, or memory-status label.
 
 Regenerate locally (default output directory is gitignored):
 
@@ -123,22 +125,24 @@ python scripts/workflows/evaluate_mempatch_predictions.py \
   --predictions mempatch/tests/fixtures/smoke_predictions.jsonl
 ```
 
-## Train + eval (Path B ablation, MLX)
+## Paper reproduction (Linux CUDA)
 
 ```bash
-RUN_ID=full256 KFOLD_FOLD=0 bash scripts/workflows/run_kfold_train.sh qwen3_14b
-ADAPTER=local/adapters/qwen3_14b_pathB_lora/fold0/full256 \
-  bash scripts/workflows/run_eval_test.sh
+export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
+export RUN_ID=full512
+bash scripts/linux/run_paper_campaign.sh
 ```
 
-Download MLX base weights into `local/models/` via [MLX Community on Hugging Face](https://huggingface.co/mlx-community).
+Place dataset at `$LOCAL_ROOT/data/mempatch/{train,test}/scenarios.jsonl`. See `scripts/linux/README.md`.
+
+Protocol per backbone: one 512-step multitask QLoRA run, checkpoints at steps 128/256/384/512, selection by the lowest mixed-task L3 val loss, then held-out L4 test500 evaluation. Each scenario in the fixed 80/20 train partition yields one Path B response target and one Path A typed-action target; the original scenario JSONL is unchanged. This is one fixed partition, not k-fold cross-validation.
 
 ## Local workspace (`local/`, gitignored)
 
 ```text
 local/
   data/mempatch/    generated scenario JSONL (train + test)
-  models/           MLX base weights
+  models/           prefetched HF weights (Linux) or MLX weights (dev)
   adapters/         LoRA checkpoints
   runs/             eval outputs
   logs/             training logs
@@ -149,7 +153,7 @@ local/
 ```text
 benchmark/              MemPatch-Bench scorer + generator
 mempatch/
-  revision/             Path A/B revision module
+  revision/             Path A revision module
   dpa/                  Defeat-Path Authorization kernel
   tests/                pytest + smoke fixtures
 scripts/                reproducibility CLIs (eval, workflows, data)
@@ -158,16 +162,15 @@ data/mempatch/          tracked boundary-audit artifact (v1.3)
 
 Script index: `scripts/README.md`.
 
-## Reproduction models (local LoRA)
+## Reproduction models
 
 | Slug | Model | Params |
 |------|-------|-------:|
 | `qwen3_14b` | Qwen3-14B | 14B |
 | `gemma3_12b` | Gemma 3 12B Instruct | 12B |
 | `mistral_nemo_12b` | Mistral Nemo 12B Instruct | 12B |
-| `llama3_1_8b` | Llama 3.1 8B Instruct | 8B |
 
-All local runs use 4-bit MLX weights and temperature 0. Full hyperparameters belong in the paper appendix.
+Paper reproduction uses 4-bit NF4 QLoRA on Linux CUDA with temperature 0 evaluation. MLX remains a development backend and is not the final paper protocol.
 
 ## Naming (paper ↔ code)
 
@@ -175,14 +178,17 @@ All local runs use 4-bit MLX weights and temperature 0. Full hyperparameters bel
 |------------|-------------------|
 | **MemPatch** | Project name; PyPI package `mempatch` |
 | **MemPatch-Bench** | `benchmark/` — dataset view + `evaluate_predictions` |
-| **MemPatch revision module** | `mempatch.revision` — view → proposer → DPA → projection |
+| **MemPatch revision module** | `mempatch.revision` — Path A view → proposer → DPA → projection |
 | **DPA** (Defeat-Path Authorization) | `mempatch.dpa.authorize` |
 | **Path A (full MemPatch)** | Revision view → typed action proposer → DPA → benchmark projection |
+| **Path A no-DPA** | Same generated typed actions → direct action/status projection without gate or DPA |
 | **Path B (ablation)** | Direct five-field response JSON without the typed revision/DPA stack |
 
-The current Linux `test500_base` and `test500_lora_best` runs are Path B
-direct-response evaluations. The typed proposer and DPA runtime exist in
-`mempatch/revision/`, but are not yet wired into the Linux evaluator.
+The Linux runner writes full Path A predictions and audit traces, a paired no-DPA result from the exact same typed actions, and Path B direct-response results. The current v1.3 training scenarios supervise `BLOCKS`, `UNCERTAIN`, `REAFFIRMS`, and `NO_REVISION`; they do not contain gold `SUPERSEDES` or `RELEASES` transitions, which remains an explicit action-coverage limitation.
+
+## Paper result policy
+
+Paper tables must use the unified `full512` protocol on all three backbones and the complete held-out test500 split. Report raw schema compliance, projected schema compliance, and repair counts separately.
 
 ## Citation
 

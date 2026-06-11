@@ -161,7 +161,7 @@ def test_project_to_benchmark_response_keeps_release_projection_primary() -> Non
     assert response["memory_state"]["m-case-distractor"] == "out_of_scope"
 
 
-def test_project_to_benchmark_response_accepts_raw_memory_state_overrides() -> None:
+def test_project_to_benchmark_response_only_accepts_auxiliary_raw_memory_states() -> None:
     runtime_result = _runtime_result(
         final_belief_statuses={"m1": "AUTHORIZED"},
         authorized_belief_ids=("m1",),
@@ -176,20 +176,29 @@ def test_project_to_benchmark_response_accepts_raw_memory_state_overrides() -> N
         runtime_result=runtime_result,
         raw_response={
             "response": {
-                "memory_state": {"m1": "should_not_store", "m2": "deleted"},
+                "memory_state": {
+                    "m1": "should_not_store",
+                    "m2": "blocked",
+                    "m3": "deleted",
+                },
                 "decision": "refuse_due_to_policy",
                 "failure_diagnosis": "policy_violation",
             }
         },
         scenario_public_view={
             "public_input": {
-                "initial_memory": [{"memory_id": "m1"}, {"memory_id": "m2"}]
+                "initial_memory": [
+                    {"memory_id": "m1"},
+                    {"memory_id": "m2"},
+                    {"memory_id": "m3"},
+                ]
             }
         },
     )
 
     assert response["memory_state"]["m1"] == "should_not_store"
     assert response["memory_state"]["m2"] == "current"
+    assert response["memory_state"]["m3"] == "current"
     assert response["decision"] == "refuse_due_to_policy"
     assert response["failure_diagnosis"] == "policy_violation"
     for label in response["memory_state"].values():

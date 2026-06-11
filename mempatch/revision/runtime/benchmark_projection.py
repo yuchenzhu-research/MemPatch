@@ -111,8 +111,12 @@ def _merge_raw_memory_state(
     if not isinstance(raw_state, dict):
         return memory_state
     merged = dict(memory_state)
+    # DPA owns the core current/blocked/unresolved transition statuses. Raw
+    # response labels may only supply benchmark-only states that have no typed
+    # DPA action in the current vocabulary.
+    auxiliary_statuses = {"out_of_scope", "should_not_store"}
     for memory_id, label in raw_state.items():
-        if isinstance(label, str) and label in PRIMARY_MEMORY_STATUSES:
+        if isinstance(label, str) and label in auxiliary_statuses:
             merged[str(memory_id)] = label
     return merged
 
@@ -175,22 +179,32 @@ def _project_evidence_event_ids(runtime_result: RuntimeResult) -> list[str]:
         for d in runtime_result.gate_decisions
         if d.get("admitted")
     }
+    rejected_ids = {
+        d["edge_id"]
+        for d in runtime_result.gate_decisions
+        if not d.get("admitted")
+    }
     evidence: list[str] = []
     for idx, action in enumerate(runtime_result.parse_result.actions):
-        if action.action_type == "NO_REVISION" or f"edge_rl_{idx}" in admitted_ids:
+        edge_id = f"edge_rl_{idx}"
+        if edge_id in rejected_ids:
+            continue
+        if action.action_type == "NO_REVISION" or edge_id in admitted_ids:
             evidence.extend(action.evidence_ids)
     return _dedupe_preserve_order(evidence)
 
 
 def _project_decision(memory_state: dict[str, str], raw_response: Any) -> str:
     raw_decision = _raw_response_field(raw_response, "decision")
-    if isinstance(raw_decision, str) and raw_decision in DECISIONS:
-        return raw_decision
     if any(status == "should_not_store" for status in memory_state.values()):
         return "refuse_due_to_policy"
     if any(status == "unresolved" for status in memory_state.values()):
+        if raw_decision == "ask_clarification":
+            return "ask_clarification"
         return "mark_unresolved"
     if any(status == "blocked" for status in memory_state.values()):
+        if raw_decision == "ask_clarification":
+            return "ask_clarification"
         return "escalate"
     return "use_current_memory"
 

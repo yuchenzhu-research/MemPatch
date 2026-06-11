@@ -1,6 +1,7 @@
 """External memory baseline helpers for MemPatch-Bench."""
 
 from scripts.memory.context_builders import (
+    BASELINE_DISPLAY_NAMES,
     BASELINE_IDS,
     DIAGNOSTIC_UPPER_BOUND_IDS,
     PAPER_APPENDIX_BASELINE_IDS,
@@ -11,6 +12,7 @@ from scripts.memory.context_builders import (
 
 __all__ = [
     "BASELINE_IDS",
+    "BASELINE_DISPLAY_NAMES",
     "DIAGNOSTIC_UPPER_BOUND_IDS",
     "PAPER_MAIN_BASELINE_IDS",
     "PAPER_APPENDIX_BASELINE_IDS",

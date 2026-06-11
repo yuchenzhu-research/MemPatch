@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""QLoRA SFT for one fixed train/validation split."""
+"""QLoRA SFT for one fixed stratified train/val partition within train3500."""
 
 from __future__ import annotations
 
 import argparse
+import importlib.metadata
+import inspect
 import json
 import sys
 from pathlib import Path
@@ -77,8 +79,8 @@ def main(argv: list[str] | None = None) -> int:
     import torch
     from datasets import Dataset
     from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
-    from transformers import AutoModelForCausalLM, BitsAndBytesConfig, TrainingArguments
-    from trl import SFTTrainer
+    from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+    from trl import SFTConfig, SFTTrainer
 
     from scripts.linux.hf_hub import hub_kwargs, log_hub_config
 
@@ -129,37 +131,75 @@ def main(argv: list[str] | None = None) -> int:
     warmup_steps = 0 if args.max_steps <= 16 else max(1, int(args.max_steps * 0.03))
     logging_steps = min(16, max(1, args.save_steps))
 
-    training_args = TrainingArguments(
-        output_dir=str(args.output_dir),
-        max_steps=args.max_steps,
-        per_device_train_batch_size=1,
-        gradient_accumulation_steps=4,
-        learning_rate=args.learning_rate,
-        lr_scheduler_type="cosine",
-        warmup_steps=warmup_steps,
-        logging_steps=logging_steps,
-        save_steps=args.save_steps,
-        eval_strategy="steps",
-        eval_steps=args.eval_steps,
-        save_total_limit=args.save_total_limit,
-        bf16=True,
-        seed=args.seed,
-        report_to=[],
-        remove_unused_columns=False,
-    )
+    sft_parameters = inspect.signature(SFTConfig).parameters
+    sft_config_kwargs: dict[str, Any] = {
+        "output_dir": str(args.output_dir),
+        "max_steps": args.max_steps,
+        "per_device_train_batch_size": 1,
+        "gradient_accumulation_steps": 4,
+        "learning_rate": args.learning_rate,
+        "lr_scheduler_type": "cosine",
+        "warmup_steps": warmup_steps,
+        "logging_steps": logging_steps,
+        "save_steps": args.save_steps,
+        "eval_steps": args.eval_steps,
+        "save_total_limit": args.save_total_limit,
+        "bf16": True,
+        "seed": args.seed,
+        "report_to": [],
+        "remove_unused_columns": False,
+    }
+    if "eval_strategy" in sft_parameters:
+        sft_config_kwargs["eval_strategy"] = "steps"
+    elif "evaluation_strategy" in sft_parameters:
+        sft_config_kwargs["evaluation_strategy"] = "steps"
+    else:
+        raise RuntimeError("installed TRL SFTConfig has no supported evaluation-strategy option")
+    if "max_length" in sft_parameters:
+        sft_config_kwargs["max_length"] = args.max_seq_length
+    elif "max_seq_length" in sft_parameters:
+        sft_config_kwargs["max_seq_length"] = args.max_seq_length
+    else:
+        raise RuntimeError("installed TRL SFTConfig has no supported sequence-length option")
 
-    trainer = SFTTrainer(
-        model=model,
-        args=training_args,
-        train_dataset=train_ds,
-        eval_dataset=valid_ds,
-        processing_class=tokenizer,
+    training_args = SFTConfig(
+        **sft_config_kwargs,
     )
 
     resume = str(args.resume_from_checkpoint) if args.resume_from_checkpoint else None
+    resume_global_step: int | None = None
     if resume and not Path(resume).is_dir():
         print(f"error: resume checkpoint not found: {resume}", file=sys.stderr)
         return 1
+    if resume:
+        state_path = Path(resume) / "trainer_state.json"
+        if not state_path.is_file():
+            print(f"error: resume checkpoint has no trainer_state.json: {resume}", file=sys.stderr)
+            return 1
+        resume_state = json.loads(state_path.read_text(encoding="utf-8"))
+        resume_global_step = int(resume_state.get("global_step", -1))
+        if resume_global_step < 0 or resume_global_step >= args.max_steps:
+            print(
+                f"error: invalid resume global_step={resume_global_step} for max_steps={args.max_steps}",
+                file=sys.stderr,
+            )
+            return 1
+
+    trainer_kwargs: dict[str, Any] = {
+        "model": model,
+        "args": training_args,
+        "train_dataset": train_ds,
+        "eval_dataset": valid_ds,
+    }
+    trainer_parameters = inspect.signature(SFTTrainer).parameters
+    if "processing_class" in trainer_parameters:
+        trainer_kwargs["processing_class"] = tokenizer
+    elif "tokenizer" in trainer_parameters:
+        trainer_kwargs["tokenizer"] = tokenizer
+    else:
+        raise RuntimeError("installed TRL SFTTrainer accepts neither processing_class nor tokenizer")
+
+    trainer = SFTTrainer(**trainer_kwargs)
     trainer.train(resume_from_checkpoint=resume)
 
     checkpoint_rows: list[dict[str, Any]] = []
@@ -184,6 +224,23 @@ def main(argv: list[str] | None = None) -> int:
         "output_dir": str(args.output_dir),
         "best_val_loss": best_val,
         "checkpoints": sorted(checkpoint_rows, key=lambda r: r["step"]),
+        "training_config": {
+            "max_steps": args.max_steps,
+            "save_steps": args.save_steps,
+            "eval_steps": args.eval_steps,
+            "max_seq_length": args.max_seq_length,
+            "lora_rank": args.lora_rank,
+            "lora_alpha": args.lora_rank * 2,
+            "learning_rate": args.learning_rate,
+            "seed": args.seed,
+            "resume_from_checkpoint": resume,
+            "resume_global_step": resume_global_step,
+            "final_global_step": int(trainer.state.global_step),
+        },
+        "package_versions": {
+            name: importlib.metadata.version(name)
+            for name in ("torch", "transformers", "trl", "peft", "bitsandbytes", "datasets")
+        },
     }
     metrics_path = args.log_dir / "trainer_metrics.json"
     metrics_path.write_text(json.dumps(metrics_payload, indent=2, sort_keys=True) + "\n", encoding="utf-8")

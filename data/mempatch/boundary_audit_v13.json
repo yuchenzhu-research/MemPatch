@@ -4,48 +4,43 @@
     "total_collision_groups": 0,
     "ask_escalate_shared_signature_count": 0,
     "non_answer_public_view_collision_count": 0,
-    "normalized_public_view_template_count": 90,
+    "normalized_public_view_template_count": 54,
     "split_template_overlap": {
-      "test ∩ train": 0,
-      "test ∩ validation": 0,
-      "train ∩ validation": 0
+      "test ∩ train": 0
     },
     "templates_per_decision": {
-      "use_current_memory": 15,
-      "escalate": 15,
-      "ask_clarification": 20,
-      "refuse_due_to_policy": 10,
-      "mark_unresolved": 30
+      "use_current_memory": 9,
+      "escalate": 9,
+      "ask_clarification": 12,
+      "refuse_due_to_policy": 6,
+      "mark_unresolved": 18
     },
     "templates_per_decision_variant": {
-      "ambiguous_scope_no_verified_ruling": 5,
-      "ci_contradiction_independent": 5,
-      "ci_monitor_gap": 5,
-      "compliance_block_with_sufficient_evidence": 5,
-      "compliance_do_not_store": 5,
-      "credential_forbidden_write": 5,
-      "dual_verified_no_policy_gate": 5,
-      "duplicate_ticket_assumed_fixed": 5,
-      "human_review_gate_active": 5,
-      "missing_target_on_update_request": 5,
-      "multiple_matching_memories": 5,
-      "passive_monitor_gap": 5,
-      "protected_prod_memory": 5,
-      "trust_chain_broken": 5,
-      "user_intent_ambiguous_action": 5,
-      "verified_auditor_signoff": 5,
-      "verified_maintainer_overrides_user": 5,
-      "verified_release_confirms_stable": 5
+      "ambiguous_scope_no_verified_ruling": 3,
+      "ci_contradiction_independent": 3,
+      "ci_monitor_gap": 3,
+      "compliance_block_with_sufficient_evidence": 3,
+      "compliance_do_not_store": 3,
+      "credential_forbidden_write": 3,
+      "dual_verified_no_policy_gate": 3,
+      "duplicate_ticket_assumed_fixed": 3,
+      "human_review_gate_active": 3,
+      "missing_target_on_update_request": 3,
+      "multiple_matching_memories": 3,
+      "passive_monitor_gap": 3,
+      "protected_prod_memory": 3,
+      "trust_chain_broken": 3,
+      "user_intent_ambiguous_action": 3,
+      "verified_auditor_signoff": 3,
+      "verified_maintainer_overrides_user": 3,
+      "verified_release_confirms_stable": 3
     },
     "fatal_issues": [],
     "jaccard_warn_threshold": 0.35,
     "pattern_decision_split_matrix": {
       "decision_variant:ambiguous_scope_no_verified_ruling": {
         "train": {
-          "ask_clarification": 150
-        },
-        "validation": {
-          "ask_clarification": 25
+          "ask_clarification": 175
         },
         "test": {
           "ask_clarification": 25
@@ -53,10 +48,7 @@
       },
       "decision_variant:ci_contradiction_independent": {
         "train": {
-          "mark_unresolved": 100
-        },
-        "validation": {
-          "mark_unresolved": 25
+          "mark_unresolved": 125
         },
         "test": {
           "mark_unresolved": 16
@@ -64,10 +56,7 @@
       },
       "decision_variant:ci_monitor_gap": {
         "train": {
-          "mark_unresolved": 100
-        },
-        "validation": {
-          "mark_unresolved": 25
+          "mark_unresolved": 125
         },
         "test": {
           "mark_unresolved": 16
@@ -75,10 +64,7 @@
       },
       "decision_variant:compliance_block_with_sufficient_evidence": {
         "train": {
-          "escalate": 200
-        },
-        "validation": {
-          "escalate": 25
+          "escalate": 225
         },
         "test": {
           "escalate": 25
@@ -86,10 +72,7 @@
       },
       "decision_variant:compliance_do_not_store": {
         "train": {
-          "refuse_due_to_policy": 150
-        },
-        "validation": {
-          "refuse_due_to_policy": 37
+          "refuse_due_to_policy": 187
         },
         "test": {
           "refuse_due_to_policy": 37
@@ -97,10 +80,7 @@
       },
       "decision_variant:credential_forbidden_write": {
         "train": {
-          "refuse_due_to_policy": 150
-        },
-        "validation": {
-          "refuse_due_to_policy": 38
+          "refuse_due_to_policy": 188
         },
         "test": {
           "refuse_due_to_policy": 38
@@ -108,10 +88,7 @@
       },
       "decision_variant:dual_verified_no_policy_gate": {
         "train": {
-          "mark_unresolved": 100
-        },
-        "validation": {
-          "mark_unresolved": 25
+          "mark_unresolved": 125
         },
         "test": {
           "mark_unresolved": 17
@@ -119,10 +96,7 @@
       },
       "decision_variant:duplicate_ticket_assumed_fixed": {
         "train": {
-          "mark_unresolved": 100
-        },
-        "validation": {
-          "mark_unresolved": 25
+          "mark_unresolved": 125
         },
         "test": {
           "mark_unresolved": 17
@@ -130,10 +104,7 @@
       },
       "decision_variant:human_review_gate_active": {
         "train": {
-          "escalate": 200
-        },
-        "validation": {
-          "escalate": 25
+          "escalate": 225
         },
         "test": {
           "escalate": 25
@@ -141,10 +112,7 @@
       },
       "decision_variant:missing_target_on_update_request": {
         "train": {
-          "ask_clarification": 150
-        },
-        "validation": {
-          "ask_clarification": 25
+          "ask_clarification": 175
         },
         "test": {
           "ask_clarification": 25
@@ -152,10 +120,7 @@
       },
       "decision_variant:multiple_matching_memories": {
         "train": {
-          "ask_clarification": 150
-        },
-        "validation": {
-          "ask_clarification": 25
+          "ask_clarification": 175
         },
         "test": {
           "ask_clarification": 25
@@ -163,10 +128,7 @@
       },
       "decision_variant:passive_monitor_gap": {
         "train": {
-          "mark_unresolved": 100
-        },
-        "validation": {
-          "mark_unresolved": 25
+          "mark_unresolved": 125
         },
         "test": {
           "mark_unresolved": 17
@@ -174,10 +136,7 @@
       },
       "decision_variant:protected_prod_memory": {
         "train": {
-          "escalate": 200
-        },
-        "validation": {
-          "escalate": 25
+          "escalate": 225
         },
         "test": {
           "escalate": 25
@@ -185,10 +144,7 @@
       },
       "decision_variant:trust_chain_broken": {
         "train": {
-          "mark_unresolved": 100
-        },
-        "validation": {
-          "mark_unresolved": 25
+          "mark_unresolved": 125
         },
         "test": {
           "mark_unresolved": 17
@@ -196,10 +152,7 @@
       },
       "decision_variant:user_intent_ambiguous_action": {
         "train": {
-          "ask_clarification": 150
-        },
-        "validation": {
-          "ask_clarification": 25
+          "ask_clarification": 175
         },
         "test": {
           "ask_clarification": 25
@@ -207,10 +160,7 @@
       },
       "decision_variant:verified_auditor_signoff": {
         "train": {
-          "use_current_memory": 200
-        },
-        "validation": {
-          "use_current_memory": 133
+          "use_current_memory": 333
         },
         "test": {
           "use_current_memory": 50
@@ -218,10 +168,7 @@
       },
       "decision_variant:verified_maintainer_overrides_user": {
         "train": {
-          "use_current_memory": 200
-        },
-        "validation": {
-          "use_current_memory": 134
+          "use_current_memory": 334
         },
         "test": {
           "use_current_memory": 50
@@ -229,10 +176,7 @@
       },
       "decision_variant:verified_release_confirms_stable": {
         "train": {
-          "use_current_memory": 200
-        },
-        "validation": {
-          "use_current_memory": 133
+          "use_current_memory": 333
         },
         "test": {
           "use_current_memory": 50
@@ -240,14 +184,9 @@
       },
       "pattern:authority_conflict": {
         "train": {
-          "escalate": 200,
-          "ask_clarification": 150,
-          "mark_unresolved": 100
-        },
-        "validation": {
-          "escalate": 25,
-          "ask_clarification": 25,
-          "mark_unresolved": 25
+          "escalate": 225,
+          "ask_clarification": 175,
+          "mark_unresolved": 125
         },
         "test": {
           "escalate": 25,
@@ -257,12 +196,8 @@
       },
       "pattern:ci_failed_after_claim": {
         "train": {
-          "escalate": 200,
-          "mark_unresolved": 200
-        },
-        "validation": {
-          "escalate": 25,
-          "mark_unresolved": 50
+          "escalate": 225,
+          "mark_unresolved": 250
         },
         "test": {
           "escalate": 25,
@@ -271,12 +206,8 @@
       },
       "pattern:closed_as_duplicate_not_fixed": {
         "train": {
-          "ask_clarification": 150,
-          "mark_unresolved": 100
-        },
-        "validation": {
-          "ask_clarification": 25,
-          "mark_unresolved": 25
+          "ask_clarification": 175,
+          "mark_unresolved": 125
         },
         "test": {
           "ask_clarification": 25,
@@ -285,12 +216,8 @@
       },
       "pattern:label_state_mismatch": {
         "train": {
-          "use_current_memory": 200,
-          "refuse_due_to_policy": 150
-        },
-        "validation": {
-          "use_current_memory": 133,
-          "refuse_due_to_policy": 37
+          "use_current_memory": 333,
+          "refuse_due_to_policy": 187
         },
         "test": {
           "use_current_memory": 50,
@@ -299,12 +226,8 @@
       },
       "pattern:maintainer_correction_over_user_claim": {
         "train": {
-          "use_current_memory": 200,
-          "ask_clarification": 150
-        },
-        "validation": {
-          "use_current_memory": 134,
-          "ask_clarification": 25
+          "use_current_memory": 334,
+          "ask_clarification": 175
         },
         "test": {
           "use_current_memory": 50,
@@ -313,10 +236,7 @@
       },
       "pattern:negative_evidence_required": {
         "train": {
-          "mark_unresolved": 200
-        },
-        "validation": {
-          "mark_unresolved": 50
+          "mark_unresolved": 250
         },
         "test": {
           "mark_unresolved": 34
@@ -324,12 +244,8 @@
       },
       "pattern:security_policy_override": {
         "train": {
-          "escalate": 200,
-          "refuse_due_to_policy": 150
-        },
-        "validation": {
-          "escalate": 25,
-          "refuse_due_to_policy": 38
+          "escalate": 225,
+          "refuse_due_to_policy": 188
         },
         "test": {
           "escalate": 25,
@@ -338,12 +254,8 @@
       },
       "pattern:version_scope_leakage": {
         "train": {
-          "use_current_memory": 200,
-          "ask_clarification": 150
-        },
-        "validation": {
-          "use_current_memory": 133,
-          "ask_clarification": 25
+          "use_current_memory": 333,
+          "ask_clarification": 175
         },
         "test": {
           "use_current_memory": 50,
@@ -355,14 +267,14 @@
   "datasets": [
     {
       "split": "train",
-      "path": "local/data/mempatch/train/scenarios.jsonl",
-      "count": 2700,
+      "path": "/var/folders/sm/3mmgpjb95gsdxq8wjrxhpv540000gn/T/mempatch_audit_w856wzvy/train/scenarios.jsonl",
+      "count": 3500,
       "decision_counts": {
-        "use_current_memory": 600,
-        "escalate": 600,
-        "ask_clarification": 600,
-        "refuse_due_to_policy": 300,
-        "mark_unresolved": 600
+        "use_current_memory": 1000,
+        "escalate": 675,
+        "ask_clarification": 700,
+        "refuse_due_to_policy": 375,
+        "mark_unresolved": 750
       },
       "extra_decisions": {},
       "core_event_signature_collisions": [],
@@ -375,227 +287,227 @@
       "pattern_tables": {
         "pattern": {
           "authority_conflict": {
-            "escalate": 200,
-            "ask_clarification": 150,
-            "mark_unresolved": 100
+            "escalate": 225,
+            "ask_clarification": 175,
+            "mark_unresolved": 125
           },
           "ci_failed_after_claim": {
-            "escalate": 200,
-            "mark_unresolved": 200
+            "escalate": 225,
+            "mark_unresolved": 250
           },
           "closed_as_duplicate_not_fixed": {
-            "ask_clarification": 150,
-            "mark_unresolved": 100
+            "ask_clarification": 175,
+            "mark_unresolved": 125
           },
           "label_state_mismatch": {
-            "use_current_memory": 200,
-            "refuse_due_to_policy": 150
+            "use_current_memory": 333,
+            "refuse_due_to_policy": 187
           },
           "maintainer_correction_over_user_claim": {
-            "use_current_memory": 200,
-            "ask_clarification": 150
+            "use_current_memory": 334,
+            "ask_clarification": 175
           },
           "negative_evidence_required": {
-            "mark_unresolved": 200
+            "mark_unresolved": 250
           },
           "security_policy_override": {
-            "escalate": 200,
-            "refuse_due_to_policy": 150
+            "escalate": 225,
+            "refuse_due_to_policy": 188
           },
           "version_scope_leakage": {
-            "use_current_memory": 200,
-            "ask_clarification": 150
+            "use_current_memory": 333,
+            "ask_clarification": 175
           }
         },
         "pattern_trap_type": {
           "apply_fix_unspecified": {
-            "ask_clarification": 150
+            "ask_clarification": 175
           },
           "auditor_confirms_current": {
-            "use_current_memory": 200
+            "use_current_memory": 333
           },
           "beta_distractor_ignored": {
-            "use_current_memory": 200
+            "use_current_memory": 333
           },
           "bi_compliance_refusal": {
-            "refuse_due_to_policy": 150
+            "refuse_due_to_policy": 187
           },
           "ci_passive_gap": {
-            "mark_unresolved": 100
+            "mark_unresolved": 125
           },
           "ci_verified_contradiction": {
-            "mark_unresolved": 100
+            "mark_unresolved": 125
           },
           "compliance_blocks_despite_evidence": {
-            "escalate": 200
+            "escalate": 225
           },
           "crm_record_ambiguity": {
-            "ask_clarification": 150
+            "ask_clarification": 175
           },
           "duplicate_closure_trap": {
-            "mark_unresolved": 100
+            "mark_unresolved": 125
           },
           "no_authority_path": {
-            "mark_unresolved": 100
+            "mark_unresolved": 125
           },
           "no_passive_confirmation": {
-            "mark_unresolved": 100
+            "mark_unresolved": 125
           },
           "prod_memory_policy_gate": {
-            "escalate": 200
+            "escalate": 225
           },
           "reviewer_hold_blocks_auto_write": {
-            "escalate": 200
+            "escalate": 225
           },
           "secret_in_memory_request": {
-            "refuse_due_to_policy": 150
+            "refuse_due_to_policy": 188
           },
           "stable_beta_both_active": {
-            "ask_clarification": 150
+            "ask_clarification": 175
           },
           "trust_verified_maintainer": {
-            "use_current_memory": 200
+            "use_current_memory": 334
           },
           "user_update_without_target": {
-            "ask_clarification": 150
+            "ask_clarification": 175
           },
           "verified_sources_disagree": {
-            "mark_unresolved": 100
+            "mark_unresolved": 125
           }
         },
         "decision_variant": {
           "ambiguous_scope_no_verified_ruling": {
-            "ask_clarification": 150
+            "ask_clarification": 175
           },
           "ci_contradiction_independent": {
-            "mark_unresolved": 100
+            "mark_unresolved": 125
           },
           "ci_monitor_gap": {
-            "mark_unresolved": 100
+            "mark_unresolved": 125
           },
           "compliance_block_with_sufficient_evidence": {
-            "escalate": 200
+            "escalate": 225
           },
           "compliance_do_not_store": {
-            "refuse_due_to_policy": 150
+            "refuse_due_to_policy": 187
           },
           "credential_forbidden_write": {
-            "refuse_due_to_policy": 150
+            "refuse_due_to_policy": 188
           },
           "dual_verified_no_policy_gate": {
-            "mark_unresolved": 100
+            "mark_unresolved": 125
           },
           "duplicate_ticket_assumed_fixed": {
-            "mark_unresolved": 100
+            "mark_unresolved": 125
           },
           "human_review_gate_active": {
-            "escalate": 200
+            "escalate": 225
           },
           "missing_target_on_update_request": {
-            "ask_clarification": 150
+            "ask_clarification": 175
           },
           "multiple_matching_memories": {
-            "ask_clarification": 150
+            "ask_clarification": 175
           },
           "passive_monitor_gap": {
-            "mark_unresolved": 100
+            "mark_unresolved": 125
           },
           "protected_prod_memory": {
-            "escalate": 200
+            "escalate": 225
           },
           "trust_chain_broken": {
-            "mark_unresolved": 100
+            "mark_unresolved": 125
           },
           "user_intent_ambiguous_action": {
-            "ask_clarification": 150
+            "ask_clarification": 175
           },
           "verified_auditor_signoff": {
-            "use_current_memory": 200
+            "use_current_memory": 333
           },
           "verified_maintainer_overrides_user": {
-            "use_current_memory": 200
+            "use_current_memory": 334
           },
           "verified_release_confirms_stable": {
-            "use_current_memory": 200
+            "use_current_memory": 333
           }
         },
         "decision_triggers": {
           "['ambiguous_user_intent', 'missing_target_scope']": {
-            "ask_clarification": 150
+            "ask_clarification": 175
           },
           "['ambiguous_workspace', 'ambiguous_user_intent']": {
-            "ask_clarification": 150
+            "ask_clarification": 175
           },
           "['assume_duplicate_means_fixed']": {
-            "mark_unresolved": 100
+            "mark_unresolved": 125
           },
           "['ci_passive_monitor_gap']": {
-            "mark_unresolved": 100
+            "mark_unresolved": 125
           },
           "['ci_second_verified_contradiction']": {
-            "mark_unresolved": 100
+            "mark_unresolved": 125
           },
           "['compliance_do_not_store']": {
-            "refuse_due_to_policy": 150
+            "refuse_due_to_policy": 187
           },
           "['credential_secret_forbidden', 'security_policy_forbids_storage']": {
-            "refuse_due_to_policy": 150
+            "refuse_due_to_policy": 188
           },
           "['mark_insufficient_passive']": {
-            "mark_unresolved": 100
+            "mark_unresolved": 125
           },
           "['mark_stalemate_no_authority']": {
-            "mark_unresolved": 100
+            "mark_unresolved": 125
           },
           "['mark_verified_conflict']": {
-            "mark_unresolved": 100
+            "mark_unresolved": 125
           },
           "['missing_target_scope', 'explicit_hold_for_user']": {
-            "ask_clarification": 150
+            "ask_clarification": 175
           },
           "['multiple_candidate_memories']": {
-            "ask_clarification": 150
+            "ask_clarification": 175
           },
           "['policy_human_review_required', 'verified_reviewer_hold']": {
-            "escalate": 200
+            "escalate": 225
           },
           "['protected_production_memory', 'policy_human_review_required']": {
-            "escalate": 200
+            "escalate": 225
           },
           "['security_compliance_block', 'evidence_sufficient_but_policy_blocks']": {
-            "escalate": 200
+            "escalate": 225
           },
           "['verified_auditor_confirms', 'stable_scope_matches_target']": {
-            "use_current_memory": 200
+            "use_current_memory": 333
           },
           "['verified_ci_release_confirms', 'distractor_beta_out_of_scope']": {
-            "use_current_memory": 200
+            "use_current_memory": 333
           },
           "['verified_maintainer_confirms', 'stable_scope_matches_target']": {
-            "use_current_memory": 200
+            "use_current_memory": 334
           }
         }
       },
       "decision_triggers_coverage": {
         "ask_clarification": {
-          "with_metadata": 600,
-          "with_public_trigger": 600,
-          "total": 600
+          "with_metadata": 700,
+          "with_public_trigger": 700,
+          "total": 700
         },
         "escalate": {
-          "with_metadata": 600,
-          "with_public_trigger": 600,
-          "total": 600
+          "with_metadata": 675,
+          "with_public_trigger": 675,
+          "total": 675
         },
         "mark_unresolved": {
-          "with_metadata": 600,
-          "with_public_trigger": 600,
-          "total": 600
+          "with_metadata": 750,
+          "with_public_trigger": 750,
+          "total": 750
         }
       },
       "mark_unresolved_breakdown": {
-        "ci_derived": 200,
-        "non_ci": 400
+        "ci_derived": 250,
+        "non_ci": 500
       },
       "gold_public_consistency_violations": [],
       "public_marker_leakage_violations": [],
@@ -792,446 +704,8 @@
       "top_public_view_collisions": []
     },
     {
-      "split": "validation",
-      "path": "local/data/mempatch/validation/scenarios.jsonl",
-      "count": 800,
-      "decision_counts": {
-        "use_current_memory": 400,
-        "escalate": 75,
-        "ask_clarification": 100,
-        "refuse_due_to_policy": 75,
-        "mark_unresolved": 150
-      },
-      "extra_decisions": {},
-      "core_event_signature_collisions": [],
-      "non_answer_decision_collisions": [],
-      "public_view_collisions": [],
-      "non_answer_public_view_collisions": [],
-      "ask_escalate_bigram_jaccard": 0.23278688524590163,
-      "ask_escalate_jaccard_flags": [],
-      "ask_escalate_shared_signatures": [],
-      "pattern_tables": {
-        "pattern": {
-          "authority_conflict": {
-            "escalate": 25,
-            "ask_clarification": 25,
-            "mark_unresolved": 25
-          },
-          "ci_failed_after_claim": {
-            "escalate": 25,
-            "mark_unresolved": 50
-          },
-          "closed_as_duplicate_not_fixed": {
-            "ask_clarification": 25,
-            "mark_unresolved": 25
-          },
-          "label_state_mismatch": {
-            "use_current_memory": 133,
-            "refuse_due_to_policy": 37
-          },
-          "maintainer_correction_over_user_claim": {
-            "use_current_memory": 134,
-            "ask_clarification": 25
-          },
-          "negative_evidence_required": {
-            "mark_unresolved": 50
-          },
-          "security_policy_override": {
-            "escalate": 25,
-            "refuse_due_to_policy": 38
-          },
-          "version_scope_leakage": {
-            "use_current_memory": 133,
-            "ask_clarification": 25
-          }
-        },
-        "pattern_trap_type": {
-          "apply_fix_unspecified": {
-            "ask_clarification": 25
-          },
-          "auditor_confirms_current": {
-            "use_current_memory": 133
-          },
-          "beta_distractor_ignored": {
-            "use_current_memory": 133
-          },
-          "bi_compliance_refusal": {
-            "refuse_due_to_policy": 37
-          },
-          "ci_passive_gap": {
-            "mark_unresolved": 25
-          },
-          "ci_verified_contradiction": {
-            "mark_unresolved": 25
-          },
-          "compliance_blocks_despite_evidence": {
-            "escalate": 25
-          },
-          "crm_record_ambiguity": {
-            "ask_clarification": 25
-          },
-          "duplicate_closure_trap": {
-            "mark_unresolved": 25
-          },
-          "no_authority_path": {
-            "mark_unresolved": 25
-          },
-          "no_passive_confirmation": {
-            "mark_unresolved": 25
-          },
-          "prod_memory_policy_gate": {
-            "escalate": 25
-          },
-          "reviewer_hold_blocks_auto_write": {
-            "escalate": 25
-          },
-          "secret_in_memory_request": {
-            "refuse_due_to_policy": 38
-          },
-          "stable_beta_both_active": {
-            "ask_clarification": 25
-          },
-          "trust_verified_maintainer": {
-            "use_current_memory": 134
-          },
-          "user_update_without_target": {
-            "ask_clarification": 25
-          },
-          "verified_sources_disagree": {
-            "mark_unresolved": 25
-          }
-        },
-        "decision_variant": {
-          "ambiguous_scope_no_verified_ruling": {
-            "ask_clarification": 25
-          },
-          "ci_contradiction_independent": {
-            "mark_unresolved": 25
-          },
-          "ci_monitor_gap": {
-            "mark_unresolved": 25
-          },
-          "compliance_block_with_sufficient_evidence": {
-            "escalate": 25
-          },
-          "compliance_do_not_store": {
-            "refuse_due_to_policy": 37
-          },
-          "credential_forbidden_write": {
-            "refuse_due_to_policy": 38
-          },
-          "dual_verified_no_policy_gate": {
-            "mark_unresolved": 25
-          },
-          "duplicate_ticket_assumed_fixed": {
-            "mark_unresolved": 25
-          },
-          "human_review_gate_active": {
-            "escalate": 25
-          },
-          "missing_target_on_update_request": {
-            "ask_clarification": 25
-          },
-          "multiple_matching_memories": {
-            "ask_clarification": 25
-          },
-          "passive_monitor_gap": {
-            "mark_unresolved": 25
-          },
-          "protected_prod_memory": {
-            "escalate": 25
-          },
-          "trust_chain_broken": {
-            "mark_unresolved": 25
-          },
-          "user_intent_ambiguous_action": {
-            "ask_clarification": 25
-          },
-          "verified_auditor_signoff": {
-            "use_current_memory": 133
-          },
-          "verified_maintainer_overrides_user": {
-            "use_current_memory": 134
-          },
-          "verified_release_confirms_stable": {
-            "use_current_memory": 133
-          }
-        },
-        "decision_triggers": {
-          "['ambiguous_user_intent', 'missing_target_scope']": {
-            "ask_clarification": 25
-          },
-          "['ambiguous_workspace', 'ambiguous_user_intent']": {
-            "ask_clarification": 25
-          },
-          "['assume_duplicate_means_fixed']": {
-            "mark_unresolved": 25
-          },
-          "['ci_passive_monitor_gap']": {
-            "mark_unresolved": 25
-          },
-          "['ci_second_verified_contradiction']": {
-            "mark_unresolved": 25
-          },
-          "['compliance_do_not_store']": {
-            "refuse_due_to_policy": 37
-          },
-          "['credential_secret_forbidden', 'security_policy_forbids_storage']": {
-            "refuse_due_to_policy": 38
-          },
-          "['mark_insufficient_passive']": {
-            "mark_unresolved": 25
-          },
-          "['mark_stalemate_no_authority']": {
-            "mark_unresolved": 25
-          },
-          "['mark_verified_conflict']": {
-            "mark_unresolved": 25
-          },
-          "['missing_target_scope', 'explicit_hold_for_user']": {
-            "ask_clarification": 25
-          },
-          "['multiple_candidate_memories']": {
-            "ask_clarification": 25
-          },
-          "['policy_human_review_required', 'verified_reviewer_hold']": {
-            "escalate": 25
-          },
-          "['protected_production_memory', 'policy_human_review_required']": {
-            "escalate": 25
-          },
-          "['security_compliance_block', 'evidence_sufficient_but_policy_blocks']": {
-            "escalate": 25
-          },
-          "['verified_auditor_confirms', 'stable_scope_matches_target']": {
-            "use_current_memory": 133
-          },
-          "['verified_ci_release_confirms', 'distractor_beta_out_of_scope']": {
-            "use_current_memory": 133
-          },
-          "['verified_maintainer_confirms', 'stable_scope_matches_target']": {
-            "use_current_memory": 134
-          }
-        }
-      },
-      "decision_triggers_coverage": {
-        "ask_clarification": {
-          "with_metadata": 100,
-          "with_public_trigger": 100,
-          "total": 100
-        },
-        "escalate": {
-          "with_metadata": 75,
-          "with_public_trigger": 75,
-          "total": 75
-        },
-        "mark_unresolved": {
-          "with_metadata": 150,
-          "with_public_trigger": 150,
-          "total": 150
-        }
-      },
-      "mark_unresolved_breakdown": {
-        "ci_derived": 50,
-        "non_ci": 100
-      },
-      "gold_public_consistency_violations": [],
-      "public_marker_leakage_violations": [],
-      "normalized_public_view_template_count": 36,
-      "normalized_public_view_template_hashes": [
-        "06043d0d5e4da0245f07e50e39d05eccaf7da242a9b8c99f497f9dca3e09aafd",
-        "1634fda57c889866ceb61746f716acf2929294eac6b8953641c7616b7a9ed07b",
-        "170d98379671c69e78c6ae3ef932f823d93c32517eb29c8b4228362ef0bf75fa",
-        "1883f9dc5b0a159733b38a96853105e39bcc4965ae5b378e81e2ce1adc0ab11d",
-        "1cd1a65a65724185568995079574b4d6b89fae9eab12ab16a4fa9f9a50000138",
-        "29a441d37241fbeda09199afa22003ced6535be92c079c3d3262aa98097a05c1",
-        "32b1164b8c5ad2438b7f89ab28387a22aa2444eeda7e13747d406c5306c9d833",
-        "37799025900ab5bc6f368f57c0365b92c10142da240b70868dedc87ac4160d0f",
-        "37cefb938b7900688cce17670d1549fbea689e52c8ee1747ba5cf3affc0948a1",
-        "3adcd3a3a8e449a9bebe5f79c4c7b062f2327457db8f292f9ab5dc318895e1bc",
-        "3c903af2a030a0a2aef83f05bf1ece1596bb7c5541727afe3880255d788a4e8f",
-        "43fffcbe06e27401d877bc9ae6d6be5e3a6f59fc8574ce0439b081c69bd6d825",
-        "4a909404798737394b669e0a5e22f2b10ba19febcde75fab98e8ecc8ac63d937",
-        "4ee8757d2afa14d1b968885dc68ddbdad10a6da6c10f446d2836fbd81f141ce5",
-        "4fd86705a6c7fb0af21cc69b10b0edc89564fe5ebb38c07e0fb49e89c91238de",
-        "609f66e0b6621b2df42595ee9c13e2d4bc0f76b0dc46fbc71284c02415c4616f",
-        "680627a4f18c69ee6505e68b6ad179df1a65ee1a3153f2b19b68da192a909c08",
-        "691455bb51938c3204c908ded747c9b113db9aed506eb3bd0adae6584aba051d",
-        "787aff814ea00151cd7272a7b096f499787206cd05f562d1c2daa4acb4205167",
-        "7df79477fd2594d7c958bcbdcc718f2d38b4edd1738bc1df33d208a74fc73c0c",
-        "81120840478103ffeb7238b9eb4696029b0bbad57c34519e65c490885e602094",
-        "84b46b467e040b3c5d938c925a0d6492445b2e1d5f78422ea6aed01b476f93bf",
-        "954d1df422029099ef49b30ccb64488cf11d206bb569bc1f5ff48497cd8234c1",
-        "99b19f0affbe57a539ff27443012d644be77d762111bf7f391adca45e59bb9cb",
-        "9d99afee93daabe8bec73c9c9c545e9e90b1b71576b9bbd63e697ff90971a5e7",
-        "a17890176299c13cfa11bbbf7827a765989596fcf57151413a4692d062ebf07e",
-        "ab5365811126ff98b13e1804480b8f5a9e01de79e577b15d71d27d8ee070edbf",
-        "b60a2ddb50e91412731ffcb06453eabbfbd55464753fcfe258740da3c68d2a17",
-        "c5ac58833289e71511aee9167823c59b09362fc902e6c2050d1ae38be7b691e2",
-        "c92da836eec4cf2fa6bd49f7aa4d6f98626a8e5d26587fbaebc3e72990493288",
-        "db797d7976626191b323fb105ab630abac6811cc20a6982bdcb47763e52652b1",
-        "dbcc537a0f1d2c5db60fbcc8d00bcdb0b11ce392b428808d78a29c6509a6d30f",
-        "e429cdd6a6fe8b247f4fbcc2495edb190ace9e5166f94f6c96bcaf7720320e1c",
-        "e5d9b80b8467dfd825dfdc3b3de0ec4c1eb688f1df0014b8a59d6add35f922a8",
-        "efdc231acb44ae8f63b5d1cb5575407d089054b643dd8a9814d3801fa15dc573",
-        "f1333c3558ad97d5ee0415c2cd8337448d39397dd754b5c4ed3ad5ebc85447f3"
-      ],
-      "templates_per_decision": {
-        "use_current_memory": 6,
-        "escalate": 6,
-        "ask_clarification": 8,
-        "refuse_due_to_policy": 4,
-        "mark_unresolved": 12
-      },
-      "template_hashes_by_decision": {
-        "use_current_memory": [
-          "29a441d37241fbeda09199afa22003ced6535be92c079c3d3262aa98097a05c1",
-          "3adcd3a3a8e449a9bebe5f79c4c7b062f2327457db8f292f9ab5dc318895e1bc",
-          "4ee8757d2afa14d1b968885dc68ddbdad10a6da6c10f446d2836fbd81f141ce5",
-          "7df79477fd2594d7c958bcbdcc718f2d38b4edd1738bc1df33d208a74fc73c0c",
-          "a17890176299c13cfa11bbbf7827a765989596fcf57151413a4692d062ebf07e",
-          "db797d7976626191b323fb105ab630abac6811cc20a6982bdcb47763e52652b1"
-        ],
-        "escalate": [
-          "37799025900ab5bc6f368f57c0365b92c10142da240b70868dedc87ac4160d0f",
-          "81120840478103ffeb7238b9eb4696029b0bbad57c34519e65c490885e602094",
-          "9d99afee93daabe8bec73c9c9c545e9e90b1b71576b9bbd63e697ff90971a5e7",
-          "ab5365811126ff98b13e1804480b8f5a9e01de79e577b15d71d27d8ee070edbf",
-          "b60a2ddb50e91412731ffcb06453eabbfbd55464753fcfe258740da3c68d2a17",
-          "c5ac58833289e71511aee9167823c59b09362fc902e6c2050d1ae38be7b691e2"
-        ],
-        "ask_clarification": [
-          "680627a4f18c69ee6505e68b6ad179df1a65ee1a3153f2b19b68da192a909c08",
-          "691455bb51938c3204c908ded747c9b113db9aed506eb3bd0adae6584aba051d",
-          "787aff814ea00151cd7272a7b096f499787206cd05f562d1c2daa4acb4205167",
-          "99b19f0affbe57a539ff27443012d644be77d762111bf7f391adca45e59bb9cb",
-          "c92da836eec4cf2fa6bd49f7aa4d6f98626a8e5d26587fbaebc3e72990493288",
-          "e429cdd6a6fe8b247f4fbcc2495edb190ace9e5166f94f6c96bcaf7720320e1c",
-          "e5d9b80b8467dfd825dfdc3b3de0ec4c1eb688f1df0014b8a59d6add35f922a8",
-          "f1333c3558ad97d5ee0415c2cd8337448d39397dd754b5c4ed3ad5ebc85447f3"
-        ],
-        "refuse_due_to_policy": [
-          "06043d0d5e4da0245f07e50e39d05eccaf7da242a9b8c99f497f9dca3e09aafd",
-          "1634fda57c889866ceb61746f716acf2929294eac6b8953641c7616b7a9ed07b",
-          "3c903af2a030a0a2aef83f05bf1ece1596bb7c5541727afe3880255d788a4e8f",
-          "609f66e0b6621b2df42595ee9c13e2d4bc0f76b0dc46fbc71284c02415c4616f"
-        ],
-        "mark_unresolved": [
-          "170d98379671c69e78c6ae3ef932f823d93c32517eb29c8b4228362ef0bf75fa",
-          "1883f9dc5b0a159733b38a96853105e39bcc4965ae5b378e81e2ce1adc0ab11d",
-          "1cd1a65a65724185568995079574b4d6b89fae9eab12ab16a4fa9f9a50000138",
-          "32b1164b8c5ad2438b7f89ab28387a22aa2444eeda7e13747d406c5306c9d833",
-          "37cefb938b7900688cce17670d1549fbea689e52c8ee1747ba5cf3affc0948a1",
-          "43fffcbe06e27401d877bc9ae6d6be5e3a6f59fc8574ce0439b081c69bd6d825",
-          "4a909404798737394b669e0a5e22f2b10ba19febcde75fab98e8ecc8ac63d937",
-          "4fd86705a6c7fb0af21cc69b10b0edc89564fe5ebb38c07e0fb49e89c91238de",
-          "84b46b467e040b3c5d938c925a0d6492445b2e1d5f78422ea6aed01b476f93bf",
-          "954d1df422029099ef49b30ccb64488cf11d206bb569bc1f5ff48497cd8234c1",
-          "dbcc537a0f1d2c5db60fbcc8d00bcdb0b11ce392b428808d78a29c6509a6d30f",
-          "efdc231acb44ae8f63b5d1cb5575407d089054b643dd8a9814d3801fa15dc573"
-        ]
-      },
-      "templates_per_decision_variant": {
-        "ambiguous_scope_no_verified_ruling": 2,
-        "ci_contradiction_independent": 2,
-        "ci_monitor_gap": 2,
-        "compliance_block_with_sufficient_evidence": 2,
-        "compliance_do_not_store": 2,
-        "credential_forbidden_write": 2,
-        "dual_verified_no_policy_gate": 2,
-        "duplicate_ticket_assumed_fixed": 2,
-        "human_review_gate_active": 2,
-        "missing_target_on_update_request": 2,
-        "multiple_matching_memories": 2,
-        "passive_monitor_gap": 2,
-        "protected_prod_memory": 2,
-        "trust_chain_broken": 2,
-        "user_intent_ambiguous_action": 2,
-        "verified_auditor_signoff": 2,
-        "verified_maintainer_overrides_user": 2,
-        "verified_release_confirms_stable": 2
-      },
-      "template_hashes_by_decision_variant": {
-        "ambiguous_scope_no_verified_ruling": [
-          "691455bb51938c3204c908ded747c9b113db9aed506eb3bd0adae6584aba051d",
-          "99b19f0affbe57a539ff27443012d644be77d762111bf7f391adca45e59bb9cb"
-        ],
-        "ci_contradiction_independent": [
-          "1883f9dc5b0a159733b38a96853105e39bcc4965ae5b378e81e2ce1adc0ab11d",
-          "37cefb938b7900688cce17670d1549fbea689e52c8ee1747ba5cf3affc0948a1"
-        ],
-        "ci_monitor_gap": [
-          "1cd1a65a65724185568995079574b4d6b89fae9eab12ab16a4fa9f9a50000138",
-          "4a909404798737394b669e0a5e22f2b10ba19febcde75fab98e8ecc8ac63d937"
-        ],
-        "compliance_block_with_sufficient_evidence": [
-          "37799025900ab5bc6f368f57c0365b92c10142da240b70868dedc87ac4160d0f",
-          "b60a2ddb50e91412731ffcb06453eabbfbd55464753fcfe258740da3c68d2a17"
-        ],
-        "compliance_do_not_store": [
-          "06043d0d5e4da0245f07e50e39d05eccaf7da242a9b8c99f497f9dca3e09aafd",
-          "1634fda57c889866ceb61746f716acf2929294eac6b8953641c7616b7a9ed07b"
-        ],
-        "credential_forbidden_write": [
-          "3c903af2a030a0a2aef83f05bf1ece1596bb7c5541727afe3880255d788a4e8f",
-          "609f66e0b6621b2df42595ee9c13e2d4bc0f76b0dc46fbc71284c02415c4616f"
-        ],
-        "dual_verified_no_policy_gate": [
-          "43fffcbe06e27401d877bc9ae6d6be5e3a6f59fc8574ce0439b081c69bd6d825",
-          "dbcc537a0f1d2c5db60fbcc8d00bcdb0b11ce392b428808d78a29c6509a6d30f"
-        ],
-        "duplicate_ticket_assumed_fixed": [
-          "4fd86705a6c7fb0af21cc69b10b0edc89564fe5ebb38c07e0fb49e89c91238de",
-          "efdc231acb44ae8f63b5d1cb5575407d089054b643dd8a9814d3801fa15dc573"
-        ],
-        "human_review_gate_active": [
-          "81120840478103ffeb7238b9eb4696029b0bbad57c34519e65c490885e602094",
-          "c5ac58833289e71511aee9167823c59b09362fc902e6c2050d1ae38be7b691e2"
-        ],
-        "missing_target_on_update_request": [
-          "c92da836eec4cf2fa6bd49f7aa4d6f98626a8e5d26587fbaebc3e72990493288",
-          "f1333c3558ad97d5ee0415c2cd8337448d39397dd754b5c4ed3ad5ebc85447f3"
-        ],
-        "multiple_matching_memories": [
-          "680627a4f18c69ee6505e68b6ad179df1a65ee1a3153f2b19b68da192a909c08",
-          "e5d9b80b8467dfd825dfdc3b3de0ec4c1eb688f1df0014b8a59d6add35f922a8"
-        ],
-        "passive_monitor_gap": [
-          "32b1164b8c5ad2438b7f89ab28387a22aa2444eeda7e13747d406c5306c9d833",
-          "954d1df422029099ef49b30ccb64488cf11d206bb569bc1f5ff48497cd8234c1"
-        ],
-        "protected_prod_memory": [
-          "9d99afee93daabe8bec73c9c9c545e9e90b1b71576b9bbd63e697ff90971a5e7",
-          "ab5365811126ff98b13e1804480b8f5a9e01de79e577b15d71d27d8ee070edbf"
-        ],
-        "trust_chain_broken": [
-          "170d98379671c69e78c6ae3ef932f823d93c32517eb29c8b4228362ef0bf75fa",
-          "84b46b467e040b3c5d938c925a0d6492445b2e1d5f78422ea6aed01b476f93bf"
-        ],
-        "user_intent_ambiguous_action": [
-          "787aff814ea00151cd7272a7b096f499787206cd05f562d1c2daa4acb4205167",
-          "e429cdd6a6fe8b247f4fbcc2495edb190ace9e5166f94f6c96bcaf7720320e1c"
-        ],
-        "verified_auditor_signoff": [
-          "29a441d37241fbeda09199afa22003ced6535be92c079c3d3262aa98097a05c1",
-          "7df79477fd2594d7c958bcbdcc718f2d38b4edd1738bc1df33d208a74fc73c0c"
-        ],
-        "verified_maintainer_overrides_user": [
-          "4ee8757d2afa14d1b968885dc68ddbdad10a6da6c10f446d2836fbd81f141ce5",
-          "db797d7976626191b323fb105ab630abac6811cc20a6982bdcb47763e52652b1"
-        ],
-        "verified_release_confirms_stable": [
-          "3adcd3a3a8e449a9bebe5f79c4c7b062f2327457db8f292f9ab5dc318895e1bc",
-          "a17890176299c13cfa11bbbf7827a765989596fcf57151413a4692d062ebf07e"
-        ]
-      },
-      "fatal_issues": [],
-      "top_collision_groups": [],
-      "top_public_view_collisions": []
-    },
-    {
       "split": "test",
-      "path": "local/data/mempatch/test/scenarios.jsonl",
+      "path": "/var/folders/sm/3mmgpjb95gsdxq8wjrxhpv540000gn/T/mempatch_audit_w856wzvy/test/scenarios.jsonl",
       "count": 500,
       "decision_counts": {
         "use_current_memory": 150,

@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
-# QLoRA train one k-fold.
+# QLoRA multitask train: Path B responses + Path A typed actions.
 #
-#   KFOLD_FOLD=0 SLUG=gemma3_12b bash scripts/linux/03_train_fold.sh
+#   SPLIT_INDEX=0 SLUG=gemma3_12b bash scripts/linux/03_train.sh
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 
 SLUG="${SLUG:?set SLUG}"
-KFOLD_FOLD="${KFOLD_FOLD:?set KFOLD_FOLD}"
+SPLIT_INDEX="${SPLIT_INDEX:-0}"
 HF_MODEL="$(resolve_hf_model "$SLUG")"
-SFT_DIR="$TRAIN_DATA_ROOT/${SLUG}_fold${KFOLD_FOLD}"
-OUT_DIR="$ADAPTER_ROOT/${SLUG}_pathB_lora/fold${KFOLD_FOLD}/${RUN_ID}"
-LOG_DIR="$LOG_ROOT/${SLUG}_fold${KFOLD_FOLD}/${RUN_ID}"
+SFT_DIR="$TRAIN_DATA_ROOT/${SLUG}_split${SPLIT_INDEX}"
+OUT_DIR="$ADAPTER_ROOT/${SLUG}_multitask_lora/split${SPLIT_INDEX}/${RUN_ID}"
+LOG_DIR="$LOG_ROOT/${SLUG}_split${SPLIT_INDEX}/${RUN_ID}"
 
 if [[ ! -f "$SFT_DIR/train.jsonl" ]]; then
-  echo "Missing $SFT_DIR/train.jsonl — run 02_prepare_kfold.sh first" >&2
+  echo "Missing $SFT_DIR/train.jsonl — run 02_prepare_split.sh first" >&2
   exit 1
 fi
 
@@ -28,7 +28,7 @@ TRAIN_ARGS=(
   --max-steps "$TRAIN_ITERS"
   --save-steps "$SAVE_EVERY"
   --eval-steps "$SAVE_EVERY"
-  --save-total-limit "${SAVE_TOTAL_LIMIT:-8}"
+  --save-total-limit "${SAVE_TOTAL_LIMIT:-4}"
   --seed "$SEED"
 )
 if [[ -n "${RESUME_FROM:-}" ]]; then

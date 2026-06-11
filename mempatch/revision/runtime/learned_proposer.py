@@ -76,12 +76,26 @@ def _view_payload(view: SharedCandidateView) -> dict[str, Any]:
         for bid, edges in view.dependency_edges_by_belief
     }
     return {
+        "query": view.query,
+        "as_of_evidence_id": view.new_evidence.evidence_id,
+        "evidence_context": [
+            {
+                "evidence_id": evidence.evidence_id,
+                "timestamp": evidence.timestamp,
+                "text": evidence.text,
+            }
+            for evidence in view.evidence_context
+        ],
         "new_evidence": {
             "evidence_id": view.new_evidence.evidence_id,
             "text": view.new_evidence.text,
         },
         "candidate_beliefs": [
-            {"belief_id": b.belief_id, "proposition": b.proposition}
+            {
+                "belief_id": b.belief_id,
+                "proposition": b.proposition,
+                "source_evidence_ids": list(b.source_evidence_ids),
+            }
             for b in view.candidate_beliefs
         ],
         "candidate_replacement_beliefs": [
@@ -97,10 +111,13 @@ def build_proposer_prompt(view: SharedCandidateView) -> str:
     payload = _view_payload(view)
     return (
         "You are the MemPatch Revision Module Response Policy (Step 2). Given the "
-        "revision view and new evidence, output ONLY a JSON array of typed patch "
+        "revision view and evidence ledger up to as_of_evidence_id, output ONLY a "
+        "JSON array of typed patch "
         "actions forming r_raw for DPA-Consistent Projection into a benchmark "
         "response (decision, memory_state, evidence_event_ids, failure_diagnosis).\n\n"
         f"{CANONICAL_ACTION_HELP}\n"
+        "Every evidence_id must be copied exactly from evidence_context. Use the "
+        "minimal supporting evidence set; never invent an ID.\n"
         "Each action object has keys: action_type, target_belief_id, "
         "target_condition_id, replacement_belief_id, evidence_ids, rationale.\n\n"
         f"CONTEXT:\n{json.dumps(payload, ensure_ascii=False, indent=2)}\n\nACTIONS_JSON:"

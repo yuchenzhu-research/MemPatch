@@ -19,6 +19,7 @@ BASELINE_SET="${BASELINE_SET:-main}"
 INCLUDE_LORA="${INCLUDE_LORA:-0}"
 RESUME="${RESUME:-0}"
 PRED_TAG_PREFIX="${PRED_TAG_PREFIX:-baseline_}"
+resolve_test_scenarios
 EVAL_SCENARIOS="${EVAL_SCENARIOS:-${TEST_SCENARIOS}}"
 if [[ -n "${TEST_SFT_DIR:-}" && -f "${TEST_SFT_DIR}/scenarios.jsonl" ]]; then
   EVAL_SCENARIOS="$TEST_SFT_DIR/scenarios.jsonl"

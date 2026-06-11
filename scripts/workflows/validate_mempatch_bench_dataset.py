@@ -74,7 +74,7 @@ def _infer_split(scenario: dict[str, Any], data_path: Path | None) -> str | None
         return split
     if data_path is not None:
         name = data_path.parent.name
-        for candidate in ("train", "validation", "test", "main", "hard", "realistic", "calibration", "private_hidden"):
+        for candidate in ("train", "test"):
             if name.startswith(f"{candidate}_"):
                 return candidate
     return scenario.get("metadata", {}).get("split")
@@ -215,31 +215,13 @@ def validate_one(
         if latest_event_id and latest_event_id in gold_ev and len(gold_ev) == 1:
             errors.append(f"{sid}: L3/L4 has latest-event shortcut (latest event is the sole minimal evidence)")
 
-    if split in ("test", "hard") or diff in ("L3", "L4"):
+    if split == "test" or diff in ("L3", "L4"):
         non_bg = [e for e in events if not _is_background_event(e)]
         if len(non_bg) < 3:
-            errors.append(f"{sid}: hard/L3/L4 scenario has too few non-background events ({len(non_bg)} < 3)")
+            errors.append(f"{sid}: test/L3/L4 scenario has too few non-background events ({len(non_bg)} < 3)")
         bg_in_gold = [eid for eid in gold_ev if any(e.get("event_id") == eid and _is_background_event(e) for e in events)]
         if bg_in_gold:
             errors.append(f"{sid}: background filler events appear in gold evidence: {bg_in_gold}")
-
-    annotation_status = scenario.get("annotation_status") or scenario.get("metadata", {}).get("annotation_status")
-    if split == "realistic":
-        if annotation_status == "reviewed" and scenario.get("source_type") == "github_realistic":
-            errors.append(
-                f"{sid}: realistic github_realistic scenario cannot be auto-marked reviewed "
-                "(requires manual validation script)"
-            )
-        if annotation_status not in ("reviewed", "synthetic_gold_unreviewed", "pending"):
-            warnings.append(f"{sid}: realistic annotation_status={annotation_status!r} is non-standard")
-        if annotation_status != "reviewed":
-            msg = f"{sid}: realistic split is not manually reviewed (annotation_status={annotation_status!r})"
-            warnings.append(msg)
-
-    if split == "calibration" and packaging_final:
-        warnings.append(
-            f"{sid}: calibration row is smoke/quickstart only; exclude from headline table generation"
-        )
 
     if packaging_final:
         meta = scenario.get("metadata") or {}
@@ -320,7 +302,7 @@ def validate_dataset(
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--data", required=True)
-    parser.add_argument("--smoke", action="store_true", help="Relax dataset-rate gates; warn on unreviewed realistic")
+    parser.add_argument("--smoke", action="store_true", help="Relax dataset-rate gates for small local samples")
     parser.add_argument(
         "--packaging-final",
         action="store_true",

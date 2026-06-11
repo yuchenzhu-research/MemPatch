@@ -41,7 +41,11 @@ log "MemPatch with LoRA (${SMOKE_LIMIT} case)"
 EVAL_PREFIX=smoke_test500 EVAL_LIMIT="$SMOKE_LIMIT" SLUG="$SLUG" \
   bash "$LINUX_DIR/06_eval_test.sh" --variant lora
 
-log "8 paper baselines (${SMOKE_LIMIT} case each)"
+log "MemPatch Path A with typed actions + DPA (${SMOKE_LIMIT} case)"
+PATH_A_STRICT_SMOKE=1 EVAL_PREFIX=smoke_path_a EVAL_LIMIT="$SMOKE_LIMIT" SLUG="$SLUG" \
+  bash "$LINUX_DIR/07_eval_path_a.sh" --variant lora
+
+log "paper baseline proxies (${SMOKE_LIMIT} case each)"
 BASELINE_SET="${BASELINE_SET:-main}" \
   INCLUDE_LORA=0 \
   EVAL_LIMIT="$SMOKE_LIMIT" \

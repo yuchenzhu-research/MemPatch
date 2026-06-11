@@ -52,6 +52,20 @@ DIAGNOSTIC_UPPER_BOUND_IDS: tuple[str, ...] = (
     "oracle_memory_state",
 )
 
+BASELINE_DISPLAY_NAMES: dict[str, str] = {
+    "structured_direct": "Structured Direct",
+    "full_context": "Full Context",
+    "vanilla_rag": "Vanilla RAG",
+    "bm25_rag": "BM25 RAG",
+    "time_aware_rag": "Time-Aware RAG",
+    "summary_memory": "Summary Memory",
+    "mem0": "Mem0-style Proxy",
+    "mem0g": "Mem0g-style Proxy",
+    "a_mem": "A-MEM-style Proxy",
+    "oracle_evidence": "Oracle Evidence (diagnostic)",
+    "oracle_memory_state": "Oracle Memory State (diagnostic)",
+}
+
 TOKEN_RE = re.compile(r"[a-z0-9_\-]+")
 
 

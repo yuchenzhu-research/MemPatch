@@ -10,13 +10,13 @@ SLUG="${SLUG:?set SLUG}"
 RESULT_DIR="$RESULTS_ROOT/$SLUG"
 mkdir -p "$RESULT_DIR"
 
-BEST_FOLD="$VALIDATION_PART"
+SPLIT_IDX="$SPLIT_INDEX"
 
 BEST_CHECKPOINT="$("$PYTHON" "$LINUX_DIR/pick_best_checkpoint.py" \
-  --adapter-dir "$ADAPTER_ROOT/${SLUG}_pathB_lora/fold${BEST_FOLD}/${RUN_ID}" \
-  --log-dir "$LOG_ROOT/${SLUG}_fold${BEST_FOLD}/${RUN_ID}" \
+  --adapter-dir "$ADAPTER_ROOT/${SLUG}_multitask_lora/split${SPLIT_IDX}/${RUN_ID}" \
+  --log-dir "$LOG_ROOT/${SLUG}_split${SPLIT_IDX}/${RUN_ID}" \
   --out "$RESULT_DIR/checkpoint_selection.json")"
 
-export BEST_FOLD BEST_CHECKPOINT
-echo "BEST_FOLD=$BEST_FOLD"
+export SPLIT_IDX BEST_CHECKPOINT
+echo "SPLIT_INDEX=$SPLIT_IDX"
 echo "BEST_CHECKPOINT=$BEST_CHECKPOINT"

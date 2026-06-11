@@ -14,7 +14,7 @@ def test_public_scenario_view_strips_internal_task_fields() -> None:
         "black_box_task": {
             "prompt": "What is the current value?",
             "hidden_gold": {"expected_decision": "use_current_memory"},
-            "metadata": {"split": "main"},
+            "metadata": {"split": "train"},
         },
     }
 

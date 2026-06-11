@@ -42,20 +42,20 @@ run_prefetch() {
 }
 
 run_train() {
-  local fold="$VALIDATION_PART"
-  local metrics="$LOG_ROOT/${SLUG}_fold${fold}/${RUN_ID}/trainer_metrics.json"
-  log "single-split train start (validation_part=$fold/$VALIDATION_PARTS, steps=$TRAIN_ITERS)"
+  local split_idx="$SPLIT_INDEX"
+  local metrics="$LOG_ROOT/${SLUG}_split${split_idx}/${RUN_ID}/trainer_metrics.json"
+  log "train start (held-out partition $split_idx/$SPLIT_PARTS, steps=$TRAIN_ITERS)"
   if [[ -f "$metrics" ]]; then
-    log "single-split run already trained, skip"
+    log "train artifacts present, skip"
     return
   fi
-  KFOLD_FOLD="$fold" bash "$LINUX_DIR/02_prepare_kfold.sh"
-  KFOLD_FOLD="$fold" bash "$LINUX_DIR/03_train_fold.sh"
-  log "single-split train done"
+  SPLIT_INDEX="$split_idx" bash "$LINUX_DIR/02_prepare_split.sh"
+  SPLIT_INDEX="$split_idx" bash "$LINUX_DIR/03_train.sh"
+  log "train done"
 }
 
 run_pick() {
-  log "pick checkpoint on fixed validation split ($((TRAIN_ITERS / SAVE_EVERY)) candidates)"
+  log "pick checkpoint on fixed L3 val partition ($((TRAIN_ITERS / SAVE_EVERY)) candidates)"
   SLUG="$SLUG" bash "$LINUX_DIR/05_pick_best.sh" | tee -a "$PIPELINE_LOG"
   log "pick done"
 }
@@ -67,10 +67,12 @@ run_smoke() {
 }
 
 run_eval() {
-  log "Path B direct-response test500 without + with LoRA (no DPA)"
+  log "Path B direct-response test500 without + with LoRA (no DPA ablation)"
   unset EVAL_LIMIT
   EVAL_PREFIX=test500 SLUG="$SLUG" bash "$LINUX_DIR/06_eval_test.sh" | tee -a "$PIPELINE_LOG"
-  log "mempatch eval done"
+  log "Path A LoRA test500 (paired typed-actions: full DPA + no-DPA ablation)"
+  EVAL_PREFIX=test500_path_a SLUG="$SLUG" bash "$LINUX_DIR/07_eval_path_a.sh" --variant lora | tee -a "$PIPELINE_LOG"
+  log "Path A + Path B eval done"
 }
 
 run_baselines() {

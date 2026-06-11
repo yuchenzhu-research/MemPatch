@@ -1,125 +1,84 @@
 # Linux CUDA paper pipeline
 
-QLoRA train once on a fixed stratified 80/20 split → select among steps
-128/256/384/512 → smoke → test500 Path B w/o+w/ LoRA → 7 public-data baselines.
+One multitask QLoRA train per backbone on **train3500 (L3)** → pick checkpoint on **fixed L3 val partition** → eval Path A/Path B on **test500 (L4)**.
 
-**7+1 layout:** 7 main baselines (`BASELINE_SET=main`) + Path B direct-response method (without LoRA + with LoRA in `06_eval_test.sh`). Hidden-gold oracle diagnostics are excluded.
+The full comparison produces Path A+DPA, paired Path A no-DPA, Path B base/LoRA, and seven public-input baseline proxy rows. Subset evaluation adds BM25 and skips the Path B base row by default.
 
-**Three backbones (no Llama):** `mistral_nemo_12b`, `gemma3_12b`, `qwen3_14b`
+**Backbones:** `mistral_nemo_12b`, `gemma3_12b`, `qwen3_14b`
 
-## Why earlier runs failed (not your fault)
-
-| Problem | Cause | Fix in this refactor |
-|---------|--------|----------------------|
-| `Fetching 5 files: 0%` forever | HF xet CDN from AutoDL | `HF_HUB_DISABLE_XET=1` + **prefetch to `LOCAL_MODEL_ROOT`** |
-| `HF_HUB_OFFLINE` errors | Offline on by default with incomplete cache | **Removed** default offline; load from local dir after prefetch |
-| screen died | Python process crashed on HF error | `run_model.sh` phases + `pipeline.log` |
-| Restart from scratch | No phase detection | `PHASES=auto` skips completed steps |
-
-## One command (full paper)
-
-Order: **mistral** → **gemma** → **qwen**. `PHASES=auto` skips artifacts
-already completed for the active `RUN_ID`.
-
-```bash
-export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
-export HF_HOME=$LOCAL_ROOT/hf_cache
-export HF_TOKEN=hf_...
-cd /root/autodl-tmp/MemPatch
-git pull
-
-bash scripts/linux/run_paper_campaign.sh
-# or background: bash scripts/linux/start_background.sh
-```
-
-screen -ls
-tail -f /root/autodl-tmp/mempatch_local/logs/pipeline.log
-```
-
-## Pipeline per model (`run_model.sh`)
+## Data layout
 
 ```text
-prefetch   snapshot_download -> LOCAL_MODEL_ROOT/{hub-id-as-dir}/
-train      one QLoRA run, saves every 128 steps up to 512 -> trainer_metrics.json
-pick       lowest validation loss among checkpoints 128/256/384/512
-eval       Path B direct-response test500 without adapter + with LoRA; no DPA
-baselines  7 public-data main baselines (RESUME=1)
+$LOCAL_ROOT/data/mempatch/train/scenarios.jsonl   # 3500, L3
+$LOCAL_ROOT/data/mempatch/test/scenarios.jsonl    # 500, L4 (never for checkpoint pick)
 ```
 
-**Selection:** this protocol intentionally avoids repeated k-fold training.
-`VALIDATION_PART=0` identifies the fixed stratified 80/20 split; only one model is
-trained. Test500 is not used for checkpoint selection.
+No runtime HF dataset download when these files exist. HF is only for **base model weight prefetch**.
 
-## Status / resume
-
-```bash
-bash scripts/linux/status_models.sh
-SLUG=mistral_nemo_12b bash scripts/linux/status_models.sh
-```
-
-## Download triage
-
-Start with one model and probe access before downloading weights:
+## Full paper
 
 ```bash
 export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
 export HF_HOME=$LOCAL_ROOT/hf_cache
-export HF_ENDPOINT=https://hf-mirror.com
-export HF_HUB_DISABLE_XET=1
-export HF_DOWNLOAD_WORKERS=1
-export HF_TOKEN=hf_...
+export RUN_ID=full512
+cd /root/autodl-tmp/MemPatch && git pull
 
-cd /root/autodl-tmp/MemPatch
-SLUG=mistral_nemo_12b HF_PREFETCH_PROBE_ONLY=1 bash scripts/linux/prefetch_model.sh
-SLUG=mistral_nemo_12b bash scripts/linux/prefetch_model.sh
+bash scripts/linux/run_paper_campaign.sh
 ```
 
-If `gemma3_12b` fails at the probe, accept the Gemma terms on Hugging Face with the same account used by `HF_TOKEN`. If `hf-mirror.com` still hangs at `Fetching files: 0%`, retry the same command with `HF_ENDPOINT=` to use the official endpoint.
+## Per-model phases (`run_model.sh`)
 
-Mistral training already done on server → only runs prefetch (if needed), eval, baselines:
+```text
+prefetch → multitask train (512 steps) → pick checkpoint → Path A/Path B test500 → baselines
+```
 
 ```bash
-SLUG=mistral_nemo_12b PHASES=eval,baselines bash scripts/linux/run_model.sh
+SLUG=mistral_nemo_12b PHASES=train,pick,eval,baselines bash scripts/linux/run_model.sh
 ```
 
-Or full auto (skips finished train/pick):
+## Fast subset eval (8+1, skip base)
 
 ```bash
-SLUG=mistral_nemo_12b bash scripts/linux/run_model.sh
+SLUG=mistral_nemo_12b EVAL_LIMIT=15 bash scripts/linux/run_eval_subset.sh
+# or EVAL_LIMIT=25
 ```
 
-## Remove Llama local artifacts
+Output: `$LOCAL_ROOT/results_eval_test{N}/{slug}/`
+
+## Offline resume + 8+1 smoke
+
+This smoke requires all three model directories and both dataset JSONL files to already exist locally. It sets the Hugging Face model, Transformers, and Datasets offline flags, trains each backbone to step 1, resumes to step 2, then runs eight baseline proxies plus Path A LoRA/DPA on one case each. The paired no-DPA artifact is also required; action quality is not enforced after only two training steps.
 
 ```bash
-bash scripts/linux/clean_llama_local.sh
+export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
+bash scripts/linux/run_resume_8plus1_smoke.sh
 ```
+
+Artifacts, package versions, checkpoint audits, warnings, and one-case metrics are kept under `$LOCAL_ROOT/smoke/resume_8plus1/<timestamp>/`. Set `SMOKE_FAIL_ON_WARNINGS=1` to fail on detected deprecation/future-warning text.
+
+## Training partition (not k-fold CV)
+
+Within train3500, a **fixed** stratified 80/20 scenario split (`SPLIT_PARTS=5`, `SPLIT_INDEX=0`): ~2800 SFT-train scenarios and ~700 held-out val scenarios. Each scenario yields two independent SFT rows: one direct five-field response and one typed-action array, producing 5600 train rows and 1400 val rows. Checkpoint selection uses their mixed val loss.
+
+**L3 vs L4:** val and SFT are L3; test500 is L4. Test scores measure generalization to harder cases, not seen during training.
 
 ## Artifacts
 
 ```text
-LOCAL_MODEL_ROOT/              full HF weights (use these, not hub cache)
-local/adapters/{slug}_pathB_lora/fold0/full512/checkpoint-{128,256,384,512}
-local/logs/kfold/{slug}_fold0/full512/trainer_metrics.json
-local/results/{slug}/          predictions + metrics + selection JSON
-local/logs/pipeline.log        unified log
+$LOCAL_ROOT/train_data/splits/{slug}_split0/
+$LOCAL_ROOT/adapters/{slug}_multitask_lora/split0/full512/checkpoint-*
+$LOCAL_ROOT/logs/splits/{slug}_split0/full512/trainer_metrics.json
+$LOCAL_ROOT/results/{slug}/
 ```
 
-## Models
-
-| SLUG | HF hub ID |
-|------|-----------|
-| `mistral_nemo_12b` | `mistralai/Mistral-Nemo-Instruct-2407` |
-| `gemma3_12b` | `google/gemma-3-12b-it` |
-| `qwen3_14b` | `OpenPipe/Qwen3-14B-Instruct` |
-
-Override: `export HF_MODEL_GEMMA3_12B=/path/to/local/dir`
-
-## Step scripts (still valid)
+## Step scripts
 
 | Script | Role |
 |--------|------|
-| `prefetch_model.sh` | Download one model to `LOCAL_MODEL_ROOT` |
-| `04_train_all_folds.sh` | Train all folds (used internally by `run_model.sh`) |
-| `05_pick_best.sh` | Pick fold + checkpoint |
-| `06_eval_test.sh` | test500 base + lora |
-| `run_baseline_matrix.sh` | 7 public-data main baselines by default |
+| `02_prepare_split.sh` | Build train/valid JSONL |
+| `03_train.sh` | QLoRA train |
+| `05_pick_best.sh` | Pick checkpoint |
+| `06_eval_test.sh` | Path B test500 |
+| `07_eval_path_a.sh` | Path A DPA + same-action no-DPA test500 |
+| `run_baseline_matrix.sh` | Baselines |
+| `run_eval_subset.sh` | Subset 8+1 |

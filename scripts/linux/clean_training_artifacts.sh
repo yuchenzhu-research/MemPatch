@@ -9,7 +9,7 @@
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 
-RUNNER="${LOCAL_ROOT}/run_paper_three.sh"
+RUNNER="${LOCAL_ROOT}/run_paper_campaign.sh"
 
 targets=(
   "$ADAPTER_ROOT"

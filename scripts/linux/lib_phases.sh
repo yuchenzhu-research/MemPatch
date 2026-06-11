@@ -11,9 +11,9 @@ phase_prefetch_done() {
 
 phase_train_done() {
   local slug="${1:?slug}"
-  [[ -f "$LOG_ROOT/${slug}_fold${VALIDATION_PART}/${RUN_ID}/trainer_metrics.json" ]] || return 1
+  [[ -f "$LOG_ROOT/${slug}_split${SPLIT_INDEX}/${RUN_ID}/trainer_metrics.json" ]] || return 1
   local ckpt_count
-  ckpt_count="$(find "$ADAPTER_ROOT/${slug}_pathB_lora/fold${VALIDATION_PART}/${RUN_ID}" -maxdepth 1 -type d -name 'checkpoint-*' 2>/dev/null | wc -l)"
+  ckpt_count="$(find "$ADAPTER_ROOT/${slug}_multitask_lora/split${SPLIT_INDEX}/${RUN_ID}" -maxdepth 1 -type d -name 'checkpoint-*' 2>/dev/null | wc -l)"
   [[ "$ckpt_count" -ge 1 ]]
 }
 
@@ -32,13 +32,20 @@ phase_eval_done() {
   local slug="${1:?slug}"
   [[ -f "$RESULTS_ROOT/$slug/test500_base_predictions.jsonl" ]] \
     && [[ -f "$RESULTS_ROOT/$slug/test500_lora_best_predictions.jsonl" ]] \
-    && [[ -f "$RESULTS_ROOT/$slug/test500_lora_best_manifest.json" ]] || return 1
-  "$PYTHON" - "$RESULTS_ROOT/$slug/test500_lora_best_manifest.json" "$RUN_ID" <<'PY'
+    && [[ -f "$RESULTS_ROOT/$slug/test500_lora_best_manifest.json" ]] \
+    && [[ -f "$RESULTS_ROOT/$slug/test500_path_a_lora_best_predictions.jsonl" ]] \
+    && [[ -f "$RESULTS_ROOT/$slug/test500_path_a_lora_best_manifest.json" ]] \
+    && [[ -f "$RESULTS_ROOT/$slug/test500_path_a_lora_best_no_dpa_manifest.json" ]] || return 1
+  "$PYTHON" - "$RESULTS_ROOT/$slug/test500_lora_best_manifest.json" "$RESULTS_ROOT/$slug/test500_path_a_lora_best_manifest.json" "$RUN_ID" <<'PY'
 import json, sys
 payload = json.load(open(sys.argv[1]))
 meta = payload.get("run_meta") or {}
-ok = sys.argv[2] in str(meta.get("adapter_path", ""))
+path_a = json.load(open(sys.argv[2]))
+path_a_meta = path_a.get("run_meta") or {}
+ok = sys.argv[3] in str(meta.get("adapter_path", ""))
 ok = ok and meta.get("schema_projection") == "public_only_v1"
+ok = ok and sys.argv[3] in str(path_a_meta.get("adapter_path", ""))
+ok = ok and path_a_meta.get("method_path") == "path_a_typed_actions_dpa"
 raise SystemExit(0 if ok else 1)
 PY
 }
@@ -63,6 +70,6 @@ print_model_status() {
   phase_train_done "$slug" && echo "  train (single split, $TRAIN_ITERS steps): OK" || echo "  train: incomplete"
   phase_pick_done "$slug" && echo "  pick (checkpoint): OK" || echo "  pick: MISSING"
   phase_smoke_done "$slug" && echo "  smoke: OK" || echo "  smoke: incomplete"
-  phase_eval_done "$slug" && echo "  Path B eval (w/o + w/ LoRA, 500): OK" || echo "  Path B eval: incomplete"
+  phase_eval_done "$slug" && echo "  Path A DPA + Path B direct (500): OK" || echo "  Path A/B eval: incomplete"
   phase_baselines_done "$slug" && echo "  public baselines: OK" || echo "  baselines: incomplete"
 }

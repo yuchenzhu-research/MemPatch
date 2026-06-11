@@ -38,4 +38,4 @@ for pat in "${patterns[@]}"; do
 done
 
 echo "kept: checkpoint_selection.json (selection result)"
-echo "kept: adapters under $ADAPTER_ROOT/${SLUG}_pathB_lora/"
+echo "kept: adapters under $ADAPTER_ROOT/${SLUG}_multitask_lora/"

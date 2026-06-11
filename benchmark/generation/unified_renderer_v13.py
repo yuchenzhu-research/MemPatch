@@ -151,7 +151,6 @@ def _difficulty_factors(*, events: int, policy: bool = False, ci: bool = False) 
 
 SPLIT_SURFACE_INDICES: dict[str, tuple[int, ...]] = {
     "train": (0, 1),
-    "validation": (2, 3),
     "test": (4,),
 }
 

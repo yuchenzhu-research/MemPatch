@@ -18,7 +18,7 @@ from benchmark.general_taxonomy import DECISIONS
 
 SPLIT_SEED_NAMESPACE = "mempatch_v13"
 
-# Train (SFT + k-fold dev) / test (held-out final eval). No separate validation split.
+# Train (SFT + fixed in-train val partition) / test (held-out L4 eval).
 SPLIT_RANGES: dict[str, tuple[int, int]] = {
     "train": (1, 3500),
     "test": (3501, 4000),
