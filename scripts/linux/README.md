@@ -32,7 +32,7 @@ bash scripts/linux/run_paper_campaign.sh
 prefetch → multitask train (512 steps) → pick checkpoint → Path A/Path B test500 → baselines
 ```
 
-32GB GPUs: Gemma defaults to `max_seq_length=768`, in-train eval capped to 512 val rows, and `MemorySafeSFTTrainer` skips full-vocab logits during eval (TRL otherwise OOMs at step 128). Override with `TRAIN_MAX_SEQ_LENGTH_GEMMA`, `TRAIN_EVAL_MAX_SAMPLES_GEMMA`.
+32GB GPUs: Gemma/Qwen use lower `max_seq_length` and cap in-train eval to 512 val rows. `MemorySafeSFTTrainer` overrides `prediction_step` so TRL does not materialize full-vocab logits at step 128. Override via `TRAIN_MAX_SEQ_LENGTH_<SLUG>`, `TRAIN_EVAL_MAX_SAMPLES_<SLUG>`.
 
 ```bash
 SLUG=mistral_nemo_12b PHASES=train,pick,eval,baselines bash scripts/linux/run_model.sh

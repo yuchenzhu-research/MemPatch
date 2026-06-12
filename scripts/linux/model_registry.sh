@@ -99,7 +99,7 @@ train_max_seq_length_for_slug() {
   fi
   case "$slug" in
     gemma3_12b) echo "${TRAIN_MAX_SEQ_LENGTH_GEMMA:-768}" ;;
-    qwen3_14b) echo "${TRAIN_MAX_SEQ_LENGTH_QWEN:-1536}" ;;
+    qwen3_14b) echo "${TRAIN_MAX_SEQ_LENGTH_QWEN:-1280}" ;;
     *) echo 2048 ;;
   esac
 }
@@ -120,7 +120,7 @@ train_eval_max_samples_for_slug() {
   fi
   case "$slug" in
     gemma3_12b) echo "${TRAIN_EVAL_MAX_SAMPLES_GEMMA:-512}" ;;
-    qwen3_14b) echo "${TRAIN_EVAL_MAX_SAMPLES_QWEN:-0}" ;;
+    qwen3_14b) echo "${TRAIN_EVAL_MAX_SAMPLES_QWEN:-512}" ;;
     *) echo 0 ;;
   esac
 }

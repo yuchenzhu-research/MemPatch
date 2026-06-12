@@ -252,11 +252,39 @@ def main(argv: list[str] | None = None) -> int:
     class MemorySafeSFTTrainer(SFTTrainer):
         """Avoid TRL eval path that materializes full vocab logits for metrics."""
 
-        def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
-            loss_only_eval = (
-                bool(getattr(self.args, "prediction_loss_only", False))
-                and not self.model.training
+        def _loss_only_eval_enabled(self) -> bool:
+            return bool(getattr(self.args, "prediction_loss_only", False))
+
+        def evaluate(self, eval_dataset=None, ignore_keys=None, metric_key_prefix: str = "eval"):
+            import gc
+
+            gc.collect()
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            return super().evaluate(
+                eval_dataset=eval_dataset,
+                ignore_keys=ignore_keys,
+                metric_key_prefix=metric_key_prefix,
             )
+
+        def prediction_step(self, model, inputs, prediction_loss_only, ignore_keys=None):
+            """TRL SFTTrainer.prediction_step still builds full logits; bypass it."""
+            if not (prediction_loss_only or self._loss_only_eval_enabled()):
+                return super().prediction_step(
+                    model,
+                    inputs,
+                    prediction_loss_only,
+                    ignore_keys=ignore_keys,
+                )
+
+            inputs = self._prepare_inputs(inputs)
+            with torch.no_grad():
+                with self.compute_loss_context_manager():
+                    loss = self.compute_loss(model, inputs, return_outputs=False)
+            return (loss.detach(), None, None)
+
+        def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
+            loss_only_eval = self._loss_only_eval_enabled() and not model.training
             if not loss_only_eval:
                 return super().compute_loss(
                     model,
