@@ -43,6 +43,17 @@ def format_example(row: dict[str, Any], tokenizer: Any) -> dict[str, str]:
     return {"text": text}
 
 
+def subsample_eval_dataset(dataset: Any, *, max_samples: int, seed: int) -> Any:
+    """Cap in-train eval rows to reduce peak VRAM (checkpoint pick uses relative val_loss)."""
+    if max_samples <= 0 or len(dataset) <= max_samples:
+        return dataset
+    import random
+
+    indices = list(range(len(dataset)))
+    random.Random(seed).shuffle(indices)
+    return dataset.select(sorted(indices[:max_samples]))
+
+
 def val_loss_from_checkpoint(ckpt_dir: Path) -> float | None:
     state_path = ckpt_dir / "trainer_state.json"
     if not state_path.is_file():
@@ -74,13 +85,19 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--learning-rate", type=float, default=1e-5)
     parser.add_argument("--save-total-limit", type=int, default=8)
     parser.add_argument("--eval-accumulation-steps", type=int, default=8)
+    parser.add_argument(
+        "--eval-max-samples",
+        type=int,
+        default=0,
+        help="Cap validation rows during in-train eval (0 = full valid set).",
+    )
     parser.add_argument("--resume-from-checkpoint", type=Path, default=None)
     args = parser.parse_args(argv)
 
     import torch
     from datasets import Dataset
     from peft import LoraConfig, get_peft_model, prepare_model_for_kbit_training
-    from transformers import AutoModelForCausalLM, BitsAndBytesConfig
+    from transformers import AutoModelForCausalLM, BitsAndBytesConfig, Trainer
     from trl import SFTConfig, SFTTrainer
 
     from scripts.linux.hf_hub import hub_kwargs, log_hub_config
@@ -132,6 +149,16 @@ def main(argv: list[str] | None = None) -> int:
     valid_rows = [format_example(r, tokenizer) for r in read_jsonl(args.valid_data)]
     train_ds = Dataset.from_list(train_rows)
     valid_ds = Dataset.from_list(valid_rows)
+    valid_ds = subsample_eval_dataset(
+        valid_ds,
+        max_samples=args.eval_max_samples,
+        seed=args.seed,
+    )
+    if args.eval_max_samples > 0:
+        print(
+            f"in-train eval capped to {len(valid_ds)} / {len(valid_rows)} validation rows",
+            flush=True,
+        )
 
     warmup_steps = 0 if args.max_steps <= 16 else max(1, int(args.max_steps * 0.03))
     logging_steps = min(16, max(1, args.save_steps))
@@ -168,6 +195,8 @@ def main(argv: list[str] | None = None) -> int:
         sft_config_kwargs["gradient_checkpointing_kwargs"] = {"use_reentrant": False}
     if "prediction_loss_only" in sft_parameters:
         sft_config_kwargs["prediction_loss_only"] = True
+    if "eval_use_gather_for_metrics" in sft_parameters:
+        sft_config_kwargs["eval_use_gather_for_metrics"] = False
     if "eval_strategy" in sft_parameters:
         sft_config_kwargs["eval_strategy"] = "steps"
     elif "evaluation_strategy" in sft_parameters:
@@ -220,6 +249,36 @@ def main(argv: list[str] | None = None) -> int:
 
     from transformers import TrainerCallback
 
+    class MemorySafeSFTTrainer(SFTTrainer):
+        """Avoid TRL eval path that materializes full vocab logits for metrics."""
+
+        def compute_loss(self, model, inputs, return_outputs=False, num_items_in_batch=None):
+            loss_only_eval = (
+                bool(getattr(self.args, "prediction_loss_only", False))
+                and not self.model.training
+            )
+            if not loss_only_eval:
+                return super().compute_loss(
+                    model,
+                    inputs,
+                    return_outputs=return_outputs,
+                    num_items_in_batch=num_items_in_batch,
+                )
+
+            eval_inputs = dict(inputs)
+            eval_inputs["use_cache"] = False
+            forward_params = inspect.signature(model.forward).parameters
+            if "skip_logits" in forward_params:
+                eval_inputs["skip_logits"] = True
+            loss = Trainer.compute_loss(
+                self,
+                model,
+                eval_inputs,
+                return_outputs=False,
+                num_items_in_batch=num_items_in_batch,
+            )
+            return (loss, None) if return_outputs else loss
+
     class ReleaseCudaCacheCallback(TrainerCallback):
         def on_evaluate(self, args, state, control, **kwargs):
             import gc
@@ -227,9 +286,10 @@ def main(argv: list[str] | None = None) -> int:
             gc.collect()
             if torch.cuda.is_available():
                 torch.cuda.empty_cache()
+                torch.cuda.synchronize()
 
     trainer_kwargs["callbacks"] = [ReleaseCudaCacheCallback()]
-    trainer = SFTTrainer(**trainer_kwargs)
+    trainer = MemorySafeSFTTrainer(**trainer_kwargs)
     trainer.train(resume_from_checkpoint=resume)
 
     checkpoint_rows: list[dict[str, Any]] = []
@@ -263,8 +323,10 @@ def main(argv: list[str] | None = None) -> int:
             "lora_alpha": args.lora_rank * 2,
             "learning_rate": args.learning_rate,
             "eval_accumulation_steps": args.eval_accumulation_steps,
+            "eval_max_samples": args.eval_max_samples,
             "gradient_checkpointing": True,
             "prediction_loss_only": True,
+            "memory_safe_eval": True,
             "seed": args.seed,
             "resume_from_checkpoint": resume,
             "resume_global_step": resume_global_step,

@@ -98,7 +98,42 @@ train_max_seq_length_for_slug() {
     return 0
   fi
   case "$slug" in
-    gemma3_12b) echo "${TRAIN_MAX_SEQ_LENGTH_GEMMA:-1536}" ;;
+    gemma3_12b) echo "${TRAIN_MAX_SEQ_LENGTH_GEMMA:-768}" ;;
+    qwen3_14b) echo "${TRAIN_MAX_SEQ_LENGTH_QWEN:-1536}" ;;
     *) echo 2048 ;;
+  esac
+}
+
+# In-train eval row cap (0 = full L3 val partition). Gemma 12B OOMs on 1400-row eval.
+train_eval_max_samples_for_slug() {
+  local slug="${1:?slug}"
+  if [[ -n "${TRAIN_EVAL_MAX_SAMPLES:-}" ]]; then
+    echo "$TRAIN_EVAL_MAX_SAMPLES"
+    return 0
+  fi
+  local upper var
+  upper="$(echo "$slug" | tr '[:lower:]' '[:upper:]')"
+  var="TRAIN_EVAL_MAX_SAMPLES_${upper}"
+  if [[ -n "${!var:-}" ]]; then
+    echo "${!var}"
+    return 0
+  fi
+  case "$slug" in
+    gemma3_12b) echo "${TRAIN_EVAL_MAX_SAMPLES_GEMMA:-512}" ;;
+    qwen3_14b) echo "${TRAIN_EVAL_MAX_SAMPLES_QWEN:-0}" ;;
+    *) echo 0 ;;
+  esac
+}
+
+train_eval_accumulation_steps_for_slug() {
+  local slug="${1:?slug}"
+  if [[ -n "${TRAIN_EVAL_ACCUMULATION_STEPS:-}" ]]; then
+    echo "$TRAIN_EVAL_ACCUMULATION_STEPS"
+    return 0
+  fi
+  case "$slug" in
+    gemma3_12b) echo "${TRAIN_EVAL_ACCUMULATION_STEPS_GEMMA:-32}" ;;
+    qwen3_14b) echo "${TRAIN_EVAL_ACCUMULATION_STEPS_QWEN:-16}" ;;
+    *) echo 8 ;;
   esac
 }

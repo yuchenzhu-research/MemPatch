@@ -20,7 +20,9 @@ fi
 mkdir -p "$OUT_DIR" "$LOG_DIR"
 
 MAX_SEQ_LEN="$(train_max_seq_length_for_slug "$SLUG")"
-echo "train max_seq_length=$MAX_SEQ_LEN (slug=$SLUG)"
+EVAL_MAX_SAMPLES="$(train_eval_max_samples_for_slug "$SLUG")"
+EVAL_ACCUM_STEPS="$(train_eval_accumulation_steps_for_slug "$SLUG")"
+echo "train max_seq_length=$MAX_SEQ_LEN eval_max_samples=$EVAL_MAX_SAMPLES (slug=$SLUG)"
 
 TRAIN_ARGS=(
   --model-id "$HF_MODEL"
@@ -33,7 +35,8 @@ TRAIN_ARGS=(
   --eval-steps "$SAVE_EVERY"
   --save-total-limit "${SAVE_TOTAL_LIMIT:-4}"
   --max-seq-length "$MAX_SEQ_LEN"
-  --eval-accumulation-steps "${TRAIN_EVAL_ACCUMULATION_STEPS:-8}"
+  --eval-accumulation-steps "$EVAL_ACCUM_STEPS"
+  --eval-max-samples "$EVAL_MAX_SAMPLES"
   --seed "$SEED"
 )
 if [[ -n "${RESUME_FROM:-}" ]]; then
