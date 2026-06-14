@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Hugging Face hub IDs for Linux CUDA paper models (3 backbones; Llama omitted).
 
-PAPER_SLUGS=(mistral_nemo_12b gemma3_12b qwen3_14b)
+PAPER_SLUGS=(mistral_nemo_12b gemma3_12b qwen3_14b phi4_14b)
 
 require_paper_slug() {
   local slug="${1:?slug}"
@@ -21,6 +21,7 @@ resolve_hf_model_hub() {
     qwen3_14b) echo "OpenPipe/Qwen3-14B-Instruct" ;;
     gemma3_12b) echo "google/gemma-3-12b-it" ;;
     mistral_nemo_12b) echo "mistralai/Mistral-Nemo-Instruct-2407" ;;
+    phi4_14b) echo "microsoft/phi-4" ;;
     *)
       echo "unknown slug: $slug" >&2
       return 1

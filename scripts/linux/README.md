@@ -135,3 +135,26 @@ $LOCAL_ROOT/results/{slug}/
 | `run_eval_subset.sh` | Subset 8+1 |
 | `run_train_all_then_7plus1.sh` | Train all three, then full test500 7+1 |
 | `rescore_result_bundle.py` | Rescore preserved predictions without inference |
+
+## Phi-4 smoke probe
+
+To run the Phi-4 smoke/probe pipeline:
+
+```bash
+export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
+export HF_HOME=$LOCAL_ROOT/hf_cache
+cd /root/autodl-tmp/MemPatch
+git rev-parse --short HEAD
+
+SLUG=phi4_14b bash scripts/linux/run_phi4_smoke10.sh
+python scripts/linux/diagnose_result_bundle.py --slug phi4_14b --run-id phi4_smoke10
+```
+
+Passing the smoke probe means:
+- model prefetch works successfully;
+- 10-step QLoRA training completes without OOM on 32GB hardware;
+- checkpoint selection functions correctly;
+- Path B JSON object parser succeeds;
+- Path A JSON array parser succeeds;
+- no stale full-run (`full512`) artifact or markers are used or created.
+

@@ -108,7 +108,76 @@ def _intersection(scored: Iterable[dict[str, Any]]) -> tuple[Counter[str], list[
     return counts, examples
 
 
-def diagnose_slug(result_dir: Path, *, examples: int) -> None:
+def diagnose_phi4(result_dir: Path, run_id_filter: str | None) -> None:
+    print(f"\n== Phi-4 Detailed Diagnostics: {result_dir.name} ==")
+
+    selection_path = result_dir / "checkpoint_selection.json"
+    if selection_path.is_file():
+        sel = _load_json(selection_path)
+        print(f"  Selected Checkpoint: {sel.get('checkpoint_dir')}")
+    else:
+        print(f"  Warning: checkpoint_selection.json missing under {result_dir}")
+
+    manifests = sorted(result_dir.glob("*_manifest.json"))
+    if not manifests:
+        print("  Warning: no result manifests found under results dir")
+        return
+
+    for manifest_path in manifests:
+        tag = manifest_path.name.removesuffix("_manifest.json")
+        manifest = _load_json(manifest_path)
+        meta = manifest.get("run_meta") or {}
+        manifest_run_id = meta.get("run_id") or _run_id(meta.get("adapter_path"))
+        if run_id_filter is not None and manifest_run_id != run_id_filter:
+            continue
+
+        print(f"\n  Manifest Tag: {tag}")
+        print(f"    Slug: {result_dir.name}")
+        print(f"    HF Model ID: {meta.get('model_id') or '<missing>'}")
+        print(f"    RUN_ID: {manifest_run_id or '<missing>'}")
+        print(f"    Adapter Path: {meta.get('adapter_path') or '<none/base>'}")
+
+        predictions_path = result_dir / f"{tag}_predictions.jsonl"
+        predictions = _rows(predictions_path)
+        print(f"    Prediction counts: {len(predictions)}")
+        if not predictions_path.is_file():
+            print(f"    Warning: predictions file missing: {predictions_path.name}")
+
+        headline = manifest.get("headline_metrics") or {}
+
+        compliance = headline.get("response_schema_compliance_rate")
+        if compliance is None:
+            paired_path_b = meta.get("paired_path_b_headline_metrics") or {}
+            compliance = paired_path_b.get("response_schema_compliance_rate")
+        if compliance is not None:
+            print(f"    Path B schema compliance: {100 * float(compliance):.2f}%")
+        else:
+            print(f"    Path B schema compliance: <missing>")
+
+        if meta.get("method_path") in ("path_a_typed_actions_dpa", "path_a_typed_actions_no_dpa") or "path_a" in tag:
+            diag = _action_diagnostics(predictions)
+            valid_rate = diag["valid"] / diag["total"] if diag["total"] else 0.0
+            print(f"    Path A typed-action parse validity: {100 * valid_rate:.2f}%")
+            print(f"    Admitted action count: {diag['admitted']}")
+            print(f"    Rejected action count: {diag['rejected']}")
+            print(f"    Action type counts: {dict(diag['action_types'])}")
+            print(f"    Top parse error messages:")
+            for message, count in diag["errors"].most_common(3):
+                print(f"      [{count}]: {message}")
+
+        print(f"    Headline Metrics:")
+        print(f"      decision_macro_f1: {headline.get('decision_macro_f1')}")
+        print(f"      memory_state_accuracy: {headline.get('memory_state_accuracy')}")
+        print(f"      evidence_f1: {headline.get('evidence_f1')}")
+        print(f"      joint_revision_success: {headline.get('joint_revision_success')}")
+        print(f"      stale_reuse_rate: {headline.get('stale_reuse_rate')}")
+
+
+def diagnose_slug(result_dir: Path, *, examples: int, run_id_filter: str | None = None) -> None:
+    if result_dir.name == "phi4_14b":
+        diagnose_phi4(result_dir, run_id_filter)
+        return
+
     print(f"\n== {result_dir.name} ==")
     manifests = sorted(result_dir.glob("*_manifest.json"))
     if not manifests:
@@ -119,10 +188,14 @@ def diagnose_slug(result_dir: Path, *, examples: int) -> None:
         tag = manifest_path.name.removesuffix("_manifest.json")
         manifest = _load_json(manifest_path)
         meta = manifest.get("run_meta") or {}
+        manifest_run_id = meta.get("run_id") or _run_id(meta.get("adapter_path"))
+        if run_id_filter is not None and manifest_run_id != run_id_filter:
+            continue
+
         predictions = _rows(result_dir / f"{tag}_predictions.jsonl")
         print(
             f"{tag}: n={len(predictions)} adapter={meta.get('adapter_path')} "
-            f"run_id={meta.get('run_id') or _run_id(meta.get('adapter_path'))} "
+            f"run_id={manifest_run_id} "
             f"{_metric_summary(manifest)}"
         )
 
@@ -163,6 +236,8 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results-root", type=Path, default=Path("local/results"))
     parser.add_argument("--slugs", nargs="*", default=[])
+    parser.add_argument("--slug", dest="slugs", action="append", help="Specify a single slug (can be repeated)")
+    parser.add_argument("--run-id", type=str, default=None, help="Optionally filter manifests by run-id")
     parser.add_argument("--examples", type=int, default=3)
     return parser.parse_args(argv)
 
@@ -174,13 +249,15 @@ def main(argv: list[str] | None = None) -> int:
         if args.results_root.is_dir()
         else []
     )
-    slugs = args.slugs or discovered
+    # clean None values if `--slug` was used and `--slugs` had defaults
+    slugs = [s for s in (args.slugs or discovered) if s]
     if not slugs:
         print(f"No result bundles found under {args.results_root}")
         return 0
     for slug in slugs:
-        diagnose_slug(args.results_root / slug, examples=max(0, args.examples))
+        diagnose_slug(args.results_root / slug, examples=max(0, args.examples), run_id_filter=args.run_id)
     return 0
+
 
 
 if __name__ == "__main__":
