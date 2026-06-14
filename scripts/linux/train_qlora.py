@@ -176,6 +176,8 @@ def main(argv: list[str] | None = None) -> int:
         "save_steps": args.save_steps,
         "eval_steps": args.eval_steps,
         "save_total_limit": args.save_total_limit,
+        "metric_for_best_model": "eval_loss",
+        "greater_is_better": False,
         "bf16": True,
         "seed": args.seed,
         "report_to": [],
@@ -203,6 +205,10 @@ def main(argv: list[str] | None = None) -> int:
         sft_config_kwargs["evaluation_strategy"] = "steps"
     else:
         raise RuntimeError("installed TRL SFTConfig has no supported evaluation-strategy option")
+    if "save_strategy" in sft_parameters:
+        sft_config_kwargs["save_strategy"] = "steps"
+    if "load_best_model_at_end" in sft_parameters:
+        sft_config_kwargs["load_best_model_at_end"] = True
     if "max_length" in sft_parameters:
         sft_config_kwargs["max_length"] = args.max_seq_length
     elif "max_seq_length" in sft_parameters:
@@ -346,6 +352,13 @@ def main(argv: list[str] | None = None) -> int:
             "max_steps": args.max_steps,
             "save_steps": args.save_steps,
             "eval_steps": args.eval_steps,
+            "eval_strategy": "steps",
+            "save_strategy": "steps",
+            "metric_for_best_model": "eval_loss",
+            "greater_is_better": False,
+            "load_best_model_at_end": bool(
+                sft_config_kwargs.get("load_best_model_at_end", False)
+            ),
             "max_seq_length": args.max_seq_length,
             "lora_rank": args.lora_rank,
             "lora_alpha": args.lora_rank * 2,

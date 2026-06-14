@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Fresh two-stage paper campaign:
 #   1. train + pick all three backbones;
-#   2. run seven public baselines + MemPatch Path A on all 500 test cases.
+#   2. run the configured frozen baseline set + MemPatch on all 500 test cases.
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 source "$LINUX_DIR/lib_gpu.sh"

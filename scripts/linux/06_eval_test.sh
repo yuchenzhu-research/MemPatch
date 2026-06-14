@@ -72,6 +72,9 @@ run_variant() {
   if [[ -n "${EVAL_LIMIT:-}" ]]; then
     EVAL_ARGS+=(--limit "$EVAL_LIMIT")
   fi
+  if [[ "${NO_SCHEMA_PROJECTION:-0}" == "1" ]]; then
+    EVAL_ARGS+=(--no-schema-projection)
+  fi
   "$PYTHON" "$LINUX_DIR/run_hf_test_eval.py" "${EVAL_ARGS[@]}" "${extra[@]}"
 
   SCORE_ARGS=(--data "$EVAL_SCENARIOS" --predictions "$pred" --no-strict --print-table)

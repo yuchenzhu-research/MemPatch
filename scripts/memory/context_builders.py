@@ -37,6 +37,11 @@ PAPER_MAIN_BASELINE_IDS: tuple[str, ...] = (
     "vanilla_rag",
     "time_aware_rag",
     "summary_memory",
+)
+
+# Optional supplement-only frozen systems. They are deliberately excluded from
+# the main formal baseline table.
+PAPER_SUPPLEMENT_BASELINE_IDS: tuple[str, ...] = (
     "mem0",
     "a_mem",
 )
@@ -53,9 +58,9 @@ DIAGNOSTIC_UPPER_BOUND_IDS: tuple[str, ...] = (
 )
 
 BASELINE_DISPLAY_NAMES: dict[str, str] = {
-    "structured_direct": "Structured Direct",
+    "structured_direct": "Frozen Direct Prompting",
     "full_context": "Full Context",
-    "vanilla_rag": "Vanilla RAG",
+    "vanilla_rag": "Lexical RAG",
     "bm25_rag": "BM25 RAG",
     "time_aware_rag": "Time-Aware RAG",
     "summary_memory": "Summary Memory",

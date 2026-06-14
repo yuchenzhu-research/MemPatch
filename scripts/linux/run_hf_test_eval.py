@@ -51,6 +51,7 @@ def prediction_from_output(
     *,
     json_brace_prefill: bool = False,
     scenario_public_view: dict[str, Any] | None = None,
+    project_schema: bool = True,
 ) -> dict[str, Any]:
     try:
         response = extract_json_object(output, json_brace_prefill=json_brace_prefill)
@@ -62,7 +63,7 @@ def prediction_from_output(
             "raw_output": output,
             "parse_error": str(exc),
         }
-    if scenario_public_view is not None:
+    if scenario_public_view is not None and project_schema:
         prediction["raw_response"] = prediction["response"]
         prediction["response"], prediction["schema_repairs"] = project_response_schema(
             prediction["response"], scenario_public_view
@@ -102,6 +103,7 @@ def run_predictions(args: argparse.Namespace) -> list[dict[str, Any]]:
             text,
             json_brace_prefill=bool(gen_meta.get("json_brace_prefill")),
             scenario_public_view=scenario_public_view,
+            project_schema=not args.no_schema_projection,
         )
         pred["raw_output"] = text
         pred["gen_meta"] = gen_meta
@@ -119,7 +121,10 @@ def write_metrics(args: argparse.Namespace, predictions: list[dict[str, Any]]) -
     scenarios = [s for s in load_scenarios(args.eval_data) if s.get("scenario_id") in scenario_ids]
     result = evaluate_predictions(scenarios, predictions, strict=False, allow_missing=True)
     raw_predictions = [
-        {"scenario_id": row.get("scenario_id"), "response": row.get("raw_response", {})}
+        {
+            "scenario_id": row.get("scenario_id"),
+            "response": row.get("raw_response", row.get("response", {})),
+        }
         for row in predictions
     ]
     raw_result = evaluate_predictions(
@@ -149,7 +154,9 @@ def write_metrics(args: argparse.Namespace, predictions: list[dict[str, Any]]) -
             "temp": args.temp,
             "eval_data": str(args.eval_data),
             "sft_data": str(args.data),
-            "schema_projection": "public_only_v1",
+            "schema_projection": (
+                "disabled" if args.no_schema_projection else "public_only_v1"
+            ),
             "raw_response_schema_compliance_rate": raw_result["headline_metrics"].get(
                 "response_schema_compliance_rate"
             ),
@@ -178,6 +185,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=root / "local/data/mempatch/test/scenarios.jsonl",
     )
     parser.add_argument("--out-metrics", type=Path, default=None)
+    parser.add_argument(
+        "--no-schema-projection",
+        action="store_true",
+        help="Score parsed model output as-is; do not fill or repair schema fields.",
+    )
     parser.add_argument("--limit", type=int, default=None)
     parser.add_argument("--max-tokens", type=int, default=256)
     parser.add_argument("--temp", type=float, default=0.0)

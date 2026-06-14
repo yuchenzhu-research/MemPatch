@@ -113,6 +113,6 @@ def test_multitask_sft_keeps_two_separate_targets() -> None:
     )
 
     assert [row["task_type"] for row in rows] == [
-        "path_b_response",
-        "path_a_typed_actions",
+        "FINAL_STATE",
+        "PATCH_ACTION",
     ]

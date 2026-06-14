@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# One-shot paper pipeline in fixed backbone order. Each model runs:
+# One-shot 1024-step campaign in fixed backbone order. Each model runs:
 # prefetch → fixed-split train → checkpoint pick → Path A DPA/no-DPA + Path B → baselines.
 # (smoke is manual-only: PHASES=smoke bash scripts/linux/run_model.sh)
 #
@@ -8,6 +8,14 @@
 #
 # Background: bash scripts/linux/start_background.sh
 set -euo pipefail
+
+# Set campaign defaults before env.sh installs its general-purpose defaults.
+# Callers may still override these values explicitly.
+export RUN_ID="${RUN_ID:-full1024}"
+export TRAIN_ITERS="${TRAIN_ITERS:-1024}"
+export SAVE_EVERY="${SAVE_EVERY:-128}"
+export SAVE_TOTAL_LIMIT="${SAVE_TOTAL_LIMIT:-8}"
+
 source "$(dirname "$0")/env.sh"
 source "$LINUX_DIR/lib_phases.sh"
 source "$LINUX_DIR/lib_gpu.sh"
@@ -15,14 +23,25 @@ source "$LINUX_DIR/lib_gpu.sh"
 PIPELINE_LOG="${PIPELINE_LOG:-$LOCAL_ROOT/logs/pipeline.log}"
 mkdir -p "$(dirname "$PIPELINE_LOG")"
 
-# Fixed backbone order — do not reorder without editing this script.
-SLUGS=(mistral_nemo_12b gemma3_12b qwen3_14b)
+# Complete higher-priority models first so an interrupted allocation still
+# leaves their selected checkpoints and formal test results intact.
+SLUGS=("${FORMAL_SLUGS[@]}")
 
 log() {
   echo "[$(date '+%F %T')] campaign: $*" | tee -a "$PIPELINE_LOG"
 }
 
-log "start order: ${SLUGS[*]} (PHASES=auto per model)"
+if (( TRAIN_ITERS % SAVE_EVERY != 0 )); then
+  log "ERROR: TRAIN_ITERS=$TRAIN_ITERS must be divisible by SAVE_EVERY=$SAVE_EVERY"
+  exit 2
+fi
+required_checkpoints=$((TRAIN_ITERS / SAVE_EVERY))
+if (( SAVE_TOTAL_LIMIT < required_checkpoints )); then
+  log "ERROR: SAVE_TOTAL_LIMIT=$SAVE_TOTAL_LIMIT would discard some of the $required_checkpoints checkpoint candidates"
+  exit 2
+fi
+
+log "start order: ${SLUGS[*]} (steps=$TRAIN_ITERS, checkpoint_every=$SAVE_EVERY, PHASES=auto per model)"
 
 if ! AUDIT_TRAIN="$(resolve_split_dir train)" || ! AUDIT_TEST="$(resolve_split_dir test)"; then
   log "ERROR: full train/test scenarios not found."

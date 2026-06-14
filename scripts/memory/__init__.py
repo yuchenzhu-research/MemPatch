@@ -6,6 +6,7 @@ from scripts.memory.context_builders import (
     DIAGNOSTIC_UPPER_BOUND_IDS,
     PAPER_APPENDIX_BASELINE_IDS,
     PAPER_MAIN_BASELINE_IDS,
+    PAPER_SUPPLEMENT_BASELINE_IDS,
     build_baseline_prompt,
     build_baseline_view,
 )
@@ -15,6 +16,7 @@ __all__ = [
     "BASELINE_DISPLAY_NAMES",
     "DIAGNOSTIC_UPPER_BOUND_IDS",
     "PAPER_MAIN_BASELINE_IDS",
+    "PAPER_SUPPLEMENT_BASELINE_IDS",
     "PAPER_APPENDIX_BASELINE_IDS",
     "build_baseline_prompt",
     "build_baseline_view",

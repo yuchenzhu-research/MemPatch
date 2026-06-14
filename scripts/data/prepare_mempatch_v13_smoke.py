@@ -201,7 +201,7 @@ def sft_example(scenario: dict[str, Any]) -> dict[str, Any]:
     assert_no_leakage(user_content, scenario_id=str(scenario["scenario_id"]))
     response = gold_to_response(scenario)
     return {
-        "task_type": "path_b_response",
+        "task_type": "FINAL_STATE",
         "messages": [
             {"role": "system", "content": SYSTEM_PROMPT_V13_SMOKE},
             {"role": "user", "content": user_content},
@@ -288,7 +288,7 @@ def typed_action_sft_example(scenario: dict[str, Any]) -> dict[str, Any]:
     user_content = build_proposer_prompt(view)
     assert_no_leakage(user_content, scenario_id=str(scenario["scenario_id"]))
     return {
-        "task_type": "path_a_typed_actions",
+        "task_type": "PATCH_ACTION",
         "messages": [
             {
                 "role": "system",
@@ -321,7 +321,7 @@ def test_balanced_row(scenario: dict[str, Any]) -> dict[str, Any]:
 def decision_distribution_sft(rows: list[dict[str, Any]]) -> Counter[str]:
     counts: Counter[str] = Counter()
     for row in rows:
-        if row.get("task_type") != "path_b_response":
+        if row.get("task_type") != "FINAL_STATE":
             continue
         assistant = next(m["content"] for m in row["messages"] if m["role"] == "assistant")
         counts[json.loads(assistant).get("decision", "<missing>")] += 1
@@ -331,7 +331,7 @@ def decision_distribution_sft(rows: list[dict[str, Any]]) -> Counter[str]:
 def action_distribution_sft(rows: list[dict[str, Any]]) -> Counter[str]:
     counts: Counter[str] = Counter()
     for row in rows:
-        if row.get("task_type") != "path_a_typed_actions":
+        if row.get("task_type") != "PATCH_ACTION":
             continue
         assistant = next(m["content"] for m in row["messages"] if m["role"] == "assistant")
         for action in json.loads(assistant):

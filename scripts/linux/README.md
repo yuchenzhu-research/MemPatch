@@ -2,9 +2,19 @@
 
 One multitask QLoRA train per backbone on **train3500 (L3)** → pick checkpoint on **fixed L3 val partition** → eval Path A/Path B on **test500 (L4)**.
 
-The full comparison produces Path A+DPA, paired Path A no-DPA, Path B base/LoRA, and seven public-input baseline proxy rows. Subset evaluation adds BM25 and skips the Path B base row by default.
+The formal comparison produces MemPatch, its paired no-guard diagnostic,
+Final-State Control, and five frozen external baselines. Mem0/A-MEM outputs are
+supplement-only when present.
 
-**Backbones:** `mistral_nemo_12b`, `gemma3_12b`, `qwen3_14b`
+**Campaign order:** `qwen3_14b`, `gemma3_12b`, `phi4`, `mistral_nemo_12b`
+
+The five formal public-input baselines use the frozen base backbone and receive no
+MemPatch training. They measure prompting, retrieval, recency, summarization,
+and memory organization without benchmark-specific gradient updates. The
+strict like-for-like mechanism comparison is Final-State Control versus
+adapted Path A MemPatch: both use the same multitask LoRA checkpoint and
+training examples. Report these as two separate comparison groups rather than
+claiming that the frozen 7-baseline table isolates the scaffold alone.
 
 ## Data layout
 
@@ -15,19 +25,43 @@ $LOCAL_ROOT/data/mempatch/test/scenarios.jsonl    # 500, L4 (never for checkpoin
 
 No runtime HF dataset download when these files exist. With local base weights under `$LOCAL_ROOT/models/`, no Hugging Face login is required.
 
-## Full paper
+## Smoke Test
+
+The smoke pipeline uses exactly 30 deterministic test500 cases and no LoRA. It
+runs Qwen3, Gemma-3, and Phi-4 in that order; Mistral is excluded.
+
+```bash
+bash scripts/linux/run_experiment.sh smoke
+```
+
+Dry-run without model execution:
+
+```bash
+DRY_RUN=1 bash scripts/linux/run_experiment.sh smoke
+```
+
+Systems are Frozen Direct Prompting, Full Context, and MemPatch Zero-Shot.
+
+## Formal Test
 
 ```bash
 export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
 export HF_HOME=$LOCAL_ROOT/hf_cache
-export RUN_ID=full512
 cd /root/autodl-tmp/MemPatch && git pull
 
-bash scripts/linux/run_paper_campaign.sh
+bash scripts/linux/run_experiment.sh formal
 ```
 
-To train all three backbones first, then run the seven main public baselines
-plus MemPatch Path A on all 500 held-out cases for each backbone:
+The component commands `run_formal_frozen.sh`, `run_formal_adapted.sh`, and
+`build_paper_results.sh` remain available for partial reruns.
+
+The adapted pipeline uses 1,024 optimization
+steps, validation/checkpointing every 128 steps, and retention of all eight
+checkpoint candidates. It selects the lowest mixed-task L3 validation loss
+before test500 inference. Final-State Control and MemPatch use the same selected
+checkpoint. The fixed order is Qwen3, Gemma-3, Phi-4, then Mistral-Nemo.
+
+The older all-in-one helper remains available for archival reruns:
 
 ```bash
 export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
@@ -38,9 +72,9 @@ bash scripts/linux/run_train_all_then_7plus1.sh
 
 This is destructive only for the exact `RUN_ID` adapter/log directories and
 the three model result directories. It preserves base model weights and the
-train/test dataset. The 7+1 methods are Structured Direct, Full Context,
-Vanilla RAG, Time-Aware RAG, Summary Memory, Mem0-style, A-MEM-style, and
-MemPatch Path A LoRA+DPA. Path A also writes its paired no-DPA audit artifact.
+train/test dataset. New formal runs should use the five-baseline and matched
+adapted commands above. Frozen Direct Prompting replaces the old display name
+for the structured direct prompt, and Lexical RAG replaces Vanilla RAG.
 The baseline generation cap remains the paper default of 256 tokens; set
 `BASELINE_MAX_TOKENS=512 EVAL_LIMIT=20` only for an explicit truncation subset
 diagnostic, not silently for the main table.
@@ -62,10 +96,10 @@ python scripts/linux/rescore_result_bundle.py \
 ## Per-model phases (`run_model.sh`)
 
 ```text
-prefetch → multitask train (512 steps) → pick checkpoint → Path A/Path B test500 → baselines
+prefetch → multitask train (1024 steps) → pick among checkpoints 128..1024 → Path A/Path B test500 → frozen baselines
 ```
 
-All three backbones default to `max_seq_length=2048`. Gemma/Qwen cap in-train eval to 512 val rows on 32GB GPUs. `MemorySafeSFTTrainer` overrides `prediction_step` so TRL does not materialize full-vocab logits at step 128. Override via `TRAIN_MAX_SEQ_LENGTH_<SLUG>`, `TRAIN_EVAL_MAX_SAMPLES_<SLUG>`.
+All four campaign backbones default to `max_seq_length=2048`. Gemma/Qwen cap in-train eval to 512 val rows on 32GB GPUs. `MemorySafeSFTTrainer` overrides `prediction_step` so TRL does not materialize full-vocab logits at step 128. Override via `TRAIN_MAX_SEQ_LENGTH_<SLUG>`, `TRAIN_EVAL_MAX_SAMPLES_<SLUG>`.
 
 ```bash
 SLUG=mistral_nemo_12b PHASES=train,pick,eval,baselines bash scripts/linux/run_model.sh
@@ -117,8 +151,8 @@ Within train3500, a **fixed** stratified 80/20 scenario split (`SPLIT_PARTS=5`, 
 
 ```text
 $LOCAL_ROOT/train_data/splits/{slug}_split0/
-$LOCAL_ROOT/adapters/{slug}_multitask_lora/split0/full512/checkpoint-*
-$LOCAL_ROOT/logs/splits/{slug}_split0/full512/trainer_metrics.json
+$LOCAL_ROOT/adapters/{slug}_multitask_lora/split0/full1024/checkpoint-*
+$LOCAL_ROOT/logs/splits/{slug}_split0/full1024/trainer_metrics.json
 $LOCAL_ROOT/results/{slug}/
 ```
 
@@ -157,4 +191,3 @@ Passing the smoke probe means:
 - Path B JSON object parser succeeds;
 - Path A JSON array parser succeeds;
 - no stale full-run (`full512`) artifact or markers are used or created.
-

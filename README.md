@@ -129,13 +129,22 @@ python scripts/workflows/evaluate_mempatch_predictions.py \
 
 ```bash
 export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
-export RUN_ID=full512
+export RUN_ID=full1024
 bash scripts/linux/run_paper_campaign.sh
 ```
 
-Place dataset at `$LOCAL_ROOT/data/mempatch/{train,test}/scenarios.jsonl`. See `scripts/linux/README.md`.
+Place dataset at `$LOCAL_ROOT/data/mempatch/{train,test}/scenarios.jsonl`. The
+campaign runs Qwen3, Gemma-3, Phi-4, then Mistral-Nemo for 1,024 steps, retains
+checkpoints every 128 steps, and selects only by the fixed L3 validation loss
+before test500 evaluation. See `scripts/linux/README.md`.
 
-Protocol per backbone: one 512-step multitask QLoRA run, checkpoints at steps 128/256/384/512, selection by the lowest mixed-task L3 val loss, then held-out L4 test500 evaluation. Each scenario in the fixed 80/20 train partition yields one Path B response target and one Path A typed-action target; the original scenario JSONL is unchanged. This is one fixed partition, not k-fold cross-validation.
+Protocol per backbone: one 1,024-step multitask QLoRA run over `FINAL_STATE`
+and `PATCH_ACTION`, checkpoints every
+128 steps, selection by the lowest mixed-task L3 val loss, then held-out L4
+test500 evaluation. Each scenario in the fixed 80/20 train partition yields
+one Path B response target and one Path A typed-action target; the original
+scenario JSONL is unchanged. This is one fixed partition, not k-fold
+cross-validation.
 
 ## Local workspace (`local/`, gitignored)
 
@@ -168,6 +177,7 @@ Script index: `scripts/README.md`.
 |------|-------|-------:|
 | `qwen3_14b` | Qwen3-14B | 14B |
 | `gemma3_12b` | Gemma 3 12B Instruct | 12B |
+| `phi4` | Phi-4 | 14B |
 | `mistral_nemo_12b` | Mistral Nemo 12B Instruct | 12B |
 
 Paper reproduction uses 4-bit NF4 QLoRA on Linux CUDA with temperature 0 evaluation. MLX remains a development backend and is not the final paper protocol.
@@ -188,7 +198,11 @@ The Linux runner writes full Path A predictions and audit traces, a paired no-DP
 
 ## Paper result policy
 
-Paper tables must use the unified `full512` protocol on all three backbones and the complete held-out test500 split. Report raw schema compliance, projected schema compliance, and repair counts separately.
+Final tables must use the unified 1,024-step protocol on all four campaign
+backbones and the complete held-out test500 split. Report frozen external
+baselines separately from the Final-State Control versus MemPatch comparison, and
+report raw schema compliance, projected schema compliance, and repair counts
+separately.
 
 ## Citation
 

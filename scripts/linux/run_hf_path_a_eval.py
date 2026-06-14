@@ -89,6 +89,7 @@ def run_predictions(
             raw_text,
             json_brace_prefill=bool(response_meta.get("json_brace_prefill")),
             scenario_public_view=public_view,
+            project_schema=False,
         )
         path_b["raw_output"] = raw_text
         path_b["gen_meta"] = response_meta
