@@ -45,6 +45,20 @@ The baseline generation cap remains the paper default of 256 tokens; set
 `BASELINE_MAX_TOKENS=512 EVAL_LIMIT=20` only for an explicit truncation subset
 diagnostic, not silently for the main table.
 
+The campaign performs a CUDA/package preflight before deleting any artifacts.
+Install the Linux QLoRA dependencies first with `bash scripts/linux/00_setup.sh`.
+
+Existing prediction files can be rescored without Torch, a GPU, training, or
+new inference. The output must be a separate directory so raw results remain
+unchanged:
+
+```bash
+python scripts/linux/rescore_result_bundle.py \
+  --data "$LOCAL_ROOT/data/mempatch/test/scenarios.jsonl" \
+  --source-results local/results \
+  --out-results local/results_rescored
+```
+
 ## Per-model phases (`run_model.sh`)
 
 ```text
@@ -120,3 +134,4 @@ $LOCAL_ROOT/results/{slug}/
 | `run_baseline_matrix.sh` | Baselines |
 | `run_eval_subset.sh` | Subset 8+1 |
 | `run_train_all_then_7plus1.sh` | Train all three, then full test500 7+1 |
+| `rescore_result_bundle.py` | Rescore preserved predictions without inference |

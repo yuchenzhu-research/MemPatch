@@ -20,6 +20,21 @@ fi
   "datasets>=3.0"
 
 echo "Setup OK. Next:"
+"$PYTHON" - <<'PY'
+import torch
+import transformers
+import accelerate
+import peft
+import trl
+import bitsandbytes
+import datasets
+
+if not torch.cuda.is_available():
+    raise SystemExit("error: PyTorch installed but CUDA is unavailable")
+print(f"CUDA: {torch.cuda.get_device_name(0)}")
+print(f"torch={torch.__version__} transformers={transformers.__version__} trl={trl.__version__}")
+PY
+
 echo "  export LOCAL_ROOT=/root/autodl-tmp/mempatch_local"
 echo "  bash scripts/linux/01_audit.sh"
 echo "  bash scripts/linux/run_paper_campaign.sh"

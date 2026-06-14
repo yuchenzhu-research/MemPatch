@@ -23,6 +23,30 @@ mkdir -p "$(dirname "$CAMPAIGN_LOG")"
 resolve_train_scenarios
 resolve_test_scenarios
 
+"$PYTHON" - <<'PY'
+import importlib
+import sys
+
+required = ("torch", "transformers", "accelerate", "peft", "trl", "bitsandbytes", "datasets")
+missing = []
+for name in required:
+    try:
+        importlib.import_module(name)
+    except Exception as exc:
+        missing.append(f"{name}: {exc}")
+if missing:
+    print("error: Linux training dependencies are missing or broken:", file=sys.stderr)
+    for row in missing:
+        print(f"  {row}", file=sys.stderr)
+    print("Run: bash scripts/linux/00_setup.sh", file=sys.stderr)
+    raise SystemExit(1)
+
+import torch
+if not torch.cuda.is_available():
+    raise SystemExit("error: torch is installed but CUDA is unavailable")
+print(f"CUDA preflight OK: {torch.cuda.get_device_name(0)}; torch={torch.__version__}")
+PY
+
 "$PYTHON" - "$TRAIN_SCENARIOS" "$TEST_SCENARIOS" <<'PY'
 import sys
 from pathlib import Path
