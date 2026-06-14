@@ -17,16 +17,19 @@ selection_matches_run_id() {
   local run_id="$2"
   "$PYTHON" - "$selection" "$run_id" <<'PY'
 import json, sys
+from pathlib import Path
 payload = json.load(open(sys.argv[1]))
 run_id = sys.argv[2]
-paths = (
-    str(payload.get("checkpoint_dir", "")),
-    str(payload.get("best_checkpoint", "")),
-    str(payload.get("adapter_dir", "")),
-    str(payload.get("run_id", "")),
-    str(payload.get("log_dir", "")),
-)
-raise SystemExit(0 if any(run_id in p for p in paths if p) else 1)
+checkpoint = payload.get("checkpoint_dir") or payload.get("best_checkpoint")
+adapter = payload.get("adapter_dir")
+log_dir = payload.get("log_dir")
+candidates = [
+    Path(str(checkpoint)).parent.name if checkpoint else None,
+    Path(str(adapter)).name if adapter else None,
+    str(payload.get("run_id")) if payload.get("run_id") else None,
+    Path(str(log_dir)).name if log_dir else None,
+]
+raise SystemExit(0 if run_id in candidates else 1)
 PY
 }
 

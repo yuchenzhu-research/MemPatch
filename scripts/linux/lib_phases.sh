@@ -23,8 +23,10 @@ phase_pick_done() {
   [[ -f "$selection" ]] || return 1
   "$PYTHON" - "$selection" "$RUN_ID" <<'PY'
 import json, sys
+from pathlib import Path
 payload = json.load(open(sys.argv[1]))
-raise SystemExit(0 if sys.argv[2] in str(payload.get("checkpoint_dir", "")) else 1)
+checkpoint = Path(str(payload.get("checkpoint_dir", "")))
+raise SystemExit(0 if checkpoint.parent.name == sys.argv[2] else 1)
 PY
 }
 
@@ -36,16 +38,31 @@ phase_eval_done() {
     && [[ -f "$RESULTS_ROOT/$slug/test500_path_a_lora_best_predictions.jsonl" ]] \
     && [[ -f "$RESULTS_ROOT/$slug/test500_path_a_lora_best_manifest.json" ]] \
     && [[ -f "$RESULTS_ROOT/$slug/test500_path_a_lora_best_no_dpa_manifest.json" ]] || return 1
-  "$PYTHON" - "$RESULTS_ROOT/$slug/test500_lora_best_manifest.json" "$RESULTS_ROOT/$slug/test500_path_a_lora_best_manifest.json" "$RUN_ID" <<'PY'
+  "$PYTHON" - \
+    "$RESULTS_ROOT/$slug/test500_lora_best_manifest.json" \
+    "$RESULTS_ROOT/$slug/test500_path_a_lora_best_manifest.json" \
+    "$RESULTS_ROOT/$slug/test500_path_a_lora_best_no_dpa_manifest.json" \
+    "$RUN_ID" <<'PY'
 import json, sys
-payload = json.load(open(sys.argv[1]))
-meta = payload.get("run_meta") or {}
-path_a = json.load(open(sys.argv[2]))
-path_a_meta = path_a.get("run_meta") or {}
-ok = sys.argv[3] in str(meta.get("adapter_path", ""))
-ok = ok and meta.get("schema_projection") == "public_only_v1"
-ok = ok and sys.argv[3] in str(path_a_meta.get("adapter_path", ""))
+from pathlib import Path
+
+def meta(path):
+    return (json.load(open(path)).get("run_meta") or {})
+
+def run_id(payload):
+    adapter = payload.get("adapter_path")
+    return Path(str(adapter)).parent.name if adapter else None
+
+path_b_meta = meta(sys.argv[1])
+path_a_meta = meta(sys.argv[2])
+no_dpa_meta = meta(sys.argv[3])
+expected_run_id = sys.argv[4]
+ok = run_id(path_b_meta) == expected_run_id
+ok = ok and run_id(path_a_meta) == expected_run_id
+ok = ok and run_id(no_dpa_meta) == expected_run_id
+ok = ok and path_b_meta.get("schema_projection") == "public_only_v1"
 ok = ok and path_a_meta.get("method_path") == "path_a_typed_actions_dpa"
+ok = ok and no_dpa_meta.get("method_path") == "path_a_typed_actions_no_dpa"
 raise SystemExit(0 if ok else 1)
 PY
 }

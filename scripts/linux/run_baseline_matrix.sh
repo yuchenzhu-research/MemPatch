@@ -8,6 +8,7 @@
 #   BASELINE_SET=paper|all|main   (default: main = 7 public-data baselines)
 #   INCLUDE_LORA=1               (default: 1 — run lora_best row)
 #   RESUME=1                     resume incremental JSONL per baseline
+#   BASELINE_MAX_TOKENS=256      generation cap (override only for explicit diagnostics)
 set -euo pipefail
 source "$(dirname "$0")/env.sh"
 source "$LINUX_DIR/lib_selection.sh"
@@ -68,6 +69,7 @@ RUN_ONE() {
     --out-metrics "$metrics" \
     --split-tag "$tag" \
     --model-tag "$SLUG" \
+    --max-tokens "${BASELINE_MAX_TOKENS:-256}" \
     "${extra[@]}"
 }
 

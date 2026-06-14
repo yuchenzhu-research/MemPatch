@@ -179,3 +179,6 @@ def test_proposer_prompt_contains_full_public_evidence_ledger() -> None:
     assert '"evidence_id": "e_init"' in prompt
     assert '"evidence_id": "e_latest"' in prompt
     assert '"as_of_evidence_id": "e_latest"' in prompt
+    assert "Use BLOCKS, UNCERTAIN, REAFFIRMS, or NO_REVISION" in prompt
+    assert "Do not emit SUPERSEDES unless candidate_replacement_beliefs contains" in prompt
+    assert "Do not emit RELEASES unless the view contains an explicit release target" in prompt

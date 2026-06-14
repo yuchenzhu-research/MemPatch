@@ -100,8 +100,13 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.prefer_run_id:
         preferred = [c for c in candidates if c.get("run_id") == args.prefer_run_id]
-        if preferred:
-            candidates = preferred
+        if not preferred:
+            print(
+                f"error: no checkpoint found for exact run_id={args.prefer_run_id}",
+                file=sys.stderr,
+            )
+            return 1
+        candidates = preferred
 
     best = min(candidates, key=lambda row: float(row["best_val_loss"]))
     best["slug"] = args.slug

@@ -4,9 +4,33 @@
 from __future__ import annotations
 
 import json
+import os
+import subprocess
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
+
+
+def _git_commit() -> str | None:
+    try:
+        return subprocess.run(
+            ["git", "rev-parse", "HEAD"],
+            check=True,
+            capture_output=True,
+            text=True,
+            timeout=5,
+        ).stdout.strip() or None
+    except (OSError, subprocess.SubprocessError):
+        return None
+
+
+def _with_protocol_meta(run_meta: dict[str, Any]) -> dict[str, Any]:
+    enriched = dict(run_meta)
+    enriched.setdefault("run_id", os.environ.get("RUN_ID"))
+    enriched.setdefault("split_index", os.environ.get("SPLIT_INDEX"))
+    enriched.setdefault("train_iters", os.environ.get("TRAIN_ITERS"))
+    enriched.setdefault("commit_hash", _git_commit())
+    return enriched
 
 
 def write_eval_bundle(
@@ -19,6 +43,7 @@ def write_eval_bundle(
 ) -> dict[str, Path]:
     """Persist metrics, scored rows, per-case errors, and raw predictions."""
     result_dir.mkdir(parents=True, exist_ok=True)
+    run_meta = _with_protocol_meta(run_meta)
     paths: dict[str, Path] = {}
 
     metrics_path = result_dir / f"{run_tag}_metrics.json"

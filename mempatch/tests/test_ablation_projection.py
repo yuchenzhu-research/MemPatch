@@ -6,6 +6,19 @@ from mempatch.revision.runtime.dpa_runtime import parse_actions
 from mempatch.revision.runtime.scenario_revision import build_scenario_revision_view
 
 
+def test_supersedes_without_replacement_remains_invalid() -> None:
+    parsed = parse_actions(
+        '[{"action_type":"SUPERSEDES","target_belief_id":"m_target",'
+        '"target_condition_id":null,"replacement_belief_id":null,'
+        '"evidence_ids":["e1"],"rationale":"replace"}]'
+    )
+
+    assert parsed.valid_json
+    assert not parsed.schema_valid
+    assert parsed.actions == ()
+    assert parsed.error_message == "SUPERSEDES requires replacement_belief_id"
+
+
 def test_no_dpa_projection_maps_block_action_directly() -> None:
     scenario = {
         "scenario_id": "case_ablation",

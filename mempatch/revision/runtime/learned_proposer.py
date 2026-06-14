@@ -39,13 +39,14 @@ class TypedRevisionProposer(Protocol):
 
 
 CANONICAL_ACTION_HELP = (
-    "Allowed action_type values and required fields:\n"
-    "- SUPERSEDES: target_belief_id + replacement_belief_id + evidence_ids\n"
+    "Preferred v1.3 action_type values and required fields:\n"
     "- BLOCKS: target_condition_id + evidence_ids\n"
-    "- RELEASES: target_condition_id + evidence_ids\n"
     "- UNCERTAIN: target_belief_id + evidence_ids\n"
     "- REAFFIRMS: target_belief_id + evidence_ids\n"
     "- NO_REVISION: all target/replacement ids null (still cite new evidence)\n"
+    "Restricted action_type values:\n"
+    "- SUPERSEDES: target_belief_id + replacement_belief_id + evidence_ids\n"
+    "- RELEASES: target_condition_id + evidence_ids\n"
 )
 
 
@@ -116,6 +117,12 @@ def build_proposer_prompt(view: SharedCandidateView) -> str:
         "actions forming r_raw for DPA-Consistent Projection into a benchmark "
         "response (decision, memory_state, evidence_event_ids, failure_diagnosis).\n\n"
         f"{CANONICAL_ACTION_HELP}\n"
+        "Use BLOCKS, UNCERTAIN, REAFFIRMS, or NO_REVISION unless the view "
+        "explicitly supports a restricted action. Do not emit SUPERSEDES unless "
+        "candidate_replacement_beliefs contains a valid replacement_belief_id; "
+        "copy that belief_id exactly from the view. Do not emit RELEASES unless "
+        "the view contains an explicit release target. Invalid or missing IDs "
+        "make the entire action array fail closed.\n"
         "Every evidence_id must be copied exactly from evidence_context. Use the "
         "minimal supporting evidence set; never invent an ID.\n"
         "Each action object has keys: action_type, target_belief_id, "

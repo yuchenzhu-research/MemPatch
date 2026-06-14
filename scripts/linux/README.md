@@ -26,6 +26,25 @@ cd /root/autodl-tmp/MemPatch && git pull
 bash scripts/linux/run_paper_campaign.sh
 ```
 
+To train all three backbones first, then run the seven main public baselines
+plus MemPatch Path A on all 500 held-out cases for each backbone:
+
+```bash
+export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
+export RUN_ID=full512
+export CONFIRM_FRESH=1
+bash scripts/linux/run_train_all_then_7plus1.sh
+```
+
+This is destructive only for the exact `RUN_ID` adapter/log directories and
+the three model result directories. It preserves base model weights and the
+train/test dataset. The 7+1 methods are Structured Direct, Full Context,
+Vanilla RAG, Time-Aware RAG, Summary Memory, Mem0-style, A-MEM-style, and
+MemPatch Path A LoRA+DPA. Path A also writes its paired no-DPA audit artifact.
+The baseline generation cap remains the paper default of 256 tokens; set
+`BASELINE_MAX_TOKENS=512 EVAL_LIMIT=20` only for an explicit truncation subset
+diagnostic, not silently for the main table.
+
 ## Per-model phases (`run_model.sh`)
 
 ```text
@@ -37,6 +56,22 @@ All three backbones default to `max_seq_length=2048`. Gemma/Qwen cap in-train ev
 ```bash
 SLUG=mistral_nemo_12b PHASES=train,pick,eval,baselines bash scripts/linux/run_model.sh
 ```
+
+## Safe explicit rerun
+
+Do not use `PHASES=auto` when replacing paper results. Remove artifacts for the
+exact `RUN_ID`, then run every phase explicitly:
+
+```bash
+export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
+export RUN_ID=full512
+CONFIRM_RERUN=1 bash scripts/linux/rerun_qwen_mistral.sh
+```
+
+The script deletes only Qwen/Mistral adapters and logs under the exact
+`split${SPLIT_INDEX}/${RUN_ID}` path, clears their result directories, runs
+`PHASES=train,pick,eval,baselines`, and prints the diagnostic report. Existing
+artifacts from names such as `full512_2048` are not treated as `full512`.
 
 ## Fast subset eval (8+1, skip base)
 
@@ -84,3 +119,4 @@ $LOCAL_ROOT/results/{slug}/
 | `07_eval_path_a.sh` | Path A DPA + same-action no-DPA test500 |
 | `run_baseline_matrix.sh` | Baselines |
 | `run_eval_subset.sh` | Subset 8+1 |
+| `run_train_all_then_7plus1.sh` | Train all three, then full test500 7+1 |
