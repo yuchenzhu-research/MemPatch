@@ -41,4 +41,5 @@ def test_rescore_writes_separate_artifacts_and_preserves_predictions(tmp_path: P
     assert prediction_path.read_text(encoding="utf-8") == original
     metrics = json.loads((output / "model/test_metrics.json").read_text(encoding="utf-8"))
     assert metrics["rescore_only"] is True
+    assert (output / "model/test_manifest.json").is_file()
     assert (output / "model/test_scored.jsonl").is_file()

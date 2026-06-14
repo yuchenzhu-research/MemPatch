@@ -64,6 +64,19 @@ def rescore_file(
         "rescore_only": True,
     }
     _write_json(output_dir / f"{tag}_metrics.json", payload)
+    _write_json(
+        output_dir / f"{tag}_manifest.json",
+        {
+            "run_tag": tag,
+            "headline_metrics": result.get("headline_metrics"),
+            "run_meta": {
+                **(source_manifest.get("run_meta") or {}),
+                "rescore_only": True,
+                "source_predictions": str(prediction_path.resolve()),
+            },
+            "source_manifest": source_manifest,
+        },
+    )
     _write_jsonl(output_dir / f"{tag}_scored.jsonl", result.get("scored_predictions") or [])
     _write_jsonl(
         output_dir / f"{tag}_validation_errors.jsonl",
