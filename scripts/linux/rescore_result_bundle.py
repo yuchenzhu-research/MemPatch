@@ -125,15 +125,24 @@ def main() -> int:
 
     if output.exists():
         shutil.rmtree(output)
-    rows = [
-        rescore_file(
+    rows = []
+    for index, path in enumerate(prediction_paths, start=1):
+        print(
+            f"[{index}/{len(prediction_paths)}] rescoring {path.relative_to(source)}",
+            flush=True,
+        )
+        row = rescore_file(
             scenarios=scenarios,
             prediction_path=path,
             source_root=source,
             out_root=output,
         )
-        for path in prediction_paths
-    ]
+        rows.append(row)
+        print(
+            f"[{index}/{len(prediction_paths)}] done {row['slug']}/{row['tag']} "
+            f"Joint={100 * row.get('joint_revision_success', 0):.1f}",
+            flush=True,
+        )
     _write_json(output / "rescore_summary.json", {"source_results": str(source), "runs": rows})
     print(f"Rescored {len(rows)} prediction files -> {output}")
     for row in rows:
