@@ -18,7 +18,7 @@ export RUN_ID="${RUN_ID:-full512}"
 export TRAIN_ITERS="${TRAIN_ITERS:-512}"
 export SAVE_EVERY="${SAVE_EVERY:-128}"
 export SAVE_TOTAL_LIMIT="${SAVE_TOTAL_LIMIT:-4}"
-# Gemma defaults to 768 seq + 512-row in-train eval (32GB). Override on 48GB+.
+# Gemma/Qwen keep a 512-row in-train eval cap for 32GB GPUs.
 export TRAIN_EVAL_ACCUMULATION_STEPS="${TRAIN_EVAL_ACCUMULATION_STEPS:-}"
 export EVAL_LIMIT="${EVAL_LIMIT:-}"
 export SMOKE_LIMIT="${SMOKE_LIMIT:-1}"

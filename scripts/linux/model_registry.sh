@@ -82,7 +82,7 @@ resolve_hf_model() {
   echo "$hub_id"
 }
 
-# Training max_seq_length: Gemma 12B @ 2048 often OOMs on 32GB during in-train eval.
+# Training max_seq_length defaults to the paper protocol value for every backbone.
 # Override globally with TRAIN_MAX_SEQ_LENGTH or per slug with TRAIN_MAX_SEQ_LENGTH_<SLUG>.
 train_max_seq_length_for_slug() {
   local slug="${1:?slug}"
@@ -97,11 +97,7 @@ train_max_seq_length_for_slug() {
     echo "${!var}"
     return 0
   fi
-  case "$slug" in
-    gemma3_12b) echo "${TRAIN_MAX_SEQ_LENGTH_GEMMA:-768}" ;;
-    qwen3_14b) echo "${TRAIN_MAX_SEQ_LENGTH_QWEN:-1280}" ;;
-    *) echo 2048 ;;
-  esac
+  echo 2048
 }
 
 # In-train eval row cap (0 = full L3 val partition). Gemma 12B OOMs on 1400-row eval.
