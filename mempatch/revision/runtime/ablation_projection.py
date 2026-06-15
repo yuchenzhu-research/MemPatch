@@ -59,7 +59,11 @@ def project_actions_without_dpa(
     raw_state = _raw_field(raw_response, "memory_state")
     if isinstance(raw_state, dict):
         for memory_id, status in raw_state.items():
-            if status in {"out_of_scope", "should_not_store"} and memory_id in memory_state:
+            if (
+                isinstance(status, str)
+                and status in {"out_of_scope", "should_not_store"}
+                and str(memory_id) in memory_state
+            ):
                 memory_state[str(memory_id)] = str(status)
 
     raw_decision = _raw_field(raw_response, "decision")
@@ -73,7 +77,7 @@ def project_actions_without_dpa(
         decision = "use_current_memory"
 
     diagnosis = _raw_field(raw_response, "failure_diagnosis")
-    if diagnosis not in PRIMARY_FAILURE_MODES:
+    if not isinstance(diagnosis, str) or diagnosis not in PRIMARY_FAILURE_MODES:
         diagnosis = "memory_hallucination"
     answer = _raw_field(raw_response, "answer")
     return {

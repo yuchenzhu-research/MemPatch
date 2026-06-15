@@ -70,13 +70,37 @@ class RevisionAction:
     def from_dict(cls, d: dict[str, Any]) -> "RevisionAction":
         if "action_type" not in d:
             raise SchemaValidationError("action object missing 'action_type'")
+        action_type = d["action_type"]
+        if not isinstance(action_type, str):
+            raise SchemaValidationError("action_type must be a string")
+
+        id_fields = (
+            "target_belief_id",
+            "target_condition_id",
+            "replacement_belief_id",
+        )
+        for field_name in id_fields:
+            value = d.get(field_name)
+            if value is not None and not isinstance(value, str):
+                raise SchemaValidationError(f"{field_name} must be a string or null")
+
+        raw_evidence_ids = d.get("evidence_ids", [])
+        if not isinstance(raw_evidence_ids, list) or not all(
+            isinstance(evidence_id, str) for evidence_id in raw_evidence_ids
+        ):
+            raise SchemaValidationError("evidence_ids must be an array of strings")
+
+        rationale = d.get("rationale", "")
+        if not isinstance(rationale, str):
+            raise SchemaValidationError("rationale must be a string")
+
         return cls(
-            action_type=d["action_type"],
+            action_type=action_type,
             target_belief_id=d.get("target_belief_id"),
             target_condition_id=d.get("target_condition_id"),
             replacement_belief_id=d.get("replacement_belief_id"),
-            evidence_ids=tuple(d.get("evidence_ids", ()) or ()),
-            rationale=d.get("rationale", "") or "",
+            evidence_ids=tuple(raw_evidence_ids),
+            rationale=rationale,
         )
 
     def validate(self) -> None:

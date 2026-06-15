@@ -96,7 +96,7 @@ These are mediator properties conditional on A1--A4; they do not imply semantic 
 
 \paragraph{Corollary 2 (Local Noninterference).}\label{prop:local_noninterference}
 \emph{If neither an admitted action nor an authorized reconciliation decision targets $m_i$, then $s_i^\star = s_i^0$. Malformed references and rejected actions therefore cannot silently alter unrelated records.}
-\textbf{Implementation Artifact:} \texttt{mempatch/revision/runtime/dpa\_runtime.py} (tested in \texttt{mempatch/tests/test\_dpa\_kernel.py})
+\textbf{Implementation Artifact:} \path{mempatch/revision/runtime/dpa_runtime.py} (tested in \path{mempatch/tests/test_dpa_kernel.py})
 
 \paragraph{Verifiability Metric.}
 To detect logging or mediation defects empirically, the system calculates the \emph{Externally Verifiable Transition Fraction} ($\mathrm{EVTF}$):

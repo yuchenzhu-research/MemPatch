@@ -14,7 +14,7 @@ The five frozen baselines are: \emph{Frozen Direct Prompting}, which predicts th
 \setlength{\tabcolsep}{5pt}
 \begin{tabular}{lrrrrrrrr}
 \toprule
-& \multicolumn{4}{c}{Memory-State Accuracy (\%)} & \multicolumn{4}{c}{Schema Compliance (\%)} \\
+& \multicolumn{4}{c}{Memory-State Accuracy (\%)} & \multicolumn{4}{c}{Final-Response Schema Compliance (\%)} \\
 \cmidrule(lr){2-5}\cmidrule(lr){6-9}
 System & Qwen & Phi-4 & Mistral & Avg. & Qwen & Phi-4 & Mistral & Avg. \\
 \midrule
@@ -26,7 +26,7 @@ Summary Memory & 81.1 & 81.3 & 0.0 & 54.1 & 76.2 & 54.4 & 0.0 & 43.5 \\
 \method{} & \textbf{83.9} & 82.9 & \textbf{84.7} & \textbf{83.8} & \textbf{100.0} & \textbf{100.0} & \textbf{100.0} & \textbf{100.0} \\
 \bottomrule
 \end{tabular}
-\caption{Matched frozen-backbone comparison on the 500-case L4 test set. No row uses LoRA or benchmark-specific adaptation. We emphasize memory-state accuracy, the benchmark's persistent-state target, and schema compliance, which determines whether an output can be consumed without repair. Full diagnostic vectors are reported separately.}
+\caption{Matched frozen-backbone comparison on the 500-case L4 test set. No row uses LoRA or benchmark-specific adaptation. Schema compliance is measured on the final five-field response; for \method{}, this response is produced by deterministic canonical projection. Full diagnostic vectors are reported separately.}
 \label{tab:frozen-results}
 \end{table*}
 
@@ -34,10 +34,10 @@ Summary Memory & 81.1 & 81.3 & 0.0 & 54.1 & 76.2 & 54.4 & 0.0 & 43.5 \\
 Across the three completed frozen backbones, \method{} raises average memory-state accuracy from the strongest baseline average of $56.1\%$ to $83.8\%$. The largest difference occurs on Mistral-Nemo: the strongest baseline reaches only $9.3\%$, while typed patches followed by deterministic projection reach $84.7\%$. This is not merely an average dominated by one model: \method{} is best on Qwen and Mistral and remains competitive with the strongest Phi-4 baseline ($82.9\%$ versus $85.1\%$).
 
 \paragraph{Interface Robustness.}
-All \method{} runs satisfy the output schema, whereas baseline compliance ranges from $0\%$ to $100\%$ and collapses on Mistral. The result isolates a practical role for mediation: model-specific surface forms are normalized before persistent state is committed. The Guard cannot make an omitted proposal correct, but it can prevent malformed output from becoming an implicit write protocol.
+All projected \method{} responses satisfy the five-field output schema, whereas baseline compliance ranges from $0\%$ to $100\%$ and collapses on Mistral. This $100\%$ is a property of deterministic canonical projection, not evidence that every neural proposal is well formed: raw action parse validity is $90.4\%$ for Qwen, $87.8\%$ for Phi-4, and $100\%$ for Mistral. The result isolates a practical role for mediation: model-specific surface forms are normalized before persistent state is committed. The Guard cannot make an omitted proposal correct, but it can prevent malformed output from becoming an implicit write protocol.
 
 \paragraph{Diagnostic Trade-offs.}
-The full vectors prevent overclaiming. \method{} does not dominate every response channel. On Qwen, for example, frozen direct prompting has higher decision $F_1$ and evidence $F_1$, while \method{} has higher memory-state accuracy and complete schema compliance. On Phi-4, \method{} obtains the strongest diagnosis accuracy ($37.4\%$) but trails Time-Aware RAG in decision $F_1$. These differences support the benchmark design: answer-level, evidence-level, and persistent-state correctness are related but not interchangeable.
+The full vectors prevent overclaiming. \method{} does not dominate every response channel. On Qwen, for example, frozen direct prompting has higher decision $F_1$ and evidence $F_1$, while \method{} has higher memory-state accuracy and a schema-valid projected response. On Phi-4, \method{} obtains the strongest diagnosis accuracy ($37.4\%$) but trails Time-Aware RAG in decision $F_1$. These differences support the benchmark design: answer-level, evidence-level, and persistent-state correctness are related but not interchangeable.
 
 \paragraph{Why Joint Is Secondary.}
 Joint revision success requires every scored component to be correct for the same case. It is useful as a strict complete-case statistic, but a zero does not distinguish malformed output, a wrong diagnosis, or a single evidence mismatch from a wrong persistent state. We therefore retain Joint in reproducibility artifacts rather than using it as the headline measure.

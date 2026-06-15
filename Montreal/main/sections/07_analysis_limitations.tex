@@ -15,7 +15,7 @@ Several key safety properties are guaranteed by the structural design of \method
 \paragraph{Observed Empirically.}
 On the L4 evaluation split, we observe the following:
 \begin{itemize}[leftmargin=*]
-\item \textbf{Accuracy and Mediation Trade-offs:} \method{} improves state and schema reliability but does not dominate decision or evidence accuracy. A rejected patch is a no-commit outcome, not proof that the pre-existing state is safe.
+\item \textbf{Accuracy and Mediation Trade-offs:} \method{} improves state reliability and guarantees a schema-valid projected response, but it does not dominate decision or evidence accuracy. A rejected patch is a no-commit outcome, not proof that the pre-existing state is safe.
 \item \textbf{Backbone Sensitivity:} Benefits are largest when direct generation fails to express the state contract; stronger native structured-output behavior narrows the gap.
 \end{itemize}
 
