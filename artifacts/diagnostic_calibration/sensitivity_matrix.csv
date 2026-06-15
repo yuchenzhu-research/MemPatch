@@ -1,0 +1,9 @@
+metric,wrong_decision,wrong_state,wrong_evidence,overcitation,wrong_diagnosis,malformed_schema,missing_trace
+black_box_decision_accuracy,1.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000
+memory_state_accuracy,0.0000,1.0000,0.0000,0.0000,0.0000,1.0000,0.0000
+evidence_f1,0.0000,0.0000,1.0000,0.2000,0.0000,0.0000,0.0000
+minimal_evidence_exact_match,0.0000,0.0000,1.0000,1.0000,0.0000,0.0000,0.0000
+failure_diagnosis_accuracy,0.0000,0.0000,0.0000,0.0000,1.0000,0.0000,0.0000
+answer_key_fact_accuracy,0.0000,0.0000,0.0000,0.0000,0.0000,0.0000,0.5680
+response_schema_compliance_rate,0.0000,0.0000,0.0000,0.0000,0.0000,1.0000,1.0000
+joint_revision_success,0.5680,0.5680,0.5680,0.5680,0.0000,0.5680,0.5680

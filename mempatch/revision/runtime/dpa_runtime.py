@@ -412,3 +412,64 @@ def run_from_text(
         parse_result=parse_result,
         audit_metadata=audit_metadata,
     )
+
+
+def run_consensus(
+    view: SharedCandidateView,
+    proposals_text: list[str],
+    *,
+    audit_metadata: dict[str, Any] | None = None,
+) -> RuntimeResult:
+    """Consensus Mode: Parse multiple proposals and reconcile deterministically.
+
+    If all proposals parse successfully and yield identical action lists, they are committed.
+    Otherwise, the engine fails closed (NO_REVISION) to enforce safety under disagreement.
+    """
+    parsed_results = [parse_actions(text) for text in proposals_text]
+    
+    # Check if all are valid and have identical actions
+    all_valid = all(p.schema_valid for p in parsed_results)
+    
+    reconciled_actions = []
+    if all_valid and len(parsed_results) > 0:
+        first_actions = parsed_results[0].actions
+        identical = True
+        for p in parsed_results[1:]:
+            if len(p.actions) != len(first_actions):
+                identical = False
+                break
+            for a1, a2 in zip(first_actions, p.actions):
+                # Simple serialization check
+                if a1.to_dict() != a2.to_dict():
+                    identical = False
+                    break
+        if identical:
+            reconciled_actions = list(first_actions)
+            
+    # If not identical or some invalid, we default to empty list (fail-closed)
+    if not reconciled_actions:
+        # Re-parse or create a fail-closed parser result
+        from mempatch.revision.runtime.engine_errors import EngineError, EngineStage, ErrorSeverity
+        err = EngineError(
+            stage=EngineStage.REVISION_GATE,
+            code="CONSENSUS_DISAGREEMENT",
+            message="Proposers failed to reach consensus, failing closed",
+            severity=ErrorSeverity.ERROR
+        )
+        parse_result = ParseResult(
+            valid_json=True,
+            schema_valid=False,
+            actions=(),
+            error_code="CONSENSUS_DISAGREEMENT",
+            error_message="Proposers failed to reach consensus",
+            errors=(err,)
+        )
+    else:
+        parse_result = parsed_results[0]
+        
+    return run_actions(
+        view,
+        reconciled_actions,
+        parse_result=parse_result,
+        audit_metadata=audit_metadata,
+    )
