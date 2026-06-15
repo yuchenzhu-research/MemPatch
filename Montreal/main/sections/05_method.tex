@@ -1,112 +1,73 @@
-\section{MemPatch Revision Module}
+\section{MemPatch Runtime}
 
-The \method{} revision module is a training-free, plug-and-play inference scaffold designed to maintain memory consistency without parameter updates. It separates opaque semantic proposals from deterministic, verifiable persistent-memory transitions. 
+The \method{} runtime is a parameter-free plug-in layer designed to convert predictions from frozen or adapted models into policy-checked, attributable, and replayable memory patches. It separates neural prediction from deterministic runtime verification.
 
 \begin{figure*}[t]
 \centering
 \begin{tikzpicture}[
-    scale=0.85, every node/.style={transform shape},
-    box/.style={rectangle, draw=gray!80, fill=gray!5, rounded corners=3pt, minimum width=2.2cm, minimum height=0.9cm, align=center, font=\small},
-    bluebox/.style={rectangle, draw=blue!60!black, fill=blue!5, rounded corners=3pt, minimum width=2.2cm, minimum height=0.9cm, align=center, font=\small},
-    greenbox/.style={rectangle, draw=green!60!black, fill=green!5, rounded corners=3pt, minimum width=2.2cm, minimum height=0.9cm, align=center, font=\small},
-    orangebox/.style={rectangle, draw=orange!70!black, fill=orange!5, rounded corners=3pt, minimum width=2.2cm, minimum height=0.9cm, align=center, font=\small},
+    scale=0.88, every node/.style={transform shape},
+    box/.style={rectangle, draw=gray!80, fill=gray!5, rounded corners=3pt, minimum width=2.4cm, minimum height=0.9cm, align=center, font=\small},
+    bluebox/.style={rectangle, draw=blue!60!black, fill=blue!5, rounded corners=3pt, minimum width=2.4cm, minimum height=0.9cm, align=center, font=\small},
+    greenbox/.style={rectangle, draw=green!60!black, fill=green!5, rounded corners=3pt, minimum width=2.4cm, minimum height=0.9cm, align=center, font=\small},
+    orangebox/.style={rectangle, draw=orange!70!black, fill=orange!5, rounded corners=3pt, minimum width=2.4cm, minimum height=0.9cm, align=center, font=\small},
     arrow/.style={->, >=stealth, thick, draw=gray!80}
 ]
 
-% Left: Input
-\node[box] (input) at (0,1.2) {\textbf{Public View} \\ $V = B(M, E, \dots)$};
+% Main Compatibility Mode Path (Solid)
+\node[bluebox] (pred) at (0,1.2) {\textbf{Predictor} \\ $\widehat{r} = \Pi_\theta(V)$};
+\node[bluebox] (comp) at (3.5,1.2) {\textbf{Compiler} \\ $\widetilde{\alpha} = C_V(\dots)$};
+\node[greenbox] (guard) at (7.0,1.2) {\textbf{Guard} \\ $G_\Gamma(V, \widetilde{\alpha})$};
+\node[greenbox] (commit) at (10.5,1.2) {\textbf{Canonical Commit} \\ $s^\star = \Delta(s^0, \alpha^+)$};
+\node[box] (cert) at (14.0,1.2) {\textbf{Audit Certificate} \\ $\tau$};
 
-% Top Path: Path F
-\node[bluebox] (promptf) at (3.0,2.4) {Prompting $P_F(V)$ \\ \scriptsize{(Final State)}};
-\node[bluebox] (modelf) at (6.0,2.4) {Frozen Model \\ $\pi_{\theta_0}$};
-\node[bluebox] (compilef) at (9.0,2.4) {Compile \\ $\widetilde{\alpha}^F$};
+\draw[arrow] (pred) -- (comp) node[midway,above,font=\scriptsize] {$\widehat{r}$};
+\draw[arrow] (comp) -- (guard) node[midway,above,font=\scriptsize] {$\widetilde{\alpha}$};
+\draw[arrow] (guard) -- (commit) node[midway,above,font=\scriptsize] {$\alpha^+$};
+\draw[arrow] (commit) -- (cert) node[midway,above,font=\scriptsize] {$s^\star, \rho$};
 
-% Bottom Path: Path A
-\node[orangebox] (prompta) at (3.0,0.0) {Prompting $P_A(V)$ \\ \scriptsize{(Action Edit)}};
-\node[orangebox] (modela) at (6.0,0.0) {Frozen Model \\ $\pi_{\theta_0}$};
-\node[orangebox] (parsea) at (9.0,0.0) {Parse \\ $\widetilde{\alpha}^A$};
+% Consensus Mode Branch (Dashed)
+\node[orangebox] (pred2) at (0,-0.6) {\textbf{Proposer 2} \\ $\widehat{r}_2$};
+\node[orangebox] (recon) at (3.5,-0.6) {\textbf{Reconciliation} \\ (Consensus Check)};
 
-% Mid-Right: Guard
-\node[greenbox] (guard) at (12.2,1.2) [minimum height=2.0cm, minimum width=1.8cm] {\textbf{Revision Guard} \\ $G_\Gamma(V, \cdot)$ \\ \scriptsize{Predicate checks}};
-
-% Right: Reconciliation & Output
-\node[greenbox] (recon) at (15.2,1.2) {\textbf{Reconciliation} \\ $R(s^0, s^F, s^A)$};
-\node[box] (out) at (18.0,1.2) {\textbf{Projection} \\ Response $r^\star$};
-
-% Connect paths
-\draw[arrow] (input.east) -- ++(0.5,0) |- (promptf.west);
-\draw[arrow] (input.east) -- ++(0.5,0) |- (prompta.west);
-
-\draw[arrow] (promptf) -- (modelf);
-\draw[arrow] (modelf) -- (compilef);
-\draw[arrow] (prompta) -- (modela);
-\draw[arrow] (modela) -- (parsea);
-
-\draw[arrow] (compilef.east) -- ++(0.5,0) |- (guard.160);
-\draw[arrow] (parsea.east) -- ++(0.5,0) |- (guard.200);
-
-\draw[arrow] (guard) -- (recon) node[midway,above,font=\scriptsize] {$\alpha^F, \alpha^A$};
-\draw[arrow] (recon) -- (out) node[midway,above,font=\scriptsize] {$s^\star$};
+\draw[arrow, dashed] (pred2) -- (recon);
+\draw[arrow, dashed] (pred.south) -- (recon.north) node[midway,right,font=\tiny] {$\widehat{r}_1$};
+\draw[arrow, dashed] (recon.east) -- ++(1.4,0) |- (guard.200) node[near end,above,font=\tiny] {$\widetilde{\alpha}_{\mathrm{consensus}}$};
 
 \end{tikzpicture}
-\caption{\method{} Dual-Path Architecture. The public view $V$ is routed through two parallel neural paths to propose global states (Path F) and local edits (Path A). Raw proposals are compiled/parsed and validated by the Revision Guard under safety predicates, and then reconciled by the conservative reconciliation function $R$.}
+\caption{\method{} Parameter-Free Runtime Flow. Compatibility Mode is shown as the main execution path: predictions flow from the predictor to the compiler, Revision Guard, and canonical commit, yielding an audit certificate. Consensus Mode operates as an optional branch with deterministic reconciliation under multiple proposers.}
 \label{fig:architecture}
 \end{figure*}
 
-\subsection{Dual-Path Proposal}
-\method{} queries a single frozen backbone model $\pi_{\theta_0}$ through two distinct prompting interfaces to obtain complementary viewpoints:
-\begin{align}
-y^F &= \pi_{\theta_0}(P_F(V)), \qquad \widetilde{\alpha}^F = \mathsf{Compile}_V(y^F), \\
-y^A &= \pi_{\theta_0}(P_A(V)), \qquad \widetilde{\alpha}^A = \mathsf{Parse}_V(y^A).
-\end{align}
-Here, the final-state path $P_F(V)$ prompts the model to propose global validity states directly ($y^F$), which are compiled into a raw action sequence $\widetilde{\alpha}^F$. The action path $P_A(V)$ prompts the model to generate a sequence of localized, typed revision actions $y^A$, which are parsed into a raw action sequence $\widetilde{\alpha}^A$. Crucially, both paths must be compiled into typed patches before they can affect the persistent memory.
+\subsection{Parameter-Free Runtime Execution Modes}
+The \method{} runtime acts as a complete mediation scaffold, accepting semantic proposals and executing policy validations without editing parameters. It supports two primary operational modes:
+\begin{itemize}[leftmargin=*]
+\item \textbf{Compatibility Mode:} A single arbitrary predictor (which can be a frozen baseline or an SFT adapted model) generates raw text outputs $\widehat{r} = \Pi_\theta(V)$, which are parsed and compiled into candidate actions $\widetilde{\alpha} = C_V(s^0, \widehat{s}, \widehat{Z})$.
+\item \textbf{Consensus Mode:} Multiple predictors generate independent proposals ($\widehat{r}_1, \widehat{r}_2$). The reconciliation function evaluates their intersection: if all branch proposals agree on the set of memory changes, the actions are compiled; otherwise, it resolves to a safe fail-closed action ($\mathrm{NO\_REVISION}$) before routing to the Guard.
+\end{itemize}
 
 \subsection{Revision Guard}
-To prevent ungrounded or contradictory actions from modifying memory, both raw action sequences are routed through a symbolic Revision Guard $G_\Gamma$:
+To prevent ungrounded or contradictory actions from modifying memory, compiled action sequences are routed through the symbolic Revision Guard $G_\Gamma$:
 \begin{equation}
-(\alpha^b, \rho^b) = G_\Gamma(V, \widetilde{\alpha}^b) \quad \text{for } b \in \{F, A\},
+(\alpha^+, \rho) = G_\Gamma(V, \widetilde{\alpha}),
 \end{equation}
-where $\alpha^b$ is the admitted canonical patch, and $\rho^b$ is the rejection log detailing the failure reasons. The Guard filters proposals based on a transition policy $\Gamma$ containing five predicates:
+where $\alpha^+$ is the admitted canonical patch, and $\rho$ is the rejection log detailing the failure reasons. The Guard filters proposals based on a transition policy $\Gamma$ containing five predicates:
 \begin{align*}
 \mathcal{L}_\Gamma(V) = \{ \alpha \mid &\mathsf{Schema}(\alpha) \land \mathsf{References}_V(\alpha) \land \mathsf{Transitions}_\Gamma(\alpha) \\
 &\land \mathsf{NoConflict}(\alpha) \land \mathsf{Authorized}_\Gamma(\alpha) \}.
 \end{align*}
 \begin{itemize}[leftmargin=*]
-\item $\mathsf{Schema}(\alpha)$: Checks that each action matches the required JSON structure.
+\item $\mathsf{Schema}(\alpha)$: Checks that each action matches the required structure.
 \item $\mathsf{References}_V(\alpha)$: Ensures all target and replacement identifiers exist within the visible memory $M$ of $V$.
-\item $\mathsf{Transitions}_\Gamma(\alpha)$: Verifies that all state changes follow valid transitions (e.g., condition rules can only block or release).
+\item $\mathsf{Transitions}_\Gamma(\alpha)$: Verifies that all state changes follow valid transitions.
 \item $\mathsf{NoConflict}(\alpha)$: Rejects overlapping or contradictory actions within the same patch.
 \item $\mathsf{Authorized}_\Gamma(\alpha)$: Confirms that cited evidence events logically justify the state changes.
 \end{itemize}
-Admitted patches are deterministically projected to yield candidate state maps:
+Admitted patches are projected to yield candidate state maps $s^\star = \Delta(s^0, \alpha^+)$.
+Every transition outputs an audit certificate trace:
 \begin{equation}
-s^b = \Delta(s^0, \alpha^b) \quad \text{for } b \in \{F, A\}.
+\tau = (H(V), H(\Pi), \widehat{r}, \widetilde{\alpha}, \alpha^+, \rho, s^0, s^\star),
 \end{equation}
-
-\subsection{Conservative Reconciliation}
-Let a rejected or missing branch proposal be represented by $\bot$. We define a deterministic reconciliation function $R$ to compute the final state for each record $i$:
-\begin{equation}
-s_i^\star = R(s_i^0, s_i^F, s_i^A),
-\end{equation}
-which satisfies the following six logical invariants by construction:
-\begin{enumerate}[leftmargin=*]
-\item \textbf{Agreement:} If both paths propose the same state ($s_i^F = s_i^A$), that state is committed.
-\item \textbf{No Silent Permission:} A disagreement between proposals cannot silently grant downstream reuse permission (i.e., default to $\mathsf{Current}$).
-\item \textbf{Restrictive Fail-Closed:} A disagreement involving a restrictive state (any state other than $\mathsf{Current}$) produces an authorized fail-closed state (e.g., $\mathsf{Unresolved}$ or $\mathsf{Blocked}$).
-\item \textbf{Double Rejection:} If both branch proposals are rejected or $\bot$, the state remains unchanged ($s_i^\star = s_i^0$).
-\item \textbf{Traceability:} Every reconciliation decision emits a stable reason code logged in the trace.
-\item \textbf{Isolation:} No free-form natural-language answer generated by the model can directly modify the memory store.
-\end{enumerate}
-
-We preserve branch-specific evidence provenance:
-\begin{equation}
-Z_i^\star = (Z_i^F, Z_i^A, \chi_i),
-\end{equation}
-where $\chi_i$ records the agreement, disagreement, rejection, or fallback reason. The final response is projected deterministically:
-\begin{equation}
-r^\star = \mathsf{Project}(V, y^F, s^\star, Z^\star).
-\end{equation}
-This projection formats the final output dictionary but is mathematically restricted from introducing new identifiers or state changes.
+which is fully verifiable and logs the input view hash $H(V)$, predictor hash $H(\Pi)$, raw proposals, gate actions, and states.
 
 \subsection{Formal Guarantees}
 

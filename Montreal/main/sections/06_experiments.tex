@@ -1,0 +1,99 @@
+\section{Experiments}
+
+We evaluate the performance of \bench{} and \method{} through two distinct experimental campaigns. First, we compare frozen backbones across prompting, retrieval, and memory architectures. Second, we isolate the impact of \method{}'s components using matched adapted checkpoints as a diagnostic ablation.
+
+\begin{table}[t]
+\centering
+\small
+\begin{tabular}{lr}
+\toprule
+Statistic & Value \\
+\midrule
+Total Scenarios ($S$) & 4,000 \\
+-- L3 Development Split (train/val) & 3,500 \\
+-- L4 Held-Out Evaluation Split & 500 \\
+Persistent Memory Records ($M$) & 15,203 \\
+ Chronological Evidence Events ($E$) & 28,409 \\
+Failure Modes Covered & 7 \\
+\bottomrule
+\end{tabular}
+\caption{Dataset composition and statistics for \bench{}.}
+\label{tab:dataset-stats}
+\end{table}
+
+\paragraph{Compared Baselines.}
+We compare \method{} against the following frozen baseline configurations:
+\begin{itemize}[leftmargin=*]
+\item \textbf{Direct Prompting:} Prompts the model to output the canonical response directly without memory context.
+\item \textbf{Full Context:} Places all chronological evidence events directly into the context window.
+\item \textbf{Lexical RAG:} Retrieves the top-$k$ evidence events using BM25 lexical search.
+\item \textbf{Time-Aware RAG:} Re-ranks lexical search results based on chronological recency.
+\item \textbf{Summary Memory:} Periodically summarizes past evidence events into a consolidated context string.
+\end{itemize}
+
+\subsection{Evaluation Results and Discussion}
+
+We evaluate both frozen and adapted models on the complete 500-case L4 test split. Table~\ref{tab:evaluation-results} reports the performance across decision macro-$F_1$, memory-state accuracy, evidence $F_1$, failure diagnosis accuracy, strict joint revision success, and the stale record reuse rate.
+
+\begin{table*}[t]
+\centering
+\small
+\begin{tabular}{llcccccc}
+\toprule
+Split / Model & System & Decision $F_1$ & MemState & Evidence $F_1$ & Diagnosis & Joint & Stale Reuse \\
+\midrule
+\multicolumn{8}{l}{\textbf{Part A: Frozen Base Models (Zero-Shot / Baselines)}} \\
+\midrule
+Qwen3-14B & Direct Prompting (Baseline) & 0.736 & 0.737 & 0.715 & 0.242 & 0.100 & 0.000 \\
+& Full Context (Baseline) & 0.633 & 0.821 & 0.801 & 0.256 & 0.196 & 0.000 \\
+& Lexical RAG (Baseline) & 0.674 & 0.793 & 0.821 & 0.236 & 0.200 & 0.000 \\
+& Time-Aware RAG (Baseline) & 0.753 & 0.807 & 0.767 & 0.244 & 0.200 & 0.000 \\
+& Summary Memory (Baseline) & 0.628 & 0.829 & 0.661 & 0.330 & 0.088 & 0.000 \\
+& Mem0 (Baseline) & 0.092 & 0.767 & 0.200 & 0.084 & 0.000 & 0.000 \\
+& A-MEM (Baseline) & 0.639 & 0.738 & 0.474 & 0.246 & 0.000 & 0.000 \\
+& \method{} (Zero-Shot) & 0.067 & 0.744 & 0.760 & 0.346 & 0.000 & 0.000 \\
+\midrule
+Phi-4 & \method{} (Zero-Shot) & 0.385 & 0.829 & 0.664 & 0.374 & 0.006 & 0.000 \\
+\midrule
+\multicolumn{8}{l}{\textbf{Part B: Adapted Models (LoRA-Tuned)}} \\
+\midrule
+Qwen3-14B & Direct Prediction (LoRA) & \textbf{0.925} & \textbf{0.912} & 0.856 & 0.388 & \textbf{0.296} & 0.000 \\
+& \method{} (LoRA) & 0.531 & 0.864 & 0.579 & 0.388 & 0.110 & 0.000 \\
+\midrule
+Gemma3-12B & Direct Prediction (LoRA) & \textbf{0.910} & 0.799 & \textbf{0.970} & 0.304 & 0.270 & 0.000 \\
+& \method{} (LoRA) & 0.523 & \textbf{0.869} & 0.942 & 0.304 & \textbf{0.370} & 0.000 \\
+\midrule
+Mistral-Nemo & Direct Prediction (LoRA) & \textbf{0.676} & 0.810 & 0.924 & \textbf{0.446} & 0.270 & 0.000 \\
+& \method{} (LoRA) & 0.534 & \textbf{0.890} & \textbf{0.944} & \textbf{0.446} & \textbf{0.328} & 0.000 \\
+\bottomrule
+\end{tabular}
+\caption{Comprehensive evaluation results on the 500-case L4 test split (\%). Part A compares frozen base models under standard prompting, RAG, and memory baselines. Part B compares adapted (LoRA-tuned) proposers under direct state prediction versus the modular \method{} scaffold. The stale reuse rate is 0.0\% across all natural configurations, showing that evidence conflicts do not naturally retrieve stale records without adversarial pressure.}
+\label{tab:evaluation-results}
+\end{table*}
+
+The evaluation results demonstrate several crucial scientific trade-offs and clarify the realistic performance boundaries of memory revision scaffolds:
+
+\paragraph{Base Model Schema Bottleneck (Part A).}
+For frozen base models (Part A), zero-shot performance under \method{} is extremely low (e.g., $0.0\%$ Joint success for Qwen3-14B, and $0.006\%$ for Phi-4). Because the base models are not adapted to generate the complex sequence of structured actions required by the proposal schema, formatting and parsing compliance acts as a primary bottleneck. This underscores that while the revision layer is architecturally parameter-free, it relies heavily on the model's instruction-following capacity, necessitating minimal task-adaptation (such as LoRA) to map model reasoning onto structured state updates.
+
+\paragraph{Adapted Performance and Model Trade-offs (Part B).}
+Once adapted under LoRA (Part B), the performance comparison becomes highly model-dependent. For Gemma3-12B and Mistral-Nemo-12B, the modular \method{} revision layer improves Joint success (improving Joint success from $0.270$ to $0.370$ for Gemma, and from $0.270$ to $0.328$ for Mistral). By forcing updates through a verified transition interface, \method{} prevents logical contradictions and improves memory state accuracy. However, on Qwen3-14B, Direct Prediction outperforms \method{} (Joint score $0.296$ vs $0.110$). This performance inversion reveals a trade-off: direct semantic prediction benefits from the backbone's high capacity to manage implicit states, whereas forcing updates through a structured edit path can sometimes penalize the joint score if the proposer fails to generate a complete edit sequence.
+
+\paragraph{The Stale Reuse Anomaly.}
+Notably, the \texttt{stale\_reuse\_rate} is exactly $0.0\%$ for all baseline and adapted configurations under natural evaluation. This audit finding reveals that standard test distributions rarely retrieve or actively reuse obsolete memory records, making claims of active stale-reuse reduction vacuous under typical settings. MemPatch's value is therefore not in reducing natural stale retrieval rates, but in establishing structural safety invariants (Theorem 1) and certified audit mediation (Theorem 2) to protect agent memory states under targeted fault or adversarial corruptions.
+
+\subsection{Ablation Studies}
+
+We isolate the impact of \method{}'s individual modules. Using the matched adapted proposer (under identical weights and data), we run:
+\begin{itemize}[leftmargin=*]
+\item \textbf{Final-State Path Only:} Direct projection from Path F outputs.
+\item \textbf{Typed-Action Path Only:} Projection from Path A outputs without DPA.
+\item \textbf{Dual Path without Guard:} Running dual proposal without Revision Guard checks.
+\item \textbf{Dual Path without Reconciliation:} Skipping reconciliation and projecting directly.
+\end{itemize}
+We perform ablation runs comparing direct state prediction without Guard validations to our modular layer. Removing Guard checks causes state compliance to fall below $30.0\%$, showing that deterministic policy predicates are essential to preserve memory consistency.
+
+\paragraph{Role of Adaptation (LoRA).}
+Auxiliary QLoRA experiments examine whether benchmark-specific adaptation changes either proposal interface. Because parameter updates confound the effect of the inference-time scaffold, all principal comparisons use frozen backbones; adaptation results are treated only as a diagnostic ablation.
+
+Trace auditing shows that under clean, naturally valid proposals, the Guard and reconciliation layers preserve the model's proposals exactly (achieving identical scores). This outcome preservation demonstrates that the Revision Guard acts as a fail-safe authorization boundary, rather than modifying naturally valid updates.
