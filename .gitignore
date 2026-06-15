@@ -7,7 +7,14 @@ artifacts/
 
 # Agent / paper drafts — not part of the public benchmark release.
 AGENTS.md
-Montreal/
+Montreal/*
+!Montreal/main/
+Montreal/main/*
+!Montreal/main/main.pdf
+!Montreal/main/sections/
+!Montreal/main/main.tex
+Montreal/main/sections/*
+!Montreal/main/sections/*.tex
 Montreal copy/
 
 # Dataset bundle — regenerate locally or fetch from the public dataset host.

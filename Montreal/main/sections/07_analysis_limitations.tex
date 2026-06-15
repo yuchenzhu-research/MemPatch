@@ -15,7 +15,7 @@ Several key safety properties are guaranteed by the structural design of \method
 \paragraph{Observed Empirically.}
 On the L4 evaluation split, we observe the following:
 \begin{itemize}[leftmargin=*]
-\item \textbf{Accuracy and Safety Trade-offs:} \method{} eliminates stale-record reuse and prevents schema violations. However, when the neural proposer fails to emit schema-valid JSON, \method{}'s fail-closed policy rejects the entire patch, trading proposal recall for strict state safety.
+\item \textbf{Accuracy and Safety Trade-offs:} \method{} enforces structural invariants and prevents schema violations. However, when the neural proposer fails to emit schema-valid JSON, \method{}'s fail-closed policy rejects the entire patch, trading proposal recall for strict state safety.
 \item \textbf{Natural-Set Congruence:} On clean, naturally valid proposals, the Guard is non-restrictive, meaning it does not alter predictions that are already correct. Rejection efficacy is observed under targeted error injection.
 \end{itemize}
 

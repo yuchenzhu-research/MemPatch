@@ -33,7 +33,7 @@ We compare \method{} against the following frozen baseline configurations:
 
 \subsection{Evaluation Results and Discussion}
 
-We evaluate both frozen and adapted models on the complete 500-case L4 test split. Table~\ref{tab:evaluation-results} reports the performance across decision macro-$F_1$, memory-state accuracy, evidence $F_1$, failure diagnosis accuracy, strict joint revision success, and the stale record reuse rate.
+We evaluate both frozen and adapted models on the complete 500-case L4 test split. Table~\ref{tab:evaluation-results} reports the performance across decision macro-$F_1$, memory-state accuracy, evidence $F_1$, failure diagnosis accuracy, Joint Success, and the stale record reuse rate.
 
 \begin{table*}[t]
 \centering
@@ -80,7 +80,7 @@ For frozen base models (Part A), zero-shot performance under \method{} is extrem
 Once adapted under LoRA (Part B), the performance comparison becomes highly model-dependent. For Gemma3-12B and Mistral-Nemo-12B, the modular \method{} revision layer improves Joint success (improving Joint success from $0.270$ to $0.370$ for Gemma, and from $0.270$ to $0.328$ for Mistral). By forcing updates through a verified transition interface, \method{} prevents logical contradictions and improves memory state accuracy. However, on Qwen3-14B, Direct Prediction outperforms \method{} (Joint score $0.296$ vs $0.110$). This performance inversion reveals a trade-off: direct semantic prediction benefits from the backbone's high capacity to manage implicit states, whereas forcing updates through a structured edit path can sometimes penalize the joint score if the proposer fails to generate a complete edit sequence.
 
 \paragraph{The Stale Reuse Anomaly.}
-Notably, the \texttt{stale\_reuse\_rate} is exactly $0.0\%$ for all baseline and adapted configurations under natural evaluation. This audit finding reveals that standard test distributions rarely retrieve or actively reuse obsolete memory records, making claims of active stale-reuse reduction vacuous under typical settings. MemPatch's value is therefore not in reducing natural stale retrieval rates, but in establishing structural safety invariants (Theorem 1) and certified audit mediation (Theorem 2) to protect agent memory states under targeted fault or adversarial corruptions.
+Notably, the \texttt{stale\_reuse\_rate} is exactly $0.0\%$ for all baseline and adapted configurations under natural evaluation. This audit finding reveals that standard test distributions rarely retrieve or actively reuse obsolete memory records, making claims of active stale-reuse reduction vacuous under typical settings. MemPatch's value is therefore not in reducing natural stale retrieval rates, but in establishing structural safety invariants and certified audit mediation (Theorem~\ref{thm:certified_transparent_mediation}) to protect agent memory states under targeted fault or adversarial corruptions.
 
 \subsection{Ablation Studies}
 
