@@ -1,5 +1,5 @@
 from experiments.aaai27.analyze import _bootstrap_delta, _cluster_wtl
-from experiments.aaai27.methods import build_method_view
+from experiments.aaai27.methods import build_method_view, lexical_rag, time_aware_rag
 
 
 def _view():
@@ -50,3 +50,34 @@ def test_cluster_bootstrap_and_wtl_are_paired_and_reproducible():
         "ties": 1,
         "losses": 0,
     }
+
+
+def test_rag_not_full_context():
+    view = {
+        "workflow_context": "issue stability build",
+        "black_box_task": "check build",
+        "public_input": {
+            "event_trace": [
+                {"event_id": "e1", "text": "stability state", "timestamp_order": 1},
+                {"event_id": "e2", "text": "nothing match query", "timestamp_order": 2},
+                {"event_id": "e3", "text": "build succeeded check", "timestamp_order": 3},
+                {"event_id": "e4", "text": "stability fix committed", "timestamp_order": 4},
+            ]
+        }
+    }
+    
+    # 验证检索数量限制且不是 full-context
+    lex_view = lexical_rag(view, k=2)
+    time_view = time_aware_rag(view, k=2)
+    
+    lex_events = [e["event_id"] for e in lex_view["public_input"]["event_trace"]]
+    time_events = [e["event_id"] for e in time_view["public_input"]["event_trace"]]
+    
+    assert len(lex_events) == 2
+    assert len(time_events) == 2
+    assert set(lex_events) != {"e1", "e2", "e3", "e4"}
+    
+    # 验证 lexical RAG 和 time-aware RAG 在有 recency 权重作用下选中的事件不同
+    # lexical_rag 基于词频，query 含有 stability/build，会匹配 e1, e3, e4 (其中 e1 有 stability, e3 有 build, e4 有 stability)
+    # time_aware_rag 会给时间靠后的 e3, e4 加上更多的 recency 权重
+    assert lex_events != time_events

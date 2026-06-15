@@ -3,20 +3,21 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import asdict, dataclass
+import hashlib
 import json
 import os
 import platform
 import random
+from pathlib import Path
 import subprocess
 import time
-from dataclasses import asdict, dataclass
-from pathlib import Path
 from typing import Any
 
 import numpy as np
 
 from benchmark.api import load_scenarios
-from benchmark.model_runner import build_prompt, canonical_response, extract_json_object
+from benchmark.model_runner import canonical_response, extract_json_object
 from benchmark.public_view import public_scenario_view
 from mempatch.revision.runtime.ablation_projection import project_actions_without_dpa
 from mempatch.revision.runtime.dpa_runtime import parse_actions
@@ -28,6 +29,9 @@ try:
     from .methods import build_method_view
 except ImportError:
     from methods import build_method_view
+
+from benchmark.general_taxonomy import DECISIONS, PRIMARY_FAILURE_MODES, PRIMARY_MEMORY_STATUSES
+from benchmark.model_runner import _collect_memory_ids
 
 BASELINE_METHODS = (
     "frozen_direct",
@@ -54,10 +58,26 @@ class LocalHFBackend:
 
         self.torch = torch
         self.model_id = model_id
-        self.tokenizer = AutoTokenizer.from_pretrained(
-            model_id,
-            trust_remote_code=trust_remote_code,
-        )
+        
+        tokenizer_kwargs = {"trust_remote_code": trust_remote_code}
+        if "mistral" in model_id.lower():
+            try:
+                self.tokenizer = AutoTokenizer.from_pretrained(
+                    model_id,
+                    fix_mistral_regex=True,
+                    **tokenizer_kwargs
+                )
+            except TypeError:
+                self.tokenizer = AutoTokenizer.from_pretrained(
+                    model_id,
+                    **tokenizer_kwargs
+                )
+        else:
+            self.tokenizer = AutoTokenizer.from_pretrained(
+                model_id,
+                **tokenizer_kwargs
+            )
+            
         dtype_value = {
             "auto": "auto",
             "bfloat16": torch.bfloat16,
@@ -66,7 +86,7 @@ class LocalHFBackend:
         }[dtype]
         self.model = AutoModelForCausalLM.from_pretrained(
             model_id,
-            torch_dtype=dtype_value,
+            dtype=dtype_value,
             device_map="auto",
             trust_remote_code=trust_remote_code,
         )
@@ -131,9 +151,60 @@ def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
         os.fsync(handle.fileno())
 
 
+def build_prompt_aaai27(public_view: dict[str, Any]) -> str:
+    memory_ids = _collect_memory_ids(public_view)
+    payload = {
+        "instruction": (
+            "Answer as strict JSON only matching the schema exactly. Do not use Markdown fences. "
+            "Use only the visible scenario content. Do not use external knowledge. "
+            "Use exact enum strings. Do not invent memory IDs or event IDs. "
+            "Cite only minimal supporting event IDs. "
+            "Decision order: refuse_due_to_policy, escalate, ask_clarification, "
+            "mark_unresolved, use_current_memory (first applicable wins). "
+            "CRITICAL: 'decision' and 'failure_diagnosis' must be scalar STRINGS, NOT lists or arrays. "
+            "Provide exactly one valid enum string for 'decision' and 'failure_diagnosis' respectively. "
+            "CRITICAL: Do NOT output 'none', 'null', or any custom string for 'failure_diagnosis'. "
+            "You MUST select exactly one failure mode from the allowed list (stale_memory_reuse, under_update, conflict_collapse, scope_leakage, policy_violation, wrong_source_attribution, memory_hallucination) "
+            "that matches the potential issue presented in the context, even if your decision is use_current_memory."
+        ),
+        "required_output_schema": {
+            "answer": "short final answer/action text (string)",
+            "decision": "exactly one string from: refuse_due_to_policy, escalate, ask_clarification, mark_unresolved, use_current_memory (string)",
+            "memory_state": {mid: "exactly one string from: current, blocked, unresolved, out_of_scope, should_not_store (string)" for mid in memory_ids},
+            "evidence_event_ids": "minimal list of event_id strings from public_input.event_trace (list of strings)",
+            "failure_diagnosis": "exactly one string from: stale_memory_reuse, under_update, conflict_collapse, scope_leakage, policy_violation, wrong_source_attribution, memory_hallucination (string)",
+        },
+        **public_view,
+    }
+    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
+
+
+def clean_response(parsed: dict[str, Any]) -> dict[str, Any]:
+    cleaned = dict(parsed)
+    for key in ("decision", "failure_diagnosis"):
+        val = cleaned.get(key)
+        if isinstance(val, (list, tuple)):
+            if len(val) == 1:
+                cleaned[key] = val[0]
+            elif len(val) == 0:
+                cleaned[key] = ""
+        elif val is None:
+            cleaned[key] = ""
+            
+    mem = cleaned.get("memory_state")
+    if isinstance(mem, dict):
+        cleaned["memory_state"] = {
+            k: (v[0] if isinstance(v, (list, tuple)) and len(v) == 1 else v)
+            for k, v in mem.items()
+        }
+    return cleaned
+
+
 def _safe_response(text: str) -> tuple[dict[str, Any], str | None]:
     try:
-        return canonical_response(extract_json_object(text)), None
+        parsed = extract_json_object(text)
+        cleaned = clean_response(parsed)
+        return canonical_response(cleaned), None
     except Exception as exc:
         return {
             "answer": "",
@@ -192,7 +263,7 @@ def run_case(
     frozen_response: dict[str, Any] | None = None
     for method in BASELINE_METHODS:
         method_view = build_method_view(method, public_view, retrieval_k)
-        generation = backend.generate(build_prompt(method_view), response_tokens)
+        generation = backend.generate(build_prompt_aaai27(method_view), response_tokens)
         response, parse_error = _safe_response(generation.text)
         predictions[method] = {"scenario_id": scenario_id, "response": response}
         generations[method] = {
@@ -268,55 +339,125 @@ def main() -> None:
     output_dir = Path(args.output_root) / args.model_key
     output_dir.mkdir(parents=True, exist_ok=True)
     raw_path = output_dir / "raw_cases.jsonl"
+    
+    scenarios = load_scenarios(args.data)
+    
+    # Dataset Audit
+    event_lens = [len(c.get("public_input", {}).get("event_trace", [])) for c in scenarios]
+    min_len = min(event_lens) if event_lens else 0
+    median_len = int(np.median(event_lens)) if event_lens else 0
+    p90_len = int(np.percentile(event_lens, 90)) if event_lens else 0
+    max_len = max(event_lens) if event_lens else 0
+    
+    print(f"[Dataset Audit] Scenarios count: {len(scenarios)}")
+    print(f"[Dataset Audit] Event trace lengths - min: {min_len}, median: {median_len}, p90: {p90_len}, max: {max_len}")
+    from collections import Counter
+    for length, count in sorted(Counter(event_lens).items()):
+        print(f"  Length {length}: {count} cases")
+        
+    final_k = args.retrieval_k
+    if final_k >= median_len:
+        if median_len > 3:
+            final_k = 3
+        else:
+            final_k = max(1, median_len - 1)
+        print(f"[Dataset Audit] Auto-adjusted retrieval_k to {final_k} (was {args.retrieval_k}) to avoid full-context degradation.")
+        
+    # 计算 sha256 校验
+    import hashlib
+    dataset_bytes = Path(args.data).read_bytes()
+    dataset_sha256 = hashlib.sha256(dataset_bytes).hexdigest()
+    
+    scenario_ids = [str(s["scenario_id"]) for s in scenarios]
+    ids_str = ",".join(scenario_ids)
+    scenario_ids_sha256 = hashlib.sha256(ids_str.encode("utf-8")).hexdigest()
+    
+    manifest_path = output_dir / "run_manifest.json"
+    
     if raw_path.exists() and not args.resume:
         raise FileExistsError(f"{raw_path} exists; pass --resume or choose a new output root")
+        
+    if raw_path.exists() and args.resume and manifest_path.exists():
+        existing_manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+        mismatches = []
+        if existing_manifest.get("dataset_sha256") != dataset_sha256:
+            mismatches.append("dataset_sha256")
+        if existing_manifest.get("scenario_ids_sha256") != scenario_ids_sha256:
+            mismatches.append("scenario_ids_sha256")
+        if existing_manifest.get("model_id") != args.model_id:
+            mismatches.append("model_id")
+        if existing_manifest.get("retrieval_k") != final_k:
+            mismatches.append("retrieval_k")
+        if existing_manifest.get("response_token_limit") != args.response_tokens:
+            mismatches.append("response_token_limit")
+        if existing_manifest.get("action_token_limit") != args.action_tokens:
+            mismatches.append("action_token_limit")
+            
+        if mismatches:
+            raise RuntimeError(
+                f"Resuming aborted: current configuration does not match existing manifest "
+                f"at {manifest_path}. Mismatched fields: {mismatches}."
+            )
 
-    scenarios = load_scenarios(args.data)
     completed = {str(row["scenario_id"]) for row in _jsonl_rows(raw_path)} if args.resume else set()
     pending = [scenario for scenario in scenarios if str(scenario["scenario_id"]) not in completed]
     if args.limit is not None:
         pending = pending[: args.limit]
 
+    backend = LocalHFBackend(args.model_id, args.dtype, args.trust_remote_code)
+    
+    import torch
+    import transformers
+    cuda_version = torch.version.cuda if torch.cuda.is_available() else "N/A"
+    gpu_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "N/A"
+    
     manifest = {
         "campaign": "aaai27_main",
         "repository_sha": _git_sha(),
         "model_key": args.model_key,
         "model_id": args.model_id,
-        "data": str(Path(args.data).resolve()),
+        "model_class": backend.model.__class__.__name__,
+        "tokenizer_class": backend.tokenizer.__class__.__name__,
+        "data_path": str(Path(args.data).resolve()),
+        "dataset_sha256": dataset_sha256,
+        "scenario_ids_sha256": scenario_ids_sha256,
         "seed": args.seed,
         "methods": list(ALL_METHODS),
         "pairing": {
             "frozen_direct_is_mempatch_raw_response": True,
             "mempatch_and_no_guard_share_actions": True,
         },
-        "generation": {
+        "retrieval_k": final_k,
+        "decoding_params": {
             "temperature": 0.0,
-            "retrieval_k": args.retrieval_k,
-            "response_tokens": args.response_tokens,
-            "action_tokens": args.action_tokens,
-            "dtype": args.dtype,
+            "do_sample": False
         },
-        "environment": {
+        "response_token_limit": args.response_tokens,
+        "action_token_limit": args.action_tokens,
+        "versions": {
             "python": platform.python_version(),
+            "torch": torch.__version__,
+            "transformers": transformers.__version__,
+            "cuda": cuda_version,
             "platform": platform.platform(),
         },
+        "gpu_name": gpu_name,
         "dataset_size": len(scenarios),
         "already_completed": len(completed),
         "planned_now": len(pending),
         "started_at_unix": time.time(),
     }
-    (output_dir / "run_manifest.json").write_text(
+    manifest_path.write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )
 
-    backend = LocalHFBackend(args.model_id, args.dtype, args.trust_remote_code)
     for index, scenario in enumerate(pending, start=1):
         started = time.perf_counter()
         row = run_case(
             scenario,
             backend,
-            args.retrieval_k,
+            final_k,
             args.response_tokens,
             args.action_tokens,
         )
@@ -330,7 +471,7 @@ def main() -> None:
     _write_predictions(raw_path, output_dir)
     manifest["finished_at_unix"] = time.time()
     manifest["completed_total"] = len(_jsonl_rows(raw_path))
-    (output_dir / "run_manifest.json").write_text(
+    manifest_path.write_text(
         json.dumps(manifest, indent=2, ensure_ascii=False) + "\n",
         encoding="utf-8",
     )

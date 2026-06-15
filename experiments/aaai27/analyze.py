@@ -6,6 +6,7 @@ import argparse
 import csv
 import json
 import random
+import sys
 from collections import Counter, defaultdict
 from pathlib import Path
 from typing import Any
@@ -256,6 +257,7 @@ def main() -> None:
     parser.add_argument("--bootstrap", type=int, default=10000)
     parser.add_argument("--cluster-key", default="decision_variant")
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--allow-validation-errors", action="store_true")
     args = parser.parse_args()
 
     scenarios = load_scenarios(args.data)
@@ -273,12 +275,34 @@ def main() -> None:
         for method in METHODS:
             path = Path(args.runs_root) / model / f"{method}.predictions.jsonl"
             predictions = load_predictions(path)
+
+            # 严格验证长度
+            if len(predictions) != len(scenarios):
+                print(f"Error: {model}/{method} prediction count mismatch. Expected {len(scenarios)}, found {len(predictions)}", file=sys.stderr)
+                sys.exit(1)
+            
+            # 严格验证 scenario_id 顺序和去重
+            pred_ids = [str(p.get("scenario_id", "")) for p in predictions]
+            gold_ids = [str(s["scenario_id"]) for s in scenarios]
+            
+            if len(pred_ids) != len(set(pred_ids)):
+                print(f"Error: {model}/{method} contains duplicate scenario IDs", file=sys.stderr)
+                sys.exit(1)
+            if pred_ids != gold_ids:
+                print(f"Error: {model}/{method} scenario ID order mismatch with dataset", file=sys.stderr)
+                sys.exit(1)
+
             official = evaluate_predictions(scenarios, predictions, strict=False)
             if official["missing_prediction_count"]:
-                raise ValueError(
-                    f"{model}/{method} is incomplete: "
-                    f"{official['missing_prediction_count']} missing predictions"
-                )
+                print(f"Error: {model}/{method} is incomplete with {official['missing_prediction_count']} missing predictions", file=sys.stderr)
+                sys.exit(1)
+            
+            if len(official["errors"]) > 0 and not args.allow_validation_errors:
+                print(f"Error: {model}/{method} has validation errors in strict mode:", file=sys.stderr)
+                for err in official["errors"][:5]:
+                    print(f"  * {err}", file=sys.stderr)
+                sys.exit(1)
+
             state = _state_scores(scenarios, _prediction_map(predictions))
             summary_rows.append(
                 {
