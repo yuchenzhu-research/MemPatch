@@ -39,13 +39,16 @@ if [[ -f "$TEST_SFT_DIR/scenarios.jsonl" ]]; then
 fi
 
 source "$LINUX_DIR/lib_selection.sh"
-if [[ -z "${BEST_CHECKPOINT:-}" ]]; then
-  BEST_CHECKPOINT="$(ensure_selection "$SLUG")" || {
-    echo "hint: SLUG=$SLUG bash scripts/linux/status_checkpoint.sh" >&2
-    exit 1
-  }
+ADAPTER_PATH=""
+if [[ "$VARIANT_FILTER" == "lora" || "$VARIANT_FILTER" == "all" ]]; then
+  if [[ -z "${BEST_CHECKPOINT:-}" ]]; then
+    BEST_CHECKPOINT="$(ensure_selection "$SLUG")" || {
+      echo "hint: SLUG=$SLUG bash scripts/linux/status_checkpoint.sh" >&2
+      exit 1
+    }
+  fi
+  ADAPTER_PATH="${BEST_CHECKPOINT:?missing checkpoint}"
 fi
-ADAPTER_PATH="${BEST_CHECKPOINT:?missing checkpoint}"
 
 run_variant() {
   local variant="$1"
