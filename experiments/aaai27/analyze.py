@@ -8,7 +8,7 @@ import json
 import random
 from collections import Counter, defaultdict
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 from benchmark.api import evaluate_predictions, load_predictions, load_scenarios
 
@@ -20,6 +20,15 @@ METHODS = (
     "summary_memory",
     "mempatch_no_guard",
     "mempatch",
+)
+BOOTSTRAP_METRICS = (
+    "joint_revision_success",
+    "black_box_decision_accuracy",
+    "memory_state_accuracy",
+    "evidence_f1",
+    "failure_diagnosis_accuracy",
+    "stale_reuse_rate",
+    "scenario_exact_state_match",
 )
 
 
@@ -199,6 +208,36 @@ def _efficiency_rows(model: str, raw_path: Path) -> list[dict[str, Any]]:
     return result
 
 
+def _funnel_row(model: str, raw_path: Path) -> dict[str, Any]:
+    rows = _read_jsonl(raw_path)
+    totals: Counter[str] = Counter()
+    evtf_sum = 0.0
+    for row in rows:
+        audit = row["predictions"]["mempatch"].get("dpa_audit") or {}
+        parse = audit.get("parse_result") or {}
+        totals["cases"] += 1
+        totals["valid_json"] += int(bool(parse.get("valid_json")))
+        totals["schema_valid"] += int(bool(parse.get("schema_valid")))
+        totals["proposed_actions"] += int(parse.get("n_actions") or 0)
+        totals["admitted_actions"] += len(audit.get("admitted_actions") or [])
+        totals["rejected_actions"] += len(audit.get("rejected_actions") or [])
+        totals["engine_errors"] += len(audit.get("engine_errors") or [])
+        evtf_sum += float(audit.get("evtf", 0.0))
+    cases = max(totals["cases"], 1)
+    proposed = max(totals["proposed_actions"], 1)
+    return {
+        "model": model,
+        "cases": totals["cases"],
+        "valid_json_rate": totals["valid_json"] / cases,
+        "schema_valid_rate": totals["schema_valid"] / cases,
+        "proposed_actions": totals["proposed_actions"],
+        "admitted_action_rate": totals["admitted_actions"] / proposed,
+        "rejected_action_rate": totals["rejected_actions"] / proposed,
+        "mean_engine_errors": totals["engine_errors"] / cases,
+        "mean_evtf": evtf_sum / cases,
+    }
+
+
 def _write_csv(path: Path, rows: list[dict[str, Any]]) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     with path.open("w", encoding="utf-8", newline="") as handle:
@@ -224,12 +263,13 @@ def main() -> None:
     summary_rows: list[dict[str, Any]] = []
     significance_rows: list[dict[str, Any]] = []
     efficiency_rows: list[dict[str, Any]] = []
+    funnel_rows: list[dict[str, Any]] = []
 
     for model in args.models:
         method_details: dict[str, dict[str, Any]] = {}
-        efficiency_rows.extend(
-            _efficiency_rows(model, Path(args.runs_root) / model / "raw_cases.jsonl")
-        )
+        raw_path = Path(args.runs_root) / model / "raw_cases.jsonl"
+        efficiency_rows.extend(_efficiency_rows(model, raw_path))
+        funnel_rows.append(_funnel_row(model, raw_path))
         for method in METHODS:
             path = Path(args.runs_root) / model / f"{method}.predictions.jsonl"
             predictions = load_predictions(path)
@@ -240,68 +280,67 @@ def main() -> None:
                     f"{official['missing_prediction_count']} missing predictions"
                 )
             state = _state_scores(scenarios, _prediction_map(predictions))
-            row = {
-                "model": model,
-                "method": method,
-                **official["headline_metrics"],
-                "state_macro_f1": state["state_macro_f1"],
-                "changed_record_accuracy": state["changed_record_accuracy"],
-                "scenario_exact_state_match": state["scenario_exact_state_match"],
-                "validation_error_count": len(official["errors"]),
-            }
-            summary_rows.append(row)
+            summary_rows.append(
+                {
+                    "model": model,
+                    "method": method,
+                    **official["headline_metrics"],
+                    "state_macro_f1": state["state_macro_f1"],
+                    "changed_record_accuracy": state["changed_record_accuracy"],
+                    "scenario_exact_state_match": state["scenario_exact_state_match"],
+                    "validation_error_count": len(official["errors"]),
+                }
+            )
             method_details[method] = {
-                "official": official,
-                "state": state,
+                "per_scenario": {
+                    str(scored["scenario_id"]): {
+                        **scored["metrics"],
+                        "scenario_exact_state_match": state["per_scenario"][
+                            str(scored["scenario_id"])
+                        ]["scenario_exact_state_match"],
+                    }
+                    for scored in official["scored_predictions"]
+                }
             }
 
-        mempatch = method_details["mempatch"]
-        metric_extractors: dict[str, Callable[[str], float]] = {
-            "memory_state_accuracy": lambda sid: mempatch["state"]["per_scenario"][sid][
-                "memory_state_accuracy"
-            ],
-            "scenario_exact_state_match": lambda sid: mempatch["state"]["per_scenario"][sid][
-                "scenario_exact_state_match"
-            ],
-        }
+        mempatch = method_details["mempatch"]["per_scenario"]
         for baseline in METHODS:
             if baseline == "mempatch":
                 continue
-            baseline_state = method_details[baseline]["state"]["per_scenario"]
-            for metric, left_fn in metric_extractors.items():
-                left = {str(s["scenario_id"]): left_fn(str(s["scenario_id"])) for s in scenarios}
+            baseline_scores = method_details[baseline]["per_scenario"]
+            for metric in BOOTSTRAP_METRICS:
+                left = {
+                    str(s["scenario_id"]): float(mempatch[str(s["scenario_id"])][metric])
+                    for s in scenarios
+                }
                 right = {
-                    str(s["scenario_id"]): baseline_state[str(s["scenario_id"])][metric]
+                    str(s["scenario_id"]): float(baseline_scores[str(s["scenario_id"])][metric])
                     for s in scenarios
                 }
                 stats = _bootstrap_delta(
-                    scenarios,
-                    left,
-                    right,
-                    args.cluster_key,
-                    args.bootstrap,
-                    args.seed,
+                    scenarios, left, right, args.cluster_key, args.bootstrap, args.seed
                 )
-                wtl = _cluster_wtl(scenarios, left, right, args.cluster_key)
                 significance_rows.append(
                     {
                         "model": model,
                         "metric": metric,
                         "comparison": f"mempatch - {baseline}",
                         **stats,
-                        **wtl,
+                        **_cluster_wtl(scenarios, left, right, args.cluster_key),
                     }
                 )
 
     _write_csv(output / "main_results.csv", summary_rows)
     _write_csv(output / "paired_cluster_bootstrap.csv", significance_rows)
     _write_csv(output / "efficiency.csv", efficiency_rows)
+    _write_csv(output / "interface_funnel.csv", funnel_rows)
     (output / "analysis.json").write_text(
         json.dumps(
             {
                 "summary": summary_rows,
                 "paired_cluster_bootstrap": significance_rows,
                 "efficiency": efficiency_rows,
+                "interface_funnel": funnel_rows,
                 "bootstrap_replicates": args.bootstrap,
                 "cluster_key": args.cluster_key,
                 "seed": args.seed,
