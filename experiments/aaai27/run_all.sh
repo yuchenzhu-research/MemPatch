@@ -4,17 +4,24 @@ set -euo pipefail
 DATA="${DATA:-local/data/mempatch/test/scenarios.jsonl}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-runs/aaai27_main}"
 DTYPE="${DTYPE:-bfloat16}"
+LIMIT="${LIMIT:-}"
 
 run_model() {
   local key="$1"
   local model_id="$2"
-  python experiments/aaai27/run_core.py \
-    --data "$DATA" \
-    --model-key "$key" \
-    --model-id "$model_id" \
-    --output-root "$OUTPUT_ROOT" \
-    --dtype "$DTYPE" \
+  local args=(
+    python experiments/aaai27/run_core.py
+    --data "$DATA"
+    --model-key "$key"
+    --model-id "$model_id"
+    --output-root "$OUTPUT_ROOT"
+    --dtype "$DTYPE"
     --resume
+  )
+  if [[ -n "$LIMIT" ]]; then
+    args+=(--limit "$LIMIT")
+  fi
+  "${args[@]}"
 }
 
 case "${1:-}" in

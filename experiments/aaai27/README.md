@@ -24,6 +24,16 @@ pip install -e .
 pip install -r experiments/aaai27/requirements.txt
 ```
 
+Before a full run, use a separate three-case smoke directory:
+
+```bash
+LIMIT=3 OUTPUT_ROOT=runs/aaai27_smoke bash experiments/aaai27/run_all.sh qwen3_14b
+python experiments/aaai27/validate_run.py \
+  --data local/data/mempatch/test/scenarios.jsonl \
+  --run-dir runs/aaai27_smoke/qwen3_14b \
+  --expected-cases 3
+```
+
 Run one model per GPU allocation:
 
 ```bash
@@ -50,6 +60,7 @@ The main paper inputs are:
 - `paper_results/main_results.csv`
 - `paper_results/paired_cluster_bootstrap.csv`
 - `paper_results/efficiency.csv`
+- `paper_results/interface_funnel.csv`
 - each model's `guard_stress.json`
 - each model's `run_manifest.json`
 
