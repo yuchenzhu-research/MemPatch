@@ -70,14 +70,15 @@ def main() -> None:
         config_data = yaml.safe_load(f)
     config_rules = config_data.get("rules", [])
     
-    # Pairwise critical pairs audit over RULES in reference semantics
+    # Synthetic order-swap audit over every unordered pair of rules. This is
+    # implementation stress coverage, not a critical-overlap confluence proof.
     mids = {
         "target": "m-target",
         "condition": "m-condition",
         "distractor": "m-distractor"
     }
     
-    critical_pairs = []
+    pairwise_order_audits = []
     non_joinable = []
     joinable_count = 0
     total_pairs = 0
@@ -91,25 +92,26 @@ def main() -> None:
             # Since both can be triggered, do they converge?
             joinable, details = check_confluence(r1, r2, mids)
             total_pairs += 1
-            critical_pairs.append(details)
+            pairwise_order_audits.append(details)
             
             if joinable:
                 joinable_count += 1
             else:
                 non_joinable.append(details)
                 
-    # Write output critical_pairs.json
+    # Keep the caller-selected output path for backward compatibility.
     with output_path.open("w", encoding="utf-8") as f:
-        json.dump(critical_pairs, f, indent=2, ensure_ascii=False)
+        json.dump(pairwise_order_audits, f, indent=2, ensure_ascii=False)
         
     # Write summary
     summary_path = output_path.parent / "critical_pair_summary.json"
     summary = {
         "total_rules": len(RULES),
-        "total_critical_pairs": total_pairs,
-        "joinable_pairs": joinable_count,
-        "non_joinable_pairs": len(non_joinable),
-        "confluence_guaranteed": (len(non_joinable) == 0)
+        "total_unordered_rule_pairs": total_pairs,
+        "order_invariant_pairs_under_synthetic_audit": joinable_count,
+        "order_sensitive_pairs_under_synthetic_audit": len(non_joinable),
+        "all_synthetic_order_swaps_agree": (len(non_joinable) == 0),
+        "claim_scope": "synthetic pairwise order-swap audit; not critical-pair confluence"
     }
     with summary_path.open("w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2, ensure_ascii=False)
@@ -120,11 +122,11 @@ def main() -> None:
         for item in non_joinable:
             f.write(json.dumps(item, ensure_ascii=False) + "\n")
             
-    print(f"\n--- Confluence & Critical Pairs Audit Summary ---")
-    print(f"Total critical pairs analyzed: {total_pairs}")
-    print(f"Joinable pairs: {joinable_count} ({joinable_count/total_pairs*100:.2f}%)")
-    print(f"Non-joinable pairs: {len(non_joinable)} ({len(non_joinable)/total_pairs*100:.2f}%)")
-    print(f"Confluence Guaranteed: {summary['confluence_guaranteed']}")
+    print("\n--- Synthetic Rule-Pair Order Audit Summary ---")
+    print(f"Unordered rule pairs analyzed: {total_pairs}")
+    print(f"Order-invariant pairs: {joinable_count} ({joinable_count/total_pairs*100:.2f}%)")
+    print(f"Order-sensitive pairs: {len(non_joinable)} ({len(non_joinable)/total_pairs*100:.2f}%)")
+    print(f"All synthetic order swaps agree: {summary['all_synthetic_order_swaps_agree']}")
 
 if __name__ == "__main__":
     main()

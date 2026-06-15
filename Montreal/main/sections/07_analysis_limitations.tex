@@ -7,16 +7,16 @@ We analyze the theoretical and empirical characteristics of \method{} across thr
 \paragraph{Guaranteed by Construction.}
 Several key safety properties are guaranteed by the structural design of \method{}:
 \begin{itemize}[leftmargin=*]
-\item \textbf{Complete Mediation and Authorization:} Every write to persistent memory is filtered by the Revision Guard $G_\Gamma$, preventing ungrounded or out-of-scope modifications.
+\item \textbf{Complete Mediation and Authorization:} Under the mediated deployment boundary, every persistent-memory write is filtered by $G_\Gamma$; actions outside the legal language are not committed.
 \item \textbf{Referential Integrity:} Predicates enforce that target and replacement identifiers must exist in the public view.
-\item \textbf{Replayability and Noninterference:} Replaying the deterministic parse, Guard, and reconciliation trace yields identical states, ensuring mutations are fully auditable and local to targeted records.
+\item \textbf{Replayability and Noninterference:} Given a complete certificate, deterministic replay yields the same post-state, and untargeted records are unchanged.
 \end{itemize}
 
 \paragraph{Observed Empirically.}
 On the L4 evaluation split, we observe the following:
 \begin{itemize}[leftmargin=*]
-\item \textbf{Accuracy and Safety Trade-offs:} \method{} enforces structural invariants and prevents schema violations. However, when the neural proposer fails to emit schema-valid JSON, \method{}'s fail-closed policy rejects the entire patch, trading proposal recall for strict state safety.
-\item \textbf{Natural-Set Congruence:} On clean, naturally valid proposals, the Guard is non-restrictive, meaning it does not alter predictions that are already correct. Rejection efficacy is observed under targeted error injection.
+\item \textbf{Accuracy and Mediation Trade-offs:} \method{} improves state and schema reliability but does not dominate decision or evidence accuracy. A rejected patch is a no-commit outcome, not proof that the pre-existing state is safe.
+\item \textbf{Backbone Sensitivity:} Benefits are largest when direct generation fails to express the state contract; stronger native structured-output behavior narrows the gap.
 \end{itemize}
 
 \paragraph{Not Guaranteed.}
@@ -32,9 +32,9 @@ The system does not guarantee:
 Several limitations define the current scope of our work:
 \begin{itemize}[leftmargin=*]
 \item \textbf{Synthetic Ontology and NL Entailment:} The transition ontology in \bench{} simplifies organic language variability, and incomplete natural-language entailment means the symbolic Guard cannot verify semantic truth.
-\item \textbf{Template-Family Generalization:} Evaluation is conducted over template-family stratums rather than arbitrary real-world conversational databases, which might limit external validity.
-\item \textbf{Perturbation Efficacy:} While our diagnostic identifiability analysis yields a stable condition number of $5.9086$, the sensitivity matrix under higher noise levels may become ill-conditioned, and failure channels may interact under complex error profiles.
+\item \textbf{Template-Family Generalization:} Evaluation is conducted over template-family strata rather than arbitrary real-world conversational databases, which might limit external validity.
+\item \textbf{Perturbation Basis:} The seven controlled operators are an auditable diagnostic basis, not an exhaustive model of organic failures; nonlinear interactions may not be identifiable from the local response matrix.
 \item \textbf{Proposal Boundedness:} The runtime cannot recover omitted semantic proposals if the neural model fails to propose them.
+\item \textbf{Incomplete Organic Validation:} The present study uses controlled template families. External validity requires deployment traces, naturally occurring corrections, and downstream write-through measurements.
 \end{itemize}
-Future work should investigate zero-shot transfer to organic traces and online multi-agent simulations.
-
+Future work should investigate organic traces, online multi-agent revision, and learned proposers whose training objective directly balances semantic recall with authorized commit quality.

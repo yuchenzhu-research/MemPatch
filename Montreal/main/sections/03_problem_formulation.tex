@@ -14,7 +14,10 @@ where $s^0$ is the initial state map of the memory records, and $\Gamma$ is the 
 
 The memory state space $\Sigma$ is defined over five distinct epistemic classes:
 \begin{equation}
-\Sigma = \{\mathsf{Current}, \mathsf{Blocked}, \mathsf{Unresolved}, \mathsf{OutOfScope}, \mathsf{ShouldNotStore}\}.
+\begin{split}
+\Sigma=\{&\mathsf{Current},\mathsf{Blocked},\mathsf{Unresolved},\\
+&\mathsf{OutOfScope},\mathsf{ShouldNotStore}\}.
+\end{split}
 \end{equation}
 The downstream reuse license is a function $\lambda: \Sigma \rightarrow \{0, 1\}$:
 \begin{equation}
@@ -27,14 +30,13 @@ The agent's output is structured as a tuple:
 \begin{equation}
 r = (d, \mathbf{s}, Z, f, a),
 \end{equation}
-where $d$ is a downstream decision (e.g., use memory, escalate, ask clarification, refuse due to policy), $\mathbf{s}: M \rightarrow \Sigma$ is the final memory validity mapping, $Z \subseteq I_E$ is the set of cited evidence identifiers, $f \in \mathcal{F}$ is the failure diagnosis, and $a$ is the final generated answer text.
+where $d$ is a downstream decision (e.g., use memory, escalate, ask clarification, refuse due to policy), $\mathbf{s}: M \rightarrow \Sigma$ is the final memory validity mapping, $Z \subseteq I_E$ is the response-level evidence set, $f \in \mathcal{F}$ is the failure diagnosis, and $a$ is the final generated answer. For a committed patch, provenance is finer grained: $\widehat Z:M\rightarrow 2^{I_E}$ associates each changed record with its own evidence witness.
 
 \paragraph{Diagnostic Measurement Model.}
-To assess agent performance across multiple dimensions, we define a set of eight calibrated diagnostic channels $\mathcal{K} = \{\mathrm{decision}, \mathrm{state}, \mathrm{evidence}, \mathrm{minimality}, \mathrm{diagnosis}, \mathrm{answer}, \mathrm{execution}, \mathrm{audit}\}$. These channels correspond to Decision Accuracy, Memory State Accuracy, Evidence $F_1$, Evidence Exact Match, Diagnosis Accuracy, Answer Fact Accuracy, Schema Compliance, and Joint Success, respectively. Let $\mathcal{O} = \{o_1, \ldots, o_7\}$ be a set of seven distinct corruption operators representing latent failure components: wrong decision ($o_1$), wrong state ($o_2$), wrong evidence ($o_3$), overcitation ($o_4$), wrong diagnosis ($o_5$), malformed schema ($o_6$), and missing trace ($o_7$).
+To assess agent performance without hiding failure modes inside a single conjunction, we define seven response channels: decision, state, evidence, minimality, diagnosis, answer, and schema. They correspond to decision accuracy, memory-state accuracy, evidence $F_1$, minimal-evidence exact match, diagnosis accuracy, answer key-fact accuracy, and schema compliance. We probe these channels with seven controlled corruptions $\mathcal{O}$: wrong decision, wrong state, wrong evidence, overcitation, wrong diagnosis, malformed schema, and missing answer. Trace audit is evaluated separately because replayability is a property of an executed transition, not of a five-field response.
 
 For each scenario, we define an error vector $\mathbf{e}(r, g) = (\ell_k(r, g))_{k \in \mathcal{K}}$, where each $\ell_k$ measures the correctness of output channel $k$ against gold label $g$. The diagnostic profile of an agent $h$ is the expected error vector:
 \begin{equation}
 \mathbf{R}(h) = \mathbb{E}_{\xi} [\mathbf{e}(h(B(\xi)), g(\xi))].
 \end{equation}
-The sensitivity matrix $A = (a_{kj}) \in \mathbb{R}^{8 \times 7}$ characterizes the system under controlled perturbations, where $a_{kj}$ measures the decrement in metric $k$ under corruption $o_j$. Empirically calibrated on the test scenarios, $A$ is verified to be of dimensions $8 \times 7$ with $\operatorname{rank}(A) = 7$. Since $\operatorname{rank}(A)$ equals the number of latent failure components, $A$ has full column rank, yielding a null space $\operatorname{null}(A) = \{\mathbf{0}\}$ and guaranteeing full-column-rank identifiability of latent errors. Rather than evaluating via a collapsing joint success rate, which collapses $2^{K}-1$ distinct failure states since $J(\mathbf{b}) = \prod_{k=1}^K (1-b_k)$, this diagnostic response matrix enables fine-grained, unique error localization. A secondary joint score is retained only as a complete-case statistic.
-
+The sensitivity matrix $A=(a_{kj})\in\mathbb{R}^{7\times7}$ records the decrement in metric $k$ under corruption $o_j$. All operators, mappings, and calibration constants are fixed exclusively on the L3 development split before L4 evaluation. Full rank is an empirical audit of this chosen corruption basis, not a claim that all real model failures are linearly separable. We report the complete error vector as the primary outcome. Joint revision success, $J(\mathbf b)=\prod_k(1-b_k)$, is retained only as a secondary complete-case statistic because it maps many distinct error signatures to the same zero value.

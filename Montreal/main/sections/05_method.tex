@@ -9,11 +9,9 @@ The \method{} runtime is a parameter-free plug-in layer designed to convert pred
     box/.style={rectangle, draw=gray!80, fill=gray!5, rounded corners=3pt, minimum width=2.4cm, minimum height=0.9cm, align=center, font=\small},
     bluebox/.style={rectangle, draw=blue!60!black, fill=blue!5, rounded corners=3pt, minimum width=2.4cm, minimum height=0.9cm, align=center, font=\small},
     greenbox/.style={rectangle, draw=green!60!black, fill=green!5, rounded corners=3pt, minimum width=2.4cm, minimum height=0.9cm, align=center, font=\small},
-    orangebox/.style={rectangle, draw=orange!70!black, fill=orange!5, rounded corners=3pt, minimum width=2.4cm, minimum height=0.9cm, align=center, font=\small},
     arrow/.style={->, >=stealth, thick, draw=gray!80}
 ]
 
-% Main Compatibility Mode Path (Solid)
 \node[bluebox] (pred) at (0,1.2) {\textbf{Predictor} \\ $\widehat{r} = \Pi_\theta(V)$};
 \node[bluebox] (comp) at (3.5,1.2) {\textbf{Compiler} \\ $\widetilde{\alpha} = C_V(\dots)$};
 \node[greenbox] (guard) at (7.0,1.2) {\textbf{Guard} \\ $G_\Gamma(V, \widetilde{\alpha})$};
@@ -25,43 +23,34 @@ The \method{} runtime is a parameter-free plug-in layer designed to convert pred
 \draw[arrow] (guard) -- (commit) node[midway,above,font=\scriptsize] {$\alpha^+$};
 \draw[arrow] (commit) -- (cert) node[midway,above,font=\scriptsize] {$s^\star, \rho$};
 
-% Consensus Mode Branch (Dashed)
-\node[orangebox] (pred2) at (0,-0.6) {\textbf{Proposer 2} \\ $\widehat{r}_2$};
-\node[orangebox] (recon) at (3.5,-0.6) {\textbf{Reconciliation} \\ (Consensus Check)};
-
-\draw[arrow, dashed] (pred2) -- (recon);
-\draw[arrow, dashed] (pred.south) -- (recon.north) node[midway,right,font=\tiny] {$\widehat{r}_1$};
-\draw[arrow, dashed] (recon.east) -- ++(1.4,0) |- (guard.200) node[near end,above,font=\tiny] {$\widetilde{\alpha}_{\mathrm{consensus}}$};
-
 \end{tikzpicture}
-\caption{\method{} Parameter-Free Runtime Flow. Compatibility Mode is shown as the main execution path: predictions flow from the predictor to the compiler, Revision Guard, and canonical commit, yielding an audit certificate. Consensus Mode operates as an optional branch with deterministic reconciliation under multiple proposers.}
+\caption{\method{} as a plug-in mediation layer. Model-specific output is confined to the predictor; compilation, authorization, commit, and certificate generation are deterministic.}
 \label{fig:architecture}
 \end{figure*}
 
-\subsection{Parameter-Free Runtime Execution Modes}
-The \method{} runtime acts as a complete mediation scaffold, accepting semantic proposals and executing policy validations without editing parameters. It normalizes LLM outputs by defining a plug-in adapter contract $A_\Pi$:
+\subsection{Plug-in Interface and Compilation}
+The \method{} runtime accepts semantic proposals without editing model parameters. It normalizes heterogeneous outputs through an adapter contract $A_\Pi$:
 \begin{equation}
 A_\Pi: Y_\Pi \rightarrow (\widehat{s}, \widehat{Z}),
 \end{equation}
-where $Y_\Pi$ represents the raw model generation under public view $V$, $\widehat{s}: M \rightarrow \Sigma$ is the predicted memory validity state mapping, and $\widehat{Z} \subseteq I_E$ is the set of cited evidence reference identifiers. The runtime operates across two primary execution modes on top of this normalized interface:
-\begin{itemize}[leftmargin=*]
-\item \textbf{Compatibility Mode:} A single arbitrary model predictor (which can be a frozen baseline or an SFT adapted model) generates outputs mediated via the adapter contract $A_\Pi$. The compiled candidate actions are constructed as $\widetilde{\alpha} = C_V(s^0, \widehat{s}, \widehat{Z})$ and routed directly to the Revision Guard.
-\item \textbf{Consensus Mode:} Multiple predictors generate independent proposals $(\widehat{s}_1, \widehat{Z}_1)$ and $(\widehat{s}_2, \widehat{Z}_2)$ via the adapter contract. A reconciliation function evaluates their intersection: if all proposals agree on the set of memory transitions ($\widehat{s}_1 = \widehat{s}_2$), the actions are compiled; otherwise, it resolves to a safe fail-closed action ($\mathrm{NO\_REVISION}$) before routing to the Guard. Consensus Mode remains an optional operational branch.
-\end{itemize}
+where $Y_\Pi$ is the raw generation, $\widehat{s}:M\rightarrow\Sigma$ is the proposed state map, and $\widehat Z:M\rightarrow2^{I_E}$ supplies record-level provenance. The compiler constructs $\widetilde\alpha=C_V(s^0,\widehat{s},\widehat Z)$. An empty or rejected patch is a \emph{no-commit} outcome: it prevents an unauthorized write but is not claimed to repair an already stale state.
 
 \subsection{Revision Guard}
 To prevent ungrounded or contradictory actions from modifying memory, compiled action sequences are routed through the symbolic Revision Guard $G_\Gamma$:
 \begin{equation}
 (\alpha^+, \rho) = G_\Gamma(V, \widetilde{\alpha}),
 \end{equation}
-where $a^+$ is the admitted canonical patch, and $\rho$ is the rejection log detailing the failure reasons. The Guard filters proposals based on a transition policy $\Gamma$ containing five predicates:
+where $\alpha^+$ is the admitted canonical patch, and $\rho$ is the rejection log detailing the failure reasons. The Guard filters proposals based on a transition policy $\Gamma$ containing five predicates:
 \begin{align*}
-\mathcal{L}_\Gamma(V) = \{ \alpha \mid &\mathsf{Schema}(\alpha) \land \mathsf{References}_V(\alpha) \land \mathsf{Transitions}_\Gamma(\alpha) \\
-&\land \mathsf{NoConflict}(\alpha) \land \mathsf{Authorized}_\Gamma(\alpha) \}.
+\mathcal{L}_\Gamma(V)=\{\alpha\mid
+&\mathsf{Schema}(\alpha)\land\mathsf{References}_V(\alpha)\\
+&\land\mathsf{Transitions}_\Gamma(\alpha)
+\land\mathsf{NoConflict}(\alpha)\\
+&\land\mathsf{Authorized}_\Gamma(\alpha)\}.
 \end{align*}
 \begin{itemize}[leftmargin=*]
 \item $\mathsf{Schema}(\alpha)$: Checks that each action matches the required structure.
-\item $\mathsf{References}_V(\alpha)$: Ensures all target and replacement identifiers exist within the visible memory $M$ of $V$.
+\item $\mathsf{References}_V(\alpha)$: Ensures all target and replacement identifiers exist in the public memory $M$ exposed by $V$.
 \item $\mathsf{Transitions}_\Gamma(\alpha)$: Verifies that all state changes follow valid transitions.
 \item $\mathsf{NoConflict}(\alpha)$: Rejects overlapping or contradictory actions within the same patch.
 \item $\mathsf{Authorized}_\Gamma(\alpha)$: Verifies that the cited evidence identifiers match the transition rule triggers registered in $\Gamma$.
@@ -71,56 +60,47 @@ Every transition outputs an audit certificate trace:
 \begin{equation}
 \tau = (H(V), H(\Pi), \widehat{r}, \widetilde{\alpha}, \alpha^+, \rho, s^0, s^\star),
 \end{equation}
-which is fully verifiable and logs the input view hash $H(V)$, predictor hash $H(\Pi)$, raw proposals, gate actions, and states.
+which logs the input view hash $H(V)$, predictor identity, raw proposal, candidate and admitted actions, rejection reasons, and pre/post states.
 
 \subsection{Formal Guarantees}
 
-We formalize the safety and correctness properties of \method{} via the following verified theorems and propositions.
+We separate properties of the benchmark reference executor from properties of the runtime mediator.
 
-\paragraph{Theorem 1 (Verified Conditional Gold Determinacy).}\label{thm:gold_determinacy}
-\emph{Let $\rightarrow_R \subseteq \Sigma_{cfg} \times \Sigma_{cfg}$ be the binary rewrite relation mapping a memory configuration $C$ to its successor under an event trace $E$. Define the well-founded priority measure $\mu: \Sigma_{cfg} \rightarrow \mathbb{N}$ as $\mu(C) = \sum_{i=1}^n P(\mathbf{s}(m_i))$, where the state priorities are well-ordered: $P(\mathsf{Current}) = 5 > P(\mathsf{Unresolved}) = 4 > P(\mathsf{Blocked}) = 2 > P(\mathsf{ShouldNotStore}) = 1$. If the rewrite relation is well-founded, rule priorities resolve noncommuting rules, and all critical pairs are joinable, then every valid scenario has a unique normal form:}
+\paragraph{Proposition 1 (Deterministic Reference Execution).}\label{prop:reference_determinism}
+\emph{Let $E=(e_1,\ldots,e_T)$ be a finite, totally ordered event trace. If the reference step function $F_\Gamma:\Sigma_{cfg}\times E\rightarrow\Sigma_{cfg}$ is total and deterministic, then the evaluator returns a unique configuration}
 \begin{equation}
-\exists! C^\star = \operatorname{NF}_\Gamma(C_0, E).
+C^\star=F_\Gamma(\cdots F_\Gamma(F_\Gamma(C_0,e_1),e_2)\cdots,e_T).
 \end{equation}
-\textbf{Assumptions:} Event trace $E$ is totally ordered; rule priorities are antisymmetric; rewrite steps strictly decrease $\mu$.
-\textbf{Confluence Audit:} Pairwise critical pair search over the 23 active rules generates exactly 253 critical pairs, all of which are automatically verified to be joinable ($100\%$ confluence).
-\textbf{Implementation Artifact:} \texttt{mempatch/reference\_semantics/normal\_form.py}
-\textbf{Corresponding Test:} \texttt{mempatch/tests/test\_reference\_semantics.py}
-\textbf{What it does not prove:} It does not guarantee that natural language regex matching is semantically error-free, only that rule evaluations converge.
+The result follows by induction on $T$. The implementation additionally enumerates all $\binom{23}{2}=253$ unordered rule pairs in a synthetic order-swap stress test. This audit is reported as implementation coverage, not as a critical-pair confluence proof.
 
-\paragraph{Theorem 2 (Diagnostic Identifiability).}\label{thm:diagnostic_identifiability}
-\emph{Under the linear perturbation error model $\Delta = A\mathbf{w} + \varepsilon$, if the sensitivity matrix $A \in \mathbb{R}^{8 \times 7}$ has full column rank, the noiseless latent failure mixture $\mathbf{w}$ is unique and given by $\mathbf{w} = A^\dagger\Delta$. The noise propagation is bounded by:}
+\paragraph{Proposition 2 (Conditional Diagnostic Identifiability).}\label{thm:diagnostic_identifiability}
+\emph{Under the local linear model $\Delta=A\mathbf w+\varepsilon$, if the L3-calibrated matrix $A\in\mathbb R^{7\times7}$ has full column rank, the noiseless coefficients in the chosen corruption basis are unique: $\mathbf w=A^\dagger\Delta$. Moreover,}
 \begin{equation}
 \|\widehat{\mathbf{w}} - \mathbf{w}\|_2 \le \|A^\dagger\|_2 \left( \|\widehat\Delta - \Delta\|_2 + \|\widehat A - A\|_2 \|\mathbf{w}\|_2 \right).
 \end{equation}
-\textbf{Assumptions:} The sensitivity matrix $A$ has full column rank ($\operatorname{rank}(A) = 7$, $\operatorname{null}(A) = \{\mathbf{0}\}$).
-\textbf{Implementation Artifact:} \texttt{mempatch/audit/calibrate\_metrics.py}
-\textbf{Corresponding Test:} Verified via empirical calibration yielding condition number $5.9086$ and rank 7.
-\textbf{What it does not prove:} It does not prevent perturbation noise $\varepsilon$ from causing small estimation errors under high measurement noise.
+This identifies mixtures only within the seven controlled operators; it does not establish completeness of that basis for organic failures. Calibration and rank auditing use L3 only.
 
-\paragraph{Theorem 3 (Certified Transparent Mediation).}\label{thm:certified_transparent_mediation}
-Assume complete mediation, complete compilation of proposed changes, and deterministic commit. Then:
+\paragraph{Theorem 1 (Guarded Mediation).}\label{thm:certified_transparent_mediation}
+Assume (A1) $s^0\models\mathcal I_\Gamma$; (A2) the Guard admits only $\alpha\in\mathcal L_\Gamma(V)$; (A3) every legal action preserves $\mathcal I_\Gamma$; and (A4) each admitted action records a complete transition witness in $\tau$. Then:
 \begin{itemize}
-    \item \textbf{Invariant Preservation:} \emph{$\mathcal{I}(M^0) \Rightarrow \mathcal{I}(M^\star)$.}
-    \item \textbf{Certified Mutation:} \emph{$\{m_i : s_i^\star \neq s_i^0 \land \neg\operatorname{Witness}(i, \tau)\} = \varnothing$.}
-    \item \textbf{Transparency for Legal Proposals:} \emph{If proposed actions $\widetilde\alpha \in \mathcal{L}_\Gamma(V)$, then $s^\star = \widehat{s}$.}
+    \item \textbf{Mutation confinement:} only records targeted by admitted actions may change;
+    \item \textbf{Invariant preservation:} $s^\star\models\mathcal I_\Gamma$;
+    \item \textbf{Replayable mediation:} deterministic replay of $(s^0,\tau)$ yields $s^\star$;
+    \item \textbf{Trace-complete authorization:} every committed mutation has a record-level evidence witness.
 \end{itemize}
-\textbf{Assumptions:} Proposer actions are well-formed and valid under the schema $\Gamma$.
-\textbf{Implementation Artifact:} \texttt{mempatch/revision/runtime/revision\_module.py}
-\textbf{Corresponding Test:} \texttt{mempatch/tests/test\_benchmark\_response\_projection.py}
-\textbf{What it does not prove:} It does not prove that the underlying language model itself is correct or clean of semantic hallucination.
+These are mediator properties conditional on A1--A4; they do not imply semantic truth or proposal completeness.
 
-\paragraph{Proposition 1 (Deterministic Replay and Idempotency).}\label{prop:deterministic_replay}
+\paragraph{Corollary 1 (Deterministic Replay and Idempotency).}\label{prop:deterministic_replay}
 \emph{For deterministic parsing, Guard evaluation, reconciliation, and projection, replaying the same audit trace $\tau$ satisfies $\mathsf{Replay}(s^0, \tau) = s^\star$. Replaying the same canonical patch $\alpha^\star$ is idempotent: $\Delta(\Delta(s, \alpha^\star), \alpha^\star) = \Delta(s, \alpha^\star)$.}
 \textbf{Implementation Artifact:} \texttt{mempatch/tests/test\_consensus\_mode.py}
 
-\paragraph{Proposition 2 (Local Noninterference).}\label{prop:local_noninterference}
-\emph{If neither an accepted action nor an authorized reconciliation decision targets $m_i$, then $s_i^\star = s_i^0$. Malformed references and rejected actions therefore cannot silently alter unrelated records.}
-\textbf{Implementation Artifact:} \texttt{mempatch/revision/runtime/dpa\_runtime.py} (tested in \texttt{test\_dpa\_kernel.py})
+\paragraph{Corollary 2 (Local Noninterference).}\label{prop:local_noninterference}
+\emph{If neither an admitted action nor an authorized reconciliation decision targets $m_i$, then $s_i^\star = s_i^0$. Malformed references and rejected actions therefore cannot silently alter unrelated records.}
+\textbf{Implementation Artifact:} \texttt{mempatch/revision/runtime/dpa\_runtime.py} (tested in \texttt{mempatch/tests/test\_dpa\_kernel.py})
 
 \paragraph{Verifiability Metric.}
 To detect logging or mediation defects empirically, the system calculates the \emph{Externally Verifiable Transition Fraction} ($\mathrm{EVTF}$):
 \begin{equation}
 \mathrm{EVTF} = \frac{\sum_i \mathbf{1}[s_i^\star \neq s_i^0] \mathbf{1}[\mathsf{VerifyWitness}(i, \dots)]}{\sum_i \mathbf{1}[s_i^\star \neq s_i^0]}.
 \end{equation}
-In our construction, $\mathrm{EVTF} = 1$, which is verified by the execution trace.
+We report EVTF only for runs that emit the required per-transition certificate; it is not imputed for ordinary prompting baselines.

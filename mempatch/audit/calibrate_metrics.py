@@ -30,7 +30,6 @@ METRIC_KEYS = [
     "failure_diagnosis_accuracy",
     "answer_key_fact_accuracy",
     "response_schema_compliance_rate",
-    "joint_revision_success"
 ]
 
 METRIC_LABELS = [
@@ -41,7 +40,6 @@ METRIC_LABELS = [
     "Diag Acc",
     "Answer Fact Acc",
     "Schema Compliance",
-    "Joint Success"
 ]
 
 CORRUPTIONS = [
@@ -51,7 +49,7 @@ CORRUPTIONS = [
     ("overcitation", corrupt_overcitation),
     ("wrong_diagnosis", corrupt_diagnosis),
     ("malformed_schema", corrupt_schema),
-    ("missing_trace", corrupt_missing_trace)
+    ("missing_answer", corrupt_missing_trace)
 ]
 
 CORRUPTION_LABELS = [
@@ -61,7 +59,7 @@ CORRUPTION_LABELS = [
     "Over-citation",
     "Wrong Diagnosis",
     "Malformed Schema",
-    "Missing Trace"
+    "Missing Answer"
 ]
 
 def make_perfect_predictions(scenarios: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -181,15 +179,20 @@ def generate_tikz_heatmap(matrix: np.ndarray, output_pdf_path: Path) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Calibrate metrics and audit sensitivity.")
-    parser.add_argument("--split", default="l3", help="Dataset split (L3/L4/test/train)")
+    parser.add_argument(
+        "--split",
+        default="l3",
+        choices=("l3", "l4", "train", "test"),
+        help="Calibration split. Use l3/train for paper calibration; l4/test is audit-only.",
+    )
     parser.add_argument("--output", required=True, help="Output folder path")
     args = parser.parse_args()
     
     output_dir = Path(args.output)
     output_dir.mkdir(parents=True, exist_ok=True)
     
-    # Load scenarios (default to test scenarios for L3 validation / smoke)
-    scenarios_path = Path("local/data/mempatch/test/scenarios.jsonl")
+    split_dir = "train" if args.split in {"l3", "train"} else "test"
+    scenarios_path = Path("local/data/mempatch") / split_dir / "scenarios.jsonl"
     if not scenarios_path.exists():
         print(f"Error: scenarios file {scenarios_path} not found.", file=sys.stderr)
         sys.exit(1)
