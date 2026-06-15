@@ -163,9 +163,9 @@ def build_prompt_aaai27(public_view: dict[str, Any]) -> str:
             "mark_unresolved, use_current_memory (first applicable wins). "
             "CRITICAL: 'decision' and 'failure_diagnosis' must be scalar STRINGS, NOT lists or arrays. "
             "Provide exactly one valid enum string for 'decision' and 'failure_diagnosis' respectively. "
-            "CRITICAL: Do NOT output 'none', 'null', or any custom string for 'failure_diagnosis'. "
-            "You MUST select exactly one failure mode from the allowed list (stale_memory_reuse, under_update, conflict_collapse, scope_leakage, policy_violation, wrong_source_attribution, memory_hallucination) "
-            "that matches the potential issue presented in the context, even if your decision is use_current_memory."
+            "CRITICAL WARNING ON 'failure_diagnosis': Even if the memory state is correct, or your decision is use_current_memory, and there appears to be no issue, you MUST NOT output 'none', 'null', 'ok', or any other custom string. "
+            "You MUST select EXACTLY ONE failure mode from this list as the failure_diagnosis: stale_memory_reuse, under_update, conflict_collapse, scope_leakage, policy_violation, wrong_source_attribution, memory_hallucination. "
+            "Select the failure mode that MOST CLOSELY represents the hypothetical or potential threat described in the scenario."
         ),
         "required_output_schema": {
             "answer": "short final answer/action text (string)",
