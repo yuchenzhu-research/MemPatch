@@ -16,14 +16,24 @@ def _tokens(value: Any) -> list[str]:
 
 
 def _query_text(view: dict[str, Any]) -> str:
-    parts = [
-        view.get("workflow_context", ""),
-        view.get("black_box_task", ""),
-        view.get("memory_state_task", ""),
-        view.get("evidence_retrieval_task", ""),
-        view.get("diagnostic_task", ""),
-    ]
-    return " ".join(str(part) for part in parts if part)
+    def strings(value: Any) -> list[str]:
+        if isinstance(value, str):
+            return [value]
+        if isinstance(value, dict):
+            return [text for item in value.values() for text in strings(item)]
+        if isinstance(value, list):
+            return [text for item in value for text in strings(item)]
+        return []
+
+    parts = strings(view.get("workflow_context", ""))
+    for key in (
+        "black_box_task",
+        "memory_state_task",
+        "evidence_retrieval_task",
+        "diagnostic_task",
+    ):
+        parts.extend(strings(view.get(key)))
+    return " ".join(parts)
 
 
 def _events(view: dict[str, Any]) -> list[dict[str, Any]]:
@@ -102,28 +112,32 @@ def time_aware_rag(view: dict[str, Any], k: int = 8) -> dict[str, Any]:
     )
 
 
-def summary_memory(view: dict[str, Any]) -> dict[str, Any]:
+def summary_memory(view: dict[str, Any], max_chars: int = 2400) -> dict[str, Any]:
     events = sorted(
         _events(view),
         key=lambda event: (event.get("timestamp_order", 0), str(event.get("event_id", ""))),
     )
-    summary = [
-        {
-            "event_id": event.get("event_id"),
-            "timestamp_order": event.get("timestamp_order"),
-            "actor_role": event.get("actor_role"),
-            "event_type": event.get("event_type"),
-            "related_memory_ids": event.get("related_memory_ids", []),
-            "summary": str(event.get("text", "")).strip(),
-        }
-        for event in events
-    ]
+    lines = []
+    for event in events:
+        text = " ".join(str(event.get("text", "")).split())
+        if len(text) > 180:
+            text = text[:177] + "..."
+        lines.append(
+            f"- t{event.get('timestamp_order', '?')} "
+            f"[{event.get('event_id', '?')}] {text}"
+        )
+    summary = "\n".join(lines)
+    if len(summary) > max_chars:
+        summary = summary[: max_chars - 3] + "..."
     result = _with_events(
         view,
         [],
         "Use the deterministic chronological memory summary instead of the raw event trace.",
     )
-    result["memory_summary"] = summary
+    result["memory_summary"] = {
+        "format": "chronological_extractive_summary",
+        "text": summary,
+    }
     return result
 
 
