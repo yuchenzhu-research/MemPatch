@@ -1,12 +1,9 @@
-"""Shared MLX chat-template helpers (thinking off, JSON-friendly generation)."""
+"""Shared Hugging Face chat-template and JSON utility functions."""
 
 from __future__ import annotations
 
 import json
 import re
-import shutil
-import tempfile
-from pathlib import Path
 from typing import Any
 
 THINKING_CLOSE_SUFFIX = "\n</think>\n"
@@ -40,8 +37,6 @@ def prompt_needs_thinking_close(prompt: str) -> bool:
     return "</think>" not in tail
 
 
-# Some reasoning models open <think> in the chat template; close it
-# and prefill "{" so generation starts in JSON mode instead of free-form reasoning.
 def apply_chat_template_no_think(
     tokenizer: Any,
     messages: list[dict[str, str]],
@@ -102,30 +97,3 @@ def extract_json_object(text: str, *, json_brace_prefill: bool = False) -> dict[
         if isinstance(obj, dict):
             return obj
     raise ValueError(f"no JSON object found in model output: {text[:300]!r}")
-
-
-def resolve_mlx_adapter_dir(adapter_path: Path | str) -> Path:
-    """mlx_lm expects a directory with adapter_config.json + adapters.safetensors."""
-    path = Path(adapter_path)
-    if path.is_dir():
-        if not (path / "adapter_config.json").is_file():
-            raise FileNotFoundError(f"adapter_config.json missing under {path}")
-        return path
-
-    if path.suffix != ".safetensors" or not path.is_file():
-        raise FileNotFoundError(f"adapter path does not exist: {path}")
-
-    parent = path.parent
-    config = parent / "adapter_config.json"
-    if not config.is_file():
-        raise FileNotFoundError(f"adapter_config.json missing under {parent}")
-
-    default_weights = parent / "adapters.safetensors"
-    if path.name == "adapters.safetensors" or path.resolve() == default_weights.resolve():
-        return parent
-
-    # mlx_lm only reads adapters.safetensors; stage a numbered checkpoint if needed.
-    staging = Path(tempfile.mkdtemp(prefix="mlx_adapter_"))
-    shutil.copy2(config, staging / "adapter_config.json")
-    shutil.copy2(path, staging / "adapters.safetensors")
-    return staging

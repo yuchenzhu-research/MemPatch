@@ -61,26 +61,21 @@ checkpoint candidates. It selects the lowest mixed-task L3 validation loss
 before test500 inference. Final-State Control and MemPatch use the same selected
 checkpoint. The fixed order is Qwen3, Gemma-3, Phi-4, then Mistral-Nemo.
 
-The older all-in-one helper remains available for archival reruns:
+Install the Linux QLoRA dependencies first with `bash scripts/linux/00_setup.sh`.
+
+## Frozen 5+1 completion run
+
+Qwen is already complete. Run the two remaining server models without training
+or LoRA (Gemma first, then Phi-4):
 
 ```bash
 export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
-export RUN_ID=full512
-export CONFIRM_FRESH=1
-bash scripts/linux/run_train_all_then_7plus1.sh
+bash scripts/linux/run_server_frozen_gemma_phi.sh
 ```
 
-This is destructive only for the exact `RUN_ID` adapter/log directories and
-the three model result directories. It preserves base model weights and the
-train/test dataset. New formal runs should use the five-baseline and matched
-adapted commands above. Frozen Direct Prompting replaces the old display name
-for the structured direct prompt, and Lexical RAG replaces Vanilla RAG.
-The baseline generation cap remains the paper default of 256 tokens; set
-`BASELINE_MAX_TOKENS=512 EVAL_LIMIT=20` only for an explicit truncation subset
-diagnostic, not silently for the main table.
-
-The campaign performs a CUDA/package preflight before deleting any artifacts.
-Install the Linux QLoRA dependencies first with `bash scripts/linux/00_setup.sh`.
+Each model writes five frozen baselines plus MemPatch Zero-Shot under
+`$LOCAL_ROOT/results/final/{slug}`. The local Apple-silicon Mistral counterpart
+is `scripts/apple_mlx/run_local_mistral_frozen.sh`.
 
 Existing prediction files can be rescored without Torch, a GPU, training, or
 new inference. The output must be a separate directory so raw results remain
@@ -105,21 +100,7 @@ All four campaign backbones default to `max_seq_length=2048`. Gemma/Qwen cap in-
 SLUG=mistral_nemo_12b PHASES=train,pick,eval,baselines bash scripts/linux/run_model.sh
 ```
 
-## Safe explicit rerun
 
-Do not use `PHASES=auto` when replacing paper results. Remove artifacts for the
-exact `RUN_ID`, then run every phase explicitly:
-
-```bash
-export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
-export RUN_ID=full512
-CONFIRM_RERUN=1 bash scripts/linux/rerun_qwen_mistral.sh
-```
-
-The script deletes only Qwen/Mistral adapters and logs under the exact
-`split${SPLIT_INDEX}/${RUN_ID}` path, clears their result directories, runs
-`PHASES=train,pick,eval,baselines`, and prints the diagnostic report. Existing
-artifacts from names such as `full512_2048` are not treated as `full512`.
 
 ## Fast subset eval (8+1, skip base)
 
@@ -167,27 +148,4 @@ $LOCAL_ROOT/results/{slug}/
 | `07_eval_path_a.sh` | Path A DPA + same-action no-DPA test500 |
 | `run_baseline_matrix.sh` | Baselines |
 | `run_eval_subset.sh` | Subset 8+1 |
-| `run_train_all_then_7plus1.sh` | Train all three, then full test500 7+1 |
 | `rescore_result_bundle.py` | Rescore preserved predictions without inference |
-
-## Phi-4 smoke probe
-
-To run the Phi-4 smoke/probe pipeline:
-
-```bash
-export LOCAL_ROOT=/root/autodl-tmp/mempatch_local
-export HF_HOME=$LOCAL_ROOT/hf_cache
-cd /root/autodl-tmp/MemPatch
-git rev-parse --short HEAD
-
-SLUG=phi4_14b bash scripts/linux/run_phi4_smoke10.sh
-python scripts/linux/diagnose_result_bundle.py --slug phi4_14b --run-id phi4_smoke10
-```
-
-Passing the smoke probe means:
-- model prefetch works successfully;
-- 10-step QLoRA training completes without OOM on 32GB hardware;
-- checkpoint selection functions correctly;
-- Path B JSON object parser succeeds;
-- Path A JSON array parser succeeds;
-- no stale full-run (`full512`) artifact or markers are used or created.

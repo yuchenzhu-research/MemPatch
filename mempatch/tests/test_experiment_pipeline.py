@@ -9,7 +9,7 @@ from scripts.memory.context_builders import (
     PAPER_MAIN_BASELINE_IDS,
 )
 from scripts.select_smoke_cases import select_cases
-from scripts.paper.build_experiment_artifacts import FORMAL_MODELS, SMOKE_MODELS
+from scripts.build_experiment_artifacts import FORMAL_MODELS, SMOKE_MODELS
 from scripts.linux.run_hf_test_eval import prediction_from_output
 
 
@@ -90,7 +90,7 @@ def test_formal_dry_run_order_ends_with_mistral(tmp_path: Path) -> None:
         "PYTHON": "/usr/bin/python3",
     }
     result = subprocess.run(
-        ["bash", str(ROOT / "scripts/linux/run_experiment.sh"), "formal"],
+        ["bash", str(ROOT / "scripts/linux/run_formal_frozen.sh")],
         cwd=ROOT,
         env=env,
         check=True,
@@ -141,3 +141,26 @@ def test_final_state_control_does_not_silently_repair_invalid_schema() -> None:
     )
     assert prediction["response"] == {"decision": "invalid"}
     assert "schema_repairs" not in prediction
+
+
+def test_selection_helper_requires_exact_run_id_segment(tmp_path: Path) -> None:
+    import sys
+    selection = tmp_path / "selection.json"
+    selection.parent.mkdir(parents=True, exist_ok=True)
+    selection.write_text(json.dumps({"checkpoint_dir": "/adapters/split0/full512_2048/checkpoint-512"}), encoding="utf-8")
+    command = f'source "{ROOT}/scripts/linux/lib_selection.sh"; selection_matches_run_id "{selection}" "$RUN_ID"'
+
+    wrong = subprocess.run(
+        ["bash", "-c", command],
+        env={"PATH": "/usr/bin:/bin", "PYTHON": sys.executable, "RUN_ID": "full512"},
+        check=False,
+    )
+    exact = subprocess.run(
+        ["bash", "-c", command],
+        env={"PATH": "/usr/bin:/bin", "PYTHON": sys.executable, "RUN_ID": "full512_2048"},
+        check=False,
+    )
+
+    assert wrong.returncode != 0
+    assert exact.returncode == 0
+

@@ -6,7 +6,7 @@ import warnings
 from pathlib import Path
 from typing import Any
 
-from scripts.mlx_support.mlx_chat_utils import apply_chat_template_no_think
+from scripts.linux.hf_chat_utils import apply_chat_template_no_think
 
 _WARNINGS_CONFIGURED = False
 

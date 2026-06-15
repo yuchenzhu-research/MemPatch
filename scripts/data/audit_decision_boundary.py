@@ -21,7 +21,7 @@ from scripts._root import bootstrap_from
 bootstrap_from(__file__)
 
 from benchmark.general_taxonomy import DECISIONS, canonical_hidden_gold_fields
-from scripts.workflows.validate_mempatch_bench_dataset import _is_background_event
+from scripts.data.validate_mempatch_bench_dataset import _is_background_event
 
 NON_ANSWER_DECISIONS = ("ask_clarification", "escalate", "mark_unresolved")
 DEFAULT_JACCARD_WARN = 0.35

@@ -81,7 +81,7 @@ run_variant() {
   if [[ -n "${EVAL_LIMIT:-}" ]]; then
     SCORE_ARGS+=(--allow-missing)
   fi
-  "$PYTHON" "$ROOT/scripts/workflows/evaluate_mempatch_predictions.py" "${SCORE_ARGS[@]}"
+  "$PYTHON" "$ROOT/scripts/evaluate_mempatch_predictions.py" "${SCORE_ARGS[@]}"
 }
 
 if [[ -z "$VARIANT_FILTER" || "$VARIANT_FILTER" == "base" ]]; then

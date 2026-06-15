@@ -2,20 +2,20 @@ local/
 # Local Mac MLX scratch workflows (not part of the Linux paper pipeline).
 scripts/_mac/
 artifacts/
-analysis/
-data_external/
-reference/
-reference_downloads/
-benchmark_downloads/
 .external_repos/
 .reference_cache/
 
 # Agent / paper drafts — not part of the public benchmark release.
 AGENTS.md
 Montreal/
+Montreal copy/
 
 # Dataset bundle — regenerate locally or fetch from the public dataset host.
 hf_release/
+
+# Supplement submission
+supplement/
+
 
 # Python/build/editor caches.
 .pycache_compile/

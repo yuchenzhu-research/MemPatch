@@ -16,7 +16,7 @@ from scripts._root import REPO_ROOT, bootstrap_from
 bootstrap_from(__file__)
 
 from benchmark.api import evaluate_predictions, load_scenarios  # noqa: E402
-from scripts.mlx_support.mlx_chat_utils import extract_json_object
+from scripts.linux.hf_chat_utils import extract_json_object
 from scripts.linux.response_schema_projection import project_response_schema
 
 

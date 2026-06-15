@@ -120,6 +120,35 @@ class RuntimeResult:
         return sorted(list(set(e.code for e in self.engine_errors)))
 
     @property
+    def evtf(self) -> float:
+        """Calculate the Externally Verifiable Transition Fraction (EVTF)."""
+        mutations = 0
+        verified = 0
+        for bid, status in self.final_belief_statuses.items():
+            if status != "AUTHORIZED":
+                mutations += 1
+                has_witness = False
+                for gd in self.gate_decisions:
+                    if gd.get("target_id") == bid:
+                        has_witness = True
+                        break
+                if not has_witness:
+                    for dp in self.defeat_paths:
+                        if dp.get("belief_id") == bid:
+                            has_witness = True
+                            break
+                if not has_witness:
+                    for err in self.engine_errors:
+                        if err.belief_id == bid:
+                            has_witness = True
+                            break
+                if has_witness:
+                    verified += 1
+        if mutations == 0:
+            return 1.0
+        return verified / mutations
+
+    @property
     def reward_breakdown(self) -> dict[str, float]:
         parser_penalty = sum(-10.0 for e in self.parser_errors)
         gate_penalty = sum(-5.0 for e in self.gate_errors)
@@ -151,6 +180,7 @@ class RuntimeResult:
             "final_statuses": self.final_statuses,
             "failure_categories": self.failure_categories,
             "reward_breakdown": self.reward_breakdown,
+            "evtf": self.evtf,
         }
 
 

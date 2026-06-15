@@ -10,7 +10,7 @@ from benchmark.general_taxonomy import (
 )
 from benchmark.model_runner import build_prompt
 from benchmark.public_view import public_scenario_view
-from scripts.workflows.validate_mempatch_bench_dataset import validate_one
+from scripts.data.validate_mempatch_bench_dataset import validate_one
 
 
 def _v13_scenario(**overrides: object) -> dict:

@@ -61,5 +61,5 @@ for slug in "${SMOKE_SLUGS[@]}"; do
   release_gpu
 done
 
-run "$PYTHON" "$ROOT/scripts/paper/build_experiment_artifacts.py" smoke \
+run "$PYTHON" "$ROOT/scripts/build_experiment_artifacts.py" smoke \
   --bundle-root "$BUNDLE_ROOT" --out-root "$ROOT"

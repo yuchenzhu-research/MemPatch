@@ -74,7 +74,7 @@ run_variant() {
   if [[ -n "${EVAL_LIMIT:-}" ]]; then
     score_args+=(--allow-missing)
   fi
-  "$PYTHON" "$ROOT/scripts/workflows/evaluate_mempatch_predictions.py" "${score_args[@]}"
+  "$PYTHON" "$ROOT/scripts/evaluate_mempatch_predictions.py" "${score_args[@]}"
 
   if [[ "${PATH_A_STRICT_SMOKE:-0}" == "1" ]]; then
     "$PYTHON" - "$pred" <<'PY'
