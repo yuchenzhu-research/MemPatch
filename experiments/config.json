@@ -1,5 +1,5 @@
 {
-  "campaign": "aaai27_main",
+  "campaign": "eval_main",
   "seed": 42,
   "models": {
     "qwen3_14b": "OpenPipe/Qwen3-14B-Instruct",

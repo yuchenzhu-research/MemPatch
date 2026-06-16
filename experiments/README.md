@@ -1,6 +1,6 @@
-# AAAI-27 Unified Experiments
+# Unified Experiments
 
-This directory is the only supported entrypoint for the new AAAI-27 campaign.
+This directory is the only supported entrypoint for the evaluation campaign.
 It does not call the historical `scripts/linux` or Apple launchers.
 
 ## Design
@@ -18,41 +18,41 @@ It does not call the historical `scripts/linux` or Apple launchers.
 ## Server setup
 
 ```bash
-python -m venv .venv-aaai27
-source .venv-aaai27/bin/activate
+python -m venv .venv
+source .venv/bin/activate
 pip install -e .
-pip install -r experiments/aaai27/requirements.txt
+pip install -r experiments/requirements.txt
 ```
 
 Before a full run, use a separate three-case smoke directory:
 
 ```bash
-LIMIT=3 OUTPUT_ROOT=runs/aaai27_smoke bash experiments/aaai27/run_all.sh qwen3_14b
-python experiments/aaai27/validate_run.py \
+LIMIT=3 OUTPUT_ROOT=runs/eval_smoke bash experiments/run_all.sh qwen3_14b
+python experiments/validate_run.py \
   --data local/data/mempatch/test/scenarios.jsonl \
-  --run-dir runs/aaai27_smoke/qwen3_14b \
+  --run-dir runs/eval_smoke/qwen3_14b \
   --expected-cases 3
 ```
 
 Run one model per GPU allocation:
 
 ```bash
-bash experiments/aaai27/run_all.sh qwen3_14b
-bash experiments/aaai27/run_all.sh phi4_14b
-bash experiments/aaai27/run_all.sh mistral_nemo_12b
+bash experiments/run_all.sh qwen3_14b
+bash experiments/run_all.sh phi4_14b
+bash experiments/run_all.sh mistral_nemo_12b
 ```
 
 Local model directories can replace Hub IDs:
 
 ```bash
-QWEN3_MODEL_ID=/models/qwen3-14b bash experiments/aaai27/run_all.sh qwen3_14b
+QWEN3_MODEL_ID=/models/qwen3-14b bash experiments/run_all.sh qwen3_14b
 ```
 
 After all three runs:
 
 ```bash
-bash experiments/aaai27/run_all.sh guard
-bash experiments/aaai27/run_all.sh analyze
+bash experiments/run_all.sh guard
+bash experiments/run_all.sh analyze
 ```
 
 The main paper inputs are:

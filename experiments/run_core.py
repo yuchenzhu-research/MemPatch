@@ -1,4 +1,4 @@
-"""Unified, resumable server runner for the AAAI-27 MemPatch experiments."""
+"""Unified, resumable server runner for the MemPatch experiments."""
 
 from __future__ import annotations
 
@@ -151,7 +151,7 @@ def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
         os.fsync(handle.fileno())
 
 
-def build_prompt_aaai27(public_view: dict[str, Any]) -> str:
+def build_prompt(public_view: dict[str, Any]) -> str:
     memory_ids = _collect_memory_ids(public_view)
     payload = {
         "instruction": (
@@ -263,7 +263,7 @@ def run_case(
     frozen_response: dict[str, Any] | None = None
     for method in BASELINE_METHODS:
         method_view = build_method_view(method, public_view, retrieval_k)
-        generation = backend.generate(build_prompt_aaai27(method_view), response_tokens)
+        generation = backend.generate(build_prompt(method_view), response_tokens)
         response, parse_error = _safe_response(generation.text)
         predictions[method] = {"scenario_id": scenario_id, "response": response}
         generations[method] = {
@@ -323,7 +323,7 @@ def main() -> None:
     parser.add_argument("--data", required=True)
     parser.add_argument("--model-key", required=True)
     parser.add_argument("--model-id", required=True)
-    parser.add_argument("--output-root", default="runs/aaai27_main")
+    parser.add_argument("--output-root", default="runs/eval_main")
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--retrieval-k", type=int, default=8)
     parser.add_argument("--response-tokens", type=int, default=1024)
@@ -412,7 +412,7 @@ def main() -> None:
     gpu_name = torch.cuda.get_device_name(0) if torch.cuda.is_available() else "N/A"
     
     manifest = {
-        "campaign": "aaai27_main",
+        "campaign": "eval_main",
         "repository_sha": _git_sha(),
         "model_key": args.model_key,
         "model_id": args.model_id,

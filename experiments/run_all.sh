@@ -2,7 +2,7 @@
 set -euo pipefail
 
 DATA="${DATA:-local/data/mempatch/test/scenarios.jsonl}"
-OUTPUT_ROOT="${OUTPUT_ROOT:-runs/aaai27_main}"
+OUTPUT_ROOT="${OUTPUT_ROOT:-runs/eval_main}"
 DTYPE="${DTYPE:-bfloat16}"
 LIMIT="${LIMIT:-}"
 
@@ -10,7 +10,7 @@ run_model() {
   local key="$1"
   local model_id="$2"
   local args=(
-    python experiments/aaai27/run_core.py
+    python experiments/run_core.py
     --data "$DATA"
     --model-key "$key"
     --model-id "$model_id"
@@ -35,7 +35,7 @@ case "${1:-}" in
     run_model mistral_nemo_12b "${MISTRAL_MODEL_ID:-mistralai/Mistral-Nemo-Instruct-2407}"
     ;;
   analyze)
-    python experiments/aaai27/analyze.py \
+    python experiments/analyze.py \
       --data "$DATA" \
       --runs-root "$OUTPUT_ROOT" \
       --models qwen3_14b phi4_14b mistral_nemo_12b \
@@ -43,7 +43,7 @@ case "${1:-}" in
     ;;
   guard)
     for key in qwen3_14b phi4_14b mistral_nemo_12b; do
-      python experiments/aaai27/guard_stress.py \
+      python experiments/guard_stress.py \
         --data "$DATA" \
         --raw-cases "$OUTPUT_ROOT/$key/raw_cases.jsonl" \
         --output "$OUTPUT_ROOT/$key/guard_stress.json"

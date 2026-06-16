@@ -1,4 +1,4 @@
-"""Model-visible context construction for the AAAI-27 experiment campaign."""
+"""Model-visible context construction for the MemPatch experiment campaign."""
 
 from __future__ import annotations
 
