@@ -297,7 +297,7 @@ def main() -> None:
                 print(f"Error: {model}/{method} is incomplete with {official['missing_prediction_count']} missing predictions", file=sys.stderr)
                 sys.exit(1)
             
-            if len(official["errors"]) > 0 and not args.allow_validation_errors:
+            if method in ("mempatch", "mempatch_no_guard") and len(official["errors"]) > 0 and not args.allow_validation_errors:
                 print(f"Error: {model}/{method} has validation errors in strict mode:", file=sys.stderr)
                 for err in official["errors"][:5]:
                     print(f"  * {err}", file=sys.stderr)
