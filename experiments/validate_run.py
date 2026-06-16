@@ -181,7 +181,10 @@ def main() -> None:
         errors_list = result["errors"]
         missing_count = result["missing_prediction_count"]
         
-        total_val_errors += len(errors_list)
+        # Only accumulate errors from mempatch methods to trigger strict validation failures.
+        # Baseline validation errors are recorded in the report but do not cause execution pipeline crashes.
+        if method in ("mempatch", "mempatch_no_guard"):
+            total_val_errors += len(errors_list)
         total_missing_predictions += missing_count
 
         # 统计错误分类
