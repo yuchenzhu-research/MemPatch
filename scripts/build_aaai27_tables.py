@@ -672,7 +672,7 @@ def build_tables(scenarios_path: Path, results_dir: Path, out_dir: Path):
             interp_lines.append(f"- **{comp}**: Delta: `{delta:+.1f}%`, 95% CI: `[{ci_lower:.1f}%, {ci_upper:.1f}%]`, p-value: `{p:.4f}`.")
             
             if model == "qwen3_14b":
-                interp_lines.append("  * **Constraint**: The Changed Acc delta is negative and statistically significant ($p = 0.0150$, CI $[-5.0\\%, -0.9\\%]$). **DO NOT claim accuracy improvement**. You must write: *\"On Qwen3-14B, MemPatch yields a statistically significant accuracy decrease of -2.9% against the strongest baseline. This represents a safety-utility trade-off where MemPatch's strict authorization guard prioritizes absolute policy compliance and safety over speculative memory updates.\"*")
+                interp_lines.append("  * **Constraint**: The Changed Acc delta is negative and statistically significant ($p = 0.0109$, CI $[-5.0\\%, -0.8\\%]$). **DO NOT claim accuracy improvement**. You must write: *\"On Qwen3-14B, MemPatch yields a statistically significant accuracy decrease of -2.9% against the strongest baseline. This represents a safety-utility trade-off where MemPatch's strict authorization guard prioritizes absolute policy compliance and safety over speculative memory updates.\"*")
             elif model == "phi4_14b":
                 if is_sig:
                     interp_lines.append("  * **Statement**: The gain is statistically significant. You may state: *\"MemPatch achieves a statistically significant accuracy gain over the strongest baseline on Phi-4-14B.\"*")
