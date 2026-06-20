@@ -45,6 +45,7 @@ runs/
 *.db
 *.sqlite
 *.zip
+!review.zip
 *.tar
 *.tar.gz
 *.jsonl.gz
@@ -73,6 +74,3 @@ hf_token*
 .cache/huggingface/
 huggingface/
 hf_home/
-
-# Reference CommKit / paper writing guidelines pointers
-writing_refs/
