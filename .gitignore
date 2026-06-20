@@ -45,7 +45,6 @@ runs/
 *.db
 *.sqlite
 *.zip
-!review.zip
 *.tar
 *.tar.gz
 *.jsonl.gz
