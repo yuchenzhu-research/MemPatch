@@ -1,44 +1,22 @@
 local/
-# Local Mac MLX scratch workflows (not part of the Linux paper pipeline).
-scripts/_mac/
-.external_repos/
-.reference_cache/
-
-# Agent / paper drafts — not part of the public benchmark release.
-Montreal/*
-
-# Dataset bundle — regenerate locally or fetch from the public dataset host.
-hf_release/
-
-# Supplement submission
-supplement/
-
+Montreal/
 
 # Python/build/editor caches.
-.pycache_compile/
 .pytest_cache/
 __pycache__/
 *.py[cod]
 *.egg-info/
 .venv*/
-venv/
 .env
 .DS_Store
 
-# Training/model artifacts.
-adapters/
-models/
-checkpoints/
-wandb/
-runs/
+# Model/checkpoint/binary artifacts.
 *.safetensors
 *.gguf
 *.bin
 *.ckpt
 *.pt
 *.pth
-
-# External/binary downloads.
 *.pdf
 *.parquet
 *.arrow
@@ -52,7 +30,6 @@ runs/
 # JSONL is ignored by default; only smoke fixtures are allowlisted.
 *.jsonl
 !mempatch/tests/**/*.jsonl
-outputs/
 
 # Secrets / credentials / tokens — never commit any of these.
 .env.*
@@ -67,9 +44,3 @@ hf_token*
 .hf_token
 *_api_key*
 *.apikey
-
-# Local Hugging Face / model-hub caches.
-.huggingface/
-.cache/huggingface/
-huggingface/
-hf_home/

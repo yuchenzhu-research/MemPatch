@@ -22,11 +22,6 @@ llm = [
     "anthropic>=0.25",
     "google-genai>=1.0",
 ]
-mlx = [
-    "mlx>=0.31",
-    "mlx-lm @ git+https://github.com/ml-explore/mlx-lm.git@main",
-    "transformers>=5.0",
-]
 mem0 = [
     "mem0ai",
     "chromadb",
