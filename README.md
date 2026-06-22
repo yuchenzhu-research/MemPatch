@@ -17,4 +17,4 @@ python scripts/evaluate_mempatch_predictions.py --help
 scripts/run_paper_campaign.sh smoke qwen3_14b
 ```
 
-Blind-review paper material is under `Montreal/`. The ChatGPT review bundle is `review.zip`.
+Blind-review paper material is under `Montreal/`.
