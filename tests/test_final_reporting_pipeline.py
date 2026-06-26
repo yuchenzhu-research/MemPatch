@@ -103,6 +103,10 @@ def test_aggregate_tiny_fixture_normalizes_alias_and_computes_tokens(tmp_path: P
     assert rows[0]["n"] == "2"
     assert float(rows[0]["parse_failure_rate"]) == 0.5
     assert float(rows[0]["total_tokens"]) == 20.0
+    assert float(rows[0]["unsupported_or_hallucinated_evidence_rate"]) == 0.5
+    cost = _read_csv(tmp_path / "aggregates" / "cost_latency.csv")
+    assert "memory_size" in cost[0]
+    assert "unsupported_or_hallucinated_evidence_rate" in cost[0]
     capabilities = _read_csv(tmp_path / "aggregates" / "per_capability.csv")
     assert capabilities[0]["capability"] == "update_handling"
     families = _read_csv(tmp_path / "aggregates" / "per_baseline_family.csv")

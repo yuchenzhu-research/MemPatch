@@ -77,6 +77,9 @@ PER_MODEL_COLUMNS = (
     "latency_sec",
     "throughput_cases_per_min",
     "retrieved_event_count",
+    "memory_size",
+    "overcitation_rate",
+    "unsupported_or_hallucinated_evidence_rate",
 )
 
 
@@ -131,6 +134,12 @@ def rate(rows: list[dict[str, Any]], key: str) -> float:
     if not rows:
         return 0.0
     return sum(1.0 for row in rows if bool_value(row.get(key))) / len(rows)
+
+
+def optional_rate(rows: list[dict[str, Any]], key: str) -> float | None:
+    if not rows or not any(key in row for row in rows):
+        return None
+    return rate(rows, key)
 
 
 def macro_correct(rows: list[dict[str, Any]], class_key: str, correct_key: str) -> float:
@@ -274,8 +283,15 @@ def aggregate_bucket(rows: list[dict[str, Any]], *, status: str = "completed") -
     throughput = (n / latency_sum * 60.0) if latency_sum > 0 else None
     schema_valid_rate = rate(rows, "schema_valid")
     exact_state_map = rate(rows, "exact_state_map")
+    evidence_precision = mean([number(row.get("evidence_precision")) for row in rows])
     evidence_recall = mean([number(row.get("evidence_recall")) for row in rows])
     strict_joint = rate(rows, "strict_joint")
+    unsupported_rate = mean([number(row.get("unsupported_or_hallucinated_evidence_rate")) for row in rows])
+    if unsupported_rate is None and evidence_precision is not None:
+        unsupported_rate = max(0.0, min(1.0, 1.0 - evidence_precision))
+    overcitation_rate = mean([number(row.get("overcitation_rate")) for row in rows])
+    if overcitation_rate is None:
+        overcitation_rate = optional_rate(rows, "overcitation")
     return {
         "n": n,
         "status": status,
@@ -294,7 +310,7 @@ def aggregate_bucket(rows: list[dict[str, Any]], *, status: str = "completed") -
         "decision_macro_f1": macro_correct(rows, "decision_macro_f1_class", "decision_correct"),
         "answer_key_fact_accuracy": mean([number(row.get("answer_key_fact_correct")) for row in rows]),
         "memory_state_accuracy": mean([number(row.get("memory_state_accuracy")) for row in rows]) or 0.0,
-        "evidence_precision": mean([number(row.get("evidence_precision")) for row in rows]) or 0.0,
+        "evidence_precision": evidence_precision or 0.0,
         "evidence_recall": evidence_recall or 0.0,
         "evidence_f1": mean([number(row.get("evidence_f1")) for row in rows]) or 0.0,
         "evidence_coverage": evidence_recall or 0.0,
@@ -309,6 +325,9 @@ def aggregate_bucket(rows: list[dict[str, Any]], *, status: str = "completed") -
         "latency_sec": mean([number(row.get("latency_sec")) for row in rows]),
         "throughput_cases_per_min": throughput,
         "retrieved_event_count": mean([number(row.get("retrieved_event_count")) for row in rows]),
+        "memory_size": mean([number(row.get("memory_size")) for row in rows]),
+        "overcitation_rate": overcitation_rate,
+        "unsupported_or_hallucinated_evidence_rate": unsupported_rate,
     }
 
 
@@ -466,6 +485,9 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             "latency_sec": row["latency_sec"],
             "throughput_cases_per_min": row["throughput_cases_per_min"],
             "retrieved_event_count": row["retrieved_event_count"],
+            "memory_size": row["memory_size"],
+            "overcitation_rate": row["overcitation_rate"],
+            "unsupported_or_hallucinated_evidence_rate": row["unsupported_or_hallucinated_evidence_rate"],
         }
         for row in per_model
     ]
@@ -491,6 +513,9 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
             "latency_sec",
             "throughput_cases_per_min",
             "retrieved_event_count",
+            "memory_size",
+            "overcitation_rate",
+            "unsupported_or_hallucinated_evidence_rate",
         ),
     )
     write_csv(

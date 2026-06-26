@@ -117,16 +117,17 @@ def cost_table(rows: list[dict[str, str]]) -> str:
         "\\begin{table}[t]",
         "\\centering",
         "\\caption{Cost and latency}",
-        "\\begin{tabular}{llrrrr}",
+        "\\begin{tabular}{llrrrrrr}",
         "\\toprule",
-        "Model & Method & Input tok. & Output tok. & Total tok. & Latency s \\\\",
+        "Model & Method & Input tok. & Output tok. & Total tok. & Latency s & Unsup. \\\\",
         "\\midrule",
     ]
     for row in sorted(rows, key=method_sort):
         lines.append(
             f"{latex_escape(row.get('model', ''))} & {latex_escape(row.get('method', ''))} & "
             f"{num(row, 'input_tokens')} & {num(row, 'output_tokens')} & "
-            f"{num(row, 'total_tokens')} & {num(row, 'latency_sec')} \\\\"
+            f"{num(row, 'total_tokens')} & {num(row, 'latency_sec')} & "
+            f"{pct(row, 'unsupported_or_hallucinated_evidence_rate')} \\\\"
         )
     lines.extend(["\\bottomrule", "\\end{tabular}", "\\end{table}", ""])
     return "\n".join(lines)
