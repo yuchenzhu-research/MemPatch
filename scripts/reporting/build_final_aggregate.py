@@ -25,6 +25,12 @@ from mempatch.benchmark.method_names import (  # noqa: E402
     HEADLINE_SPLITS,
     normalize_method_name,
 )
+from mempatch.benchmark.reporting_taxonomy import (  # noqa: E402
+    MEMORY_CAPABILITIES,
+    METHOD_BASELINE_FAMILIES,
+    baseline_family_for_method,
+    capability_for_score,
+)
 
 
 OUTPUT_FILENAMES = (
@@ -32,6 +38,8 @@ OUTPUT_FILENAMES = (
     "main_results.csv",
     "challenge_results.csv",
     "per_failure_mode.csv",
+    "per_capability.csv",
+    "per_baseline_family.csv",
     "per_domain.csv",
     "per_operation.csv",
     "per_difficulty.csv",
@@ -232,6 +240,8 @@ def normalize_score_row(row: dict[str, Any], prediction_meta: dict[tuple[str, st
     normalized["contract_valid_state_success"] = bool_value(row.get("schema_valid")) and bool_value(row.get("exact_state_map"))
     normalized["decision_macro_f1_class"] = row.get("decision_macro_f1_class") or row.get("decision_f1_class")
     normalized["operation"] = row.get("memory_operation_f1_class") or row.get("expected_memory_operation") or row.get("memory_operation")
+    normalized["capability"] = capability_for_score(normalized)
+    normalized["baseline_family"] = baseline_family_for_method(method)
     key = (
         str(normalized.get("scenario_id")),
         str(normalized.get("split") or ""),
@@ -422,6 +432,8 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
 
     subgroup_specs = {
         "per_failure_mode.csv": ("split", "model", "method", "failure_mode"),
+        "per_capability.csv": ("split", "model", "method", "capability"),
+        "per_baseline_family.csv": ("split", "model", "baseline_family"),
         "per_domain.csv": ("split", "model", "method", "domain"),
         "per_operation.csv": ("split", "model", "method", "operation"),
         "per_difficulty.csv": ("split", "model", "method", "difficulty"),
@@ -497,6 +509,9 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         "missing_required_fields": missing_columns,
         "headline_splits": list(HEADLINE_SPLITS),
         "headline_excludes_dev_calibration": True,
+        "aggregate_exports": [name for name in OUTPUT_FILENAMES if name != "aggregate_status.json"],
+        "memory_capabilities": list(MEMORY_CAPABILITIES),
+        "baseline_families": sorted(set(METHOD_BASELINE_FAMILIES.values())),
     }
     write_json(args.output_dir / "aggregate_status.json", status)
     return status

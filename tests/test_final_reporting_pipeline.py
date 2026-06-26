@@ -103,6 +103,10 @@ def test_aggregate_tiny_fixture_normalizes_alias_and_computes_tokens(tmp_path: P
     assert rows[0]["n"] == "2"
     assert float(rows[0]["parse_failure_rate"]) == 0.5
     assert float(rows[0]["total_tokens"]) == 20.0
+    capabilities = _read_csv(tmp_path / "aggregates" / "per_capability.csv")
+    assert capabilities[0]["capability"] == "update_handling"
+    families = _read_csv(tmp_path / "aggregates" / "per_baseline_family.csv")
+    assert families[0]["baseline_family"] == "no_memory_vanilla"
 
 
 def test_empty_input_with_allow_empty_writes_pending_status(tmp_path: Path) -> None:

@@ -5,6 +5,42 @@ headline_splits:
 non_headline_splits:
   - dev_calibration
 
+memory_capability_categories:
+  factual_recall:
+    description: Whether durable facts are remembered and attributed to the supported state.
+  temporal_reasoning:
+    description: Whether the model respects event order, supersession, holds, and releases.
+  update_handling:
+    description: Whether new verified information correctly revises, deletes, or restores prior memory state.
+  conflict_resolution:
+    description: Whether conflicting, scoped, or unresolved memories are handled without collapse.
+  multi_hop_memory_use:
+    description: Whether linked memories and dependent updates are connected across history fragments.
+  abstention:
+    description: Whether unsupported, unsafe, or unnecessary memory writes are refused or withheld.
+
+baseline_families:
+  no_memory_vanilla:
+    methods:
+      - direct_json
+  full_or_truncated_context:
+    methods:
+      - full_context_json
+  summary_memory:
+    methods:
+      - summary_memory_json
+  raw_rag:
+    methods:
+      - bm25_rag_json
+      - dense_rag_json
+      - time_aware_rag_json
+  mempatch_ablation:
+    methods:
+      - mempatch_noguard
+  mempatch:
+    methods:
+      - mempatch
+
 canonical_metrics:
   task_success_rate:
     aliases:

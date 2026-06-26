@@ -12,12 +12,14 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from mempatch.benchmark.method_names import FINAL_METHODS  # noqa: E402
+from mempatch.benchmark.reporting_taxonomy import MEMORY_CAPABILITIES  # noqa: E402
 
 
 TABLES = (
     "table_main_results.tex",
     "table_challenge_results.tex",
     "table_ablation_mempatch.tex",
+    "table_capability_breakdown.tex",
     "table_cost_latency.tex",
 )
 
@@ -130,6 +132,41 @@ def cost_table(rows: list[dict[str, str]]) -> str:
     return "\n".join(lines)
 
 
+def capability_sort(row: dict[str, str]) -> tuple[str, str, int, str]:
+    capability = row.get("capability", "")
+    try:
+        capability_rank = MEMORY_CAPABILITIES.index(capability)
+    except ValueError:
+        capability_rank = 999
+    method = row.get("method", "")
+    method_rank = FINAL_METHODS.index(method) if method in FINAL_METHODS else 999
+    return (row.get("split", ""), row.get("model", ""), capability_rank, f"{method_rank:03d}:{method}")
+
+
+def capability_table(rows: list[dict[str, str]]) -> str:
+    if not rows:
+        return pending_table("Memory capability breakdown")
+    lines = [
+        "% Auto-generated from per_capability.csv.",
+        "\\begin{table}[t]",
+        "\\centering",
+        "\\caption{Memory capability breakdown}",
+        "\\begin{tabular}{lllrrrr}",
+        "\\toprule",
+        "Model & Method & Capability & $n$ & State & Evidence & Joint \\\\",
+        "\\midrule",
+    ]
+    for row in sorted(rows, key=capability_sort):
+        lines.append(
+            f"{latex_escape(row.get('model', ''))} & {latex_escape(row.get('method', ''))} & "
+            f"{latex_escape(row.get('capability', ''))} & {row.get('n', '0')} & "
+            f"{pct(row, 'exact_state_map')} & {pct(row, 'evidence_f1')} & "
+            f"{pct(row, 'strict_joint')} \\\\"
+        )
+    lines.extend(["\\bottomrule", "\\end{tabular}", "\\end{table}", ""])
+    return "\n".join(lines)
+
+
 def write(path: Path, text: str) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     path.write_text(text, encoding="utf-8")
@@ -139,6 +176,7 @@ def build_tables(aggregate_dir: Path, output_dir: Path, *, strict: bool) -> list
     main = read_csv(aggregate_dir / "main_results.csv")
     challenge = read_csv(aggregate_dir / "challenge_results.csv")
     per_model = read_csv(aggregate_dir / "per_model_method_split.csv")
+    capability = read_csv(aggregate_dir / "per_capability.csv")
     cost = read_csv(aggregate_dir / "cost_latency.csv")
     missing = []
     if strict:
@@ -146,6 +184,7 @@ def build_tables(aggregate_dir: Path, output_dir: Path, *, strict: bool) -> list
             "main_results.csv": main,
             "challenge_results.csv": challenge,
             "per_model_method_split.csv": per_model,
+            "per_capability.csv": capability,
             "cost_latency.csv": cost,
         }.items():
             if not rows:
@@ -155,6 +194,7 @@ def build_tables(aggregate_dir: Path, output_dir: Path, *, strict: bool) -> list
     write(output_dir / "table_main_results.tex", results_table(main, "Main synthetic results"))
     write(output_dir / "table_challenge_results.tex", results_table(challenge, "Challenge synthetic results"))
     write(output_dir / "table_ablation_mempatch.tex", ablation_table(per_model))
+    write(output_dir / "table_capability_breakdown.tex", capability_table(capability))
     write(output_dir / "table_cost_latency.tex", cost_table(cost))
     return [str(output_dir / name) for name in TABLES]
 
