@@ -3,14 +3,30 @@ raw_internal_dir: local/data/mempatch/v1.4/raw_internal
 release_dir: local/data/mempatch/v1.4/release
 splits:
   dev_calibration:
-    count: 60
-    difficulty: medium
+    count: 500
+    difficulty_mix:
+      medium: 0.4
+      hard: 0.4
+      challenge: 0.2
   main_test_synthetic:
-    count: 240
-    difficulty: hard
+    count: 3000
+    difficulty_mix:
+      medium: 0.25
+      hard: 0.5
+      challenge: 0.25
   challenge_test_hard:
-    count: 120
-    difficulty: challenge
+    count: 500
+    difficulty_mix:
+      medium: 0.2
+      hard: 0.2
+      challenge: 0.6
+structure_variants:
+  num_events: [4, 6, 8, 12, 20]
+  num_memories: [2, 3, 5, 8, 12]
+  distractors: [0, 1, 2, 4, 6]
+  timestamp_styles: [iso, date_only, relative_turn, unordered_evidence]
+  id_styles: [compact, zero_padded, issue_like, release_note_like]
+  prompt_styles: [compact, verbose, ticket, table, chat_log, changelog]
 public_release:
   include_domain: true
   include_difficulty: false

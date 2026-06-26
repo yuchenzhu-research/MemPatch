@@ -16,8 +16,11 @@ FORBIDDEN_FIELDS = {
     "expected_decision",
     "expected_evidence_event_ids",
     "expected_failure_diagnosis",
+    "expected_followup_answer",
+    "expected_followup_answer_key_facts",
     "expected_memory_state",
     "expected_memory_states",
+    "expected_memory_operation",
     "failure_mode",
     "generation_metadata",
     "hidden_gold",
@@ -29,6 +32,7 @@ FORBIDDEN_FIELDS = {
     "source_pointers",
     "template_family_id",
     "template_instance_id",
+    "unsafe_reuse_patterns",
     "validation_notes",
 }
 
@@ -44,8 +48,11 @@ FORBIDDEN_KEY_ALIASES = {
     "expecteddecision",
     "expectedevidenceeventids",
     "expectedfailurediagnosis",
+    "expectedfollowupanswer",
+    "expectedfollowupanswerkeyfacts",
     "expectedmemorystate",
     "expectedmemorystates",
+    "expectedmemoryoperation",
     "failuremode",
     "generationmetadata",
     "gold",
@@ -60,6 +67,7 @@ FORBIDDEN_KEY_ALIASES = {
     "sourcepointers",
     "templatefamilyid",
     "templateinstanceid",
+    "unsafereusepatterns",
     "validationnotes",
 }
 

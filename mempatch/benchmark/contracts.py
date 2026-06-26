@@ -17,6 +17,19 @@ DECISIONS = {
     "mark_unresolved",
 }
 
+MEMORY_OPERATIONS = {
+    "PRESERVE",
+    "REVISE",
+    "RESTRICT_SCOPE",
+    "BLOCK",
+    "MARK_UNRESOLVED",
+    "DELETE_OR_FORGET",
+    "RESTORE_OR_RELEASE",
+    "REJECT_NEW_MEMORY",
+    "NO_WRITE",
+    "ESCALATE",
+}
+
 MEMORY_STATUSES = {
     "current",
     "blocked",
@@ -42,13 +55,20 @@ FAILURE_MODES = {
     "failure_to_release_or_restore",
 }
 
-RESPONSE_FIELDS = (
+REQUIRED_RESPONSE_FIELDS = (
     "answer",
     "decision",
     "memory_state",
     "evidence_event_ids",
     "failure_diagnosis",
 )
+
+OPTIONAL_RESPONSE_FIELDS = (
+    "memory_operation",
+    "followup_answer",
+)
+
+RESPONSE_FIELDS = REQUIRED_RESPONSE_FIELDS + OPTIONAL_RESPONSE_FIELDS
 
 
 def state_list_to_map(rows: Any) -> dict[str, str]:
@@ -95,6 +115,10 @@ def normalize_prediction(row: dict[str, Any]) -> dict[str, Any]:
         parsed = row.get("response")
     if not isinstance(parsed, dict):
         parsed = {field: row[field] for field in RESPONSE_FIELDS if field in row}
+    parsed = dict(parsed)
+    followup = row.get("followup_response")
+    if "followup_answer" not in parsed and isinstance(followup, dict) and "answer" in followup:
+        parsed["followup_answer"] = followup["answer"]
     return {
         "scenario_id": row.get("scenario_id"),
         "method": row.get("method"),
@@ -110,12 +134,15 @@ def validate_prediction(prediction: dict[str, Any]) -> list[str]:
     parsed = prediction.get("parsed")
     if not isinstance(parsed, dict):
         return ["missing parsed response object"]
-    for field in RESPONSE_FIELDS:
+    for field in REQUIRED_RESPONSE_FIELDS:
         if field not in parsed:
             errors.append(f"missing parsed.{field}")
     decision = parsed.get("decision")
     if decision not in DECISIONS:
         errors.append(f"invalid decision: {decision!r}")
+    operation = parsed.get("memory_operation")
+    if operation is not None and operation not in MEMORY_OPERATIONS:
+        errors.append(f"invalid memory_operation: {operation!r}")
     diagnosis = parsed.get("failure_diagnosis")
     if diagnosis not in FAILURE_MODES:
         errors.append(f"invalid failure_diagnosis: {diagnosis!r}")

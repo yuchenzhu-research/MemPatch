@@ -18,8 +18,11 @@ INTERNAL_ONLY_FIELDS = frozenset(
         "expected_decision",
         "expected_evidence_event_ids",
         "expected_failure_diagnosis",
+        "expected_followup_answer",
+        "expected_followup_answer_key_facts",
         "expected_memory_state",
         "expected_memory_states",
+        "expected_memory_operation",
         "failure_mode",
         "generation_metadata",
         "is_distractor",
@@ -32,6 +35,7 @@ INTERNAL_ONLY_FIELDS = frozenset(
         "source_pointers",
         "template_family_id",
         "template_instance_id",
+        "unsafe_reuse_patterns",
         "validation_notes",
     }
 )
@@ -122,7 +126,7 @@ def sanitize_public_input(public_input: dict[str, Any] | None) -> dict[str, Any]
 def public_scenario_view(scenario: dict[str, Any]) -> dict[str, Any]:
     """Build the model-visible scenario payload without internal leakage fields."""
     tasks: dict[str, Any] = {}
-    for key in ("black_box_task", "memory_state_task", "evidence_retrieval_task", "diagnostic_task"):
+    for key in ("black_box_task", "memory_state_task", "evidence_retrieval_task", "diagnostic_task", "followup_task"):
         if key in scenario:
             tasks[key] = _strip_internal(scenario[key])
     if not tasks and scenario.get("tasks"):
@@ -135,7 +139,7 @@ def public_scenario_view(scenario: dict[str, Any]) -> dict[str, Any]:
     view: dict[str, Any] = {
         "scenario_id": scenario["scenario_id"],
         "domain": scenario.get("domain"),
-        "workflow_context": _strip_internal(scenario.get("workflow_context", "")),
+        "workflow_context": sanitize_public_value(_strip_internal(scenario.get("workflow_context", ""))),
         "public_input": sanitize_public_input(scenario.get("public_input", {})),
     }
     view.update(sanitize_public_value(_strip_internal(tasks)))

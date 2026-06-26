@@ -31,9 +31,12 @@ METHODS = (
 BOOTSTRAP_METRICS = (
     "joint_revision_success",
     "black_box_decision_accuracy",
+    "memory_operation_accuracy",
     "memory_state_accuracy",
     "evidence_f1",
     "failure_diagnosis_accuracy",
+    "followup_task_accuracy",
+    "downstream_contamination_rate",
     "stale_reuse_rate",
     "scenario_exact_state_match",
 )

@@ -27,6 +27,7 @@ from typing import Any
 from mempatch.benchmark.general_taxonomy import (
     DECISIONS,
     FAILURE_MODES,
+    MEMORY_OPERATIONS,
     MEMORY_STATUSES,
 )
 from mempatch.benchmark.scorers_general import (
@@ -45,6 +46,7 @@ __all__ = [
     "HEADLINE_METRICS",
     "AUXILIARY_METRICS",
     "DECISIONS",
+    "MEMORY_OPERATIONS",
     "MEMORY_STATUSES",
     "FAILURE_MODES",
 ]
@@ -55,6 +57,16 @@ SCENARIO_JSONL_NAME = "scenarios.jsonl"
 # evaluation every field is required so models cannot score through hidden-gold
 # shaped fallbacks or partial response objects.
 RESPONSE_FIELDS = (
+    "answer",
+    "decision",
+    "memory_operation",
+    "memory_state",
+    "evidence_event_ids",
+    "failure_diagnosis",
+    "followup_answer",
+)
+
+REQUIRED_RESPONSE_FIELDS = (
     "answer",
     "decision",
     "memory_state",
@@ -135,6 +147,9 @@ def normalize_prediction(row: dict[str, Any]) -> dict[str, Any]:
         response = _normalize_response_object(
             {key: row[key] for key in RESPONSE_FIELDS if key in row}
         )
+    followup = row.get("followup_response")
+    if "followup_answer" not in response and isinstance(followup, dict) and "answer" in followup:
+        response["followup_answer"] = followup["answer"]
     return {"scenario_id": scenario_id, "response": response}
 
 
@@ -179,6 +194,13 @@ def _validate_response(
         errors.append(
             f"{scenario_id}: invalid decision label {decision!r} "
             f"(expected one of {sorted(DECISIONS)})"
+        )
+
+    operation = response.get("memory_operation")
+    if operation is not None and (not is_hashable(operation) or operation not in MEMORY_OPERATIONS):
+        errors.append(
+            f"{scenario_id}: invalid memory_operation label {operation!r} "
+            f"(expected one of {sorted(MEMORY_OPERATIONS)})"
         )
 
     # memory_state: required and must be a dict of valid statuses.

@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+from typing import Any
 
 import sys
 
@@ -41,6 +42,12 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Output directory for raw internal split JSONL.",
     )
     parser.add_argument(
+        "--config",
+        type=Path,
+        default=None,
+        help="Optional benchmark YAML config. Uses splits.*.count when provided.",
+    )
+    parser.add_argument(
         "--quota",
         action="append",
         type=_quota,
@@ -67,10 +74,25 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     return parser.parse_args(argv)
 
 
+def _load_config_quotas(path: Path | None) -> dict[str, int] | None:
+    if path is None:
+        return None
+    import yaml
+
+    payload: Any = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
+    splits = payload.get("splits") or {}
+    quotas: dict[str, int] = {}
+    for split, config in splits.items():
+        if isinstance(config, dict) and "count" in config:
+            quotas[str(split)] = int(config["count"])
+    return quotas
+
+
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
 
-    quotas = dict(args.quota) if args.quota else DEFAULT_QUOTAS
+    config_quotas = _load_config_quotas(args.config)
+    quotas = dict(args.quota) if args.quota else (config_quotas or DEFAULT_QUOTAS)
     paths = generate_raw_files(args.out_dir, quotas, seed_namespace=args.seed_namespace)
     validation_errors: list[str] = []
     for path in paths.values():

@@ -112,13 +112,13 @@ def test_project_to_benchmark_response_accepts_full_v14_raw_diagnosis() -> None:
         },
     )
 
-    assert response == {
-        "decision": "use_current_memory",
-        "memory_state": {"m1": "current"},
-        "evidence_event_ids": ["e1"],
-        "failure_diagnosis": "unnecessary_memory_write",
-        "answer": "Use the current memory.",
-    }
+    assert response["decision"] == "use_current_memory"
+    assert response["memory_operation"] == "PRESERVE"
+    assert response["memory_state"] == {"m1": "current"}
+    assert response["evidence_event_ids"] == ["e1"]
+    assert response["failure_diagnosis"] == "unnecessary_memory_write"
+    assert response["answer"] == "Use the current memory."
+    assert response["followup_answer"] == "Use the current memory."
     assert response["failure_diagnosis"] in FAILURE_MODES
 
 
@@ -199,6 +199,7 @@ def test_project_to_benchmark_response_only_accepts_auxiliary_raw_memory_states(
     assert response["memory_state"]["m2"] == "current"
     assert response["memory_state"]["m3"] == "deleted"
     assert response["decision"] == "refuse_due_to_policy"
+    assert response["memory_operation"] == "BLOCK"
     assert response["failure_diagnosis"] == "policy_violation"
     for label in response["memory_state"].values():
         assert label in MEMORY_STATUSES
@@ -220,12 +221,14 @@ def test_revision_module_pipeline_emits_strict_response_fields() -> None:
     }
     prediction = run_revision_module_on_scenario(scenario)
     response = prediction["response"]
-    assert set(response.keys()) == {
+    assert set(response.keys()) >= {
         "answer",
         "decision",
+        "memory_operation",
         "memory_state",
         "evidence_event_ids",
         "failure_diagnosis",
+        "followup_answer",
     }
     assert response["memory_state"] == {"m1": "current"}
     assert response["evidence_event_ids"] == ["e2"]

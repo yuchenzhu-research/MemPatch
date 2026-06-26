@@ -9,7 +9,7 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from mempatch.benchmark.general_taxonomy import DECISIONS, FAILURE_MODES, MEMORY_STATUSES
+from mempatch.benchmark.general_taxonomy import DECISIONS, FAILURE_MODES, MEMORY_OPERATIONS, MEMORY_STATUSES
 
 if TYPE_CHECKING:
     from mempatch.revision.runtime.dpa_runtime import RuntimeResult
@@ -202,6 +202,40 @@ def _project_decision(memory_state: dict[str, str], raw_response: Any) -> str:
     return "use_current_memory"
 
 
+def _project_memory_operation(
+    runtime_result: RuntimeResult,
+    memory_state: dict[str, str],
+    raw_response: Any,
+) -> str:
+    raw_operation = _raw_response_field(raw_response, "memory_operation")
+    if isinstance(raw_operation, str) and raw_operation in MEMORY_OPERATIONS:
+        return raw_operation
+    if any(status == "should_not_store" for status in memory_state.values()):
+        return "BLOCK"
+    if any(status == "deleted" for status in memory_state.values()):
+        return "DELETE_OR_FORGET"
+    if any(status == "restored" for status in memory_state.values()):
+        return "RESTORE_OR_RELEASE"
+    if any(status == "out_of_scope" for status in memory_state.values()):
+        return "RESTRICT_SCOPE"
+    if any(status == "unresolved" for status in memory_state.values()):
+        return "MARK_UNRESOLVED"
+    if any(status == "blocked" for status in memory_state.values()):
+        return "ESCALATE"
+    admitted_types = {action.action_type for action in runtime_result.admitted_actions}
+    if "RELEASES" in admitted_types:
+        return "RESTORE_OR_RELEASE"
+    if "BLOCKS" in admitted_types:
+        return "BLOCK"
+    if "UNCERTAIN" in admitted_types:
+        return "MARK_UNRESOLVED"
+    if "SUPERSEDES" in admitted_types:
+        return "REVISE"
+    if "NO_REVISION" in admitted_types:
+        return "PRESERVE"
+    return "PRESERVE"
+
+
 def _project_failure_diagnosis(
     runtime_result: RuntimeResult,
     memory_state: dict[str, str],
@@ -250,9 +284,12 @@ def project_to_benchmark_response(
     )
     raw_answer = _raw_response_field(raw_response, "answer")
     answer = raw_answer if isinstance(raw_answer, str) and raw_answer else fallback_answer
+    raw_followup_answer = _raw_response_field(raw_response, "followup_answer")
+    followup_answer = raw_followup_answer if isinstance(raw_followup_answer, str) else answer
     return {
         "answer": answer,
         "decision": _project_decision(memory_state, raw_response),
+        "memory_operation": _project_memory_operation(runtime_result, memory_state, raw_response),
         "memory_state": memory_state,
         "evidence_event_ids": _project_evidence_event_ids(runtime_result),
         "failure_diagnosis": _project_failure_diagnosis(
@@ -260,6 +297,7 @@ def project_to_benchmark_response(
             memory_state,
             raw_response,
         ),
+        "followup_answer": followup_answer,
     }
 
 

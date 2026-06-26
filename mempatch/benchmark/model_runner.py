@@ -18,7 +18,7 @@ from pathlib import Path
 from typing import Any
 
 from mempatch.benchmark.api import load_scenarios
-from mempatch.benchmark.general_taxonomy import DECISIONS, FAILURE_MODES, MEMORY_STATUSES
+from mempatch.benchmark.general_taxonomy import DECISIONS, FAILURE_MODES, MEMORY_OPERATIONS, MEMORY_STATUSES
 from mempatch.benchmark.public_view import public_scenario_view
 
 PROVIDERS = (
@@ -53,9 +53,11 @@ DEFAULT_MAX_TOKENS = 1024
 REQUIRED_RESPONSE_FIELDS = (
     "answer",
     "decision",
+    "memory_operation",
     "memory_state",
     "evidence_event_ids",
     "failure_diagnosis",
+    "followup_answer",
 )
 
 BAR_LENGTH = 32
@@ -174,15 +176,18 @@ def build_prompt(public_view: dict[str, Any]) -> str:
             "Use only the visible scenario content. Do not use external knowledge. "
             "Use exact enum strings. Do not invent memory IDs or event IDs. "
             "Cite only minimal supporting event IDs. "
+            "Choose a memory_operation for the durable memory lifecycle action. "
             "Decision order: refuse_due_to_policy, escalate, ask_clarification, "
             "mark_unresolved, use_current_memory (first applicable wins)."
         ),
         "required_output_schema": {
             "answer": "short final answer/action text",
             "decision": list(DECISIONS),
+            "memory_operation": list(MEMORY_OPERATIONS),
             "memory_state": {mid: list(MEMORY_STATUSES) for mid in memory_ids},
             "evidence_event_ids": "minimal list of event_id strings from public_input.events or public_input.event_trace",
             "failure_diagnosis": list(FAILURE_MODES),
+            "followup_answer": "short answer to the visible followup_task after applying the memory operation",
         },
         **public_view,
     }
@@ -215,6 +220,8 @@ def canonical_response(parsed: dict[str, Any]) -> dict[str, Any]:
         response["memory_state"] = {}
     if response["evidence_event_ids"] is None:
         response["evidence_event_ids"] = []
+    if response["followup_answer"] is None:
+        response["followup_answer"] = ""
     if not isinstance(response["memory_state"], dict):
         response["memory_state"] = {}
     if not isinstance(response["evidence_event_ids"], list):

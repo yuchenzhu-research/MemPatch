@@ -1,6 +1,6 @@
 # MemPatch
 
-MemPatch is a compact v1.4 benchmark kernel and reference revision runtime for persistent LLM-agent memory. The benchmark side is now split into three explicit stages: generate raw internal scenarios, export public/label release files, and score predictions.
+MemPatch is a compact v1.4 benchmark kernel and reference revision runtime for persistent LLM-agent memory. The benchmark side is split into three explicit stages: generate raw internal scenarios, export public/label release files, and score predictions. The current synthetic track is paper-scale by default: 500 dev-calibration, 3000 main synthetic, and 500 hard challenge cases with mixed difficulty, variable structure, lifecycle memory operations, and follow-up contamination checks.
 
 Top-level layout:
 
@@ -16,10 +16,8 @@ Minimal commands:
 pip install -e ".[dev]"
 
 MemPatch generate-synthetic \
+  --config configs/benchmark/v1.4.yaml \
   --output local/data/mempatch/v1.4/raw_internal \
-  --quota dev_calibration=22 \
-  --quota main_test_synthetic=22 \
-  --quota challenge_test_hard=22
 
 MemPatch export-release \
   --input dev_calibration=local/data/mempatch/v1.4/raw_internal/dev_calibration.jsonl \
@@ -27,7 +25,10 @@ MemPatch export-release \
   --input challenge_test_hard=local/data/mempatch/v1.4/raw_internal/challenge_test_hard.jsonl \
   --output local/data/mempatch/v1.4/release
 
-python scripts/evaluate_mempatch_predictions.py --help
+MemPatch score \
+  --labels local/data/mempatch/v1.4/release/labels/main_test_synthetic.labels.jsonl \
+  --predictions path/to/predictions.jsonl \
+  --output local/data/mempatch/v1.4/runs/model.scores.jsonl
 ```
 
 Blind-review paper material is under `Montreal/`.

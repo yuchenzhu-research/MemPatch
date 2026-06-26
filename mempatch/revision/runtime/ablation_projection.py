@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from mempatch.benchmark.general_taxonomy import FAILURE_MODES
+from mempatch.benchmark.general_taxonomy import FAILURE_MODES, MEMORY_OPERATIONS
 from mempatch.dpa.methods.contracts import SharedCandidateView
 from mempatch.revision.runtime.dpa_runtime import ParseResult
 
@@ -84,11 +84,41 @@ def project_actions_without_dpa(
     diagnosis = _raw_field(raw_response, "failure_diagnosis")
     if not isinstance(diagnosis, str) or diagnosis not in FAILURE_MODES:
         diagnosis = "memory_hallucination"
+    memory_operation = _raw_field(raw_response, "memory_operation")
+    if not isinstance(memory_operation, str) or memory_operation not in MEMORY_OPERATIONS:
+        action_types = {action.action_type for action in parse_result.actions}
+        if "should_not_store" in memory_state.values():
+            memory_operation = "BLOCK"
+        elif "deleted" in memory_state.values():
+            memory_operation = "DELETE_OR_FORGET"
+        elif "restored" in memory_state.values():
+            memory_operation = "RESTORE_OR_RELEASE"
+        elif "out_of_scope" in memory_state.values():
+            memory_operation = "RESTRICT_SCOPE"
+        elif "unresolved" in memory_state.values():
+            memory_operation = "MARK_UNRESOLVED"
+        elif "blocked" in memory_state.values():
+            memory_operation = "ESCALATE"
+        elif "RELEASES" in action_types:
+            memory_operation = "RESTORE_OR_RELEASE"
+        elif "BLOCKS" in action_types:
+            memory_operation = "BLOCK"
+        elif "UNCERTAIN" in action_types:
+            memory_operation = "MARK_UNRESOLVED"
+        elif "SUPERSEDES" in action_types:
+            memory_operation = "REVISE"
+        else:
+            memory_operation = "PRESERVE"
     answer = _raw_field(raw_response, "answer")
+    followup_answer = _raw_field(raw_response, "followup_answer")
+    if not isinstance(followup_answer, str):
+        followup_answer = answer if isinstance(answer, str) else ""
     return {
         "answer": answer if isinstance(answer, str) else "",
         "decision": decision,
+        "memory_operation": memory_operation,
         "memory_state": memory_state,
         "evidence_event_ids": list(dict.fromkeys(evidence_ids)),
         "failure_diagnosis": diagnosis,
+        "followup_answer": followup_answer,
     }

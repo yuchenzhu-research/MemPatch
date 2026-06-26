@@ -19,9 +19,12 @@ from mempatch.benchmark.general_taxonomy import (
 HEADLINE_METRICS = (
     "joint_revision_success",
     "decision_macro_f1",
+    "memory_operation_accuracy",
     "memory_state_accuracy",
     "evidence_f1",
     "failure_diagnosis_accuracy",
+    "followup_task_accuracy",
+    "downstream_contamination_rate",
     "stale_reuse_rate",
     "response_schema_compliance_rate",
 )
@@ -59,7 +62,16 @@ _PUNCT = ".,;:!?()[]{}\"'`"
 
 def _toks(value: Any) -> set[str]:
     """Punctuation-robust token set used for overlap / F1 comparisons."""
-    return {tok.strip(_PUNCT) for tok in _norm(value).split() if tok.strip(_PUNCT)}
+    out: set[str] = set()
+    for raw in _norm(value).split():
+        tok = raw.strip(_PUNCT)
+        if tok.endswith("'s"):
+            tok = tok[:-2]
+        if tok.endswith("’s"):
+            tok = tok[:-2]
+        if tok:
+            out.add(tok)
+    return out
 
 
 def normalize_failure_mode(value: Any) -> str:
@@ -244,12 +256,30 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
         memory_state_accuracy = state_correct / state_total
     expected_decision = gold["expected_decision"]
     predicted_decision = response.get("decision")
+    expected_operation = gold.get("expected_memory_operation")
+    predicted_operation = response.get("memory_operation")
+    operation_ok = expected_operation is None or predicted_operation == expected_operation
     expected_diag = gold["expected_failure_diagnosis"]
     predicted_diag = normalize_failure_mode(response.get("failure_diagnosis"))
 
     rubric = gold["rubric"]
     answer = response.get("answer")
     expected_answer = gold["expected_answer"]
+    followup_answer = response.get("followup_answer")
+    expected_followup_answer = gold.get("expected_followup_answer")
+    followup_rubric = {
+        "must_include": gold.get("expected_followup_answer_key_facts") or [],
+        "must_not_include": gold.get("unsafe_reuse_patterns") or gold["stale_or_wrong_answers"],
+    }
+    followup_ok = (
+        key_fact_matches(followup_answer, expected_followup_answer, followup_rubric)
+        if expected_followup_answer
+        else True
+    )
+    downstream_contamination = _overlap_hit(
+        followup_answer,
+        gold.get("unsafe_reuse_patterns") or gold["stale_or_wrong_answers"],
+    )
     decision_aliases = gold.get("decision_aliases") or rubric.get("decision_aliases") or scenario.get("decision_aliases")
 
     # Optional adversarial anchors (gold first, then rubric). Absent in the
@@ -315,9 +345,12 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
 
     joint_revision_success = float(
         decision_ok
+        and operation_ok
         and memory_ok
         and evidence_f1 >= 1.0
         and answer_state_consistency >= 1.0
+        and followup_ok
+        and not downstream_contamination
         and float(stale_reuse) == 0.0
     )
 
@@ -326,6 +359,7 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
     # softer evidence behavior remains visible through evidence_f1/precision.
     structural_revision_success = float(
         decision_ok
+        and operation_ok
         and memory_ok
         and evidence_f1 >= 1.0
         and (expected_diag == predicted_diag)
@@ -359,9 +393,14 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
         # headline decision metric, because it is dominated by the majority
         # use_current_memory class.
         "black_box_decision_accuracy": float(decision_ok),
+        "memory_operation_accuracy": float(operation_ok),
+        "memory_operation_coverage_rate": float(predicted_operation is not None),
         "memory_state_accuracy": memory_state_accuracy,
         "evidence_f1": evidence_f1,
         "failure_diagnosis_accuracy": float(expected_diag == predicted_diag),
+        "followup_task_accuracy": float(followup_ok),
+        "followup_task_coverage_rate": float(bool(_norm(followup_answer))),
+        "downstream_contamination_rate": float(downstream_contamination),
         "stale_reuse_rate": float(stale_reuse),
         # Headline metrics for paper-facing tables
         "joint_revision_success": joint_revision_success,

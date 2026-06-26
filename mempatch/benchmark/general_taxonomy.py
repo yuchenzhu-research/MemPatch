@@ -74,6 +74,7 @@ TASK_TYPES = (
     "memory_state_task",
     "evidence_retrieval_task",
     "diagnostic_task",
+    "followup_task",
 )
 
 TRUST_LEVELS = ("verified", "trusted", "untrusted")
@@ -84,6 +85,19 @@ DECISIONS = (
     "ask_clarification",
     "refuse_due_to_policy",
     "mark_unresolved",
+)
+
+MEMORY_OPERATIONS = (
+    "PRESERVE",
+    "REVISE",
+    "RESTRICT_SCOPE",
+    "BLOCK",
+    "MARK_UNRESOLVED",
+    "DELETE_OR_FORGET",
+    "RESTORE_OR_RELEASE",
+    "REJECT_NEW_MEMORY",
+    "NO_WRITE",
+    "ESCALATE",
 )
 
 NON_ANSWER_DECISIONS = (
@@ -140,7 +154,11 @@ def canonical_hidden_gold_fields(gold: dict) -> dict:
     """Read canonical v1.4 hidden_gold fields, accepting legacy aliases."""
     return {
         "expected_decision": gold.get("expected_decision"),
+        "expected_memory_operation": gold.get("expected_memory_operation"),
         "expected_answer": gold.get("expected_answer"),
+        "expected_followup_answer": gold.get("expected_followup_answer"),
+        "expected_followup_answer_key_facts": list(gold.get("expected_followup_answer_key_facts") or []),
+        "unsafe_reuse_patterns": list(gold.get("unsafe_reuse_patterns") or []),
         "expected_memory_state": _state_list_to_map(
             gold.get("expected_memory_state") or gold.get("expected_memory_states") or {}
         ),

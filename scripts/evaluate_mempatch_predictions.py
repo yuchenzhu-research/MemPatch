@@ -1,9 +1,13 @@
 #!/usr/bin/env python3
-"""Official MemPatch-Bench evaluator for external prediction files.
+"""Internal MemPatch-Bench evaluator for raw hidden-gold scenario files.
 
-This is the public scorer for benchmark submissions. It does NOT run any model
-and requires no API keys: it only scores an existing JSONL predictions file
-against a scenarios file.
+For public/labels release bundles, prefer the label-based scorer:
+
+    MemPatch score --labels release/labels/main_test_synthetic.labels.jsonl \
+        --predictions path/to/predictions.jsonl --output scores.jsonl
+
+This compatibility script still scores an existing JSONL predictions file
+against raw internal scenarios that contain ``hidden_gold``.
 
 Example::
 

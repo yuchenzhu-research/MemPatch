@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 from pathlib import Path
 from typing import Any
 
@@ -15,6 +16,7 @@ TASK_KEYS = (
     "memory_state_task",
     "evidence_retrieval_task",
     "diagnostic_task",
+    "followup_task",
 )
 
 INTERNAL_KEYS = {
@@ -25,6 +27,9 @@ INTERNAL_KEYS = {
     "failure_mode",
     "hidden_gold",
     "is_distractor",
+    "expected_followup_answer",
+    "expected_followup_answer_key_facts",
+    "expected_memory_operation",
     "pattern",
     "pattern_trap_type",
     "primary_failure_mode",
@@ -32,6 +37,7 @@ INTERNAL_KEYS = {
     "source_pointers",
     "template_family_id",
     "template_instance_id",
+    "unsafe_reuse_patterns",
     "validation_notes",
 }
 
@@ -159,9 +165,11 @@ def public_row(raw: dict[str, Any]) -> dict[str, Any]:
             "required_fields": [
                 "answer",
                 "decision",
+                "memory_operation",
                 "memory_state",
                 "evidence_event_ids",
                 "failure_diagnosis",
+                "followup_answer",
             ],
         },
     }
@@ -176,7 +184,21 @@ def _count(rows: list[dict[str, Any]], key: str) -> dict[str, int]:
     return dict(sorted(counts.items()))
 
 
-def split_stats(public_rows: list[dict[str, Any]], label_rows: list[dict[str, Any]]) -> dict[str, Any]:
+def _histogram(values: list[Any]) -> dict[str, int]:
+    counts: dict[str, int] = {}
+    for value in values:
+        counts[str(value)] = counts.get(str(value), 0) + 1
+    return dict(sorted(counts.items()))
+
+
+def _entropy(counts: dict[str, int]) -> float:
+    total = sum(counts.values())
+    if total == 0:
+        return 0.0
+    return -sum((count / total) * math.log2(count / total) for count in counts.values() if count)
+
+
+def public_split_stats(public_rows: list[dict[str, Any]]) -> dict[str, Any]:
     event_counts: dict[str, int] = {}
     memory_counts: dict[str, int] = {}
     for row in public_rows:
@@ -186,12 +208,54 @@ def split_stats(public_rows: list[dict[str, Any]], label_rows: list[dict[str, An
         event_counts[event_count] = event_counts.get(event_count, 0) + 1
         memory_counts[memory_count] = memory_counts.get(memory_count, 0) + 1
     return {
-        "domains": _count(label_rows, "domain"),
-        "difficulties": _count(label_rows, "difficulty"),
-        "failure_modes": _count(label_rows, "failure_mode"),
-        "patterns": _count(label_rows, "pattern"),
+        "domains": _count(public_rows, "domain"),
         "event_count_histogram": dict(sorted(event_counts.items())),
         "memory_count_histogram": dict(sorted(memory_counts.items())),
+    }
+
+
+def structure_audit(public_rows: list[dict[str, Any]], label_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    event_counts: list[int] = []
+    memory_counts: list[int] = []
+    for row in public_rows:
+        public_input = row.get("public_input") or {}
+        event_counts.append(len(public_input.get("events") or []))
+        memory_counts.append(len(public_input.get("initial_memories") or []))
+    structures = [row.get("structure") or {} for row in label_rows]
+    histograms = {
+        "event_count_histogram": _histogram(event_counts),
+        "memory_count_histogram": _histogram(memory_counts),
+        "distractor_count_histogram": _histogram(
+            [s.get("num_distractors") for s in structures if s.get("num_distractors") is not None]
+        ),
+        "prompt_style_histogram": _histogram([s.get("prompt_style") for s in structures if s.get("prompt_style")]),
+        "timestamp_style_histogram": _histogram([s.get("timestamp_style") for s in structures if s.get("timestamp_style")]),
+        "id_style_histogram": _histogram([s.get("id_style") for s in structures if s.get("id_style")]),
+        "difficulty_histogram": _count(label_rows, "difficulty"),
+        "failure_mode_histogram": _count(label_rows, "failure_mode"),
+        "pattern_histogram": _count(label_rows, "pattern"),
+        "memory_operation_histogram": _count(label_rows, "expected_memory_operation"),
+    }
+    return {
+        **histograms,
+        "entropy_bits": {key: round(_entropy(value), 4) for key, value in histograms.items()},
+        "min_failure_mode_count": min(histograms["failure_mode_histogram"].values())
+        if histograms["failure_mode_histogram"]
+        else 0,
+        "min_memory_operation_count": min(histograms["memory_operation_histogram"].values())
+        if histograms["memory_operation_histogram"]
+        else 0,
+    }
+
+
+def split_stats(public_rows: list[dict[str, Any]], label_rows: list[dict[str, Any]]) -> dict[str, Any]:
+    return {
+        **public_split_stats(public_rows),
+        "difficulties": _count(label_rows, "difficulty"),
+        "failure_modes": _count(label_rows, "failure_mode"),
+        "memory_operations": _count(label_rows, "expected_memory_operation"),
+        "patterns": _count(label_rows, "pattern"),
+        "structure_audit": structure_audit(public_rows, label_rows),
     }
 
 
@@ -207,15 +271,20 @@ def label_row(raw: dict[str, Any], split: str) -> dict[str, Any]:
         "failure_mode": raw.get("primary_failure_mode") or raw.get("failure_mode") or gold.get("expected_failure_diagnosis"),
         "pattern": raw.get("pattern") or metadata.get("pattern"),
         "expected_decision": gold.get("expected_decision"),
+        "expected_memory_operation": gold.get("expected_memory_operation"),
         "expected_memory_states": state_map_to_list(gold.get("expected_memory_state") or gold.get("expected_memory_states")),
         "expected_evidence_event_ids": [str(x) for x in gold.get("expected_evidence_event_ids") or []],
         "counterevidence_event_ids": [str(x) for x in gold.get("counterevidence_event_ids") or []],
         "expected_failure_diagnosis": gold.get("expected_failure_diagnosis"),
         "expected_answer": gold.get("expected_answer"),
+        "expected_followup_answer": gold.get("expected_followup_answer"),
+        "expected_followup_answer_key_facts": [str(x) for x in gold.get("expected_followup_answer_key_facts") or []],
         "expected_answer_key_facts": [str(x) for x in rubric.get("must_include") or []],
         "stale_or_wrong_answers": [str(x) for x in gold.get("stale_or_wrong_answers") or []],
+        "unsafe_reuse_patterns": [str(x) for x in gold.get("unsafe_reuse_patterns") or []],
         "rubric": rubric,
         "resolver_trace": metadata.get("resolver_trace"),
+        "structure": metadata.get("structure"),
     }
 
 
@@ -232,6 +301,7 @@ def export_release(split_paths: dict[str, Path], output_dir: Path, version: str 
     labels_dir = output_dir / "labels"
     manifest_dir = output_dir / "manifests"
     split_manifest: dict[str, Any] = {}
+    public_split_manifest: dict[str, Any] = {}
     all_public: list[dict[str, Any]] = []
     split_outputs: dict[str, tuple[list[dict[str, Any]], list[dict[str, Any]]]] = {}
     for split, path in split_paths.items():
@@ -245,6 +315,11 @@ def export_release(split_paths: dict[str, Path], output_dir: Path, version: str 
             "public_path": f"public/{split}.jsonl",
             "labels_path": f"labels/{split}.labels.jsonl",
             "stats": split_stats(public_rows, label_rows),
+        }
+        public_split_manifest[split] = {
+            "num_examples": len(raw_rows),
+            "public_path": f"public/{split}.jsonl",
+            "stats": public_split_stats(public_rows),
         }
     audit = {"public_forbidden_field_violations": audit_public_rows(all_public)}
     manifest_dir.mkdir(parents=True, exist_ok=True)
@@ -268,5 +343,24 @@ def export_release(split_paths: dict[str, Path], output_dir: Path, version: str 
         },
         "checksums": {path.relative_to(output_dir).as_posix(): sha256_file(path) for path in files},
     }
+    public_manifest = {
+        "dataset_name": "MemPatch-Bench",
+        "release_version": version,
+        "schema_version": "mempatch_bench_v1.4",
+        "splits": public_split_manifest,
+        "audit_summary": {
+            "public_forbidden_field_violation_count": len(audit["public_forbidden_field_violations"]),
+        },
+        "checksums": {
+            path.relative_to(output_dir).as_posix(): sha256_file(path)
+            for path in sorted(public_dir.rglob("*"))
+            if path.is_file()
+        },
+    }
+    (manifest_dir / "public_manifest.json").write_text(
+        json.dumps(public_manifest, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    (manifest_dir / "private_manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     (manifest_dir / "manifest.json").write_text(json.dumps(manifest, indent=2) + "\n", encoding="utf-8")
     return manifest

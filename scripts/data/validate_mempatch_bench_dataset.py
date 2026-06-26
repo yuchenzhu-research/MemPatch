@@ -21,6 +21,7 @@ from mempatch.benchmark.general_taxonomy import (
     DIFFICULTIES,
     DOMAINS,
     FAILURE_MODES,
+    MEMORY_OPERATIONS,
     MEMORY_STATUSES,
     PATTERNS,
     TASK_TYPES,
@@ -133,7 +134,7 @@ def validate_one(
         for k in ("black_box_task", "memory_state_task", "evidence_retrieval_task", "diagnostic_task")
     )
     if has_new_tasks:
-        for tkey in ("black_box_task", "memory_state_task", "evidence_retrieval_task", "diagnostic_task"):
+        for tkey in ("black_box_task", "memory_state_task", "evidence_retrieval_task", "diagnostic_task", "followup_task"):
             if tkey not in scenario:
                 errors.append(f"{sid}: missing required new schema task '{tkey}'")
     elif "tasks" in scenario:
@@ -157,6 +158,17 @@ def validate_one(
         errors.append(f"{sid}: hidden_gold.expected_decision is missing")
     elif gold_raw and gold["expected_decision"] not in DECISIONS:
         errors.append(f"{sid}: hidden_gold.expected_decision '{gold['expected_decision']}' not in DECISIONS")
+
+    expected_operation = gold.get("expected_memory_operation")
+    if gold_raw and not expected_operation:
+        errors.append(f"{sid}: hidden_gold.expected_memory_operation is missing")
+    elif gold_raw and expected_operation not in MEMORY_OPERATIONS:
+        errors.append(
+            f"{sid}: hidden_gold.expected_memory_operation '{expected_operation}' not in MEMORY_OPERATIONS"
+        )
+
+    if gold_raw and not gold.get("expected_followup_answer"):
+        errors.append(f"{sid}: hidden_gold.expected_followup_answer is missing")
 
     expected_state = gold["expected_memory_state"]
     if gold_raw and not expected_state and gold.get("expected_decision") != "refuse_due_to_policy":

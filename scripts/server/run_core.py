@@ -37,7 +37,7 @@ try:
 except ImportError:
     from methods import build_method_view
 
-from mempatch.benchmark.general_taxonomy import DECISIONS, FAILURE_MODES, MEMORY_STATUSES
+from mempatch.benchmark.general_taxonomy import DECISIONS, FAILURE_MODES, MEMORY_OPERATIONS, MEMORY_STATUSES
 from mempatch.benchmark.model_runner import _collect_memory_ids
 
 BASELINE_METHODS = (
@@ -162,6 +162,7 @@ def build_prompt(public_view: dict[str, Any]) -> str:
     memory_ids = _collect_memory_ids(public_view)
     decision_labels = ", ".join(DECISIONS)
     failure_mode_labels = ", ".join(FAILURE_MODES)
+    memory_operation_labels = ", ".join(MEMORY_OPERATIONS)
     status_labels = ", ".join(MEMORY_STATUSES)
     payload = {
         "instruction": (
@@ -169,10 +170,11 @@ def build_prompt(public_view: dict[str, Any]) -> str:
             "Use only the visible scenario content. Do not use external knowledge. "
             "Use exact enum strings. Do not invent memory IDs or event IDs. "
             "Cite only minimal supporting event IDs. "
+            "Choose exactly one lifecycle memory_operation for the durable memory action. "
             "Decision order: refuse_due_to_policy, escalate, ask_clarification, "
             "mark_unresolved, use_current_memory (first applicable wins). "
-            "CRITICAL: 'decision' and 'failure_diagnosis' must be scalar STRINGS, NOT lists or arrays. "
-            "Provide exactly one valid enum string for 'decision' and 'failure_diagnosis' respectively. "
+            "CRITICAL: 'decision', 'memory_operation', and 'failure_diagnosis' must be scalar STRINGS, NOT lists or arrays. "
+            "Provide exactly one valid enum string for 'decision', 'memory_operation', and 'failure_diagnosis' respectively. "
             "CRITICAL WARNING ON 'failure_diagnosis': Even if the memory state is correct, or your decision is use_current_memory, and there appears to be no issue, you MUST NOT output 'none', 'null', 'ok', or any other custom string. "
             f"You MUST select EXACTLY ONE failure mode from this list as the failure_diagnosis: {failure_mode_labels}. "
             "Select the failure mode that MOST CLOSELY represents the hypothetical or potential threat described in the scenario."
@@ -180,9 +182,11 @@ def build_prompt(public_view: dict[str, Any]) -> str:
         "required_output_schema": {
             "answer": "short final answer/action text (string)",
             "decision": f"exactly one string from: {decision_labels} (string)",
+            "memory_operation": f"exactly one string from: {memory_operation_labels} (string)",
             "memory_state": {mid: f"exactly one string from: {status_labels} (string)" for mid in memory_ids},
             "evidence_event_ids": "minimal list of event_id strings from public_input.events or public_input.event_trace (list of strings)",
             "failure_diagnosis": f"exactly one string from: {failure_mode_labels} (string)",
+            "followup_answer": "short answer to the visible followup_task after applying the memory operation (string)",
         },
         **public_view,
     }
@@ -191,7 +195,7 @@ def build_prompt(public_view: dict[str, Any]) -> str:
 
 def clean_response(parsed: dict[str, Any]) -> dict[str, Any]:
     cleaned = dict(parsed)
-    for key in ("decision", "failure_diagnosis"):
+    for key in ("decision", "memory_operation", "failure_diagnosis"):
         val = cleaned.get(key)
         if isinstance(val, (list, tuple)):
             if len(val) == 1:
@@ -219,9 +223,11 @@ def _safe_response(text: str) -> tuple[dict[str, Any], str | None]:
         return {
             "answer": "",
             "decision": None,
+            "memory_operation": None,
             "memory_state": {},
             "evidence_event_ids": [],
             "failure_diagnosis": None,
+            "followup_answer": "",
         }, f"{type(exc).__name__}: {exc}"
 
 

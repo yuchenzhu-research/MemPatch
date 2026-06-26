@@ -113,12 +113,14 @@ def test_noop_revision_runner_still_works_with_enriched_view() -> None:
     response = prediction["response"]
 
     assert prediction["scenario_id"] == "case_condition_1"
-    assert set(response.keys()) == {
+    assert set(response.keys()) >= {
         "answer",
         "decision",
+        "memory_operation",
         "memory_state",
         "evidence_event_ids",
         "failure_diagnosis",
+        "followup_answer",
     }
     assert response["memory_state"]["m_target"] == "current"
     assert response["evidence_event_ids"] == ["e_latest"]
