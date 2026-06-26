@@ -1,6 +1,6 @@
 # Real-Seeded Acceptance Report
 
-Status: pipeline implemented and smoke-tested locally. The full 300/80 mining target was not reached in this environment because `GITHUB_TOKEN` was not set and unauthenticated GitHub requests hit connection/rate-limit failures.
+Status: pipeline implemented and smoke-tested locally. The quality gate is currently blocked before filtering. The full 300/80 mining target was not reached in this environment because `GITHUB_TOKEN` was not set and unauthenticated GitHub requests hit connection/rate-limit failures.
 
 ## Repositories Inspected
 
@@ -23,6 +23,9 @@ The unauthenticated full run wrote `data/v1.4_real_seeded/raw/selected_repos.jso
 - Candidates with release/changelog/docs evidence: 0
 - Candidates with merged PR evidence: 0
 - Target 300 raw / 80 accepted reached: no
+- Latest mining report: `data/v1.4_real_seeded/raw/mining_quality_report.md`
+- API failure / rate-limit counts: IncompleteRead 4, RemoteDisconnected 1, HTTP 403 8, HTTP 404 2, rate_limit 8, search_failed 2
+- Stop reason: GitHub rate limit reached before raw candidates were collected
 
 ## Smoke Run Counts
 

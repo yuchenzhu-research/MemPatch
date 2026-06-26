@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import argparse
 import base64
+from collections import Counter
 from http.client import HTTPException
 import json
 import re
@@ -68,6 +69,7 @@ class GitHubClient:
         self.network_requests = 0
         self.cache_hits = 0
         self.last_rate: dict[str, Any] = {}
+        self.failure_counts: Counter[str] = Counter()
         if cache_dir:
             cache_dir.mkdir(parents=True, exist_ok=True)
 
@@ -105,6 +107,7 @@ class GitHubClient:
                     self._remember_rate(response.headers)
                     break
             except HTTPError as exc:
+                self.failure_counts[f"http_{exc.code}"] += 1
                 self._remember_rate(exc.headers)
                 if exc.code in {403, 429} and attempt == 0 and self._maybe_wait_for_rate_limit(exc):
                     continue
@@ -113,11 +116,13 @@ class GitHubClient:
                 message = self._safe_error_message(exc)
                 raise PipelineError(f"GitHub request failed for {self._safe_url(url)}: {message}") from exc
             except (HTTPException, TimeoutError, ConnectionError) as exc:
+                self.failure_counts[type(exc).__name__] += 1
                 if attempt == 0:
                     time.sleep(1)
                     continue
                 raise PipelineError(f"GitHub connection failed for {self._safe_url(url)}: {type(exc).__name__}") from exc
             except URLError as exc:
+                self.failure_counts["url_error"] += 1
                 raise PipelineError(f"GitHub is unreachable for {self._safe_url(url)}: {exc.reason}") from exc
         if cache_path:
             cache_path.write_text(
@@ -152,9 +157,11 @@ class GitHubClient:
         reset = (exc.headers or {}).get("X-RateLimit-Reset")
         if remaining == "0" and reset:
             wait = max(0, int(reset) - int(time.time()) + 1)
+            self.failure_counts["rate_limit"] += 1
             raise RateLimitError(
                 f"GitHub rate limit reached; reset is {wait}s away, above --rate-limit-wait-seconds={self.max_rate_wait}"
             )
+        self.failure_counts["abuse_or_secondary_rate_limit"] += 1
         raise RateLimitError("GitHub returned a rate-limit or abuse-limit response")
 
     def _safe_url(self, url: str) -> str:
@@ -600,13 +607,24 @@ def mine(args: argparse.Namespace) -> dict[str, Any]:
                 for item_type in ("issue", "pr"):
                     if len(existing) + new_count >= args.target_raw:
                         break
-                    items = fetch_paginated(
-                        client,
-                        lambda page, repo=repo, query=query, item_type=item_type: issue_search_url(
-                            repo, query, item_type, page, args.per_page
-                        ),
-                        max_pages=args.search_pages,
-                    )
+                    try:
+                        items = fetch_paginated(
+                            client,
+                            lambda page, repo=repo, query=query, item_type=item_type: issue_search_url(
+                                repo, query, item_type, page, args.per_page
+                            ),
+                            max_pages=args.search_pages,
+                        )
+                    except RateLimitError:
+                        raise
+                    except PipelineError as exc:
+                        client.failure_counts["search_failed"] += 1
+                        print(
+                            "Skipping failed search "
+                            f"repo={repo} group={group} type={item_type}: "
+                            f"{sanitize_text(str(exc), max_chars=240)}"
+                        )
+                        continue
                     for issue in items[: args.max_items_per_query]:
                         source_url = issue.get("html_url") or ""
                         key = (repo, source_url)
@@ -657,8 +675,12 @@ def mine(args: argparse.Namespace) -> dict[str, Any]:
         "network_requests": client.network_requests,
         "cache_hits": client.cache_hits,
         "last_rate": client.last_rate,
+        "api_failures": dict(sorted(client.failure_counts.items())),
         "selected_repos": len(public_repos),
     }
+    report_path = args.report_out or args.out.parent / "mining_report.json"
+    report_path.parent.mkdir(parents=True, exist_ok=True)
+    report_path.write_text(json.dumps(sanitize_obj(report), indent=2, sort_keys=True) + "\n", encoding="utf-8")
     print(json.dumps(report, indent=2, sort_keys=True))
     if total < args.target_raw:
         print("Raw target not reached; rerun with GITHUB_TOKEN set or a warmer cache to continue from the JSONL output.")
@@ -672,6 +694,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--out", type=Path, required=True)
     parser.add_argument("--cache", type=Path, default=Path("data/v1.4_real_seeded/cache"))
     parser.add_argument("--selected-repos", type=Path)
+    parser.add_argument("--report-out", type=Path)
     parser.add_argument("--target-raw", type=int, default=300)
     parser.add_argument("--repo-limit", type=int)
     parser.add_argument("--query-groups", help="Comma-separated query group names for smoke tests.")
