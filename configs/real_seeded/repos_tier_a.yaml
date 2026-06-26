@@ -1,0 +1,20 @@
+tier_a:
+  - pydantic/pydantic
+  - fastapi/fastapi
+  - langchain-ai/langchain
+  - run-llama/llama_index
+  - pandas-dev/pandas
+  - dbt-labs/dbt-core
+  - grafana/grafana
+  - apache/superset
+  - ray-project/ray
+  - pytest-dev/pytest
+
+tier_b:
+  - django/django
+  - pallets/flask
+  - scikit-learn/scikit-learn
+  - metabase/metabase
+  - apache/airflow
+  - kubernetes/kubernetes
+  - microsoft/vscode

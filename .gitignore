@@ -35,11 +35,18 @@ __pycache__/
 !mempatch/tests/**/*.jsonl
 
 # Secrets / credentials / tokens — never commit any of these.
+.env
+.tokens
+.tokens/
 .env.*
 *.env
 .envrc
 secrets.*
+secret.*
+*.secret
+tokens.*
 *.pem
+*.key
 *_token
 *_token.txt
 *.token

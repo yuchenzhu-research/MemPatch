@@ -43,4 +43,4 @@ extraPaths = ["."]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
-testpaths = ["mempatch/tests"]
+testpaths = ["mempatch/tests", "tests"]

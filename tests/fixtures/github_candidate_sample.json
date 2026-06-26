@@ -1,0 +1,51 @@
+{
+  "issue": {
+    "number": 42,
+    "html_url": "https://github.com/pydantic/pydantic/issues/42",
+    "title": "Old migration note should be updated after deprecation change",
+    "body": "The existing memory says the v1 migration guidance is still current.",
+    "labels": [{"name": "docs"}],
+    "state": "closed",
+    "created_at": "2025-01-01T00:00:00Z",
+    "updated_at": "2025-01-04T00:00:00Z",
+    "closed_at": "2025-01-04T00:00:00Z",
+    "author_association": "CONTRIBUTOR"
+  },
+  "comments": [
+    {
+      "html_url": "https://github.com/pydantic/pydantic/issues/42#issuecomment-1",
+      "body": "Maintainer clarification: the old migration note is deprecated and the new guidance applies only after the next release.",
+      "created_at": "2025-01-02T00:00:00Z",
+      "updated_at": "2025-01-02T00:00:00Z",
+      "author_association": "MEMBER"
+    }
+  ],
+  "prs": [
+    {
+      "number": 77,
+      "html_url": "https://github.com/pydantic/pydantic/pull/77",
+      "title": "Update migration guidance",
+      "body": "This merged PR revises the deprecation guidance and links issue #42.",
+      "state": "closed",
+      "merged_at": "2025-01-03T00:00:00Z"
+    }
+  ],
+  "releases": [
+    {
+      "html_url": "https://github.com/pydantic/pydantic/releases/tag/v2.9.0",
+      "name": "v2.9.0",
+      "tag_name": "v2.9.0",
+      "body": "Release note: migration guidance from #42 and #77 is fixed in this release.",
+      "created_at": "2025-01-04T00:00:00Z",
+      "published_at": "2025-01-04T00:00:00Z"
+    }
+  ],
+  "docs": [
+    {
+      "path": "CHANGELOG.md",
+      "html_url": "https://github.com/pydantic/pydantic/blob/main/CHANGELOG.md",
+      "text": "Changed: migration guidance is now updated for the deprecation path.",
+      "terms": ["migration", "deprecated"]
+    }
+  ]
+}

@@ -1,0 +1,45 @@
+deprecation:
+  - deprecated
+  - removed in
+  - renamed
+  - migration
+  - breaking change
+
+release_state:
+  - fixed in
+  - backport
+  - not released
+  - release note
+  - changelog
+
+reversal:
+  - reverted
+  - rollback
+  - regression
+  - superseded
+
+scope_policy:
+  - only applies to
+  - beta
+  - experimental
+  - enterprise only
+  - feature flag
+  - not supported
+  - permission
+
+triage:
+  - duplicate
+  - invalid
+  - wontfix
+  - closed as duplicate
+
+docs:
+  - docs outdated
+  - wrong docs
+  - documentation correction
+
+platform:
+  - only Windows
+  - only Linux
+  - platform-specific
+  - unsupported platform
