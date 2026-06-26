@@ -1,7 +1,10 @@
 local/
+!scripts/local/
+!scripts/local/**
 Montreal/
 references/
 runs/
+results/
 data/
 
 # Python/build/editor caches.

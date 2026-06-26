@@ -33,13 +33,13 @@ mem0 = [
 MemPatch = "mempatch.benchmark.cli:main"
 
 [tool.setuptools.packages.find]
-where = ["."]
-include = ["mempatch*", "scripts*"]
+where = [".", "src"]
+include = ["mempatch*", "scripts*", "mempatch_bench*"]
 exclude = ["mempatch.tests*"]
 
 [tool.pyright]
-include = ["mempatch", "scripts"]
-extraPaths = ["."]
+include = ["mempatch", "scripts", "src"]
+extraPaths = [".", "src"]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]
