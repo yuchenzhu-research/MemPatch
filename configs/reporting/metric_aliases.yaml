@@ -1,0 +1,137 @@
+schema_version: mempatch_reporting_metrics_v1.0
+headline_splits:
+  - main_test_synthetic
+  - challenge_test_hard
+non_headline_splits:
+  - dev_calibration
+
+canonical_metrics:
+  task_success_rate:
+    aliases:
+      - joint_revision_success
+    layer: task_result
+    higher_is_better: true
+  decision_accuracy:
+    aliases:
+      - black_box_decision_accuracy
+    layer: task_result
+    higher_is_better: true
+  decision_macro_f1:
+    aliases:
+      - decision_macro_f1
+    layer: task_result
+    higher_is_better: true
+  answer_key_fact_accuracy:
+    aliases:
+      - answer_key_fact_accuracy
+      - followup_task_accuracy
+    layer: task_result
+    higher_is_better: true
+  strict_joint:
+    aliases:
+      - strict_joint
+    layer: task_result
+    higher_is_better: true
+  exact_state_map:
+    aliases:
+      - scenario_exact_state_match
+    layer: memory_capability
+    higher_is_better: true
+  contract_valid_state_success:
+    expression: schema_valid_rate AND exact_state_map
+    layer: memory_capability
+    higher_is_better: true
+  memory_state_accuracy:
+    aliases:
+      - memory_state_accuracy
+    layer: memory_capability
+    higher_is_better: true
+  evidence_precision:
+    aliases:
+      - evidence_precision
+    layer: memory_capability
+    higher_is_better: true
+  evidence_recall:
+    aliases:
+      - evidence_recall
+    layer: memory_capability
+    higher_is_better: true
+  evidence_f1:
+    aliases:
+      - evidence_f1
+    layer: memory_capability
+    higher_is_better: true
+  evidence_coverage:
+    aliases:
+      - evidence_recall
+    layer: memory_capability
+    higher_is_better: true
+  diagnosis_accuracy:
+    aliases:
+      - failure_diagnosis_accuracy
+    layer: memory_capability
+    higher_is_better: true
+  unsafe_reuse_rate:
+    aliases:
+      - stale_reuse_rate
+      - unsafe_reuse_rate
+    layer: memory_capability
+    higher_is_better: false
+  downstream_contamination_rate:
+    aliases:
+      - downstream_contamination_rate
+    layer: memory_capability
+    higher_is_better: false
+  schema_valid_rate:
+    aliases:
+      - response_schema_compliance_rate
+    layer: system_cost
+    higher_is_better: true
+  parse_failure_rate:
+    expression: parse failures / attempted predictions
+    layer: system_cost
+    higher_is_better: false
+  input_tokens:
+    aliases:
+      - mean_input_tokens
+    layer: system_cost
+    higher_is_better: false
+  output_tokens:
+    aliases:
+      - mean_output_tokens
+    layer: system_cost
+    higher_is_better: false
+  total_tokens:
+    expression: input_tokens + output_tokens
+    layer: system_cost
+    higher_is_better: false
+  latency_sec:
+    aliases:
+      - latency_seconds
+      - mean_latency_seconds
+    layer: system_cost
+    higher_is_better: false
+  throughput_cases_per_min:
+    expression: completed cases / total latency minutes
+    layer: system_cost
+    higher_is_better: true
+  retrieved_event_count:
+    aliases:
+      - retrieved_event_count
+    layer: system_cost
+    higher_is_better: null
+  memory_size:
+    aliases:
+      - memory_size
+    layer: system_cost
+    higher_is_better: null
+  overcitation_rate:
+    aliases:
+      - overcitation_rate
+    layer: system_cost
+    higher_is_better: false
+  unsupported_or_hallucinated_evidence_rate:
+    aliases:
+      - unsupported_or_hallucinated_evidence_rate
+    layer: system_cost
+    higher_is_better: false

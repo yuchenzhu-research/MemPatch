@@ -8,7 +8,10 @@ from typing import Any
 from mempatch.benchmark.general_taxonomy import DIFFICULTIES, FAILURE_MODES, PATTERNS
 
 FORBIDDEN_FIELDS = {
+    "adjudication_notes",
     "canonical_failure_mode",
+    "candidate_failure_modes",
+    "candidate_memory_operations",
     "decision_triggers",
     "difficulty",
     "difficulty_level",
@@ -37,8 +40,11 @@ FORBIDDEN_FIELDS = {
 }
 
 FORBIDDEN_KEY_ALIASES = {
+    "adjudicationnotes",
     "answerkey",
     "answerkeys",
+    "candidatefailuremodes",
+    "candidatememoryoperations",
     "canonicalfailuremode",
     "decisiontrigger",
     "decisiontriggers",

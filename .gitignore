@@ -6,6 +6,7 @@ references/
 runs/
 results/
 data/
+docs/
 
 # Python/build/editor caches.
 .pytest_cache/

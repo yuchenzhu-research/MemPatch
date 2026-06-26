@@ -24,6 +24,7 @@ from scripts._root import bootstrap_from
 bootstrap_from(__file__)
 
 from mempatch.benchmark.api import load_scenarios
+from mempatch.benchmark.method_names import FINAL_METHODS, normalize_method_name
 from mempatch.benchmark.model_runner import canonical_response, extract_json_object
 from mempatch.benchmark.public_view import public_scenario_view
 from mempatch.revision.runtime.ablation_projection import project_actions_without_dpa
@@ -41,13 +42,23 @@ from mempatch.benchmark.general_taxonomy import DECISIONS, FAILURE_MODES, MEMORY
 from mempatch.benchmark.model_runner import _collect_memory_ids
 
 BASELINE_METHODS = (
-    "frozen_direct",
-    "full_context",
-    "lexical_rag",
-    "time_aware_rag",
-    "summary_memory",
+    "direct_json",
+    "full_context_json",
+    "bm25_rag_json",
+    "dense_rag_json",
+    "time_aware_rag_json",
+    "summary_memory_json",
 )
-ALL_METHODS = BASELINE_METHODS + ("mempatch", "mempatch_no_guard")
+ALL_METHODS = FINAL_METHODS
+LEGACY_BY_FINAL = {
+    "direct_json": "frozen_direct",
+    "full_context_json": "full_context",
+    "summary_memory_json": "summary_memory",
+    "bm25_rag_json": "lexical_rag",
+    "time_aware_rag_json": "time_aware_rag",
+    "mempatch_noguard": "mempatch_no_guard",
+    "mempatch": "mempatch",
+}
 
 
 @dataclass(frozen=True)
@@ -253,14 +264,21 @@ def _git_sha() -> str | None:
         return None
 
 
-def _write_predictions(raw_path: Path, output_dir: Path) -> None:
+def _write_predictions(raw_path: Path, output_dir: Path, *, model: str, split: str) -> None:
     rows = _jsonl_rows(raw_path)
     for method in ALL_METHODS:
         target = output_dir / f"{method}.predictions.jsonl"
         with target.open("w", encoding="utf-8") as handle:
             for row in rows:
                 prediction = row.get("predictions", {}).get(method)
+                if prediction is None and (legacy := LEGACY_BY_FINAL.get(method)):
+                    prediction = row.get("predictions", {}).get(legacy)
                 if prediction is not None:
+                    prediction = dict(prediction)
+                    prediction.setdefault("scenario_id", row.get("scenario_id"))
+                    prediction.setdefault("method", method)
+                    prediction.setdefault("model", model)
+                    prediction.setdefault("split", split)
                     handle.write(json.dumps(prediction, ensure_ascii=False) + "\n")
 
 
@@ -281,12 +299,18 @@ def run_case(
         method_view = build_method_view(method, public_view, retrieval_k)
         generation = backend.generate(build_prompt(method_view), response_tokens)
         response, parse_error = _safe_response(generation.text)
-        predictions[method] = {"scenario_id": scenario_id, "response": response}
+        retrieval_metadata = method_view.get("retrieval_metadata") or {}
+        predictions[method] = {
+            "scenario_id": scenario_id,
+            "method": method,
+            "response": response,
+            "retrieved_event_count": retrieval_metadata.get("retrieved_event_count"),
+        }
         generations[method] = {
             **asdict(generation),
             "parse_error": parse_error,
         }
-        if method == "frozen_direct":
+        if normalize_method_name(method) == "direct_json":
             frozen_response = response
 
     assert frozen_response is not None
@@ -316,8 +340,8 @@ def run_case(
         "response": no_guard_response,
         "parse_result": parse_result.to_dict(),
     }
-    predictions["mempatch"] = guarded
-    predictions["mempatch_no_guard"] = unguarded
+    predictions["mempatch"] = {**guarded, "method": "mempatch"}
+    predictions["mempatch_noguard"] = {**unguarded, "method": "mempatch_noguard"}
     generations["mempatch_shared_actions"] = {
         **asdict(action_generation),
         "actions_text": actions_text,
@@ -325,6 +349,7 @@ def run_case(
     }
     generations["deterministic_projection"] = {
         "mempatch_latency_seconds": guarded_latency,
+        "mempatch_noguard_latency_seconds": no_guard_latency,
         "mempatch_no_guard_latency_seconds": no_guard_latency,
     }
     return {
@@ -344,6 +369,7 @@ def main() -> None:
     parser.add_argument("--retrieval-k", type=int, default=8)
     parser.add_argument("--response-tokens", type=int, default=1024)
     parser.add_argument("--action-tokens", type=int, default=768)
+    parser.add_argument("--split", help="Split name for extracted prediction metadata. Defaults to data filename stem.")
     parser.add_argument("--dtype", choices=("auto", "bfloat16", "float16", "float32"), default="auto")
     parser.add_argument("--trust-remote-code", action="store_true")
     parser.add_argument("--limit", type=int)
@@ -357,6 +383,7 @@ def main() -> None:
     raw_path = output_dir / "raw_cases.jsonl"
     
     scenarios = load_scenarios(args.data)
+    split_name = args.split or Path(args.data).stem
     
     # Dataset Audit
     event_lens = [
@@ -487,7 +514,7 @@ def main() -> None:
             flush=True,
         )
 
-    _write_predictions(raw_path, output_dir)
+    _write_predictions(raw_path, output_dir, model=args.model_key, split=split_name)
     manifest["finished_at_unix"] = time.time()
     manifest["completed_total"] = len(_jsonl_rows(raw_path))
     manifest_path.write_text(

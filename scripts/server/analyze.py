@@ -18,16 +18,18 @@ from scripts._root import bootstrap_from
 bootstrap_from(__file__)
 
 from mempatch.benchmark.api import evaluate_predictions, load_predictions, load_scenarios
+from mempatch.benchmark.method_names import FINAL_METHODS, normalize_method_name
 
-METHODS = (
-    "frozen_direct",
-    "full_context",
-    "lexical_rag",
-    "time_aware_rag",
-    "summary_memory",
-    "mempatch_no_guard",
-    "mempatch",
-)
+METHODS = FINAL_METHODS
+LEGACY_BY_FINAL = {
+    "direct_json": "frozen_direct",
+    "full_context_json": "full_context",
+    "summary_memory_json": "summary_memory",
+    "bm25_rag_json": "lexical_rag",
+    "time_aware_rag_json": "time_aware_rag",
+    "mempatch_noguard": "mempatch_no_guard",
+    "mempatch": "mempatch",
+}
 BOOTSTRAP_METRICS = (
     "joint_revision_success",
     "black_box_decision_accuracy",
@@ -174,27 +176,41 @@ def _read_jsonl(path: Path) -> list[dict[str, Any]]:
         return [json.loads(line) for line in handle if line.strip()]
 
 
+def _generation_record(generations: dict[str, Any], method: str) -> dict[str, Any]:
+    final = normalize_method_name(method)
+    if final in generations:
+        return generations[final]
+    legacy = LEGACY_BY_FINAL.get(final)
+    if legacy and legacy in generations:
+        return generations[legacy]
+    raise KeyError(method)
+
+
 def _efficiency_rows(model: str, raw_path: Path) -> list[dict[str, Any]]:
     raw_rows = _read_jsonl(raw_path)
     totals: dict[str, Counter[str]] = defaultdict(Counter)
     for row in raw_rows:
         generations = row["generations"]
         for method in (
-            "frozen_direct",
-            "full_context",
-            "lexical_rag",
-            "time_aware_rag",
-            "summary_memory",
+            "direct_json",
+            "full_context_json",
+            "bm25_rag_json",
+            "dense_rag_json",
+            "time_aware_rag_json",
+            "summary_memory_json",
         ):
-            record = generations[method]
+            try:
+                record = _generation_record(generations, method)
+            except KeyError:
+                continue
             totals[method]["input_tokens"] += record["input_tokens"]
             totals[method]["output_tokens"] += record["output_tokens"]
             totals[method]["latency_seconds"] += record["latency_seconds"]
             totals[method]["cases"] += 1
         action = generations["mempatch_shared_actions"]
         projection = generations.get("deterministic_projection", {})
-        for method in ("mempatch", "mempatch_no_guard"):
-            direct = generations["frozen_direct"]
+        for method in ("mempatch", "mempatch_noguard"):
+            direct = _generation_record(generations, "direct_json")
             totals[method]["input_tokens"] += direct["input_tokens"] + action["input_tokens"]
             totals[method]["output_tokens"] += direct["output_tokens"] + action["output_tokens"]
             totals[method]["latency_seconds"] += (
@@ -283,6 +299,8 @@ def main() -> None:
         funnel_rows.append(_funnel_row(model, raw_path))
         for method in METHODS:
             path = Path(args.runs_root) / model / f"{method}.predictions.jsonl"
+            if not path.exists() and (legacy := LEGACY_BY_FINAL.get(method)):
+                path = Path(args.runs_root) / model / f"{legacy}.predictions.jsonl"
             predictions = load_predictions(path)
 
             # 严格验证长度

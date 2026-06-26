@@ -3,12 +3,16 @@
 from __future__ import annotations
 
 import copy
+import hashlib
 import math
 import re
 from collections import Counter
 from typing import Any
 
+from mempatch.benchmark.method_names import normalize_method_name
+
 TOKEN_RE = re.compile(r"[A-Za-z0-9_]+")
+HASH_DIM = 256
 
 
 def _tokens(value: Any) -> list[str]:
@@ -48,15 +52,51 @@ def _event_text(event: dict[str, Any]) -> str:
     )
 
 
+def _hash_embedding(text: str, *, dim: int = HASH_DIM) -> list[float]:
+    """Small local embedding fallback for dense_rag_json.
+
+    This is intentionally dependency-free and deterministic.  It is not meant
+    to be a state-of-the-art retriever; it gives the final method a real dense
+    cosine-retrieval path without proprietary APIs or model downloads.
+    """
+    vector = [0.0] * dim
+    tokens = _tokens(text)
+    for token in tokens:
+        digest = hashlib.sha256(token.encode("utf-8")).digest()
+        bucket = int.from_bytes(digest[:4], "big") % dim
+        sign = -1.0 if digest[4] % 2 else 1.0
+        vector[bucket] += sign
+    norm = math.sqrt(sum(value * value for value in vector))
+    if norm == 0.0:
+        return vector
+    return [value / norm for value in vector]
+
+
+def _cosine(left: list[float], right: list[float]) -> float:
+    return sum(a * b for a, b in zip(left, right))
+
+
 def _with_events(
     view: dict[str, Any],
     events: list[dict[str, Any]],
     instruction: str,
+    *,
+    method: str | None = None,
 ) -> dict[str, Any]:
     result = copy.deepcopy(view)
     result.setdefault("public_input", {})["event_trace"] = events
     result.setdefault("public_input", {})["events"] = events
     result["context_policy"] = instruction
+    if method is not None:
+        result["retrieval_metadata"] = {
+            "method": method,
+            "retrieved_event_count": len(events),
+            "retrieved_event_ids": [
+                str(event.get("event_id"))
+                for event in events
+                if isinstance(event, dict) and event.get("event_id")
+            ],
+        }
     return result
 
 
@@ -78,6 +118,7 @@ def full_context(view: dict[str, Any]) -> dict[str, Any]:
         view,
         events,
         "Use the complete event trace in timestamp order. Resolve conflicts before answering.",
+        method="full_context_json",
     )
 
 
@@ -98,6 +139,25 @@ def lexical_rag(view: dict[str, Any], k: int = 8) -> dict[str, Any]:
         view,
         selected,
         f"Use the top-{k} events selected by deterministic lexical retrieval.",
+        method="bm25_rag_json",
+    )
+
+
+def dense_rag(view: dict[str, Any], k: int = 8) -> dict[str, Any]:
+    events = _events(view)
+    k = _effective_retrieval_k(k, len(events))
+    query_vector = _hash_embedding(_query_text(view))
+    scored: list[tuple[float, int, dict[str, Any]]] = []
+    for index, event in enumerate(events):
+        event_vector = _hash_embedding(_event_text(event))
+        scored.append((_cosine(query_vector, event_vector), -index, event))
+    selected = [item[2] for item in sorted(scored, reverse=True)[:k]]
+    selected.sort(key=lambda event: (event.get("timestamp_order", 0), str(event.get("event_id", ""))))
+    return _with_events(
+        view,
+        selected,
+        f"Use the top-{k} events selected by deterministic local dense hash retrieval.",
+        method="dense_rag_json",
     )
 
 
@@ -120,6 +180,7 @@ def time_aware_rag(view: dict[str, Any], k: int = 8) -> dict[str, Any]:
         view,
         selected,
         f"Use the top-{k} events selected by lexical relevance with an explicit recency prior.",
+        method="time_aware_rag_json",
     )
 
 
@@ -144,6 +205,7 @@ def summary_memory(view: dict[str, Any], max_chars: int = 2400) -> dict[str, Any
         view,
         [],
         "Use the deterministic chronological memory summary instead of the raw event trace.",
+        method="summary_memory_json",
     )
     result["memory_summary"] = {
         "format": "chronological_extractive_summary",
@@ -157,18 +219,30 @@ def build_method_view(
     view: dict[str, Any],
     retrieval_k: int,
 ) -> dict[str, Any]:
-    if method == "frozen_direct":
+    final_method = normalize_method_name(method)
+    if final_method == "direct_json":
         result = copy.deepcopy(view)
         result["context_policy"] = (
             "Answer directly from the frozen public input without retrieval or memory revision."
         )
+        result["retrieval_metadata"] = {
+            "method": "direct_json",
+            "retrieved_event_count": len(_events(result)),
+            "retrieved_event_ids": [
+                str(event.get("event_id"))
+                for event in _events(result)
+                if isinstance(event, dict) and event.get("event_id")
+            ],
+        }
         return result
-    if method == "full_context":
+    if final_method == "full_context_json":
         return full_context(view)
-    if method == "lexical_rag":
+    if final_method == "bm25_rag_json":
         return lexical_rag(view, retrieval_k)
-    if method == "time_aware_rag":
+    if final_method == "dense_rag_json":
+        return dense_rag(view, retrieval_k)
+    if final_method == "time_aware_rag_json":
         return time_aware_rag(view, retrieval_k)
-    if method == "summary_memory":
+    if final_method == "summary_memory_json":
         return summary_memory(view)
     raise ValueError(f"Unknown context method: {method}")
