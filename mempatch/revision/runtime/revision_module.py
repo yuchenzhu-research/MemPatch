@@ -4,7 +4,7 @@ from __future__ import annotations
 import json
 from typing import Any
 
-from benchmark.public_view import public_scenario_view
+from mempatch.benchmark.public_view import public_scenario_view
 
 from mempatch.revision.runtime.benchmark_projection import project_to_benchmark_response
 from mempatch.revision.runtime.dpa_runtime import run_from_text

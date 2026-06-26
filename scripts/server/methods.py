@@ -37,13 +37,14 @@ def _query_text(view: dict[str, Any]) -> str:
 
 
 def _events(view: dict[str, Any]) -> list[dict[str, Any]]:
-    return list((view.get("public_input") or {}).get("event_trace") or [])
+    public_input = view.get("public_input") or {}
+    return list(public_input.get("event_trace", public_input.get("events", [])) or [])
 
 
 def _event_text(event: dict[str, Any]) -> str:
     return " ".join(
         str(event.get(key, ""))
-        for key in ("text", "actor_role", "event_type", "trust_level", "visibility_scope")
+        for key in ("text", "content", "actor_role", "event_type", "trust_level", "visibility_scope")
     )
 
 
@@ -54,8 +55,15 @@ def _with_events(
 ) -> dict[str, Any]:
     result = copy.deepcopy(view)
     result.setdefault("public_input", {})["event_trace"] = events
+    result.setdefault("public_input", {})["events"] = events
     result["context_policy"] = instruction
     return result
+
+
+def _effective_retrieval_k(k: int, event_count: int) -> int:
+    if event_count <= 1:
+        return event_count
+    return max(1, min(k, event_count - 1))
 
 
 def full_context(view: dict[str, Any]) -> dict[str, Any]:
@@ -74,9 +82,11 @@ def full_context(view: dict[str, Any]) -> dict[str, Any]:
 
 
 def lexical_rag(view: dict[str, Any], k: int = 8) -> dict[str, Any]:
+    events = _events(view)
+    k = _effective_retrieval_k(k, len(events))
     query_counts = Counter(_tokens(_query_text(view)))
     scored: list[tuple[float, int, dict[str, Any]]] = []
-    for index, event in enumerate(_events(view)):
+    for index, event in enumerate(events):
         event_counts = Counter(_tokens(_event_text(event)))
         overlap = sum(min(count, event_counts[token]) for token, count in query_counts.items())
         normalization = math.sqrt(max(sum(event_counts.values()), 1))
@@ -93,6 +103,7 @@ def lexical_rag(view: dict[str, Any], k: int = 8) -> dict[str, Any]:
 
 def time_aware_rag(view: dict[str, Any], k: int = 8) -> dict[str, Any]:
     events = _events(view)
+    k = _effective_retrieval_k(k, len(events))
     query_counts = Counter(_tokens(_query_text(view)))
     max_order = max((int(event.get("timestamp_order", 0)) for event in events), default=0)
     scored: list[tuple[float, int, dict[str, Any]]] = []
@@ -119,7 +130,7 @@ def summary_memory(view: dict[str, Any], max_chars: int = 2400) -> dict[str, Any
     )
     lines = []
     for event in events:
-        text = " ".join(str(event.get("text", "")).split())
+        text = " ".join(str(event.get("text") or event.get("content") or "").split())
         if len(text) > 180:
             text = text[:177] + "..."
         lines.append(

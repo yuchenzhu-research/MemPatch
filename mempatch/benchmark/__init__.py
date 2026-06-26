@@ -1,15 +1,13 @@
-"""MemPatch-Bench public evaluator and v1.3 scenario generation."""
+"""MemPatch-Bench public evaluator and v1.4 benchmark kernel."""
 
-__version__ = "1.3.0"
+__version__ = "1.4.0-dev"
 
-from benchmark.api import (
+from mempatch.benchmark.api import (
     AUXILIARY_METRICS,
     DECISIONS,
     FAILURE_MODES,
     HEADLINE_METRICS,
     MEMORY_STATUSES,
-    PRIMARY_FAILURE_MODES,
-    PRIMARY_MEMORY_STATUSES,
     evaluate_predictions,
     load_predictions,
     load_scenarios,
@@ -22,8 +20,6 @@ __all__ = [
     "FAILURE_MODES",
     "HEADLINE_METRICS",
     "MEMORY_STATUSES",
-    "PRIMARY_FAILURE_MODES",
-    "PRIMARY_MEMORY_STATUSES",
     "evaluate_predictions",
     "load_predictions",
     "load_scenarios",

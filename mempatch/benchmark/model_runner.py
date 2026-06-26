@@ -2,7 +2,7 @@
 
 This module is intentionally separate from the official evaluator API. It calls
 external LLM providers to create prediction files, then the model-agnostic
-scorer in :mod:`benchmark.api` can evaluate those files.
+scorer in :mod:`mempatch.benchmark.api` can evaluate those files.
 """
 
 from __future__ import annotations
@@ -17,13 +17,9 @@ import time
 from pathlib import Path
 from typing import Any
 
-from benchmark.api import load_scenarios
-from benchmark.general_taxonomy import (
-    DECISIONS,
-    PRIMARY_FAILURE_MODES,
-    PRIMARY_MEMORY_STATUSES,
-)
-from benchmark.public_view import public_scenario_view
+from mempatch.benchmark.api import load_scenarios
+from mempatch.benchmark.general_taxonomy import DECISIONS, FAILURE_MODES, MEMORY_STATUSES
+from mempatch.benchmark.public_view import public_scenario_view
 
 PROVIDERS = (
     "openai",
@@ -97,10 +93,10 @@ def _collect_memory_ids(public_view: dict[str, Any]) -> list[str]:
     public_input = public_view.get("public_input", {})
     memory_ids = [
         m["memory_id"]
-        for m in public_input.get("initial_memory", [])
+        for m in public_input.get("initial_memory") or public_input.get("initial_memories") or []
         if isinstance(m, dict) and m.get("memory_id")
     ]
-    for event in public_input.get("event_trace", []):
+    for event in public_input.get("event_trace") or public_input.get("events") or []:
         if not isinstance(event, dict):
             continue
         for memory_id in event.get("related_memory_ids", []) or []:
@@ -184,9 +180,9 @@ def build_prompt(public_view: dict[str, Any]) -> str:
         "required_output_schema": {
             "answer": "short final answer/action text",
             "decision": list(DECISIONS),
-            "memory_state": {mid: list(PRIMARY_MEMORY_STATUSES) for mid in memory_ids},
-            "evidence_event_ids": "minimal list of event_id strings from public_input.event_trace",
-            "failure_diagnosis": list(PRIMARY_FAILURE_MODES),
+            "memory_state": {mid: list(MEMORY_STATUSES) for mid in memory_ids},
+            "evidence_event_ids": "minimal list of event_id strings from public_input.events or public_input.event_trace",
+            "failure_diagnosis": list(FAILURE_MODES),
         },
         **public_view,
     }

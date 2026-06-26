@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from typing import Any
 
-from benchmark.general_taxonomy import PRIMARY_FAILURE_MODES
+from mempatch.benchmark.general_taxonomy import FAILURE_MODES
 from mempatch.dpa.methods.contracts import SharedCandidateView
 from mempatch.revision.runtime.dpa_runtime import ParseResult
 
@@ -18,6 +18,10 @@ def _raw_field(raw_response: Any, key: str) -> Any:
     return raw_response.get(key)
 
 
+def _item_text(item: dict[str, Any]) -> str:
+    return str(item.get("text") or item.get("content") or "")
+
+
 def project_actions_without_dpa(
     *,
     view: SharedCandidateView,
@@ -26,11 +30,12 @@ def project_actions_without_dpa(
     scenario_public_view: dict[str, Any],
 ) -> dict[str, Any]:
     """Project parsed actions without gate admission or defeat-path authorization."""
-    memories = (scenario_public_view.get("public_input") or {}).get("initial_memory") or []
+    public_input = scenario_public_view.get("public_input") or {}
+    memories = public_input.get("initial_memory") or public_input.get("initial_memories") or []
     memory_state = {
         str(memory["memory_id"]): (
             "out_of_scope"
-            if str(memory.get("text") or "").startswith("Distractor info:")
+            if _item_text(memory).startswith("Distractor info:")
             else "current"
         )
         for memory in memories
@@ -61,7 +66,7 @@ def project_actions_without_dpa(
         for memory_id, status in raw_state.items():
             if (
                 isinstance(status, str)
-                and status in {"out_of_scope", "should_not_store"}
+                and status in {"out_of_scope", "should_not_store", "outdated", "deleted", "restored"}
                 and str(memory_id) in memory_state
             ):
                 memory_state[str(memory_id)] = str(status)
@@ -77,7 +82,7 @@ def project_actions_without_dpa(
         decision = "use_current_memory"
 
     diagnosis = _raw_field(raw_response, "failure_diagnosis")
-    if not isinstance(diagnosis, str) or diagnosis not in PRIMARY_FAILURE_MODES:
+    if not isinstance(diagnosis, str) or diagnosis not in FAILURE_MODES:
         diagnosis = "memory_hallucination"
     answer = _raw_field(raw_response, "answer")
     return {

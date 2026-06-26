@@ -1,0 +1,18 @@
+release_version: v1.4.0-dev
+raw_internal_dir: local/data/mempatch/v1.4/raw_internal
+release_dir: local/data/mempatch/v1.4/release
+splits:
+  dev_calibration:
+    count: 60
+    difficulty: medium
+  main_test_synthetic:
+    count: 240
+    difficulty: hard
+  challenge_test_hard:
+    count: 120
+    difficulty: challenge
+public_release:
+  include_domain: true
+  include_difficulty: false
+  include_failure_mode: false
+  include_pattern: false

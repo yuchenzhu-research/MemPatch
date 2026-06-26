@@ -10,7 +10,7 @@ Usage:
   scripts/run_paper_campaign.sh analyze
 
 Environment:
-  DATA=local/data/mempatch/test/scenarios.jsonl
+  DATA=local/data/mempatch/v1.4/raw_internal/main_test_synthetic.jsonl
   OUTPUT_ROOT=runs/eval_main
   LIMIT=3                         # useful for smoke
   QWEN3_MODEL_ID=/path/or/hub/id   # optional override
@@ -24,9 +24,9 @@ case "$cmd" in
   smoke)
     model="${2:-qwen3_14b}"
     LIMIT="${LIMIT:-3}" OUTPUT_ROOT="${OUTPUT_ROOT:-runs/eval_smoke}" \
-      bash experiments/run_all.sh "$model"
-    python experiments/validate_run.py \
-      --data "${DATA:-local/data/mempatch/test/scenarios.jsonl}" \
+      bash scripts/server/run_all.sh "$model"
+    python scripts/server/validate_run.py \
+      --data "${DATA:-local/data/mempatch/v1.4/raw_internal/main_test_synthetic.jsonl}" \
       --run-dir "${OUTPUT_ROOT:-runs/eval_smoke}/$model" \
       --expected-cases "$LIMIT"
     ;;
@@ -34,7 +34,7 @@ case "$cmd" in
     model="${2:-}"
     case "$model" in
       qwen3_14b|phi4_14b|mistral_nemo_12b)
-        bash experiments/run_all.sh "$model"
+        bash scripts/server/run_all.sh "$model"
         ;;
       *)
         usage
@@ -43,7 +43,7 @@ case "$cmd" in
     esac
     ;;
   guard|analyze)
-    bash experiments/run_all.sh "$cmd"
+    bash scripts/server/run_all.sh "$cmd"
     ;;
   *)
     usage

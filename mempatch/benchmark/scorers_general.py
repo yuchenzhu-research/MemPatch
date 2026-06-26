@@ -4,10 +4,10 @@ from __future__ import annotations
 
 from typing import Any
 
-from benchmark.general_taxonomy import (
+from mempatch.benchmark.general_taxonomy import (
     DECISIONS,
+    FAILURE_MODES,
     NON_ANSWER_DECISIONS,
-    PRIMARY_FAILURE_MODES,
     canonical_hidden_gold_fields,
 )
 
@@ -43,6 +43,10 @@ DIAGNOSIS_ALIASES = {
     "policy_violation": ("policy", "private", "credential", "secure", "refuse"),
     "wrong_source_attribution": ("source", "attribution", "wrong source", "misattributed"),
     "memory_hallucination": ("hallucination", "unsupported", "false premise", "missing fact"),
+    "over_update": ("over update", "overbroad", "too broad", "wrong target", "sibling"),
+    "unnecessary_memory_write": ("unnecessary", "one-shot", "durable storage", "should not write"),
+    "failure_to_forget": ("forget", "delete", "remove memory", "deactivate"),
+    "failure_to_release_or_restore": ("release", "restore", "hold", "temporary block"),
 }
 
 
@@ -66,10 +70,10 @@ def normalize_failure_mode(value: Any) -> str:
     if isinstance(value, (list, tuple)) and len(value) == 1:
         value = value[0]
     text = _norm(value)
-    if text in PRIMARY_FAILURE_MODES:
+    if text in FAILURE_MODES:
         return text
     text = text.replace("-", "_").replace(" ", "_")
-    if text in PRIMARY_FAILURE_MODES:
+    if text in FAILURE_MODES:
         return text
     raw = _norm(value)
     for mode, aliases in DIAGNOSIS_ALIASES.items():
@@ -337,7 +341,8 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
     )
     scope_authority_accuracy = float(decision_ok) if is_scope_auth else 1.0
 
-    events = scenario.get("public_input", {}).get("event_trace", [])
+    public_input = scenario.get("public_input", {}) or {}
+    events = public_input.get("event_trace") or public_input.get("events") or []
     sorted_events = sorted(events, key=lambda e: e.get("timestamp", ""))
     latest_event_id = sorted_events[-1].get("event_id") if sorted_events else None
     
@@ -377,7 +382,7 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
     # NOTE: previous ``answer_accuracy`` and ``decision_accuracy`` were duplicates
     # of ``answer_key_fact_accuracy`` and ``black_box_decision_accuracy`` and
     # have been removed as headline metrics.
-    for mode in PRIMARY_FAILURE_MODES:
+    for mode in FAILURE_MODES:
         metrics[f"{mode}_rate"] = float(scenario.get("primary_failure_mode") == mode and predicted_diag == mode)
     # Format failure: no parseable decision (e.g. LLM emitted invalid JSON).
     metrics["format_failure_rate"] = float(predicted_decision is None)

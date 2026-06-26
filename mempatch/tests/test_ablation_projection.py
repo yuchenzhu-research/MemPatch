@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from benchmark.public_view import public_scenario_view
+from mempatch.benchmark.public_view import public_scenario_view
 from mempatch.revision.runtime.ablation_projection import project_actions_without_dpa
 from mempatch.revision.runtime.dpa_runtime import parse_actions
 from mempatch.revision.runtime.scenario_revision import build_scenario_revision_view

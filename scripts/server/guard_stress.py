@@ -5,12 +5,19 @@ from __future__ import annotations
 import argparse
 import copy
 import json
+import sys
 import time
 from collections import Counter
 from pathlib import Path
 from typing import Any
 
-from benchmark.api import load_scenarios
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts._root import bootstrap_from
+
+bootstrap_from(__file__)
+
+from mempatch.benchmark.api import load_scenarios
 from mempatch.revision.runtime.revision_module import run_revision_module_on_scenario
 
 

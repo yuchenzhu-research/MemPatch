@@ -9,8 +9,14 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from benchmark.api import evaluate_predictions, load_predictions, load_scenarios
-from benchmark.public_view import public_scenario_view
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts._root import bootstrap_from
+
+bootstrap_from(__file__)
+
+from mempatch.benchmark.api import evaluate_predictions, load_predictions, load_scenarios
+from mempatch.benchmark.public_view import public_scenario_view
 
 try:
     from .run_core import ALL_METHODS, BASELINE_METHODS

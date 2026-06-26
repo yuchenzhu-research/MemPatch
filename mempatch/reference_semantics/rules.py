@@ -3,7 +3,32 @@ from __future__ import annotations
 
 import re
 from typing import Any
-from benchmark.generation.decision_resolver import TRIGGER_PHRASES
+
+TRIGGER_PHRASES: dict[str, re.Pattern[str]] = {
+    "credential_secret_forbidden": re.compile(r"secret|credential|forbidden", re.I),
+    "security_policy_forbids_storage": re.compile(r"security policy forbids storage|policy forbids", re.I),
+    "compliance_do_not_store": re.compile(r"compliance.*do not store|regulated.*memory", re.I),
+    "explicit_hold_for_user": re.compile(r"ask user to confirm|user confirmation", re.I),
+    "policy_human_review_required": re.compile(r"human review required|review required", re.I),
+    "verified_reviewer_hold": re.compile(r"verified reviewer hold", re.I),
+    "security_compliance_block": re.compile(r"compliance block", re.I),
+    "protected_production_memory": re.compile(r"protected production memory", re.I),
+    "evidence_sufficient_but_policy_blocks": re.compile(r"policy blocks automatic|blocks automatic write", re.I),
+    "missing_target_scope": re.compile(r"without specifying|missing target|no target memory", re.I),
+    "ambiguous_user_intent": re.compile(r"could mean|ambiguous intent", re.I),
+    "ambiguous_workspace": re.compile(r"stable and beta both|different workspace", re.I),
+    "multiple_candidate_memories": re.compile(r"multiple candidate memories|several matching memories", re.I),
+    "mark_verified_conflict": re.compile(r"verified sources.*conflict|verified.*disagree", re.I),
+    "mark_insufficient_passive": re.compile(r"passive monitor gap|insufficient passive", re.I),
+    "mark_stalemate_no_authority": re.compile(r"no authority path|no authoritative source", re.I),
+    "ci_second_verified_contradiction": re.compile(r"second verified contradiction|ci rejects", re.I),
+    "ci_passive_monitor_gap": re.compile(r"ci passive monitor gap|no post-merge ci", re.I),
+    "ci_no_authority_path": re.compile(r"ci no authority path", re.I),
+    "verified_maintainer_confirms": re.compile(r"verified maintainer confirms|maintainer.*verified", re.I),
+    "verified_ci_release_confirms": re.compile(r"verified (ci|release).*confirms|release note supersedes", re.I),
+    "verified_auditor_confirms": re.compile(r"verified auditor confirms|auditor.*verified", re.I),
+    "stable_scope_matches_target": re.compile(r"stable scope matches|in-scope source", re.I),
+}
 
 # Precedence levels (lower value means higher priority for resolution)
 PRIORITY_REFUSE = 1
@@ -21,7 +46,6 @@ class TransitionRule:
         self.reason_code = reason_code
 
     def matches(self, event_text: str) -> bool:
-        # Match using TRIGGER_PHRASES from decision_resolver.py
         pattern = TRIGGER_PHRASES.get(self.rule_id)
         if pattern:
             return bool(pattern.search(event_text))

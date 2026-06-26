@@ -2,14 +2,8 @@ from __future__ import annotations
 
 import pytest
 
-from benchmark.api import FAILURE_MODES, MEMORY_STATUSES, evaluate_predictions
-from benchmark.general_taxonomy import (
-    PRIMARY_FAILURE_MODES,
-    PRIMARY_MEMORY_STATUSES,
-    RESERVED_FAILURE_MODES,
-    RESERVED_MEMORY_STATUSES,
-)
-from benchmark.scorers_general import score_prediction
+from mempatch.benchmark.api import FAILURE_MODES, MEMORY_STATUSES, evaluate_predictions
+from mempatch.benchmark.scorers_general import score_prediction
 
 
 def _scenario() -> dict:
@@ -110,14 +104,14 @@ def test_empty_response_still_scores_with_schema_violation() -> None:
     assert result["headline_metrics"]["response_schema_compliance_rate"] == 0.0
 
 
-def test_public_api_exposes_v13_primary_taxonomy_only() -> None:
-    assert FAILURE_MODES == PRIMARY_FAILURE_MODES
-    assert MEMORY_STATUSES == PRIMARY_MEMORY_STATUSES
-    assert not set(FAILURE_MODES) & set(RESERVED_FAILURE_MODES)
-    assert not set(MEMORY_STATUSES) & set(RESERVED_MEMORY_STATUSES)
+def test_public_api_exposes_v14_taxonomy() -> None:
+    assert "over_update" in FAILURE_MODES
+    assert "failure_to_forget" in FAILURE_MODES
+    assert "deleted" in MEMORY_STATUSES
+    assert "restored" in MEMORY_STATUSES
 
 
-def test_strict_evaluation_rejects_reserved_failure_diagnosis() -> None:
+def test_strict_evaluation_rejects_unknown_failure_diagnosis() -> None:
     with pytest.raises(ValueError) as excinfo:
         evaluate_predictions(
             [_scenario()],
@@ -129,7 +123,7 @@ def test_strict_evaluation_rejects_reserved_failure_diagnosis() -> None:
                         "decision": "use_current_memory",
                         "memory_state": {"m1": "current"},
                         "evidence_event_ids": ["e1"],
-                        "failure_diagnosis": "over_update",
+                        "failure_diagnosis": "not_a_failure_mode",
                     },
                 }
             ],
@@ -137,11 +131,10 @@ def test_strict_evaluation_rejects_reserved_failure_diagnosis() -> None:
         )
 
     message = str(excinfo.value)
-    assert "invalid failure_diagnosis label 'over_update'" in message
-    assert "over_update" not in str(sorted(FAILURE_MODES))
+    assert "invalid failure_diagnosis label 'not_a_failure_mode'" in message
 
 
-def test_reserved_failure_metrics_are_not_reported() -> None:
+def test_all_v14_failure_metrics_are_reported() -> None:
     metrics = score_prediction(
         _scenario(),
         {
@@ -155,7 +148,7 @@ def test_reserved_failure_metrics_are_not_reported() -> None:
         },
     )
 
-    assert "over_update_rate" not in metrics
-    assert "unnecessary_memory_write_rate" not in metrics
-    assert "failure_to_forget_rate" not in metrics
-    assert "failure_to_release_or_restore_rate" not in metrics
+    assert "over_update_rate" in metrics
+    assert "unnecessary_memory_write_rate" in metrics
+    assert "failure_to_forget_rate" in metrics
+    assert "failure_to_release_or_restore_rate" in metrics

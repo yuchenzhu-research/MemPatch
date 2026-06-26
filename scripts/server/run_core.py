@@ -1,4 +1,4 @@
-"""Unified, resumable server runner for the MemPatch experiments."""
+"""Unified, resumable server runner for MemPatch model campaigns."""
 
 from __future__ import annotations
 
@@ -11,14 +11,21 @@ import platform
 import random
 from pathlib import Path
 import subprocess
+import sys
 import time
 from typing import Any
 
 import numpy as np
 
-from benchmark.api import load_scenarios
-from benchmark.model_runner import canonical_response, extract_json_object
-from benchmark.public_view import public_scenario_view
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
+from scripts._root import bootstrap_from
+
+bootstrap_from(__file__)
+
+from mempatch.benchmark.api import load_scenarios
+from mempatch.benchmark.model_runner import canonical_response, extract_json_object
+from mempatch.benchmark.public_view import public_scenario_view
 from mempatch.revision.runtime.ablation_projection import project_actions_without_dpa
 from mempatch.revision.runtime.dpa_runtime import parse_actions
 from mempatch.revision.runtime.learned_proposer import build_proposer_prompt
@@ -30,8 +37,8 @@ try:
 except ImportError:
     from methods import build_method_view
 
-from benchmark.general_taxonomy import DECISIONS, PRIMARY_FAILURE_MODES, PRIMARY_MEMORY_STATUSES
-from benchmark.model_runner import _collect_memory_ids
+from mempatch.benchmark.general_taxonomy import DECISIONS, FAILURE_MODES, MEMORY_STATUSES
+from mempatch.benchmark.model_runner import _collect_memory_ids
 
 BASELINE_METHODS = (
     "frozen_direct",
@@ -153,6 +160,9 @@ def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
 
 def build_prompt(public_view: dict[str, Any]) -> str:
     memory_ids = _collect_memory_ids(public_view)
+    decision_labels = ", ".join(DECISIONS)
+    failure_mode_labels = ", ".join(FAILURE_MODES)
+    status_labels = ", ".join(MEMORY_STATUSES)
     payload = {
         "instruction": (
             "Answer as strict JSON only matching the schema exactly. Do not use Markdown fences. "
@@ -164,15 +174,15 @@ def build_prompt(public_view: dict[str, Any]) -> str:
             "CRITICAL: 'decision' and 'failure_diagnosis' must be scalar STRINGS, NOT lists or arrays. "
             "Provide exactly one valid enum string for 'decision' and 'failure_diagnosis' respectively. "
             "CRITICAL WARNING ON 'failure_diagnosis': Even if the memory state is correct, or your decision is use_current_memory, and there appears to be no issue, you MUST NOT output 'none', 'null', 'ok', or any other custom string. "
-            "You MUST select EXACTLY ONE failure mode from this list as the failure_diagnosis: stale_memory_reuse, under_update, conflict_collapse, scope_leakage, policy_violation, wrong_source_attribution, memory_hallucination. "
+            f"You MUST select EXACTLY ONE failure mode from this list as the failure_diagnosis: {failure_mode_labels}. "
             "Select the failure mode that MOST CLOSELY represents the hypothetical or potential threat described in the scenario."
         ),
         "required_output_schema": {
             "answer": "short final answer/action text (string)",
-            "decision": "exactly one string from: refuse_due_to_policy, escalate, ask_clarification, mark_unresolved, use_current_memory (string)",
-            "memory_state": {mid: "exactly one string from: current, blocked, unresolved, out_of_scope, should_not_store (string)" for mid in memory_ids},
-            "evidence_event_ids": "minimal list of event_id strings from public_input.event_trace (list of strings)",
-            "failure_diagnosis": "exactly one string from: stale_memory_reuse, under_update, conflict_collapse, scope_leakage, policy_violation, wrong_source_attribution, memory_hallucination (string)",
+            "decision": f"exactly one string from: {decision_labels} (string)",
+            "memory_state": {mid: f"exactly one string from: {status_labels} (string)" for mid in memory_ids},
+            "evidence_event_ids": "minimal list of event_id strings from public_input.events or public_input.event_trace (list of strings)",
+            "failure_diagnosis": f"exactly one string from: {failure_mode_labels} (string)",
         },
         **public_view,
     }
@@ -343,7 +353,10 @@ def main() -> None:
     scenarios = load_scenarios(args.data)
     
     # Dataset Audit
-    event_lens = [len(c.get("public_input", {}).get("event_trace", [])) for c in scenarios]
+    event_lens = [
+        len((c.get("public_input", {}) or {}).get("event_trace") or (c.get("public_input", {}) or {}).get("events") or [])
+        for c in scenarios
+    ]
     min_len = min(event_lens) if event_lens else 0
     median_len = int(np.median(event_lens)) if event_lens else 0
     p90_len = int(np.percentile(event_lens, 90)) if event_lens else 0

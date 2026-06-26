@@ -5,7 +5,7 @@ Pipeline:
   scenario view → learned proposer → DPA runtime → benchmark projection
 
 ``mempatch.revision`` holds the learned side; ``mempatch.dpa`` authorizes updates.
-MemPatch-Bench (``benchmark/``) scores the final ``response`` object.
+MemPatch-Bench (``mempatch/benchmark/``) scores the final ``response`` object.
 """
 from __future__ import annotations
 

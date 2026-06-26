@@ -5,17 +5,34 @@ from __future__ import annotations
 import copy
 from typing import Any
 
+from mempatch.benchmark.leakage import sanitize_public_value
+
 # Fields that must never appear in model prompts or public exports.
 INTERNAL_ONLY_FIELDS = frozenset(
     {
+        "canonical_failure_mode",
+        "decision_triggers",
+        "difficulty",
+        "difficulty_level",
+        "expected_answer",
+        "expected_decision",
+        "expected_evidence_event_ids",
+        "expected_failure_diagnosis",
+        "expected_memory_state",
+        "expected_memory_states",
+        "failure_mode",
+        "generation_metadata",
         "is_distractor",
         "hidden_gold",
-        "validation_notes",
         "metadata",
-        "source_pointers",
-        "primary_failure_mode",
+        "pattern",
         "pattern_trap_type",
-        "canonical_failure_mode",
+        "primary_failure_mode",
+        "resolver_trace",
+        "source_pointers",
+        "template_family_id",
+        "template_instance_id",
+        "validation_notes",
     }
 )
 
@@ -29,8 +46,10 @@ PUBLIC_EVENT_KEYS = frozenset(
         "visibility_scope",
         "event_type",
         "text",
+        "content",
         "related_memory_ids",
         "timestamp",
+        "source",
     }
 )
 
@@ -39,8 +58,16 @@ PUBLIC_MEMORY_KEYS = frozenset(
     {
         "memory_id",
         "text",
+        "content",
         "scope",
         "source_event_ids",
+        "memory_type",
+        "user_id",
+        "session_id",
+        "owner_id",
+        "created_at",
+        "category",
+        "tags",
     }
 )
 
@@ -59,21 +86,36 @@ def _strip_internal(obj: Any) -> Any:
     return copy.deepcopy(obj)
 
 
+def _sanitize_item(item: dict[str, Any], allowed_keys: frozenset[str]) -> dict[str, Any]:
+    cleaned = {
+        key: sanitize_public_value(item[key])
+        for key in allowed_keys
+        if key in item
+    }
+    return {
+        key: value
+        for key, value in cleaned.items()
+        if value is not None and value != [] and value != {}
+    }
+
+
 def sanitize_public_input(public_input: dict[str, Any] | None) -> dict[str, Any]:
     """Return a deep copy of public_input safe for model consumption."""
     if not public_input:
         return {}
     sanitized = _strip_internal(public_input)
-    events = sanitized.get("event_trace")
+    events = sanitized.get("events", sanitized.get("event_trace"))
     if isinstance(events, list):
-        sanitized["event_trace"] = [
-            {k: ev[k] for k in PUBLIC_EVENT_KEYS if k in ev} for ev in events if isinstance(ev, dict)
+        sanitized["events"] = [
+            _sanitize_item(ev, PUBLIC_EVENT_KEYS) for ev in events if isinstance(ev, dict)
         ]
-    memories = sanitized.get("initial_memory")
+        sanitized["event_trace"] = sanitized["events"]
+    memories = sanitized.get("initial_memories", sanitized.get("initial_memory"))
     if isinstance(memories, list):
-        sanitized["initial_memory"] = [
-            {k: mem[k] for k in PUBLIC_MEMORY_KEYS if k in mem} for mem in memories if isinstance(mem, dict)
+        sanitized["initial_memories"] = [
+            _sanitize_item(mem, PUBLIC_MEMORY_KEYS) for mem in memories if isinstance(mem, dict)
         ]
+        sanitized["initial_memory"] = sanitized["initial_memories"]
     return sanitized
 
 
@@ -93,9 +135,8 @@ def public_scenario_view(scenario: dict[str, Any]) -> dict[str, Any]:
     view: dict[str, Any] = {
         "scenario_id": scenario["scenario_id"],
         "domain": scenario.get("domain"),
-        "difficulty": scenario.get("difficulty") or scenario.get("difficulty_level"),
         "workflow_context": _strip_internal(scenario.get("workflow_context", "")),
         "public_input": sanitize_public_input(scenario.get("public_input", {})),
     }
-    view.update(_strip_internal(tasks))
+    view.update(sanitize_public_value(_strip_internal(tasks)))
     return view

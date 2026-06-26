@@ -46,6 +46,10 @@ def _task_prompt(scenario: dict[str, Any]) -> str:
     return scenario.get("workflow_context", "") or ""
 
 
+def _item_text(item: dict[str, Any]) -> str:
+    return str(item.get("text") or item.get("content") or "")
+
+
 def _event_suggests_replacement(text: str) -> bool:
     lowered = text.lower()
     return any(keyword in lowered for keyword in _REPLACEMENT_KEYWORDS)
@@ -84,7 +88,7 @@ def _extract_replacement_candidates(
     seen_replacement_ids: set[str] = set()
 
     for event in events:
-        text = str(event.get("text") or "").strip()
+        text = _item_text(event).strip()
         if not text or not _event_suggests_replacement(text):
             continue
         event_id = str(event["event_id"])
@@ -156,7 +160,7 @@ def _extract_conditions_and_dependencies(
     }
 
     for memory_id, memory in memory_by_id.items():
-        text = str(memory.get("text") or "")
+        text = _item_text(memory)
         if not _memory_has_condition_text(text):
             continue
         paired_target = _paired_target_for_condition_memory(memory_id, memory_by_id)
@@ -172,7 +176,7 @@ def _extract_conditions_and_dependencies(
         )
 
     for event in events:
-        text = str(event.get("text") or "").strip()
+        text = _item_text(event).strip()
         if not text or not _memory_has_condition_text(text):
             continue
         if text.startswith("Condition rule:"):
@@ -202,10 +206,10 @@ def build_scenario_revision_view(scenario: dict[str, Any]) -> SharedCandidateVie
     """``V ← BuildScenarioRevisionView(S, M)`` for a MemPatch-Bench scenario."""
     sid = str(scenario["scenario_id"])
     public = scenario.get("public_input") or {}
-    events = list(public.get("event_trace") or [])
-    memories = list(public.get("initial_memory") or [])
+    events = list(public.get("event_trace") or public.get("events") or [])
+    memories = list(public.get("initial_memory") or public.get("initial_memories") or [])
     if not events:
-        raise ValueError(f"{sid}: public_input.event_trace is empty")
+        raise ValueError(f"{sid}: public_input.events/event_trace is empty")
 
     sorted_events = sorted(
         events,
@@ -216,7 +220,7 @@ def build_scenario_revision_view(scenario: dict[str, Any]) -> SharedCandidateVie
     evidence_context = [
         {
             "evidence_id": str(e["event_id"]),
-            "text": e.get("text", ""),
+            "text": _item_text(e),
             "timestamp": e.get("timestamp"),
         }
         for e in events
@@ -224,7 +228,7 @@ def build_scenario_revision_view(scenario: dict[str, Any]) -> SharedCandidateVie
     candidate_beliefs = [
         {
             "belief_id": str(m["memory_id"]),
-            "proposition": m.get("text", ""),
+            "proposition": _item_text(m),
             "source_evidence_ids": list(m.get("source_event_ids") or []),
         }
         for m in memories

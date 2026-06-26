@@ -1,5 +1,8 @@
 local/
 Montreal/
+references/
+runs/
+data/
 
 # Python/build/editor caches.
 .pytest_cache/

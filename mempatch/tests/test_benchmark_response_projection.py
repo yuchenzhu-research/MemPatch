@@ -1,13 +1,12 @@
 from __future__ import annotations
 
-from benchmark.api import evaluate_predictions
-from benchmark.general_taxonomy import (
+from mempatch.benchmark.api import evaluate_predictions
+from mempatch.benchmark.general_taxonomy import (
     DECISIONS,
     FAILURE_MODES,
-    PRIMARY_FAILURE_MODES,
-    PRIMARY_MEMORY_STATUSES,
+    MEMORY_STATUSES,
 )
-from benchmark.public_view import public_scenario_view
+from mempatch.benchmark.public_view import public_scenario_view
 from mempatch.revision.runtime.benchmark_projection import project_to_benchmark_response
 from mempatch.revision.runtime.dpa_runtime import ParseResult, RuntimeResult
 from mempatch.revision.runtime.revision_module import run_revision_module_on_scenario
@@ -75,7 +74,7 @@ def test_project_to_benchmark_response_maps_dpa_statuses_and_evidence() -> None:
     )
 
     assert response["memory_state"] == {
-        "m1": "current",
+        "m1": "outdated",
         "m2": "current",
         "m3": "blocked",
         "m4": "unresolved",
@@ -86,7 +85,7 @@ def test_project_to_benchmark_response_maps_dpa_statuses_and_evidence() -> None:
     assert response["answer"] == ""
 
 
-def test_project_to_benchmark_response_maps_reserved_raw_diagnosis_to_primary() -> None:
+def test_project_to_benchmark_response_accepts_full_v14_raw_diagnosis() -> None:
     runtime_result = _runtime_result(
         final_belief_statuses={"m1": "AUTHORIZED"},
         authorized_belief_ids=("m1",),
@@ -117,10 +116,10 @@ def test_project_to_benchmark_response_maps_reserved_raw_diagnosis_to_primary() 
         "decision": "use_current_memory",
         "memory_state": {"m1": "current"},
         "evidence_event_ids": ["e1"],
-        "failure_diagnosis": "memory_hallucination",
+        "failure_diagnosis": "unnecessary_memory_write",
         "answer": "Use the current memory.",
     }
-    assert response["failure_diagnosis"] in PRIMARY_FAILURE_MODES
+    assert response["failure_diagnosis"] in FAILURE_MODES
 
 
 def test_project_to_benchmark_response_keeps_release_projection_primary() -> None:
@@ -198,14 +197,13 @@ def test_project_to_benchmark_response_only_accepts_auxiliary_raw_memory_states(
 
     assert response["memory_state"]["m1"] == "should_not_store"
     assert response["memory_state"]["m2"] == "current"
-    assert response["memory_state"]["m3"] == "current"
+    assert response["memory_state"]["m3"] == "deleted"
     assert response["decision"] == "refuse_due_to_policy"
     assert response["failure_diagnosis"] == "policy_violation"
     for label in response["memory_state"].values():
-        assert label in PRIMARY_MEMORY_STATUSES
+        assert label in MEMORY_STATUSES
     assert response["decision"] in DECISIONS
     assert response["failure_diagnosis"] in FAILURE_MODES
-    assert response["failure_diagnosis"] in PRIMARY_FAILURE_MODES
 
 
 def test_revision_module_pipeline_emits_strict_response_fields() -> None:

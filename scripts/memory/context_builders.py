@@ -1,7 +1,7 @@
 """Construct model prompts for external memory baselines on MemPatch-Bench.
 
 All baselines share the same five-field JSON output schema via
-:func:`benchmark.model_runner.build_prompt`. They differ only in how
+:func:`mempatch.benchmark.model_runner.build_prompt`. They differ only in how
 ``public_input`` (and optional memory-system fields) are prepared.
 """
 
@@ -12,9 +12,9 @@ import math
 import re
 from typing import Any
 
-from benchmark.general_taxonomy import TASK_TYPES, canonical_hidden_gold_fields
-from benchmark.model_runner import build_prompt
-from benchmark.public_view import public_scenario_view
+from mempatch.benchmark.general_taxonomy import TASK_TYPES, canonical_hidden_gold_fields
+from mempatch.benchmark.model_runner import build_prompt
+from mempatch.benchmark.public_view import public_scenario_view
 
 BASELINE_IDS: tuple[str, ...] = (
     "structured_direct",
@@ -92,13 +92,28 @@ def _query_text(view: dict[str, Any]) -> str:
 
 
 def _events(public_input: dict[str, Any]) -> list[dict[str, Any]]:
-    events = public_input.get("event_trace") or []
+    events = public_input.get("event_trace") or public_input.get("events") or []
     return [ev for ev in events if isinstance(ev, dict)]
 
 
 def _memories(public_input: dict[str, Any]) -> list[dict[str, Any]]:
-    memories = public_input.get("initial_memory") or []
+    memories = public_input.get("initial_memory") or public_input.get("initial_memories") or []
     return [mem for mem in memories if isinstance(mem, dict)]
+
+
+def _item_text(item: dict[str, Any]) -> str:
+    return str(item.get("text") or item.get("content") or "")
+
+
+def _set_public_events(public_input: dict[str, Any], events: list[dict[str, Any]]) -> None:
+    public_input["event_trace"] = events
+    public_input["events"] = events
+
+
+def _effective_retrieval_k(top_k: int, event_count: int) -> int:
+    if event_count <= 1:
+        return event_count
+    return max(1, min(top_k, event_count - 1))
 
 
 def _sort_events(events: list[dict[str, Any]]) -> list[dict[str, Any]]:
@@ -160,11 +175,10 @@ def _select_events(
     if not events or top_k <= 0:
         return []
     ordered = _sort_events(events)
-    if top_k >= len(ordered):
-        return ordered
+    top_k = _effective_retrieval_k(top_k, len(ordered))
 
     query_tokens = _tokenize(query)
-    texts = [str(ev.get("text") or "") for ev in ordered]
+    texts = [_item_text(ev) for ev in ordered]
     if scorer == "bm25":
         raw_scores = _bm25_scores(query_tokens, texts)
     else:
@@ -190,7 +204,7 @@ def _summary_from_events(events: list[dict[str, Any]], *, max_chars: int = 2400)
     for ev in _sort_events(events):
         order = ev.get("timestamp_order", "?")
         eid = ev.get("event_id", "?")
-        text = re.sub(r"\s+", " ", str(ev.get("text") or "")).strip()
+        text = re.sub(r"\s+", " ", _item_text(ev)).strip()
         if len(text) > 160:
             text = text[:157] + "..."
         lines.append(f"- t{order} [{eid}] {text}")
@@ -207,7 +221,7 @@ def _mem0_units(public_input: dict[str, Any]) -> list[dict[str, Any]]:
             {
                 "unit_id": mem.get("memory_id"),
                 "kind": "initial_memory",
-                "text": mem.get("text"),
+                "text": _item_text(mem),
                 "scope": mem.get("scope"),
                 "source_event_ids": list(mem.get("source_event_ids") or []),
             }
@@ -219,7 +233,7 @@ def _mem0_units(public_input: dict[str, Any]) -> list[dict[str, Any]]:
                     "unit_id": f"{memory_id}::ev::{ev.get('event_id')}",
                     "kind": "event_update",
                     "memory_id": memory_id,
-                    "text": ev.get("text"),
+                    "text": _item_text(ev),
                     "event_id": ev.get("event_id"),
                     "timestamp_order": ev.get("timestamp_order"),
                 }
@@ -269,7 +283,7 @@ def _a_mem_notes(public_input: dict[str, Any]) -> list[dict[str, Any]]:
         notes.append(
             {
                 "note_id": eid,
-                "text": ev.get("text"),
+                "text": _item_text(ev),
                 "timestamp_order": ev.get("timestamp_order"),
                 "links": sorted(set(links)),
             }
@@ -311,7 +325,7 @@ def build_baseline_view(
         pass
 
     elif baseline == "full_context":
-        public_input["event_trace"] = _sort_events(events)
+        _set_public_events(public_input, _sort_events(events))
         view["baseline_context"] = {
             "mode": "full_context",
             "instruction": (
@@ -322,7 +336,7 @@ def build_baseline_view(
 
     elif baseline == "vanilla_rag":
         selected = _select_events(events, query=query, top_k=rag_top_k, scorer="overlap")
-        public_input["event_trace"] = selected
+        _set_public_events(public_input, selected)
         view["baseline_context"] = {
             "mode": "vanilla_rag",
             "retrieved_event_ids": [ev.get("event_id") for ev in selected],
@@ -331,7 +345,7 @@ def build_baseline_view(
 
     elif baseline == "bm25_rag":
         selected = _select_events(events, query=query, top_k=rag_top_k, scorer="bm25")
-        public_input["event_trace"] = selected
+        _set_public_events(public_input, selected)
         view["baseline_context"] = {
             "mode": "bm25_rag",
             "retrieved_event_ids": [ev.get("event_id") for ev in selected],
@@ -345,7 +359,7 @@ def build_baseline_view(
             scorer="overlap",
             recency_weight=0.35,
         )
-        public_input["event_trace"] = _sort_events(selected)
+        _set_public_events(public_input, _sort_events(selected))
         view["baseline_context"] = {
             "mode": "time_aware_rag",
             "retrieved_event_ids": [ev.get("event_id") for ev in selected],
@@ -356,7 +370,7 @@ def build_baseline_view(
 
     elif baseline == "summary_memory":
         summary = _summary_from_events(events)
-        public_input["event_trace"] = []
+        _set_public_events(public_input, [])
         view["baseline_context"] = {
             "mode": "summary_memory",
             "rolling_summary": summary,
@@ -367,7 +381,7 @@ def build_baseline_view(
         units = _mem0_units(public_input)
         retrieved = _retrieve_units(units, query, top_k=rag_top_k)
         recent = _sort_events(events)[-3:]
-        public_input["event_trace"] = recent
+        _set_public_events(public_input, recent)
         ctx: dict[str, Any] = {
             "mode": baseline,
             "retrieved_memory_units": retrieved,
@@ -380,7 +394,7 @@ def build_baseline_view(
     elif baseline == "a_mem":
         notes = _a_mem_notes(public_input)
         retrieved = _retrieve_a_mem_notes(notes, query, top_k=rag_top_k)
-        public_input["event_trace"] = _sort_events(events)[-3:]
+        _set_public_events(public_input, _sort_events(events)[-3:])
         view["baseline_context"] = {
             "mode": "a_mem",
             "linked_notes": retrieved,

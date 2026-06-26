@@ -17,7 +17,7 @@ class ReferenceTransitionEngine:
         We check all rules against the event. If a rule matches and its priority is higher
         (i.e., lower priority number) than any rule matched so far, we perform a state transition.
         """
-        event_text = event.get("text", "")
+        event_text = event.get("text") or event.get("content") or ""
         event_id = event.get("event_id", "")
         
         # Check all rules

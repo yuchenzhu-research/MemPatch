@@ -29,13 +29,16 @@ mem0 = [
     "sentence-transformers>=3.0",
 ]
 
+[project.scripts]
+MemPatch = "mempatch.benchmark.cli:main"
+
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["mempatch*", "benchmark*"]
+include = ["mempatch*", "scripts*"]
 exclude = ["mempatch.tests*"]
 
 [tool.pyright]
-include = ["benchmark", "mempatch", "scripts"]
+include = ["mempatch", "scripts"]
 extraPaths = ["."]
 
 [tool.pytest.ini_options]

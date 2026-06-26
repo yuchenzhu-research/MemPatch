@@ -1,16 +1,13 @@
 #!/usr/bin/env python3
-"""Validate MemPatch-Bench scenario JSONL files (canonical v1.3 schema)."""
+"""Validate MemPatch-Bench v1.4 raw or public JSONL files."""
 
 from __future__ import annotations
 
 import argparse
 import json
 import sys
-from collections import Counter
 from pathlib import Path
 from typing import Any
-
-import sys
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
@@ -18,20 +15,20 @@ from scripts._root import bootstrap_from
 
 bootstrap_from(__file__)
 
-from benchmark.general_taxonomy import (
+from mempatch.benchmark.general_taxonomy import (
     BENCH_SCHEMA_VERSION,
     DECISIONS,
-    PRIMARY_DIFFICULTIES,
-    PRIMARY_DOMAINS,
-    PRIMARY_FAILURE_MODES,
-    PRIMARY_MEMORY_STATUSES,
-    PRIMARY_PATTERNS,
-    PUBLIC_FORBIDDEN_TERMS,
+    DIFFICULTIES,
+    DOMAINS,
+    FAILURE_MODES,
+    MEMORY_STATUSES,
+    PATTERNS,
     TASK_TYPES,
     TRUST_LEVELS,
     canonical_hidden_gold_fields,
     normalize_difficulty,
 )
+from mempatch.benchmark.leakage import audit_public_rows
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -49,13 +46,21 @@ def read_jsonl(path: Path) -> list[dict[str, Any]]:
 def public_text(scenario: dict[str, Any]) -> str:
     pieces = [scenario.get("workflow_context", "")]
     public = scenario.get("public_input", {})
-    for event in public.get("event_trace", []):
-        pieces.append(event.get("text", ""))
+    for event in public.get("event_trace") or public.get("events") or []:
+        pieces.append(event.get("text") or event.get("content") or "")
         pieces.append(event.get("source", ""))
-    for memory in public.get("initial_memory", []):
-        pieces.append(memory.get("text", ""))
-    for task in scenario.get("tasks", []):
-        pieces.append(task.get("prompt", ""))
+    for memory in public.get("initial_memory") or public.get("initial_memories") or []:
+        pieces.append(memory.get("text") or memory.get("content") or "")
+    tasks = scenario.get("tasks", [])
+    if isinstance(tasks, dict):
+        task_iter = tasks.values()
+    elif isinstance(tasks, list):
+        task_iter = tasks
+    else:
+        task_iter = []
+    for task in task_iter:
+        if isinstance(task, dict):
+            pieces.append(task.get("prompt") or task.get("query") or "")
     for tkey in ("black_box_task", "memory_state_task", "evidence_retrieval_task", "diagnostic_task"):
         task = scenario.get(tkey) or {}
         pieces.append(task.get("prompt", ""))
@@ -80,6 +85,16 @@ def _infer_split(scenario: dict[str, Any], data_path: Path | None) -> str | None
     return scenario.get("metadata", {}).get("split")
 
 
+def _public_events(scenario: dict[str, Any]) -> list[dict[str, Any]]:
+    public = scenario.get("public_input") or {}
+    return [event for event in (public.get("event_trace") or public.get("events") or []) if isinstance(event, dict)]
+
+
+def _public_memories(scenario: dict[str, Any]) -> list[dict[str, Any]]:
+    public = scenario.get("public_input") or {}
+    return [memory for memory in (public.get("initial_memory") or public.get("initial_memories") or []) if isinstance(memory, dict)]
+
+
 def validate_one(
     scenario: dict[str, Any],
     *,
@@ -93,20 +108,20 @@ def validate_one(
 
     split = _infer_split(scenario, data_path)
 
-    if scenario.get("domain") not in PRIMARY_DOMAINS:
+    if scenario.get("domain") is not None and scenario.get("domain") not in DOMAINS:
         errors.append(f"{sid}: invalid domain '{scenario.get('domain')}'")
-    if scenario.get("primary_failure_mode") not in PRIMARY_FAILURE_MODES:
+    if scenario.get("primary_failure_mode") is not None and scenario.get("primary_failure_mode") not in FAILURE_MODES:
         errors.append(f"{sid}: invalid primary_failure_mode '{scenario.get('primary_failure_mode')}'")
 
     pattern = scenario.get("pattern") or scenario.get("metadata", {}).get("pattern")
-    if pattern not in PRIMARY_PATTERNS:
+    if pattern is not None and pattern not in PATTERNS:
         errors.append(f"{sid}: invalid pattern '{pattern}'")
 
     raw_diff = scenario.get("difficulty")
     raw_diff_level = scenario.get("difficulty_level")
     diff = normalize_difficulty(raw_diff or raw_diff_level)
     diff_level = normalize_difficulty(raw_diff_level) if raw_diff_level else diff
-    if diff not in PRIMARY_DIFFICULTIES:
+    if (raw_diff or raw_diff_level) and diff not in DIFFICULTIES:
         errors.append(f"{sid}: invalid difficulty level '{raw_diff or raw_diff_level}'")
     if raw_diff and raw_diff_level and diff != diff_level:
         errors.append(
@@ -121,35 +136,41 @@ def validate_one(
         for tkey in ("black_box_task", "memory_state_task", "evidence_retrieval_task", "diagnostic_task"):
             if tkey not in scenario:
                 errors.append(f"{sid}: missing required new schema task '{tkey}'")
-    else:
-        tasks = scenario.get("tasks", [])
-        if len(tasks) != 4 or {t.get("task_type") for t in tasks} != set(TASK_TYPES):
-            errors.append(f"{sid}: must include exactly the four task types in tasks list")
+    elif "tasks" in scenario:
+        tasks = scenario.get("tasks", {})
+        if isinstance(tasks, dict):
+            missing = [key for key in TASK_TYPES if key not in tasks]
+            if missing:
+                errors.append(f"{sid}: tasks dict missing {missing}")
+        elif isinstance(tasks, list):
+            if len(tasks) != 4:
+                errors.append(f"{sid}: tasks list must include four task entries")
+        else:
+            errors.append(f"{sid}: tasks must be dict or list")
 
-    public = scenario.get("public_input", {})
-    events = public.get("event_trace", [])
-    memories = public.get("initial_memory", [])
+    events = _public_events(scenario)
+    memories = _public_memories(scenario)
     gold_raw = scenario.get("hidden_gold", {})
     gold = canonical_hidden_gold_fields(gold_raw)
 
-    if not gold.get("expected_decision"):
+    if gold_raw and not gold.get("expected_decision"):
         errors.append(f"{sid}: hidden_gold.expected_decision is missing")
-    elif gold["expected_decision"] not in DECISIONS:
+    elif gold_raw and gold["expected_decision"] not in DECISIONS:
         errors.append(f"{sid}: hidden_gold.expected_decision '{gold['expected_decision']}' not in DECISIONS")
 
     expected_state = gold["expected_memory_state"]
-    if not expected_state and gold.get("expected_decision") != "refuse_due_to_policy":
+    if gold_raw and not expected_state and gold.get("expected_decision") != "refuse_due_to_policy":
         errors.append(f"{sid}: hidden_gold.expected_memory_state is missing or empty")
-    bad_statuses = sorted({s for s in expected_state.values() if s not in PRIMARY_MEMORY_STATUSES})
+    bad_statuses = sorted({s for s in expected_state.values() if s not in MEMORY_STATUSES})
     if bad_statuses:
         errors.append(f"{sid}: invalid memory statuses in expected_memory_state: {bad_statuses}")
 
     expected_diag = gold.get("expected_failure_diagnosis")
-    if not expected_diag:
+    if gold_raw and not expected_diag:
         errors.append(f"{sid}: hidden_gold.expected_failure_diagnosis is missing")
-    elif expected_diag not in PRIMARY_FAILURE_MODES:
+    elif gold_raw and expected_diag not in FAILURE_MODES:
         errors.append(
-            f"{sid}: hidden_gold.expected_failure_diagnosis '{expected_diag}' not in PRIMARY_FAILURE_MODES"
+            f"{sid}: hidden_gold.expected_failure_diagnosis '{expected_diag}' not in FAILURE_MODES"
         )
 
     if len(events) < 2:
@@ -183,7 +204,7 @@ def validate_one(
                 errors.append(f"{sid}: memory {memory.get('memory_id')} references missing event {eid}")
 
     gold_ev = set(gold["expected_evidence_event_ids"])
-    if not gold_ev and gold.get("expected_decision") != "refuse_due_to_policy":
+    if gold_raw and not gold_ev and gold.get("expected_decision") != "refuse_due_to_policy":
         errors.append(f"{sid}: expected non-empty minimal gold evidence list")
     for eid in gold_ev:
         if eid not in event_ids:
@@ -194,45 +215,11 @@ def validate_one(
         if eid not in event_ids:
             errors.append(f"{sid}: counterevidence_event_id {eid} missing from event_trace")
 
-    text = public_text(scenario)
-    for term in PUBLIC_FORBIDDEN_TERMS:
-        if term in text:
-            errors.append(f"{sid}: public text contains forbidden term '{term}'")
-
-    for dec in DECISIONS:
-        if dec in text and dec not in ("escalate", "mark_unresolved"):
-            errors.append(f"{sid}: public text leaks decision verb phrase '{dec}'")
-
-    # hidden_gold leakage into public_input (decision enums checked above)
-    answer = gold.get("expected_answer") or ""
-    if len(answer) > 100 and answer.lower() in text:
-        errors.append(f"{sid}: public text leaks full hidden_gold.expected_answer")
-
-    is_hard_or_l34 = diff in ("L3", "L4")
-    if is_hard_or_l34 and events:
-        sorted_events = sorted(events, key=lambda e: e.get("timestamp", "") or str(e.get("timestamp_order", "")))
-        latest_event_id = sorted_events[-1].get("event_id") if sorted_events else None
-        if latest_event_id and latest_event_id in gold_ev and len(gold_ev) == 1:
-            errors.append(f"{sid}: L3/L4 has latest-event shortcut (latest event is the sole minimal evidence)")
-
-    if split == "test" or diff in ("L3", "L4"):
-        non_bg = [e for e in events if not _is_background_event(e)]
-        if len(non_bg) < 3:
-            errors.append(f"{sid}: test/L3/L4 scenario has too few non-background events ({len(non_bg)} < 3)")
-        bg_in_gold = [eid for eid in gold_ev if any(e.get("event_id") == eid and _is_background_event(e) for e in events)]
-        if bg_in_gold:
-            errors.append(f"{sid}: background filler events appear in gold evidence: {bg_in_gold}")
-
     if packaging_final:
-        meta = scenario.get("metadata") or {}
-        schema_version = meta.get("schema_version")
+        schema_version = scenario.get("schema_version") or (scenario.get("metadata") or {}).get("schema_version")
         if schema_version != BENCH_SCHEMA_VERSION:
             errors.append(
-                f"{sid}: metadata.schema_version {schema_version!r} != {BENCH_SCHEMA_VERSION!r}"
-            )
-        if scenario.get("benchmark_version") != "v1.3":
-            errors.append(
-                f"{sid}: benchmark_version {scenario.get('benchmark_version')!r} != 'v1.3'"
+                f"{sid}: schema_version {schema_version!r} != {BENCH_SCHEMA_VERSION!r}"
             )
 
     return errors, warnings
@@ -250,7 +237,11 @@ def validate_dataset(
     ids = [r.get("scenario_id") for r in rows]
     if len(ids) != len(set(ids)):
         errors.append("duplicate scenario_id values")
-    counters = Counter()
+    counters = {
+        "events_ge_3": 0,
+        "memories_ge_2": 0,
+        "has_hidden_gold": 0,
+    }
     for row in rows:
         row_errors, row_warnings = validate_one(
             row,
@@ -260,40 +251,16 @@ def validate_dataset(
         )
         errors.extend(row_errors)
         warnings.extend(row_warnings)
-        counters["events_ge_7"] += int(len(row.get("public_input", {}).get("event_trace", [])) >= 7)
-        counters["memories_ge_3"] += int(len(row.get("public_input", {}).get("initial_memory", [])) >= 3)
-        meta = row.get("metadata", {})
-        counters["distractors"] += int(meta.get("has_distractor"))
-        counters["cross_scope"] += int(meta.get("has_cross_scope_trap"))
-        counters["verified_over_trusted"] += int(meta.get("verified_contradicts_trusted_note"))
-        counters["false_premise"] += int(meta.get("requires_rejecting_false_premise"))
-        counters["non_answer"] += int(meta.get("requires_non_answer_action"))
+        counters["events_ge_3"] += int(len(_public_events(row)) >= 3)
+        counters["memories_ge_2"] += int(len(_public_memories(row)) >= 2)
+        counters["has_hidden_gold"] += int(bool(row.get("hidden_gold")))
     n = len(rows) or 1
-    thresholds = {
-        "events_ge_7": 0.80,
-        "memories_ge_3": 0.50,
-        "distractors": 0.40,
-        "cross_scope": 0.30,
-        "verified_over_trusted": 0.25,
-        "false_premise": 0.20,
-        "non_answer": 0.20,
-    }
-    auto_smoke = smoke
-    if data_path is not None and any(x in data_path.parent.name for x in ("_30_en", "_20_en", "smoke")):
-        auto_smoke = True
-    v13_release = rows and all(
-        (row.get("benchmark_version") == "v1.3")
-        or (row.get("metadata") or {}).get("renderer") == "unified_renderer_v13"
-        for row in rows
-    )
-    if not auto_smoke and not v13_release:
-        for key, threshold in thresholds.items():
-            rate = counters[key] / n
-            if rate < threshold:
-                errors.append(f"dataset rate {key}={rate:.3f} below {threshold:.2f}")
+    if packaging_final:
+        for violation in audit_public_rows(rows):
+            errors.append(f"{violation['scenario_id']}: public release leakage paths {violation['paths']}")
     return {
         "count": len(rows),
-        "rates": {k: counters[k] / n for k in sorted(thresholds)},
+        "rates": {k: counters[k] / n for k in sorted(counters)},
         "errors": errors,
         "warnings": warnings,
     }

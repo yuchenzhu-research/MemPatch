@@ -6,7 +6,6 @@ from typing import Any
 from mempatch.reference_semantics.states import Configuration, MemoryState
 from mempatch.reference_semantics.transition import ReferenceTransitionEngine
 from mempatch.reference_semantics.trace import DerivationTrace
-from mempatch.audit.rebuild_gold import extract_case_ref_and_topic, VARIANT_ANSWER_TEMPLATES
 
 # Priority to decision string mapping
 PRIORITY_TO_DECISION = {
@@ -24,14 +23,14 @@ def evaluate_normal_form(scenario: dict[str, Any]) -> dict[str, Any]:
     
     # 1. Initialize Memories
     initial_memories = {}
-    for mem in public_input.get("initial_memory", []):
+    for mem in public_input.get("initial_memory") or public_input.get("initial_memories") or []:
         mid = mem.get("memory_id", "")
         # Determine initial status
         status = "out_of_scope" if mem.get("is_distractor", False) else "current"
         initial_memories[mid] = MemoryState(
             memory_id=mid,
             status=status,
-            text=mem.get("text", ""),
+            text=mem.get("text") or mem.get("content") or "",
             scope=mem.get("scope", "")
         )
         
@@ -39,7 +38,7 @@ def evaluate_normal_form(scenario: dict[str, Any]) -> dict[str, Any]:
     engine = ReferenceTransitionEngine(initial_config)
     
     # 2. Step through events ordered by timestamp_order
-    events = list(public_input.get("event_trace", []))
+    events = list(public_input.get("event_trace") or public_input.get("events") or [])
     events_sorted = sorted(events, key=lambda e: e.get("timestamp_order", 0))
     
     for event in events_sorted:
@@ -81,21 +80,11 @@ def evaluate_normal_form(scenario: dict[str, Any]) -> dict[str, Any]:
                 core_events.append(eid)
         evidence_ids = core_events[:2]
         
-    # Rebuild expected answer
-    case_ref, topic = extract_case_ref_and_topic(public_input)
+    # Preserve the provided answer key when normal-form evaluation is used as a
+    # consistency check. The reference semantics no longer depends on renderer
+    # templates.
     gold_raw = scenario.get("hidden_gold", {})
     original_expected_answer = gold_raw.get("expected_answer", "")
-    
-    inferred_variant = None
-    for variant_id, template in VARIANT_ANSWER_TEMPLATES.items():
-        expected_ans_rendered = template.format(case_ref=case_ref, topic=topic)
-        if re.sub(r"\s+", " ", expected_ans_rendered.strip().lower()) == re.sub(r"\s+", " ", original_expected_answer.strip().lower()):
-            inferred_variant = variant_id
-            break
-            
-    rebuilt_answer = original_expected_answer
-    if inferred_variant:
-        rebuilt_answer = VARIANT_ANSWER_TEMPLATES[inferred_variant].format(case_ref=case_ref, topic=topic)
         
     # Construct normal form evaluation output
     return {
@@ -103,6 +92,6 @@ def evaluate_normal_form(scenario: dict[str, Any]) -> dict[str, Any]:
         "decision": final_decision,
         "minimal_evidence": evidence_ids,
         "failure_diagnosis": scenario.get("primary_failure_mode", gold_raw.get("expected_failure_diagnosis", "")),
-        "answer_key_facts": rebuilt_answer,
+        "answer_key_facts": original_expected_answer,
         "derivation_trace": final_config.trace,
     }

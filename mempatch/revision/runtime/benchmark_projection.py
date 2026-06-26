@@ -3,34 +3,23 @@
 Maps DPA-authorized transitions (``RuntimeResult``) into the canonical
 MemPatch-Bench ``response`` schema. DPA keeps internal statuses
 (``AUTHORIZED``, ``SUPERSEDED``, …); the evaluator receives ``memory_state``
-labels from the public v1.3 primary status space.
+labels from the public v1.4 status space.
 """
 from __future__ import annotations
 
 from typing import TYPE_CHECKING, Any
 
-from benchmark.general_taxonomy import DECISIONS, PRIMARY_FAILURE_MODES, PRIMARY_MEMORY_STATUSES
+from mempatch.benchmark.general_taxonomy import DECISIONS, FAILURE_MODES, MEMORY_STATUSES
 
 if TYPE_CHECKING:
     from mempatch.revision.runtime.dpa_runtime import RuntimeResult
 
 BENCHMARK_STATUS_BY_DPA_STATUS = {
     "AUTHORIZED": "current",
-    # v1.3 does not expose an ``outdated`` memory_state label. A superseding
-    # admitted edge means the visible memory slot has a current authorized
-    # basis after projection.
-    "SUPERSEDED": "current",
+    "SUPERSEDED": "outdated",
     "BLOCKED": "blocked",
     "UNRESOLVED": "unresolved",
 }
-
-RESERVED_TO_PRIMARY_FAILURE_MODE = {
-    "over_update": "scope_leakage",
-    "unnecessary_memory_write": "memory_hallucination",
-    "failure_to_forget": "stale_memory_reuse",
-    "failure_to_release_or_restore": "conflict_collapse",
-}
-
 
 def _dedupe_preserve_order(values: list[str]) -> list[str]:
     seen: set[str] = set()
@@ -55,12 +44,17 @@ def _visible_memory_ids(scenario_public_view: dict[str, Any] | None) -> list[str
     if not scenario_public_view:
         return None
     public_input = scenario_public_view.get("public_input") or {}
+    memories = public_input.get("initial_memory") or public_input.get("initial_memories") or []
     ids = [
         str(m["memory_id"])
-        for m in public_input.get("initial_memory", [])
+        for m in memories
         if isinstance(m, dict) and m.get("memory_id")
     ]
     return ids or None
+
+
+def _item_text(item: dict[str, Any]) -> str:
+    return str(item.get("text") or item.get("content") or "")
 
 
 def _memory_looks_like_distractor(memory_id: str, text: str) -> bool:
@@ -75,11 +69,12 @@ def _distractor_memory_ids(scenario_public_view: dict[str, Any] | None) -> set[s
     if not scenario_public_view:
         return set()
     ids: set[str] = set()
-    for memory in (scenario_public_view.get("public_input") or {}).get("initial_memory") or []:
+    public_input = scenario_public_view.get("public_input") or {}
+    for memory in public_input.get("initial_memory") or public_input.get("initial_memories") or []:
         if not isinstance(memory, dict) or not memory.get("memory_id"):
             continue
         memory_id = str(memory["memory_id"])
-        text = str(memory.get("text") or "")
+        text = _item_text(memory)
         if _memory_looks_like_distractor(memory_id, text):
             ids.add(memory_id)
     return ids
@@ -90,10 +85,11 @@ def _condition_memory_ids(scenario_public_view: dict[str, Any] | None) -> set[st
     if not scenario_public_view:
         return set()
     ids: set[str] = set()
-    for memory in (scenario_public_view.get("public_input") or {}).get("initial_memory") or []:
+    public_input = scenario_public_view.get("public_input") or {}
+    for memory in public_input.get("initial_memory") or public_input.get("initial_memories") or []:
         if not isinstance(memory, dict) or not memory.get("memory_id"):
             continue
-        text = str(memory.get("text") or "")
+        text = _item_text(memory)
         if text.startswith("Condition rule:"):
             ids.add(str(memory["memory_id"]))
     return ids
@@ -114,7 +110,7 @@ def _merge_raw_memory_state(
     # DPA owns the core current/blocked/unresolved transition statuses. Raw
     # response labels may only supply benchmark-only states that have no typed
     # DPA action in the current vocabulary.
-    auxiliary_statuses = {"out_of_scope", "should_not_store"}
+    auxiliary_statuses = {"out_of_scope", "should_not_store", "outdated", "deleted", "restored"}
     for memory_id, label in raw_state.items():
         if isinstance(label, str) and label in auxiliary_statuses:
             merged[str(memory_id)] = label
@@ -131,9 +127,6 @@ def _apply_scenario_memory_hints(
         return memory_state
 
     distractors = _distractor_memory_ids(scenario_public_view)
-    conditions = _condition_memory_ids(scenario_public_view)
-    has_release = any(a.action_type == "RELEASES" for a in runtime_result.admitted_actions)
-
     updated = dict(memory_state)
     for memory_id, dpa_status in runtime_result.final_belief_statuses.items():
         mid = str(memory_id)
@@ -215,10 +208,8 @@ def _project_failure_diagnosis(
     raw_response: Any,
 ) -> str:
     raw_diagnosis = _raw_response_field(raw_response, "failure_diagnosis")
-    if isinstance(raw_diagnosis, str) and raw_diagnosis in PRIMARY_FAILURE_MODES:
+    if isinstance(raw_diagnosis, str) and raw_diagnosis in FAILURE_MODES:
         return raw_diagnosis
-    if isinstance(raw_diagnosis, str) and raw_diagnosis in RESERVED_TO_PRIMARY_FAILURE_MODE:
-        return RESERVED_TO_PRIMARY_FAILURE_MODE[raw_diagnosis]
 
     raw_decision = _raw_response_field(raw_response, "decision")
     if raw_decision == "refuse_due_to_policy":

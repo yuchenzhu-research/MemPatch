@@ -39,7 +39,7 @@ class TypedRevisionProposer(Protocol):
 
 
 CANONICAL_ACTION_HELP = (
-    "Preferred v1.3 action_type values and required fields:\n"
+    "Preferred v1.4 action_type values and required fields:\n"
     "- BLOCKS: target_condition_id + evidence_ids\n"
     "- UNCERTAIN: target_belief_id + evidence_ids\n"
     "- REAFFIRMS: target_belief_id + evidence_ids\n"
@@ -132,14 +132,14 @@ def build_proposer_prompt(view: SharedCandidateView) -> str:
 
 
 def actions_to_json(actions: list[RevisionAction]) -> str:
-    """Render actions as the canonical JSON-array completion (SFT target text)."""
+    """Render actions as the canonical JSON-array completion."""
     return json.dumps([a.to_dict() for a in actions], ensure_ascii=False)
 
 
 class LearnedTypedRevisionProposer:
     """Prompt a text model and parse its completion into typed actions."""
 
-    policy_variant = "learned_lora"
+    policy_variant = "learned_prompt"
 
     def __init__(self, generate_fn: GENERATE_FN) -> None:
         self._generate = generate_fn

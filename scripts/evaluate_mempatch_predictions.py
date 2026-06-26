@@ -8,7 +8,7 @@ against a scenarios file.
 Example::
 
     python scripts/evaluate_mempatch_predictions.py \
-        --data local/data/mempatch/test/scenarios.jsonl \
+        --data local/data/mempatch/v1.4/raw_internal/main_test_synthetic.jsonl \
         --predictions path/to/predictions.jsonl \
         --out-metrics local/mempatch/my_model.metrics.json \
         --out-scored local/mempatch/my_model.scored.jsonl \
@@ -29,7 +29,7 @@ from scripts._root import bootstrap_from
 
 bootstrap_from(__file__)
 
-from benchmark.api import (  # noqa: E402
+from mempatch.benchmark.api import (  # noqa: E402
     HEADLINE_METRICS,
     evaluate_predictions,
     load_predictions,

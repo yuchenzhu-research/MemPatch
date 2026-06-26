@@ -1,16 +1,16 @@
 """Official public scoring API for MemPatch-Bench.
 
 Stable entrypoint for evaluating benchmark-compatible ``response`` predictions
-against ``hidden_gold``. Wraps :mod:`benchmark.scorers_general`
+against ``hidden_gold``. Wraps :mod:`mempatch.benchmark.scorers_general`
 with prediction loading, normalization, validation, and aggregate metrics.
 
 Typical usage::
 
-    from benchmark.api import (
+    from mempatch.benchmark.api import (
         load_scenarios, load_predictions, evaluate_predictions,
     )
 
-    scenarios = load_scenarios("local/data/mempatch/test/scenarios.jsonl")
+    scenarios = load_scenarios("local/data/mempatch/v1.4/raw_internal/main_test_synthetic.jsonl")
     predictions = load_predictions("my_model.predictions.jsonl")
     result = evaluate_predictions(scenarios, predictions, strict=True)
     print(result["headline_metrics"])
@@ -24,12 +24,12 @@ import json
 from pathlib import Path
 from typing import Any
 
-from benchmark.general_taxonomy import (
+from mempatch.benchmark.general_taxonomy import (
     DECISIONS,
-    PRIMARY_FAILURE_MODES,
-    PRIMARY_MEMORY_STATUSES,
+    FAILURE_MODES,
+    MEMORY_STATUSES,
 )
-from benchmark.scorers_general import (
+from mempatch.benchmark.scorers_general import (
     AUXILIARY_METRICS,
     HEADLINE_METRICS,
     aggregate_metrics,
@@ -47,17 +47,9 @@ __all__ = [
     "DECISIONS",
     "MEMORY_STATUSES",
     "FAILURE_MODES",
-    "PRIMARY_FAILURE_MODES",
-    "PRIMARY_MEMORY_STATUSES",
 ]
 
 SCENARIO_JSONL_NAME = "scenarios.jsonl"
-
-# Public v1.3 evaluation label spaces. The broader taxonomy module keeps
-# reserved labels for future releases, but the public API should validate and
-# report against labels that actually occur in the v1.3 benchmark gold.
-FAILURE_MODES = PRIMARY_FAILURE_MODES
-MEMORY_STATUSES = PRIMARY_MEMORY_STATUSES
 
 # Fields that make up a canonical prediction ``response`` object. In strict
 # evaluation every field is required so models cannot score through hidden-gold
@@ -147,13 +139,15 @@ def normalize_prediction(row: dict[str, Any]) -> dict[str, Any]:
 
 
 def _scenario_event_ids(scenario: dict[str, Any]) -> set[str]:
-    events = scenario.get("public_input", {}).get("event_trace", [])
+    public_input = scenario.get("public_input", {})
+    events = public_input.get("event_trace") or public_input.get("events") or []
     return {e.get("event_id") for e in events if e.get("event_id") is not None}
 
 
 def _scenario_memory_ids(scenario: dict[str, Any]) -> set[str]:
     """Memory IDs visible to the model (initial_memory only; never gold)."""
-    memories = scenario.get("public_input", {}).get("initial_memory", [])
+    public_input = scenario.get("public_input", {})
+    memories = public_input.get("initial_memory") or public_input.get("initial_memories") or []
     return {m.get("memory_id") for m in memories if m.get("memory_id") is not None}
 
 
@@ -230,9 +224,8 @@ def _validate_response(
                     f"{scenario_id}: evidence_event_ids reference IDs not in event_trace: {unknown}"
                 )
 
-    # failure_diagnosis: required to be one of the v1.3 primary failure modes
-    # (or an accepted normalized alias). Reserved taxonomy labels are not valid
-    # public benchmark outputs for this release.
+    # failure_diagnosis: required to be one of the v1.4 failure modes
+    # (or an accepted normalized alias).
     if "failure_diagnosis" not in response:
         errors.append(f"{scenario_id}: missing response field 'failure_diagnosis'")
     else:
