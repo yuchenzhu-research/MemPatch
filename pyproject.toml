@@ -17,6 +17,19 @@ dev = [
     "matplotlib>=3.8",
     "pytest>=8",
 ]
+reporting = [
+    "matplotlib>=3.8",
+]
+release = [
+    "huggingface_hub>=0.24",
+]
+server = [
+    "accelerate>=1.0",
+    "numpy>=1.26",
+    "safetensors>=0.4",
+    "torch>=2.4",
+    "transformers>=4.51",
+]
 llm = [
     "openai>=1.0",
     "anthropic>=0.25",

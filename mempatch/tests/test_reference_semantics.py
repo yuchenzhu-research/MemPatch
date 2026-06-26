@@ -2,20 +2,22 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 import pytest
 
 from mempatch.reference_semantics.normal_form import evaluate_normal_form
 
+
+def _scenario_rows() -> list[dict]:
+    override = os.environ.get("MEMPATCH_REFERENCE_SEMANTICS_SCENARIOS")
+    path = Path(override) if override else Path(__file__).parent / "fixtures" / "smoke_scenarios.jsonl"
+    with path.open("r", encoding="utf-8") as f:
+        return [json.loads(line) for line in f if line.strip()]
+
+
 def test_reference_transition_semantics():
-    local_path = Path("local/data/mempatch/test/scenarios.jsonl")
-    if local_path.exists():
-        with local_path.open("r", encoding="utf-8") as f:
-            scenarios = [json.loads(line) for line in f if line.strip()]
-    else:
-        fixture_path = Path(__file__).parent / "fixtures" / "smoke_scenarios.jsonl"
-        with fixture_path.open("r", encoding="utf-8") as f:
-            scenarios = [json.loads(line) for line in f if line.strip()]
+    scenarios = _scenario_rows()
 
     # Test a subset of scenarios for fast verification
     import random
