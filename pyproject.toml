@@ -47,11 +47,11 @@ MemPatch = "mempatch.benchmark.cli:main"
 
 [tool.setuptools.packages.find]
 where = [".", "src"]
-include = ["mempatch*", "scripts*", "mempatch_bench*"]
+include = ["mempatch*", "tools*", "mempatch_bench*"]
 exclude = ["mempatch.tests*"]
 
 [tool.pyright]
-include = ["mempatch", "scripts", "src"]
+include = ["mempatch", "tools", "src"]
 extraPaths = [".", "src"]
 
 [tool.pytest.ini_options]

@@ -9,7 +9,7 @@ from mempatch.revision.runtime.dpa_runtime import run_consensus
 from mempatch.revision.runtime.scenario_revision import build_scenario_revision_view
 
 def _load_scenario():
-    local_path = Path("local/data/mempatch/test/scenarios.jsonl")
+    local_path = Path("scratch/data/mempatch/test/scenarios.jsonl")
     if local_path.exists():
         with local_path.open("r", encoding="utf-8") as f:
             return json.loads(f.readline())

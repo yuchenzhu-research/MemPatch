@@ -3,10 +3,10 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from scripts.real_seeded.audit_real_seeded import audit
-from scripts.real_seeded.filter_candidates import filter_rows
-from scripts.real_seeded.mine_github_candidates import build_candidate
-from scripts.real_seeded.normalize_real_seeded import normalize_rows
+from tools.real_seeded.audit_real_seeded import audit
+from tools.real_seeded.filter_candidates import filter_rows
+from tools.real_seeded.mine_github_candidates import build_candidate
+from tools.real_seeded.normalize_real_seeded import normalize_rows
 
 
 FIXTURE = Path(__file__).parent / "fixtures" / "github_candidate_sample.json"

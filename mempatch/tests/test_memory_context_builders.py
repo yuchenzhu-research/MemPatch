@@ -6,7 +6,7 @@ import json
 
 from mempatch.benchmark.api import load_scenarios
 from mempatch.benchmark.model_runner import build_prompt
-from scripts.memory.context_builders import (
+from tools.memory_context.context_builders import (
     BASELINE_DISPLAY_NAMES,
     BASELINE_IDS,
     DIAGNOSTIC_UPPER_BOUND_IDS,

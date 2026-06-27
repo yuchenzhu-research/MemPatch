@@ -1,5 +1,5 @@
-from scripts.server.analyze import _bootstrap_delta, _cluster_wtl
-from scripts.server.methods import build_method_view, lexical_rag, time_aware_rag
+from tools.evaluation.server.analyze import _bootstrap_delta, _cluster_wtl
+from tools.evaluation.server.methods import build_method_view, lexical_rag, time_aware_rag
 
 
 def _view():

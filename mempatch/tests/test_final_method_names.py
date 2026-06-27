@@ -3,7 +3,7 @@ from __future__ import annotations
 import pytest
 
 from mempatch.benchmark.method_names import FINAL_METHODS, METHOD_ALIASES, normalize_method_name
-from scripts.server.methods import build_method_view
+from tools.evaluation.server.methods import build_method_view
 
 
 def _view() -> dict:

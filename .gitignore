@@ -1,12 +1,16 @@
-local/
-!scripts/local/
-!scripts/local/**
-Montreal/
-references/
-runs/
-results/
-data/
-docs/
+/scratch/
+/paper/
+/external_references/
+/runs/
+/datasets/
+/docs/
+
+# Legacy root-local artifact directories.
+/local/
+/Montreal/
+/references/
+/results/
+/data/
 
 # Python/build/editor caches.
 .pytest_cache/

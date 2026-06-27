@@ -176,17 +176,17 @@ Generate raw internal synthetic scenarios:
 ```bash
 MemPatch generate-synthetic \
   --config configs/benchmark/v1.4.yaml \
-  --output local/data/mempatch/v1.4/raw_internal
+  --output scratch/data/mempatch/v1.4/raw_internal
 ```
 
 Export public scenarios, scorer labels, manifests, checksums, and leakage audit:
 
 ```bash
 MemPatch export-release \
-  --input dev_calibration=local/data/mempatch/v1.4/raw_internal/dev_calibration.jsonl \
-  --input main_test_synthetic=local/data/mempatch/v1.4/raw_internal/main_test_synthetic.jsonl \
-  --input challenge_test_hard=local/data/mempatch/v1.4/raw_internal/challenge_test_hard.jsonl \
-  --output local/data/mempatch/v1.4/release \
+  --input dev_calibration=scratch/data/mempatch/v1.4/raw_internal/dev_calibration.jsonl \
+  --input main_test_synthetic=scratch/data/mempatch/v1.4/raw_internal/main_test_synthetic.jsonl \
+  --input challenge_test_hard=scratch/data/mempatch/v1.4/raw_internal/challenge_test_hard.jsonl \
+  --output scratch/data/mempatch/v1.4/release \
   --release-version v1.4.0
 ```
 
@@ -199,7 +199,7 @@ under `labels/`.
 import json
 from pathlib import Path
 
-path = Path("local/data/mempatch/v1.4/release/public/main_test_synthetic.jsonl")
+path = Path("scratch/data/mempatch/v1.4/release/public/main_test_synthetic.jsonl")
 rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines()]
 
 first = rows[0]
@@ -222,17 +222,17 @@ Run the label-based scorer:
 
 ```bash
 MemPatch score \
-  --labels local/data/mempatch/v1.4/release/labels/main_test_synthetic.labels.jsonl \
+  --labels scratch/data/mempatch/v1.4/release/labels/main_test_synthetic.labels.jsonl \
   --predictions path/to/predictions.jsonl \
-  --output local/data/mempatch/v1.4/runs/my_model.scores.jsonl
+  --output scratch/data/mempatch/v1.4/runs/my_model.scores.jsonl
 ```
 
 Aggregate scores:
 
 ```bash
 MemPatch aggregate \
-  --scores local/data/mempatch/v1.4/runs/my_model.scores.jsonl \
-  --output local/data/mempatch/v1.4/runs/my_model.aggregate.json \
+  --scores scratch/data/mempatch/v1.4/runs/my_model.scores.jsonl \
+  --output scratch/data/mempatch/v1.4/runs/my_model.aggregate.json \
   --group-by failure_mode \
   --group-by domain
 ```
@@ -242,18 +242,18 @@ MemPatch aggregate \
 Build canonical aggregate CSVs from completed score and prediction outputs:
 
 ```bash
-python scripts/reporting/build_final_aggregate.py \
-  --scores-root results/v1.4/local_ollama_smoke/scores \
-  --predictions-root results/v1.4/local_ollama_smoke/predictions \
-  --output-dir results/v1.4/final_synthetic/aggregates \
+python tools/reporting/build_final_aggregate.py \
+  --scores-root runs/v1.4/local_ollama_smoke/scores \
+  --predictions-root runs/v1.4/local_ollama_smoke/predictions \
+  --output-dir runs/v1.4/final_synthetic/aggregates \
   --allow-partial
 ```
 
 Render tables and figures from aggregate CSVs only:
 
 ```bash
-python scripts/reporting/make_tables.py
-python scripts/reporting/make_figures.py
+python tools/reporting/make_tables.py
+python tools/reporting/make_figures.py
 ```
 
 The exporters do not load models or run evaluation. If final aggregate data is
@@ -263,12 +263,12 @@ absent, they emit pending artifacts unless `--strict` is passed.
 
 For scorer-only validation, use `MemPatch score` on an existing prediction file.
 
-For an optional local model smoke run, configure `configs/eval/local_ollama_smoke.yaml`
+For an optional local model smoke run, configure `configs/evaluation/local_ollama_smoke.yaml`
 and run:
 
 ```bash
-python scripts/local/run_ollama_smoke.py \
-  --config configs/eval/local_ollama_smoke.yaml \
+python tools/evaluation/local_smoke/run_ollama_smoke.py \
+  --config configs/evaluation/local_ollama_smoke.yaml \
   --max-cases 2 \
   --resume
 ```
@@ -297,18 +297,29 @@ specific paper release.
 
 ## Repository Layout
 
-- `mempatch/benchmark/`: generation, public export, leakage audit, contracts,
-  scoring, and API compatibility.
+- `mempatch/benchmark/`: dataset generation, public export, leakage audit,
+  contracts, scoring, and API compatibility.
 - `mempatch/revision/`, `mempatch/dpa/`, `mempatch/reference_semantics/`:
   reference revision runtime components.
-- `scripts/memory/`: context and memory-baseline helpers.
-- `scripts/server/`: server model campaign runner, validation, and analysis.
-- `scripts/local/`: local Ollama smoke runner.
-- `scripts/real_seeded/`: optional public GitHub real-seeded challenge pipeline.
-- `configs/`: benchmark, smoke, and real-seeded mining configuration.
-- `docs/release/`: release-facing dataset card, quickstart, schema, protocol,
-  reproducibility, and limitations docs.
-- `Montreal/`: blind-review paper material.
+- `tools/data_release/`: data generation, validation, and release packaging.
+- `tools/evaluation/`: model evaluation entry points.
+- `tools/evaluation/server/`: server campaign runner, validation, and analysis.
+- `tools/evaluation/local_smoke/`: local Ollama smoke runner.
+- `tools/reporting/`: aggregate, table, and figure exporters.
+- `tools/memory_context/`: context builders and memory-baseline helpers.
+- `tools/real_seeded/`: optional public GitHub real-seeded challenge pipeline.
+- `tools/publishing/`: release upload and publishing preflight tools.
+- `configs/benchmark/`, `configs/evaluation/`, `configs/reporting/`,
+  `configs/real_seeded/`: runnable configuration grouped by workflow.
+- `docs/release/` and `docs/audits/`: release-facing documentation and
+  engineering audit records.
+- `scratch/data/` and `scratch/results/`: local generated data and local
+  experiment outputs.
+- `datasets/`: dataset release workbench artifacts.
+- `runs/`: evaluation and reporting outputs.
+- `paper/aaai2027/`: blind-review paper material.
+- `external_references/`: downloaded reference repos, datasets, papers, and
+  notes used for comparison.
 
 ## Privacy, Leakage, And Provenance
 

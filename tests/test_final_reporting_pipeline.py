@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-from scripts.reporting.build_final_aggregate import build
+from tools.reporting.build_final_aggregate import build
 
 
 def _write_jsonl(path: Path, rows: list[dict]) -> None:
