@@ -1,4 +1,4 @@
-"""Export raw internal scenarios to the v1.4 public/label release layout."""
+"""Export raw internal scenarios to the final public/label release layout."""
 
 from __future__ import annotations
 
@@ -142,7 +142,7 @@ def public_row(raw: dict[str, Any]) -> dict[str, Any]:
     events = public_input.get("events", public_input.get("event_trace", [])) or []
     tasks = {key: strip_internal(raw[key]) for key in TASK_KEYS if key in raw}
     return {
-        "schema_version": "mempatch_bench_v1.4",
+        "schema_version": "mempatch_bench_final",
         "scenario_id": str(raw["scenario_id"]),
         "split": raw.get("public_split_name") or raw.get("split"),
         "domain": raw.get("domain"),
@@ -296,7 +296,7 @@ def sha256_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def export_release(split_paths: dict[str, Path], output_dir: Path, version: str = "v1.4.0-dev") -> dict[str, Any]:
+def export_release(split_paths: dict[str, Path], output_dir: Path, version: str = "final") -> dict[str, Any]:
     public_dir = output_dir / "public"
     labels_dir = output_dir / "labels"
     manifest_dir = output_dir / "manifests"
@@ -336,7 +336,7 @@ def export_release(split_paths: dict[str, Path], output_dir: Path, version: str 
     manifest = {
         "dataset_name": "MemPatch-Bench",
         "release_version": version,
-        "schema_version": "mempatch_bench_v1.4",
+        "schema_version": "mempatch_bench_final",
         "splits": split_manifest,
         "audit_summary": {
             "public_forbidden_field_violation_count": len(audit["public_forbidden_field_violations"]),
@@ -346,7 +346,7 @@ def export_release(split_paths: dict[str, Path], output_dir: Path, version: str 
     public_manifest = {
         "dataset_name": "MemPatch-Bench",
         "release_version": version,
-        "schema_version": "mempatch_bench_v1.4",
+        "schema_version": "mempatch_bench_final",
         "splits": public_split_manifest,
         "audit_summary": {
             "public_forbidden_field_violation_count": len(audit["public_forbidden_field_violations"]),

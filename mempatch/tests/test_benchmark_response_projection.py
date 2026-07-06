@@ -85,7 +85,7 @@ def test_project_to_benchmark_response_maps_dpa_statuses_and_evidence() -> None:
     assert response["answer"] == ""
 
 
-def test_project_to_benchmark_response_accepts_full_v14_raw_diagnosis() -> None:
+def test_project_to_benchmark_response_accepts_full_final_raw_diagnosis() -> None:
     runtime_result = _runtime_result(
         final_belief_statuses={"m1": "AUTHORIZED"},
         authorized_belief_ids=("m1",),

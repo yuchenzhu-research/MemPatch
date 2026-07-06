@@ -11,7 +11,7 @@ from mempatch.benchmark.schema import (
     audit_public_private_pair,
     validate_public_scenario,
 )
-from mempatch.tests.test_benchmark_v14_kernel import _raw
+from mempatch.tests.test_benchmark_final_kernel import _raw
 
 
 def test_public_row_rejects_forbidden_fields() -> None:

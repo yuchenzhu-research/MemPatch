@@ -1,4 +1,4 @@
-"""Deterministic v1.4 scoring and aggregation."""
+"""Deterministic final scoring and aggregation."""
 
 from __future__ import annotations
 

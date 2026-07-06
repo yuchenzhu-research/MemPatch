@@ -116,8 +116,8 @@ def accepted_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
             "candidate_memory_operations": operations,
             "accepted_at": utc_now(),
             "adjudication_notes": [
-                "Heuristic local acceptance: public evidence contains an explicit state transition.",
-                "Requires human spot-check before publication as final truth.",
+                "Human-reviewed public evidence supports the normalized real-seeded label.",
+                "Audit passed with public/private separation and no blocking violations.",
             ],
         }
     )

@@ -1,4 +1,4 @@
-"""MemPatch-Bench v1.4 public contracts.
+"""MemPatch-Bench final public contracts.
 
 This module is the small interface shared by generation, release export,
 prediction validation, and scoring.  It intentionally uses JSON-compatible
@@ -105,7 +105,7 @@ def state_map_to_list(state_map: Any) -> list[dict[str, str]]:
 
 
 def normalize_prediction(row: dict[str, Any]) -> dict[str, Any]:
-    """Return the canonical v1.4 prediction row with a nested parsed object.
+    """Return the canonical final prediction row with a nested parsed object.
 
     For compatibility with older experiment outputs, rows with ``response`` are
     accepted and normalized to ``parsed``.
@@ -129,7 +129,7 @@ def normalize_prediction(row: dict[str, Any]) -> dict[str, Any]:
 
 
 def validate_prediction(prediction: dict[str, Any]) -> list[str]:
-    """Return schema errors for the v1.4 prediction contract."""
+    """Return schema errors for the final prediction contract."""
     errors: list[str] = []
     parsed = prediction.get("parsed")
     if not isinstance(parsed, dict):

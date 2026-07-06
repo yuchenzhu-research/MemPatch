@@ -1,16 +1,12 @@
-/scratch/
-/paper/
-/external_references/
-/runs/
-/datasets/
-/docs/
-
-# Legacy root-local artifact directories.
-/local/
-/Montreal/
-/references/
+# Local experiment outputs.
 /results/
+/runs/
+/scratch/
 /data/
+/datasets/
+/external_references/
+/artifacts/
+/local/
 
 # Python/build/editor caches.
 .pytest_cache/
@@ -22,29 +18,7 @@ uv.lock
 .env
 .DS_Store
 
-# Model/checkpoint/binary artifacts.
-*.safetensors
-*.gguf
-*.bin
-*.ckpt
-*.pt
-*.pth
-*.pdf
-*.parquet
-*.arrow
-*.db
-*.sqlite
-*.zip
-*.tar
-*.tar.gz
-*.jsonl.gz
-
-# JSONL is ignored by default; only smoke fixtures are allowlisted.
-*.jsonl
-!mempatch/tests/**/*.jsonl
-
-# Secrets / credentials / tokens — never commit any of these.
-.env
+# Secrets and credentials.
 .tokens
 .tokens/
 .env.*
@@ -63,3 +37,35 @@ hf_token*
 .hf_token
 *_api_key*
 *.apikey
+
+# Model, checkpoint, database, and dataset artifacts.
+*.safetensors
+*.gguf
+*.bin
+*.ckpt
+*.pt
+*.pth
+*.parquet
+*.arrow
+*.db
+*.sqlite
+*.jsonl.gz
+
+# JSONL is ignored by default; smoke fixtures are allowlisted.
+*.jsonl
+!mempatch/tests/**/*.jsonl
+
+# Archives and scratch PDFs are ignored by default.
+*.pdf
+*.zip
+*.tar
+*.tar.gz
+
+# LaTeX build intermediates.
+*.aux
+*.blg
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz

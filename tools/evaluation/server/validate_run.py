@@ -16,6 +16,7 @@ from tools._root import bootstrap_from
 bootstrap_from(__file__)
 
 from mempatch.benchmark.api import evaluate_predictions, load_predictions, load_scenarios
+from mempatch.benchmark.contracts import validate_prediction
 from mempatch.benchmark.public_view import public_scenario_view
 
 try:
@@ -45,6 +46,23 @@ def _classify_error(err: str) -> str:
     if "evidence_event_ids reference ids not in event_trace" in err_lower or "must be a list of event ids" in err_lower:
         return "Evidence Error"
     return "Other"
+
+
+def _valid_response(response: dict[str, Any] | None) -> bool:
+    return response is not None and not validate_prediction({"parsed": response})
+
+
+def _repair_response(direct_response: dict[str, Any], projected_response: dict[str, Any]) -> dict[str, Any]:
+    return direct_response if _valid_response(direct_response) else projected_response
+
+
+def _prediction(row: dict[str, Any], final_name: str, legacy_name: str | None = None) -> dict[str, Any]:
+    predictions = row.get("predictions", {})
+    if final_name in predictions:
+        return predictions[final_name]
+    if legacy_name and legacy_name in predictions:
+        return predictions[legacy_name]
+    raise KeyError(final_name)
 
 
 def main() -> None:
@@ -79,7 +97,7 @@ def main() -> None:
         
     scenario_by_id = {str(s["scenario_id"]): s for s in selected}
 
-    # 1. 检查公平配对约束与统计 generation parse error 数量
+    # Check pairing constraints and count generation parse errors.
     parse_errors_count = Counter()
     has_pairing_error = False
 
@@ -90,7 +108,6 @@ def main() -> None:
             print(f"Error: {sid} missing methods {sorted(missing)} in raw predictions", file=sys.stderr)
             sys.exit(1)
 
-        # 统计 parse_error
         generations = row.get("generations", {})
         for method in BASELINE_METHODS:
             if generations.get(method, {}).get("parse_error") is not None:
@@ -99,51 +116,49 @@ def main() -> None:
         shared_actions = generations.get("mempatch_shared_actions", {})
         if shared_actions.get("parse_error") is not None:
             parse_errors_count["mempatch"] += 1
-            parse_errors_count["mempatch_no_guard"] += 1
+            parse_errors_count["mempatch_noguard"] += 1
 
-        # 获取对应的原始 scenario
         scenario = scenario_by_id[sid]
         view = build_scenario_revision_view(scenario)
         public_view = public_scenario_view(scenario)
 
         guarded = row["predictions"]["mempatch"]
-        unguarded = row["predictions"]["mempatch_no_guard"]
-        frozen_direct_response = row["predictions"]["frozen_direct"]["response"]
+        unguarded = _prediction(row, "mempatch_noguard", "mempatch_no_guard")
+        direct_response = _prediction(row, "direct_json", "frozen_direct")["response"]
 
-        # 重构配对校验：
-        # - MemPatch 使用 frozen_direct 的完全相同 raw response (通过重跑 project_to_benchmark_response 验证)
-        # - mempatch 与 mempatch_no_guard 共享完全相同的 actions (通过重跑 project_actions_without_dpa 验证)
+        # MemPatch preserves valid direct_json responses and otherwise uses typed projection.
+        # mempatch and mempatch_noguard share exactly the same proposed actions.
         actions_text = shared_actions.get("actions_text", "")
         parse_result = parse_actions(actions_text)
         runtime_result = run_from_text(view, actions_text)
 
-        # 验证 mempatch
         expected_mempatch_response = project_to_benchmark_response(
             runtime_result=runtime_result,
-            raw_response=frozen_direct_response,
+            raw_response=direct_response,
             scenario_public_view=public_view,
             fallback_answer=""
         )
+        expected_mempatch_response = _repair_response(direct_response, expected_mempatch_response)
         if guarded.get("response") != expected_mempatch_response:
-            print(f"Pairing Error: {sid} - MemPatch response does not match DPA projection from frozen_direct.response", file=sys.stderr)
+            print(f"Pairing Error: {sid} - MemPatch response does not match conservative repair rule", file=sys.stderr)
             has_pairing_error = True
 
-        # 验证 mempatch_no_guard
         expected_no_guard_response = project_actions_without_dpa(
             view=view,
             parse_result=parse_result,
-            raw_response=frozen_direct_response,
+            raw_response=direct_response,
             scenario_public_view=public_view,
         )
+        expected_no_guard_response = _repair_response(direct_response, expected_no_guard_response)
         if unguarded.get("response") != expected_no_guard_response:
-            print(f"Pairing Error: {sid} - mempatch_no_guard response does not match ablation projection using shared actions", file=sys.stderr)
+            print(f"Pairing Error: {sid} - mempatch_noguard response does not match conservative repair rule", file=sys.stderr)
             has_pairing_error = True
 
     if has_pairing_error:
         print("Error: Fair pairing constraints validation failed", file=sys.stderr)
         sys.exit(1)
 
-    # 2. 读取 manifest 里的 retrieval_k
+    # Read retrieval_k from the manifest.
     manifest_path = run_dir / "run_manifest.json"
     retrieval_k = 8
     if manifest_path.exists():
@@ -153,7 +168,7 @@ def main() -> None:
         except Exception:
             pass
 
-    # 3. 计算每个方法的平均保留事件数
+    # Compute the average number of retained public evidence events.
     mean_events = {}
     for method in BASELINE_METHODS:
         total_evs = 0
@@ -162,11 +177,11 @@ def main() -> None:
             total_evs += len(m_view.get("public_input", {}).get("event_trace", []))
         mean_events[method] = total_evs / len(selected)
 
-    # 对于 mempatch 和 mempatch_no_guard，保留事件数等同于 frozen_direct
-    mean_events["mempatch"] = mean_events["frozen_direct"]
-    mean_events["mempatch_no_guard"] = mean_events["frozen_direct"]
+    # MemPatch starts from direct_json and only falls back to typed projection.
+    mean_events["mempatch"] = mean_events["direct_json"]
+    mean_events["mempatch_noguard"] = mean_events["direct_json"]
 
-    # 4. 执行 predictions 评估与 validation error 详细统计
+    # Evaluate predictions and collect validation-error details.
     report = {
         "cases": len(raw_rows),
         "methods": {}
@@ -189,11 +204,10 @@ def main() -> None:
         
         # Only accumulate errors from mempatch methods to trigger strict validation failures.
         # Baseline validation errors are recorded in the report but do not cause execution pipeline crashes.
-        if method in ("mempatch", "mempatch_no_guard"):
+        if method in ("mempatch", "mempatch_noguard"):
             total_val_errors += len(errors_list)
         total_missing_predictions += missing_count
 
-        # 统计错误分类
         error_categories = Counter()
         for err in errors_list:
             error_categories[_classify_error(err)] += 1
@@ -228,12 +242,12 @@ def main() -> None:
     print(f"  Total Generation Parse Errors: {sum(parse_errors_count.values())}")
     print("="*50)
 
-    # 5. 写入 validation_report.json
+    # Write validation_report.json.
     target = run_dir / "validation_report.json"
     target.write_text(json.dumps(report, indent=2, ensure_ascii=False) + "\n", encoding="utf-8")
     print(f"\nReport written to {target}")
 
-    # 6. fail-fast 退出策略
+    # Fail fast when strict validation is requested.
     if not args.allow_validation_errors:
         if total_val_errors > 0 or total_missing_predictions > 0 or sum(parse_errors_count.values()) > 0:
             print("\nValidation FAILED! Terminating with exit code 1 because strict mode is active.", file=sys.stderr)

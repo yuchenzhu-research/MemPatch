@@ -24,6 +24,7 @@ from tools._root import bootstrap_from
 bootstrap_from(__file__)
 
 from mempatch.benchmark.api import load_scenarios
+from mempatch.benchmark.contracts import validate_prediction
 from mempatch.benchmark.method_names import FINAL_METHODS, normalize_method_name
 from mempatch.benchmark.model_runner import canonical_response, extract_json_object
 from mempatch.benchmark.public_view import public_scenario_view
@@ -242,6 +243,20 @@ def _safe_response(text: str) -> tuple[dict[str, Any], str | None]:
         }, f"{type(exc).__name__}: {exc}"
 
 
+def _contract_valid_response(response: dict[str, Any] | None) -> bool:
+    return response is not None and not validate_prediction({"parsed": response})
+
+
+def _repair_response(
+    *,
+    direct_response: dict[str, Any],
+    projected_response: dict[str, Any],
+) -> tuple[dict[str, Any], str]:
+    if _contract_valid_response(direct_response):
+        return direct_response, "direct_json_valid"
+    return projected_response, "typed_projection_fallback"
+
+
 def _restore_action_array(text: str) -> str:
     stripped = text.strip()
     if stripped.startswith("```"):
@@ -335,9 +350,23 @@ def run_case(
         scenario_public_view=public_view,
     )
     no_guard_latency = time.perf_counter() - no_guard_started
+    repaired_guarded_response, guarded_source = _repair_response(
+        direct_response=frozen_response,
+        projected_response=guarded["response"],
+    )
+    repaired_no_guard_response, no_guard_source = _repair_response(
+        direct_response=frozen_response,
+        projected_response=no_guard_response,
+    )
+    guarded = {
+        **guarded,
+        "response": repaired_guarded_response,
+        "repair_source": guarded_source,
+    }
     unguarded = {
         "scenario_id": scenario_id,
-        "response": no_guard_response,
+        "response": repaired_no_guard_response,
+        "repair_source": no_guard_source,
         "parse_result": parse_result.to_dict(),
     }
     predictions["mempatch"] = {**guarded, "method": "mempatch"}
@@ -409,7 +438,7 @@ def main() -> None:
             final_k = max(1, median_len - 1)
         print(f"[Dataset Audit] Auto-adjusted retrieval_k to {final_k} (was {args.retrieval_k}) to avoid full-context degradation.")
         
-    # 计算 sha256 校验
+    # Write stable SHA-256 checksums for every output artifact.
     import hashlib
     dataset_bytes = Path(args.data).read_bytes()
     dataset_sha256 = hashlib.sha256(dataset_bytes).hexdigest()
@@ -470,7 +499,8 @@ def main() -> None:
         "seed": args.seed,
         "methods": list(ALL_METHODS),
         "pairing": {
-            "frozen_direct_is_mempatch_raw_response": True,
+            "direct_json_is_mempatch_base_response": True,
+            "mempatch_preserves_valid_direct_response": True,
             "mempatch_and_no_guard_share_actions": True,
         },
         "retrieval_k": final_k,

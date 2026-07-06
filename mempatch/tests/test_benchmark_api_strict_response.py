@@ -104,7 +104,7 @@ def test_empty_response_still_scores_with_schema_violation() -> None:
     assert result["headline_metrics"]["response_schema_compliance_rate"] == 0.0
 
 
-def test_public_api_exposes_v14_taxonomy() -> None:
+def test_public_api_exposes_final_taxonomy() -> None:
     assert "over_update" in FAILURE_MODES
     assert "failure_to_forget" in FAILURE_MODES
     assert "deleted" in MEMORY_STATUSES
@@ -134,7 +134,7 @@ def test_strict_evaluation_rejects_unknown_failure_diagnosis() -> None:
     assert "invalid failure_diagnosis label 'not_a_failure_mode'" in message
 
 
-def test_all_v14_failure_metrics_are_reported() -> None:
+def test_all_final_failure_metrics_are_reported() -> None:
     metrics = score_prediction(
         _scenario(),
         {

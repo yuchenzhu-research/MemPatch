@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Validate MemPatch-Bench v1.4 raw or public JSONL files."""
+"""Validate MemPatch-Bench final raw or public JSONL files."""
 
 from __future__ import annotations
 

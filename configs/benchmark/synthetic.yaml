@@ -1,6 +1,6 @@
-release_version: v1.4.0-dev
-raw_internal_dir: scratch/data/mempatch/v1.4/raw_internal
-release_dir: scratch/data/mempatch/v1.4/release
+release_version: synthetic-release
+raw_internal_dir: scratch/data/mempatch/synthetic/raw_internal
+release_dir: scratch/data/mempatch/synthetic/release
 splits:
   dev_calibration:
     count: 500

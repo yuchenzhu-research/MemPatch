@@ -1,4 +1,4 @@
-"""Canonical method names and compatibility aliases for v1.4 final runs."""
+"""Canonical method and model names for the final runs."""
 
 from __future__ import annotations
 
@@ -31,13 +31,11 @@ METHOD_ALIASES = {
 }
 
 FINAL_MODELS = (
-    "Qwen3-8B-Instruct",
-    "Qwen3-14B-Instruct",
-    "Qwen3-32B-Instruct",
-    "Llama-3.1-8B-Instruct",
-    "Llama-3.1-70B-Instruct",
-    "Mistral-Nemo-12B-Instruct",
-    "Phi-4-14B",
+    "qwen3_14b",
+    "mistral_nemo_12b",
+    "phi4_14b",
+    "deepseek_r1_qwen_14b",
+    "glm4_9b",
 )
 
 FINAL_SPLITS = (

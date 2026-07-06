@@ -141,7 +141,7 @@ def markdown(report: dict[str, Any]) -> str:
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--raw", type=Path, required=True)
-    parser.add_argument("--mining-summary", type=Path, default=Path("datasets/v1.4_real_seeded/raw/mining_report.json"))
+    parser.add_argument("--mining-summary", type=Path, default=Path("datasets/final_real_seeded/raw/mining_report.json"))
     parser.add_argument("--out", type=Path)
     parser.add_argument("--json-out", type=Path)
     return parser.parse_args()

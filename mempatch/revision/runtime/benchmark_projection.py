@@ -3,7 +3,7 @@
 Maps DPA-authorized transitions (``RuntimeResult``) into the canonical
 MemPatch-Bench ``response`` schema. DPA keeps internal statuses
 (``AUTHORIZED``, ``SUPERSEDED``, …); the evaluator receives ``memory_state``
-labels from the public v1.4 status space.
+labels from the public final status space.
 """
 from __future__ import annotations
 

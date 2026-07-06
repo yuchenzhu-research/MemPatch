@@ -1,4 +1,4 @@
-"""Deterministic v1.4 synthetic scenario generation.
+"""Deterministic final synthetic scenario generation.
 
 The generator creates raw internal scenarios.  A separate release step strips
 private fields into public rows and scorer-only labels.  This keeps generation
@@ -391,7 +391,7 @@ def _extra_event_content(case_ref: str, topic: str, order: int) -> str:
     return variants[order % len(variants)]
 
 
-def build_scenario(split: str, index: int, *, seed_namespace: str = "mempatch_v14") -> dict[str, Any]:
+def build_scenario(split: str, index: int, *, seed_namespace: str = "mempatch_final") -> dict[str, Any]:
     rng = random.Random(_seed(split, index, seed_namespace))
     spec = SPECS[index % len(SPECS)]
     scenario_id = _case_id(split, index)
@@ -554,7 +554,7 @@ def build_scenario(split: str, index: int, *, seed_namespace: str = "mempatch_v1
         "source_pointers": [
             {
                 "kind": "synthetic_generator",
-                "url_or_id": "mempatch.benchmark.generate:v1.4",
+                "url_or_id": "mempatch.benchmark.generate:final",
                 "license_or_terms_note": "Generated benchmark scenario.",
             }
         ],
@@ -590,7 +590,7 @@ def build_scenario(split: str, index: int, *, seed_namespace: str = "mempatch_v1
             "pattern": spec.pattern,
             "structure": structure,
             "resolver_trace": {
-                "rule": "spec_table_v1.4",
+                "rule": "spec_table_final",
                 "expected_decision": spec.decision,
                 "expected_memory_operation": spec.memory_operation,
                 "expected_failure_mode": spec.failure_mode,
@@ -599,7 +599,7 @@ def build_scenario(split: str, index: int, *, seed_namespace: str = "mempatch_v1
     }
 
 
-def generate_split(split: str, count: int, *, seed_namespace: str = "mempatch_v14") -> list[dict[str, Any]]:
+def generate_split(split: str, count: int, *, seed_namespace: str = "mempatch_final") -> list[dict[str, Any]]:
     if count < 0:
         raise ValueError("count must be non-negative")
     return [build_scenario(split, index, seed_namespace=seed_namespace) for index in range(count)]
@@ -609,7 +609,7 @@ def generate_raw_files(
     output_dir: Path,
     quotas: dict[str, int] | None = None,
     *,
-    seed_namespace: str = "mempatch_v14",
+    seed_namespace: str = "mempatch_final",
 ) -> dict[str, Path]:
     quotas = quotas or DEFAULT_QUOTAS
     output_dir.mkdir(parents=True, exist_ok=True)

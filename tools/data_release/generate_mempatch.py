@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Generate MemPatch-Bench v1.4 synthetic raw data and optional release views."""
+"""Generate MemPatch-Bench final synthetic raw data and optional release views."""
 
 from __future__ import annotations
 
@@ -34,11 +34,11 @@ def _quota(value: str) -> tuple[str, int]:
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Generate MemPatch-Bench v1.4 synthetic scenarios.")
+    parser = argparse.ArgumentParser(description="Generate MemPatch-Bench final synthetic scenarios.")
     parser.add_argument(
         "--out-dir",
         type=Path,
-        default=Path("scratch/data/mempatch/v1.4/raw_internal"),
+        default=Path("scratch/data/mempatch/final/raw_internal"),
         help="Output directory for raw internal split JSONL.",
     )
     parser.add_argument(
@@ -56,7 +56,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     )
     parser.add_argument(
         "--seed-namespace",
-        default="mempatch_v14",
+        default="mempatch_final",
         help="Deterministic seed namespace.",
     )
     parser.add_argument(
@@ -108,7 +108,7 @@ def main(argv: list[str] | None = None) -> int:
 
     manifest = {
         "generator": "mempatch.benchmark.generate",
-        "schema_version": "mempatch_bench_v1.4",
+        "schema_version": "mempatch_bench_final",
         "seed_namespace": args.seed_namespace,
         "raw_output_dir": str(args.out_dir),
         "splits": {split: {"path": str(path), "count": quotas[split]} for split, path in paths.items()},

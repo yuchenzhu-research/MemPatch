@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Run a small sequential local Ollama smoke test for MemPatch-Bench v1.4."""
+"""Run a small sequential local Ollama smoke test for MemPatch-Bench final."""
 
 from __future__ import annotations
 
@@ -490,7 +490,7 @@ def run(
     models_override: list[str] | None = None,
     resume: bool = False,
 ) -> dict[str, Any]:
-    output_root = Path(config.get("output_root", "runs/v1.4/local_ollama_smoke"))
+    output_root = Path(config.get("output_root", "results/local_ollama_smoke"))
     prediction_dir = output_root / "predictions"
     score_dir = output_root / "scores"
     aggregate_dir = output_root / "aggregates"

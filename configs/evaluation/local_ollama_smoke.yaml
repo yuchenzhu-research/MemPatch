@@ -1,10 +1,10 @@
-output_root: runs/v1.4/local_ollama_smoke
+output_root: runs/local_ollama_smoke
 ollama_base_url_env: OLLAMA_BASE_URL
 default_ollama_base_url: http://localhost:11434
 
 benchmark:
-  raw_internal_dir: scratch/data/mempatch/v1.4/raw_internal
-  release_dir: scratch/data/mempatch/v1.4/release
+  raw_internal_dir: scratch/data/mempatch/synthetic/raw_internal
+  release_dir: scratch/data/mempatch/synthetic/release
   quotas:
     dev_calibration: 200
     main_test_synthetic: 1000

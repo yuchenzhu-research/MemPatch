@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Package MemPatch-Bench v1.4 raw splits into public/label release files."""
+"""Package MemPatch-Bench final raw splits into public/label release files."""
 
 from __future__ import annotations
 
@@ -32,7 +32,7 @@ def discover_splits(input_dir: Path, splits: tuple[str, ...]) -> dict[str, Path]
 
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
-    parser = argparse.ArgumentParser(description="Package MemPatch-Bench v1.4 release files.")
+    parser = argparse.ArgumentParser(description="Package MemPatch-Bench final release files.")
     parser.add_argument(
         "--input-dir",
         type=Path,
@@ -46,7 +46,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         help="Release bundle directory containing public/, labels/, and manifests/.",
     )
     parser.add_argument("--splits", default="dev_calibration,main_test_synthetic,challenge_test_hard")
-    parser.add_argument("--release-version", default="v1.4.0-dev")
+    parser.add_argument("--release-version", default="final")
     return parser.parse_args(argv)
 
 

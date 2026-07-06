@@ -5,7 +5,11 @@ from __future__ import annotations
 import argparse
 import json
 from pathlib import Path
+import sys
 from typing import Any
+
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from mempatch.benchmark.generate import DEFAULT_QUOTAS, generate_raw_files, validate_generated_row
 from mempatch.benchmark.leakage import audit_public_rows
@@ -53,12 +57,12 @@ def main(argv: list[str] | None = None) -> int:
     generate.add_argument("--output", type=Path, required=True)
     generate.add_argument("--config", type=Path, default=None)
     generate.add_argument("--quota", action="append", type=_quota, default=[])
-    generate.add_argument("--seed-namespace", default="mempatch_v14")
+    generate.add_argument("--seed-namespace", default="mempatch_final")
 
     export = sub.add_parser("export-release")
     export.add_argument("--input", action="append", type=_split_path, required=True, help="SPLIT=PATH")
     export.add_argument("--output", type=Path, required=True)
-    export.add_argument("--release-version", default="v1.4.0-dev")
+    export.add_argument("--release-version", default="final")
 
     audit = sub.add_parser("audit-public")
     audit.add_argument("--public-jsonl", type=Path, required=True)

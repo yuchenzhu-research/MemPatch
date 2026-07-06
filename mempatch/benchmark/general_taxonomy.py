@@ -1,4 +1,4 @@
-"""Taxonomy for the MemPatch-Bench v1.4 release."""
+"""Taxonomy for the MemPatch-Bench final release."""
 
 from __future__ import annotations
 
@@ -107,7 +107,7 @@ NON_ANSWER_DECISIONS = (
     "mark_unresolved",
 )
 
-BENCH_SCHEMA_VERSION = "mempatch_bench_v1.4"
+BENCH_SCHEMA_VERSION = "mempatch_bench_final"
 
 PUBLIC_FORBIDDEN_TERMS = (
     "hidden_gold",
@@ -151,7 +151,7 @@ def _state_list_to_map(value: object) -> dict:
 
 
 def canonical_hidden_gold_fields(gold: dict) -> dict:
-    """Read canonical v1.4 hidden_gold fields, accepting legacy aliases."""
+    """Read canonical final hidden_gold fields, accepting legacy aliases."""
     return {
         "expected_decision": gold.get("expected_decision"),
         "expected_memory_operation": gold.get("expected_memory_operation"),

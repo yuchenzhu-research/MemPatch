@@ -174,7 +174,7 @@ def audit(public_rows: list[dict[str, Any]], label_rows: list[dict[str, Any]]) -
         if sensitive_findings(row)
     ]
     return {
-        "schema_version": "mempatch_bench_v1.4",
+        "schema_version": "mempatch_bench_final",
         "public_rows": len(public_rows),
         "label_rows": len(label_rows),
         "public_private_id_mismatches": sorted(public_by_id ^ label_by_id),

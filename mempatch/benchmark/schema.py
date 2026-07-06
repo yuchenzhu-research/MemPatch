@@ -1,4 +1,4 @@
-"""Canonical MemPatch-Bench v1.4 / schema v1.0 release contracts.
+"""Canonical MemPatch-Bench final / schema v1.0 release contracts.
 
 The release format remains plain JSON so rows can be published as JSONL and
 loaded by HuggingFace datasets without a custom builder.  These dataclasses are
@@ -23,7 +23,7 @@ from mempatch.benchmark.leakage import forbidden_paths
 
 
 CONTRACT_VERSION = "mempatch_bench_schema_v1.0"
-PUBLIC_SCHEMA_VERSION = "mempatch_bench_v1.4"
+PUBLIC_SCHEMA_VERSION = "mempatch_bench_final"
 SUPPORTED_PUBLIC_SCHEMA_VERSIONS = {PUBLIC_SCHEMA_VERSION, CONTRACT_VERSION}
 
 FORBIDDEN_PUBLIC_FIELDS = {

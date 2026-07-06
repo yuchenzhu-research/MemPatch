@@ -692,7 +692,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--repos", type=Path, required=True)
     parser.add_argument("--queries", type=Path, required=True)
     parser.add_argument("--out", type=Path, required=True)
-    parser.add_argument("--cache", type=Path, default=Path("datasets/v1.4_real_seeded/cache"))
+    parser.add_argument("--cache", type=Path, default=Path("datasets/final_real_seeded/cache"))
     parser.add_argument("--selected-repos", type=Path)
     parser.add_argument("--report-out", type=Path)
     parser.add_argument("--target-raw", type=int, default=300)

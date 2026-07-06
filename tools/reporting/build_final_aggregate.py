@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build final MemPatch-Bench v1.4 aggregate CSVs from completed score outputs.
+"""Build final MemPatch-Bench aggregate CSVs from completed score outputs.
 
 This script never runs model inference.  It reads score JSONL files, optionally
 joins prediction metadata for token/latency fields, normalizes method aliases,
@@ -21,7 +21,6 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 from mempatch.benchmark.method_names import (  # noqa: E402
     FINAL_METHODS,
     FINAL_MODELS,
-    FINAL_SPLITS,
     HEADLINE_SPLITS,
     normalize_method_name,
 )
@@ -369,7 +368,7 @@ def parse_cell(value: str) -> tuple[str, str, str]:
 def expected_from_args(args: argparse.Namespace) -> set[tuple[str, str, str]]:
     models = tuple(args.expected_model or FINAL_MODELS)
     methods = tuple(normalize_method_name(method) for method in (args.expected_method or FINAL_METHODS))
-    splits = tuple(args.expected_split or FINAL_SPLITS)
+    splits = tuple(args.expected_split or HEADLINE_SPLITS)
     return {(model, method, split) for model in models for method in methods for split in splits}
 
 
@@ -558,7 +557,7 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=[],
         help="Directory or JSONL prediction file used for token/latency joins.",
     )
-    parser.add_argument("--output-dir", type=Path, default=Path("runs/v1.4/final_synthetic/aggregates"))
+    parser.add_argument("--output-dir", type=Path, default=Path("results/aggregates"))
     parser.add_argument("--expected-model", action="append", default=[])
     parser.add_argument("--expected-method", action="append", default=[])
     parser.add_argument("--expected-split", action="append", default=[])
@@ -569,9 +568,9 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("--overwrite", action="store_true")
     args = parser.parse_args(argv)
     if not args.scores_root:
-        args.scores_root = [Path("runs/v1.4/local_ollama_smoke/scores")]
+        args.scores_root = [Path("results/local_ollama_smoke/scores")]
     if not args.predictions_root:
-        args.predictions_root = [Path("runs/v1.4/local_ollama_smoke/predictions")]
+        args.predictions_root = [Path("results/local_ollama_smoke/predictions")]
     return args
 
 

@@ -10,7 +10,7 @@ Typical usage::
         load_scenarios, load_predictions, evaluate_predictions,
     )
 
-    scenarios = load_scenarios("scratch/data/mempatch/v1.4/raw_internal/main_test_synthetic.jsonl")
+    scenarios = load_scenarios("scratch/data/mempatch/final/raw_internal/main_test_synthetic.jsonl")
     predictions = load_predictions("my_model.predictions.jsonl")
     result = evaluate_predictions(scenarios, predictions, strict=True)
     print(result["headline_metrics"])
@@ -246,7 +246,7 @@ def _validate_response(
                     f"{scenario_id}: evidence_event_ids reference IDs not in event_trace: {unknown}"
                 )
 
-    # failure_diagnosis: required to be one of the v1.4 failure modes
+    # failure_diagnosis: required to be one of the final failure modes
     # (or an accepted normalized alias).
     if "failure_diagnosis" not in response:
         errors.append(f"{scenario_id}: missing response field 'failure_diagnosis'")

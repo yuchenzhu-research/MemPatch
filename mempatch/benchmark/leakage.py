@@ -1,4 +1,4 @@
-"""Public-release leakage audit for MemPatch-Bench v1.4."""
+"""Public-release leakage audit for MemPatch-Bench final."""
 
 from __future__ import annotations
 

@@ -39,7 +39,7 @@ class TypedRevisionProposer(Protocol):
 
 
 CANONICAL_ACTION_HELP = (
-    "Preferred v1.4 action_type values and required fields:\n"
+    "Preferred final action_type values and required fields:\n"
     "- BLOCKS: target_condition_id + evidence_ids\n"
     "- UNCERTAIN: target_belief_id + evidence_ids\n"
     "- REAFFIRMS: target_belief_id + evidence_ids\n"

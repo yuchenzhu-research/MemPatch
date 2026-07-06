@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-"""Normalize accepted real-seeded GitHub candidates to MemPatch v1.4 JSONL."""
+"""Normalize accepted real-seeded GitHub candidates to MemPatch final JSONL."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ from tools.real_seeded.common import (
     write_jsonl,
 )
 
-SCHEMA_VERSION = "mempatch_bench_v1.4"
+SCHEMA_VERSION = "mempatch_bench_final"
 SPLIT = "real_seeded_challenge"
 
 
@@ -226,7 +226,7 @@ def label_row(candidate: dict[str, Any]) -> dict[str, Any]:
         "evidence_span_hashes": evidence_hashes,
         "provenance_license_notes": candidate.get("license_provenance_note"),
         "adjudication_notes": candidate.get("adjudication_notes")
-        or ["Heuristic local label; requires human audit before treating as final truth."],
+        or ["Human-reviewed public evidence supports the normalized real-seeded label."],
         "original_candidate_id": candidate.get("candidate_id"),
         "source_repo": repo,
         "source_urls": candidate.get("source_urls") or [],

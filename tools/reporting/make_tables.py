@@ -202,8 +202,8 @@ def build_tables(aggregate_dir: Path, output_dir: Path, *, strict: bool) -> list
 
 def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--aggregate-dir", type=Path, default=Path("runs/v1.4/final_synthetic/aggregates"))
-    parser.add_argument("--output-dir", type=Path, default=Path("runs/v1.4/final_synthetic/tables"))
+    parser.add_argument("--aggregate-dir", type=Path, default=Path("results/aggregates"))
+    parser.add_argument("--output-dir", type=Path, default=Path("results/tables"))
     parser.add_argument("--strict", action="store_true")
     return parser.parse_args(argv)
 

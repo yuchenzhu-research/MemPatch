@@ -1,4 +1,4 @@
-"""MemPatch-Bench public evaluator and v1.4 benchmark kernel."""
+"""MemPatch-Bench public evaluator and final benchmark kernel."""
 
 __version__ = "1.4.0-dev"
 

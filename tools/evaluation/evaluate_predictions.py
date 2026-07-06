@@ -12,7 +12,7 @@ against raw internal scenarios that contain ``hidden_gold``.
 Example::
 
     python tools/evaluation/evaluate_predictions.py \
-        --data scratch/data/mempatch/v1.4/raw_internal/main_test_synthetic.jsonl \
+        --data scratch/data/mempatch/final/raw_internal/main_test_synthetic.jsonl \
         --predictions path/to/predictions.jsonl \
         --out-metrics scratch/results/mempatch/my_model.metrics.json \
         --out-scored scratch/results/mempatch/my_model.scored.jsonl \
