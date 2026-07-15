@@ -278,7 +278,6 @@ def assert_token_not_in_command_context(token: str | None) -> None:
     if not token:
         return
     command_context = " ".join(sys.argv)
-    command_context += "\n" + os.environ.get("PYTEST_CURRENT_TEST", "")
     if token and token in command_context:
         raise PipelineError("Refusing network request: token value appears in command context")
 

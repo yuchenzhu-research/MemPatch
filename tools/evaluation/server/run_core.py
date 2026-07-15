@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import argparse
-from dataclasses import asdict, dataclass
 import hashlib
 import json
 import os
@@ -24,32 +23,9 @@ from tools._root import bootstrap_from
 bootstrap_from(__file__)
 
 from mempatch.benchmark.api import load_scenarios
-from mempatch.benchmark.contracts import validate_prediction
-from mempatch.benchmark.method_names import FINAL_METHODS, normalize_method_name
-from mempatch.benchmark.model_runner import canonical_response, extract_json_object
-from mempatch.benchmark.public_view import public_scenario_view
-from mempatch.revision.runtime.ablation_projection import project_actions_without_dpa
-from mempatch.revision.runtime.dpa_runtime import parse_actions
-from mempatch.revision.runtime.learned_proposer import build_proposer_prompt
-from mempatch.revision.runtime.revision_module import run_revision_module_on_scenario
-from mempatch.revision.runtime.scenario_revision import build_scenario_revision_view
+from mempatch.benchmark.method_names import FINAL_METHODS, PAPER_METHODS
+from mempatch.evaluation import GenerationRecord, evaluate_case
 
-try:
-    from .methods import build_method_view
-except ImportError:
-    from methods import build_method_view
-
-from mempatch.benchmark.general_taxonomy import DECISIONS, FAILURE_MODES, MEMORY_OPERATIONS, MEMORY_STATUSES
-from mempatch.benchmark.model_runner import _collect_memory_ids
-
-BASELINE_METHODS = (
-    "direct_json",
-    "full_context_json",
-    "bm25_rag_json",
-    "dense_rag_json",
-    "time_aware_rag_json",
-    "summary_memory_json",
-)
 ALL_METHODS = FINAL_METHODS
 LEGACY_BY_FINAL = {
     "direct_json": "frozen_direct",
@@ -60,15 +36,6 @@ LEGACY_BY_FINAL = {
     "mempatch_noguard": "mempatch_no_guard",
     "mempatch": "mempatch",
 }
-
-
-@dataclass(frozen=True)
-class GenerationRecord:
-    text: str
-    input_tokens: int
-    output_tokens: int
-    latency_seconds: float
-
 
 class LocalHFBackend:
     def __init__(self, model_id: str, dtype: str, trust_remote_code: bool) -> None:
@@ -170,104 +137,6 @@ def _append_jsonl(path: Path, row: dict[str, Any]) -> None:
         os.fsync(handle.fileno())
 
 
-def build_prompt(public_view: dict[str, Any]) -> str:
-    memory_ids = _collect_memory_ids(public_view)
-    decision_labels = ", ".join(DECISIONS)
-    failure_mode_labels = ", ".join(FAILURE_MODES)
-    memory_operation_labels = ", ".join(MEMORY_OPERATIONS)
-    status_labels = ", ".join(MEMORY_STATUSES)
-    payload = {
-        "instruction": (
-            "Answer as strict JSON only matching the schema exactly. Do not use Markdown fences. "
-            "Use only the visible scenario content. Do not use external knowledge. "
-            "Use exact enum strings. Do not invent memory IDs or event IDs. "
-            "Cite only minimal supporting event IDs. "
-            "Choose exactly one lifecycle memory_operation for the durable memory action. "
-            "Decision order: refuse_due_to_policy, escalate, ask_clarification, "
-            "mark_unresolved, use_current_memory (first applicable wins). "
-            "CRITICAL: 'decision', 'memory_operation', and 'failure_diagnosis' must be scalar STRINGS, NOT lists or arrays. "
-            "Provide exactly one valid enum string for 'decision', 'memory_operation', and 'failure_diagnosis' respectively. "
-            "CRITICAL WARNING ON 'failure_diagnosis': Even if the memory state is correct, or your decision is use_current_memory, and there appears to be no issue, you MUST NOT output 'none', 'null', 'ok', or any other custom string. "
-            f"You MUST select EXACTLY ONE failure mode from this list as the failure_diagnosis: {failure_mode_labels}. "
-            "Select the failure mode that MOST CLOSELY represents the hypothetical or potential threat described in the scenario."
-        ),
-        "required_output_schema": {
-            "answer": "short final answer/action text (string)",
-            "decision": f"exactly one string from: {decision_labels} (string)",
-            "memory_operation": f"exactly one string from: {memory_operation_labels} (string)",
-            "memory_state": {mid: f"exactly one string from: {status_labels} (string)" for mid in memory_ids},
-            "evidence_event_ids": "minimal list of event_id strings from public_input.events or public_input.event_trace (list of strings)",
-            "failure_diagnosis": f"exactly one string from: {failure_mode_labels} (string)",
-            "followup_answer": "short answer to the visible followup_task after applying the memory operation (string)",
-        },
-        **public_view,
-    }
-    return json.dumps(payload, ensure_ascii=False, separators=(",", ":"))
-
-
-def clean_response(parsed: dict[str, Any]) -> dict[str, Any]:
-    cleaned = dict(parsed)
-    for key in ("decision", "memory_operation", "failure_diagnosis"):
-        val = cleaned.get(key)
-        if isinstance(val, (list, tuple)):
-            if len(val) == 1:
-                cleaned[key] = val[0]
-            elif len(val) == 0:
-                cleaned[key] = ""
-        elif val is None:
-            cleaned[key] = ""
-            
-    mem = cleaned.get("memory_state")
-    if isinstance(mem, dict):
-        cleaned["memory_state"] = {
-            k: (v[0] if isinstance(v, (list, tuple)) and len(v) == 1 else v)
-            for k, v in mem.items()
-        }
-    return cleaned
-
-
-def _safe_response(text: str) -> tuple[dict[str, Any], str | None]:
-    try:
-        parsed = extract_json_object(text)
-        cleaned = clean_response(parsed)
-        return canonical_response(cleaned), None
-    except Exception as exc:
-        return {
-            "answer": "",
-            "decision": None,
-            "memory_operation": None,
-            "memory_state": {},
-            "evidence_event_ids": [],
-            "failure_diagnosis": None,
-            "followup_answer": "",
-        }, f"{type(exc).__name__}: {exc}"
-
-
-def _contract_valid_response(response: dict[str, Any] | None) -> bool:
-    return response is not None and not validate_prediction({"parsed": response})
-
-
-def _repair_response(
-    *,
-    direct_response: dict[str, Any],
-    projected_response: dict[str, Any],
-) -> tuple[dict[str, Any], str]:
-    if _contract_valid_response(direct_response):
-        return direct_response, "direct_json_valid"
-    return projected_response, "typed_projection_fallback"
-
-
-def _restore_action_array(text: str) -> str:
-    stripped = text.strip()
-    if stripped.startswith("```"):
-        stripped = stripped.replace("```json", "").replace("```", "").strip()
-    start = stripped.find("[")
-    end = stripped.rfind("]")
-    if start >= 0 and end > start:
-        return stripped[start : end + 1]
-    return stripped
-
-
 def _git_sha() -> str | None:
     try:
         return subprocess.check_output(
@@ -295,97 +164,6 @@ def _write_predictions(raw_path: Path, output_dir: Path, *, model: str, split: s
                     prediction.setdefault("model", model)
                     prediction.setdefault("split", split)
                     handle.write(json.dumps(prediction, ensure_ascii=False) + "\n")
-
-
-def run_case(
-    scenario: dict[str, Any],
-    backend: LocalHFBackend,
-    retrieval_k: int,
-    response_tokens: int,
-    action_tokens: int,
-) -> dict[str, Any]:
-    scenario_id = str(scenario["scenario_id"])
-    public_view = public_scenario_view(scenario)
-    predictions: dict[str, dict[str, Any]] = {}
-    generations: dict[str, Any] = {}
-
-    frozen_response: dict[str, Any] | None = None
-    for method in BASELINE_METHODS:
-        method_view = build_method_view(method, public_view, retrieval_k)
-        generation = backend.generate(build_prompt(method_view), response_tokens)
-        response, parse_error = _safe_response(generation.text)
-        retrieval_metadata = method_view.get("retrieval_metadata") or {}
-        predictions[method] = {
-            "scenario_id": scenario_id,
-            "method": method,
-            "response": response,
-            "retrieved_event_count": retrieval_metadata.get("retrieved_event_count"),
-        }
-        generations[method] = {
-            **asdict(generation),
-            "parse_error": parse_error,
-        }
-        if normalize_method_name(method) == "direct_json":
-            frozen_response = response
-
-    assert frozen_response is not None
-    revision_view = build_scenario_revision_view(scenario)
-    action_generation = backend.generate(build_proposer_prompt(revision_view), action_tokens)
-    actions_text = _restore_action_array(action_generation.text)
-    parse_result = parse_actions(actions_text)
-
-    guarded_started = time.perf_counter()
-    guarded = run_revision_module_on_scenario(
-        scenario,
-        actions_text=actions_text,
-        raw_response=frozen_response,
-        include_audit=True,
-    )
-    guarded_latency = time.perf_counter() - guarded_started
-    no_guard_started = time.perf_counter()
-    no_guard_response = project_actions_without_dpa(
-        view=revision_view,
-        parse_result=parse_result,
-        raw_response=frozen_response,
-        scenario_public_view=public_view,
-    )
-    no_guard_latency = time.perf_counter() - no_guard_started
-    repaired_guarded_response, guarded_source = _repair_response(
-        direct_response=frozen_response,
-        projected_response=guarded["response"],
-    )
-    repaired_no_guard_response, no_guard_source = _repair_response(
-        direct_response=frozen_response,
-        projected_response=no_guard_response,
-    )
-    guarded = {
-        **guarded,
-        "response": repaired_guarded_response,
-        "repair_source": guarded_source,
-    }
-    unguarded = {
-        "scenario_id": scenario_id,
-        "response": repaired_no_guard_response,
-        "repair_source": no_guard_source,
-        "parse_result": parse_result.to_dict(),
-    }
-    predictions["mempatch"] = {**guarded, "method": "mempatch"}
-    predictions["mempatch_noguard"] = {**unguarded, "method": "mempatch_noguard"}
-    generations["mempatch_shared_actions"] = {
-        **asdict(action_generation),
-        "actions_text": actions_text,
-        "parse_result": parse_result.to_dict(),
-    }
-    generations["deterministic_projection"] = {
-        "mempatch_latency_seconds": guarded_latency,
-        "mempatch_noguard_latency_seconds": no_guard_latency,
-        "mempatch_no_guard_latency_seconds": no_guard_latency,
-    }
-    return {
-        "scenario_id": scenario_id,
-        "predictions": predictions,
-        "generations": generations,
-    }
 
 
 def main() -> None:
@@ -439,7 +217,6 @@ def main() -> None:
         print(f"[Dataset Audit] Auto-adjusted retrieval_k to {final_k} (was {args.retrieval_k}) to avoid full-context degradation.")
         
     # Write stable SHA-256 checksums for every output artifact.
-    import hashlib
     dataset_bytes = Path(args.data).read_bytes()
     dataset_sha256 = hashlib.sha256(dataset_bytes).hexdigest()
     
@@ -530,12 +307,14 @@ def main() -> None:
 
     for index, scenario in enumerate(pending, start=1):
         started = time.perf_counter()
-        row = run_case(
+        row = evaluate_case(
             scenario,
             backend,
-            final_k,
-            args.response_tokens,
-            args.action_tokens,
+            methods=PAPER_METHODS,
+            retrieval_k=final_k,
+            response_tokens=args.response_tokens,
+            action_tokens=args.action_tokens,
+            include_no_guard=True,
         )
         _append_jsonl(raw_path, row)
         print(

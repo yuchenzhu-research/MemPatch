@@ -1,17 +1,22 @@
-"""Canonical method and model names for the final runs."""
+"""Canonical method, model, and split names for paper runs."""
 
 from __future__ import annotations
 
-FINAL_METHODS = (
+PAPER_METHODS = (
     "direct_json",
     "full_context_json",
     "summary_memory_json",
     "bm25_rag_json",
     "dense_rag_json",
     "time_aware_rag_json",
-    "mempatch_noguard",
     "mempatch",
 )
+
+DIAGNOSTIC_METHODS = ("mempatch_noguard",)
+
+# Historical aggregate artifacts include the no-guard diagnostic immediately
+# before MemPatch. Keep this order for readers of existing run directories.
+FINAL_METHODS = (*PAPER_METHODS[:-1], *DIAGNOSTIC_METHODS, PAPER_METHODS[-1])
 
 METHOD_ALIASES = {
     "direct_json": "direct_json",

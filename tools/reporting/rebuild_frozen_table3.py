@@ -70,14 +70,14 @@ DISPLAY_NAMES = {
 }
 
 PAPER_TABLE3 = {
-    "direct_json": (20.9, 7.2, 11.9, 47.7, 48.6, 19.3),
-    "full_context_json": (20.9, 7.5, 12.0, 47.9, 48.5, 20.0),
-    "summary_memory_json": (15.0, 3.7, 15.6, 51.0, 29.7, 12.6),
-    "bm25_rag_json": (19.9, 9.5, 9.8, 46.6, 34.9, 17.2),
-    "dense_rag_json": (20.3, 8.6, 11.0, 47.4, 47.5, 19.3),
-    "time_aware_rag_json": (18.6, 8.6, 10.2, 46.8, 33.5, 15.9),
-    "mempatch": (24.1, 7.2, 12.3, 56.4, 47.4, 21.2),
-    "scope_only": (17.6, 4.8, 36.4, 85.7, 0.0, 9.1),
+    "direct_json": (20.9, 7.2, 11.9, 47.7, 48.6),
+    "full_context_json": (20.9, 7.5, 12.0, 47.9, 48.5),
+    "summary_memory_json": (15.0, 3.7, 15.6, 51.0, 29.7),
+    "bm25_rag_json": (19.9, 9.5, 9.8, 46.6, 34.9),
+    "dense_rag_json": (20.3, 8.6, 11.0, 47.4, 47.5),
+    "time_aware_rag_json": (18.6, 8.6, 10.2, 46.8, 33.5),
+    "mempatch": (24.1, 7.2, 12.3, 56.4, 47.4),
+    "scope_only": (17.6, 4.8, 36.4, 85.7, 0.0),
 }
 
 EXPECTED_TRANSITION_JOINT_HITS = {
@@ -103,13 +103,12 @@ ROW_METRICS = (
     "contamination",
 )
 
-TABLE_METRICS = (
+PRIMARY_TABLE_METRICS = (
     "decision_macro_f1",
     "operation_macro_f1",
     "exact",
     "state",
     "evidence_f1",
-    "diagnosis",
 )
 
 
@@ -422,7 +421,8 @@ def build(artifact_root: Path, materialize: bool) -> dict[str, Any]:
             for metric in (*ROW_METRICS, "decision_macro_f1", "operation_macro_f1")
         }
         displayed[method] = [
-            round(100.0 * macro[method][metric], 1) for metric in TABLE_METRICS
+            round(100.0 * macro[method][metric], 1)
+            for metric in PRIMARY_TABLE_METRICS
         ]
         if tuple(displayed[method]) != PAPER_TABLE3[method]:
             raise RuntimeError(
@@ -456,7 +456,11 @@ def build(artifact_root: Path, materialize: bool) -> dict[str, Any]:
             "decision": decision_classes,
             "operation": operation_classes,
         },
-        "metric_order": list(TABLE_METRICS),
+        "metric_order": list(PRIMARY_TABLE_METRICS),
+        "auxiliary_diagnosis_percent": {
+            DISPLAY_NAMES[method]: round(100.0 * macro[method]["diagnosis"], 1)
+            for method in METHODS
+        },
         "diagnostic_metric_order": list(ROW_METRICS),
         "repair_counts": repair_counts,
         "prediction_sha256": prediction_hashes,

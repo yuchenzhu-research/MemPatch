@@ -8,20 +8,12 @@ version = "0.1.0"
 description = "MemPatch benchmark and rapid memory integration revision module."
 requires-python = ">=3.10"
 dependencies = [
-    "python-dotenv>=1.0,<2",
     "PyYAML>=6,<7",
 ]
 
 [project.optional-dependencies]
-dev = [
-    "matplotlib>=3.8",
-    "pytest>=8",
-]
 reporting = [
     "matplotlib>=3.8",
-]
-release = [
-    "huggingface_hub>=0.24",
 ]
 server = [
     "accelerate>=1.0",
@@ -30,23 +22,13 @@ server = [
     "torch>=2.4",
     "transformers>=4.51",
 ]
-llm = [
-    "openai>=1.0",
-    "anthropic>=0.25",
-    "google-genai>=1.0",
-]
 [project.scripts]
 MemPatch = "mempatch.benchmark.cli:main"
 
 [tool.setuptools.packages.find]
-where = [".", "src"]
-include = ["mempatch*", "tools*", "mempatch_bench*"]
-exclude = ["mempatch.tests*"]
+where = ["."]
+include = ["mempatch*", "tools*"]
 
 [tool.pyright]
-include = ["mempatch", "tools", "src"]
-extraPaths = [".", "src"]
-
-[tool.pytest.ini_options]
-pythonpath = ["."]
-testpaths = ["mempatch/tests", "tests"]
+include = ["mempatch", "tools"]
+extraPaths = ["."]

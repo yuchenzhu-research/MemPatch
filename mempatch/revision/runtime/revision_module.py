@@ -8,7 +8,6 @@ from mempatch.benchmark.public_view import public_scenario_view
 
 from mempatch.revision.runtime.benchmark_projection import project_to_benchmark_response
 from mempatch.revision.runtime.dpa_runtime import run_from_text
-from mempatch.revision.runtime.learned_proposer import TypedRevisionProposer
 from mempatch.revision.runtime.scenario_revision import build_scenario_revision_view
 
 
@@ -32,7 +31,6 @@ def run_revision_module_on_scenario(
     scenario: dict[str, Any],
     *,
     actions_text: str | None = None,
-    proposer: TypedRevisionProposer | None = None,
     raw_response: dict[str, Any] | None = None,
     fallback_answer: str = "",
     include_audit: bool = False,
@@ -40,10 +38,7 @@ def run_revision_module_on_scenario(
     """Run View Builder → Policy (actions) → DPA projection → benchmark response."""
     view = build_scenario_revision_view(scenario)
     public_view = public_scenario_view(scenario)
-    if proposer is not None:
-        proposal = proposer.propose(view, metadata={"scenario_id": scenario["scenario_id"]})
-        actions_text = proposal.raw_text
-    elif actions_text is None:
+    if actions_text is None:
         actions_text = _noop_actions_text(view.new_evidence.evidence_id)
 
     runtime_result = run_from_text(view, actions_text)

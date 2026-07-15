@@ -8,7 +8,6 @@ from pathlib import Path
 TOOLS_DIR = Path(__file__).resolve().parent
 REPO_ROOT = TOOLS_DIR.parent
 MEMPATCH_DIR = REPO_ROOT / "mempatch"
-SRC_DIR = REPO_ROOT / "src"
 
 
 def repo_root_for(caller: str | Path) -> Path:
@@ -24,7 +23,11 @@ def repo_root_for(caller: str | Path) -> Path:
 
 
 def bootstrap_from(caller: str | Path, *, src: bool = False) -> tuple[Path, Path]:
-    """Insert repo root, tools/, and optionally mempatch/src on sys.path."""
+    """Insert the repository paths needed by a tool CLI.
+
+    ``src`` is retained for compatibility with older callers; the project now
+    has one package root, so it only enables the local ``mempatch`` directory.
+    """
     repo = repo_root_for(caller)
     tools = repo / "tools"
     for entry in (repo, tools):
@@ -32,7 +35,7 @@ def bootstrap_from(caller: str | Path, *, src: bool = False) -> tuple[Path, Path
         if text not in sys.path:
             sys.path.insert(0, text)
     if src:
-        for subdir in (MEMPATCH_DIR, SRC_DIR):
+        for subdir in (MEMPATCH_DIR,):
             text = str(subdir)
             if subdir.exists() and text not in sys.path:
                 sys.path.insert(0, text)
