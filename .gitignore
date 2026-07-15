@@ -51,9 +51,8 @@ hf_token*
 *.sqlite
 *.jsonl.gz
 
-# JSONL is ignored by default; smoke fixtures are allowlisted.
+# Generated JSONL stays local by default.
 *.jsonl
-!mempatch/tests/**/*.jsonl
 
 # Archives and scratch PDFs are ignored by default.
 *.pdf

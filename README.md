@@ -75,6 +75,12 @@ Some provenance files retain aggregate-only `mempatch_noguard` diagnostics.
 They are not one of the seven paper interfaces, have no released bottom-up
 prediction set, and are not used for main-paper claims.
 
+All model runners now call the same case pipeline in `mempatch.evaluation`.
+That pipeline constructs method views, parses responses, runs typed revision,
+and applies the conservative Direct-or-projection branch. HF and Ollama supply
+only generation adapters, so a case produces one Direct response that is shared
+with MemPatch.
+
 ## Result Boundaries
 
 Headline quantitative results use the complete `main_test_synthetic` split.
@@ -98,39 +104,37 @@ python3 code/tools/reporting/rebuild_frozen_table3.py \
 
 The command verifies input hashes, prediction IDs and ordering, the
 Direct-versus-typed MemPatch branch, and the five-checkpoint macro displayed in
-Table 3. It does not run model inference.
+Table 3. The five main columns are Decision Macro-F1, Operation Macro-F1,
+State-map Exact Match, per-record State Accuracy, and Evidence F1; Diagnosis is
+retained only as an auxiliary diagnostic. It does not run model inference.
 
-## Quick Checks
-
-Install the development dependencies:
+## Minimal Use
 
 ```bash
-pip install -e ".[dev]"
+pip install -e .
+MemPatch generate-synthetic \
+  --config configs/benchmark/synthetic.yaml \
+  --output scratch/data/mempatch/synthetic/raw_internal
 ```
 
-Run the deterministic scorer and schema tests:
+For an optional server-model smoke run:
 
 ```bash
-python3 -m pytest \
-  mempatch/tests/test_benchmark_final_kernel.py \
-  mempatch/tests/test_benchmark_api_strict_response.py \
-  mempatch/tests/test_benchmark_response_projection.py \
-  mempatch/tests/test_schema_v1_contracts.py
+pip install -e ".[server]"
+bash tools/evaluation/run_paper_campaign.sh smoke qwen3_14b
 ```
 
 ## Repository Layout
 
-- `mempatch/`: the official `MemPatch` generation/export CLI, benchmark
-  contracts, response projection, and deterministic scoring.
 - `configs/`: benchmark generation and evaluation configuration.
-- `tools/data_release/`: public-release validation utilities.
-- `tools/evaluation/`: deterministic scoring and optional model-run utilities.
-- `tools/reporting/`: aggregate reporting and the frozen Table 3 rebuild.
-- `tests/` and `mempatch/tests/`: release-pipeline and benchmark-kernel tests.
-- `src/`: lightweight local runner utilities used by smoke scripts.
+- `mempatch/`: the only Python package: contracts, shared evaluation pipeline,
+  typed revision/DPA kernel, release logic, and deterministic scoring.
+- `tools/`: thin data-release, experiment-adapter, reporting, and source-mining
+  commands; model-specific code does not reimplement the benchmark pipeline.
 
-Local outputs such as `results/`, `runs/`, `scratch/`, datasets, model
-artifacts, and private notes are intentionally excluded from this repository.
+Commands may create `scratch/` as a disposable local workspace. It is output,
+not a pipeline module, and is excluded from Git together with `results/`,
+`runs/`, datasets, model artifacts, and private notes.
 
 Dataset artifacts are released under CC BY 4.0. Code and scorer utilities in
 this repository are released under the MIT License.
