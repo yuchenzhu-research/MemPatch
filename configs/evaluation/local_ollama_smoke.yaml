@@ -29,11 +29,11 @@ generation:
   top_p: 1
   seed: 42
   num_ctx: 8192
-  response_num_predict: 1024
-  action_num_predict: 768
+  response_num_predict: 512
+  action_num_predict: 384
   timeout_seconds: 240
   retries: 1
   retry_sleep_seconds: 3
   keep_alive: 5m
 
-retrieval_k: 8
+retrieval_k: 3

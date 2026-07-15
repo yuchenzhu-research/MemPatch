@@ -46,6 +46,9 @@ FINAL_SPLITS = (
 
 HEADLINE_SPLITS = (
     "main_test_synthetic",
+)
+
+AUXILIARY_SPLITS = (
     "challenge_test_hard",
 )
 

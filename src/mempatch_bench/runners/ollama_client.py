@@ -86,7 +86,7 @@ class OllamaClient:
         top_p: float = 1.0,
         seed: int | None = 42,
         num_ctx: int = 8192,
-        num_predict: int = 1024,
+        num_predict: int = 512,
         keep_alive: str = "5m",
     ) -> OllamaGeneration:
         options: dict[str, Any] = {

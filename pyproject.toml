@@ -35,13 +35,6 @@ llm = [
     "anthropic>=0.25",
     "google-genai>=1.0",
 ]
-mem0 = [
-    "mem0ai",
-    "chromadb",
-    "ollama",
-    "sentence-transformers>=3.0",
-]
-
 [project.scripts]
 MemPatch = "mempatch.benchmark.cli:main"
 

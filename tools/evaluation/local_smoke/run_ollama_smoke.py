@@ -187,12 +187,13 @@ def restore_action_array(text: str) -> str:
 
 def generation_kwargs(config: dict[str, Any], *, kind: str) -> dict[str, Any]:
     gen = config["generation"]
+    default_num_predict = 384 if kind == "action" else 512
     return {
         "temperature": float(gen.get("temperature", 0.0)),
         "top_p": float(gen.get("top_p", 1.0)),
         "seed": gen.get("seed", 42),
         "num_ctx": int(gen.get("num_ctx", 8192)),
-        "num_predict": int(gen.get("action_num_predict" if kind == "action" else "response_num_predict", 1024)),
+        "num_predict": int(gen.get("action_num_predict" if kind == "action" else "response_num_predict", default_num_predict)),
         "keep_alive": str(gen.get("keep_alive", "5m")),
     }
 
@@ -219,7 +220,7 @@ def run_direct(
     config: dict[str, Any],
 ) -> dict[str, Any]:
     public_view = public_scenario_view(scenario)
-    method_view = build_method_view("frozen_direct", public_view, int(config.get("retrieval_k", 8)))
+    method_view = build_method_view("frozen_direct", public_view, int(config.get("retrieval_k", 3)))
     generation = client.chat(model=model, prompt=build_benchmark_prompt(method_view), **generation_kwargs(config, kind="response"))
     response, parse_error = safe_response(generation.text)
     return {
@@ -247,7 +248,7 @@ def run_mempatch(
     config: dict[str, Any],
 ) -> dict[str, Any]:
     public_view = public_scenario_view(scenario)
-    direct_view = build_method_view("frozen_direct", public_view, int(config.get("retrieval_k", 8)))
+    direct_view = build_method_view("frozen_direct", public_view, int(config.get("retrieval_k", 3)))
     response_generation = client.chat(
         model=model,
         prompt=build_benchmark_prompt(direct_view),

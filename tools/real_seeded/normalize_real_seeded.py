@@ -226,7 +226,7 @@ def label_row(candidate: dict[str, Any]) -> dict[str, Any]:
         "evidence_span_hashes": evidence_hashes,
         "provenance_license_notes": candidate.get("license_provenance_note"),
         "adjudication_notes": candidate.get("adjudication_notes")
-        or ["Human-reviewed public evidence supports the normalized real-seeded label."],
+        or ["Manual acceptance review status was not supplied for this candidate."],
         "original_candidate_id": candidate.get("candidate_id"),
         "source_repo": repo,
         "source_urls": candidate.get("source_urls") or [],

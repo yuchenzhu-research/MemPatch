@@ -1,4 +1,10 @@
-"""Reference Transition Semantics: Normal-Form Evaluator."""
+"""Development-only normal-form evaluator.
+
+The frozen controlled release does not use this module to create labels.  Its
+authoritative labels are emitted from the fixed ``ScenarioSpec`` table in
+``mempatch.benchmark.generate``.  This evaluator is retained only for local
+consistency experiments and must not be presented as the release resolver.
+"""
 from __future__ import annotations
 
 import re
@@ -17,7 +23,7 @@ PRIORITY_TO_DECISION = {
 }
 
 def evaluate_normal_form(scenario: dict[str, Any]) -> dict[str, Any]:
-    """Evaluate a scenario via Reference Transition Semantics and yield its Normal Form."""
+    """Evaluate a scenario with the non-authoritative development semantics."""
     public_input = scenario.get("public_input", {})
     scenario_id = scenario.get("scenario_id", "")
     

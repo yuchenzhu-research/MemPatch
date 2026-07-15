@@ -69,3 +69,6 @@ hf_token*
 *.log
 *.out
 *.synctex.gz
+
+# Local paper-reading and reviewer logs
+paper_reading_logs/

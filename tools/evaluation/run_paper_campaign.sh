@@ -6,11 +6,9 @@ usage() {
 Usage:
   tools/evaluation/run_paper_campaign.sh smoke [model]
   tools/evaluation/run_paper_campaign.sh model <qwen3_14b|mistral_nemo_12b|phi4_14b|deepseek_r1_qwen_14b|glm4_9b|all>
-  tools/evaluation/run_paper_campaign.sh guard
-  tools/evaluation/run_paper_campaign.sh analyze
 
 Environment:
-  DATA=scratch/data/mempatch/final/raw_internal/main_test_synthetic.jsonl
+  DATA=scratch/data/mempatch/synthetic/raw_internal/main_test_synthetic.jsonl
   OUTPUT_ROOT=runs/eval_main
   LIMIT=3                         # useful for smoke
   QWEN3_MODEL_ID=/path/or/hub/id   # optional override
@@ -28,7 +26,7 @@ case "$cmd" in
     LIMIT="${LIMIT:-3}" OUTPUT_ROOT="${OUTPUT_ROOT:-runs/eval_smoke}" \
       bash tools/evaluation/server/run_all.sh "$model"
     python tools/evaluation/server/validate_run.py \
-      --data "${DATA:-scratch/data/mempatch/final/raw_internal/main_test_synthetic.jsonl}" \
+      --data "${DATA:-scratch/data/mempatch/synthetic/raw_internal/main_test_synthetic.jsonl}" \
       --run-dir "${OUTPUT_ROOT:-runs/eval_smoke}/$model" \
       --expected-cases "$LIMIT"
     ;;
@@ -43,9 +41,6 @@ case "$cmd" in
         exit 2
         ;;
     esac
-    ;;
-  guard|analyze)
-    bash tools/evaluation/server/run_all.sh "$cmd"
     ;;
   *)
     usage

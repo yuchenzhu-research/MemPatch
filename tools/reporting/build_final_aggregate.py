@@ -19,6 +19,7 @@ from typing import Any
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 from mempatch.benchmark.method_names import (  # noqa: E402
+    AUXILIARY_SPLITS,
     FINAL_METHODS,
     FINAL_MODELS,
     HEADLINE_SPLITS,
@@ -368,7 +369,7 @@ def parse_cell(value: str) -> tuple[str, str, str]:
 def expected_from_args(args: argparse.Namespace) -> set[tuple[str, str, str]]:
     models = tuple(args.expected_model or FINAL_MODELS)
     methods = tuple(normalize_method_name(method) for method in (args.expected_method or FINAL_METHODS))
-    splits = tuple(args.expected_split or HEADLINE_SPLITS)
+    splits = tuple(args.expected_split or (HEADLINE_SPLITS + AUXILIARY_SPLITS))
     return {(model, method, split) for model in models for method in methods for split in splits}
 
 
@@ -532,6 +533,7 @@ def build(args: argparse.Namespace) -> dict[str, Any]:
         "unexpected_cells": [f"{m}:{me}:{s}" for m, me, s in unexpected_cells],
         "missing_required_fields": missing_columns,
         "headline_splits": list(HEADLINE_SPLITS),
+        "auxiliary_splits": list(AUXILIARY_SPLITS),
         "headline_excludes_dev_calibration": True,
         "aggregate_exports": [name for name in OUTPUT_FILENAMES if name != "aggregate_status.json"],
         "memory_capabilities": list(MEMORY_CAPABILITIES),

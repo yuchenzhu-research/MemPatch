@@ -142,6 +142,8 @@ def test_dev_calibration_excluded_from_headline_outputs(tmp_path: Path) -> None:
     args.expected_split = ["main_test_synthetic", "dev_calibration"]
     status = build(args)
     assert status["status"] in {"complete", "partial"}
+    assert status["headline_splits"] == ["main_test_synthetic"]
+    assert status["auxiliary_splits"] == ["challenge_test_hard"]
     main = _read_csv(tmp_path / "aggregates" / "main_results.csv")
     assert main
     assert all(row["split"] == "main_test_synthetic" for row in main)

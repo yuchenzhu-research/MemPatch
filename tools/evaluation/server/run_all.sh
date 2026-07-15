@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-DATA="${DATA:-scratch/data/mempatch/final/raw_internal/main_test_synthetic.jsonl}"
+DATA="${DATA:-scratch/data/mempatch/synthetic/raw_internal/main_test_synthetic.jsonl}"
 OUTPUT_ROOT="${OUTPUT_ROOT:-runs/eval_main}"
 DTYPE="${DTYPE:-bfloat16}"
 LIMIT="${LIMIT:-}"
@@ -16,6 +16,10 @@ run_model() {
     --model-id "$model_id"
     --output-root "$OUTPUT_ROOT"
     --dtype "$DTYPE"
+    --seed 42
+    --retrieval-k 3
+    --response-tokens 512
+    --action-tokens 384
     --resume
   )
   if [[ -n "$LIMIT" ]]; then
@@ -45,23 +49,8 @@ case "${1:-}" in
       bash "$0" "$key"
     done
     ;;
-  analyze)
-    python tools/evaluation/server/analyze.py \
-      --data "$DATA" \
-      --runs-root "$OUTPUT_ROOT" \
-      --models qwen3_14b mistral_nemo_12b phi4_14b deepseek_r1_qwen_14b glm4_9b \
-      --output "$OUTPUT_ROOT/paper_results"
-    ;;
-  guard)
-    for key in qwen3_14b mistral_nemo_12b phi4_14b deepseek_r1_qwen_14b glm4_9b; do
-      python tools/evaluation/server/guard_stress.py \
-        --data "$DATA" \
-        --raw-cases "$OUTPUT_ROOT/$key/raw_cases.jsonl" \
-        --output "$OUTPUT_ROOT/$key/guard_stress.json"
-    done
-    ;;
   *)
-    echo "Usage: $0 {qwen3_14b|mistral_nemo_12b|phi4_14b|deepseek_r1_qwen_14b|glm4_9b|all|guard|analyze}" >&2
+    echo "Usage: $0 {qwen3_14b|mistral_nemo_12b|phi4_14b|deepseek_r1_qwen_14b|glm4_9b|all}" >&2
     exit 2
     ;;
 esac

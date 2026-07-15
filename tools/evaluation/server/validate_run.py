@@ -160,11 +160,11 @@ def main() -> None:
 
     # Read retrieval_k from the manifest.
     manifest_path = run_dir / "run_manifest.json"
-    retrieval_k = 8
+    retrieval_k = 3
     if manifest_path.exists():
         try:
             manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
-            retrieval_k = manifest.get("retrieval_k", 8)
+            retrieval_k = manifest.get("retrieval_k", 3)
         except Exception:
             pass
 

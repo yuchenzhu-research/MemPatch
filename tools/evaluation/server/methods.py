@@ -122,7 +122,7 @@ def full_context(view: dict[str, Any]) -> dict[str, Any]:
     )
 
 
-def lexical_rag(view: dict[str, Any], k: int = 8) -> dict[str, Any]:
+def lexical_rag(view: dict[str, Any], k: int = 3) -> dict[str, Any]:
     events = _events(view)
     k = _effective_retrieval_k(k, len(events))
     query_counts = Counter(_tokens(_query_text(view)))
@@ -143,7 +143,7 @@ def lexical_rag(view: dict[str, Any], k: int = 8) -> dict[str, Any]:
     )
 
 
-def dense_rag(view: dict[str, Any], k: int = 8) -> dict[str, Any]:
+def dense_rag(view: dict[str, Any], k: int = 3) -> dict[str, Any]:
     events = _events(view)
     k = _effective_retrieval_k(k, len(events))
     query_vector = _hash_embedding(_query_text(view))
@@ -161,7 +161,7 @@ def dense_rag(view: dict[str, Any], k: int = 8) -> dict[str, Any]:
     )
 
 
-def time_aware_rag(view: dict[str, Any], k: int = 8) -> dict[str, Any]:
+def time_aware_rag(view: dict[str, Any], k: int = 3) -> dict[str, Any]:
     events = _events(view)
     k = _effective_retrieval_k(k, len(events))
     query_counts = Counter(_tokens(_query_text(view)))

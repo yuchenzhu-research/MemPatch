@@ -116,8 +116,8 @@ def accepted_candidate(candidate: dict[str, Any]) -> dict[str, Any]:
             "candidate_memory_operations": operations,
             "accepted_at": utc_now(),
             "adjudication_notes": [
-                "Human-reviewed public evidence supports the normalized real-seeded label.",
-                "Audit passed with public/private separation and no blocking violations.",
+                "Passed automated structural screening; manual acceptance review is required before release.",
+                "Structural screening covers required fields, enums, public URLs, duplicates, and sensitive-content patterns.",
             ],
         }
     )
