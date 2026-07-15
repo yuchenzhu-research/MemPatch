@@ -1,41 +1,10 @@
-"""Revision Response Policy — MemPatch Revision Module Step 2.
-
-``r_raw ← πθ(V)``: given revision view ``V``, produce a raw benchmark-compatible
-revision response. Typed patch actions map to ``response.decision``,
-``response.memory_state``, ``response.evidence_event_ids``, and
-``response.failure_diagnosis`` after DPA-Consistent Projection (Step 4).
-
-* :class:`LearnedTypedRevisionProposer` wraps a text ``generate_fn`` and parses
-  its completion into validated actions via the shared fail-closed parser.
-* :class:`ScriptedProposer` replays a fixed action list (smoke test / oracle).
-
-Both return a :class:`ProposalOutput` carrying the raw completion, parse result,
-and validated actions for the runtime kernel and benchmark-grounded feedback.
-"""
+"""Prompt construction for the typed revision proposal."""
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass
-from typing import Any, Callable, Protocol
+from typing import Any
 
 from mempatch.dpa.methods.contracts import SharedCandidateView
-
-from mempatch.revision.schemas import RevisionAction
-from mempatch.revision.runtime.dpa_runtime import ParseResult, parse_actions
-
-GENERATE_FN = Callable[[str], str]
-
-
-class TypedRevisionProposer(Protocol):
-    policy_variant: str
-
-    def propose(
-        self,
-        view: SharedCandidateView,
-        *,
-        metadata: dict[str, Any] | None = None,
-    ) -> ProposalOutput:
-        ...
 
 
 CANONICAL_ACTION_HELP = (
@@ -48,20 +17,6 @@ CANONICAL_ACTION_HELP = (
     "- SUPERSEDES: target_belief_id + replacement_belief_id + evidence_ids\n"
     "- RELEASES: target_condition_id + evidence_ids\n"
 )
-
-
-@dataclass(frozen=True)
-class ProposalOutput:
-    raw_text: str
-    parse_result: ParseResult
-
-    @property
-    def actions(self) -> tuple[RevisionAction, ...]:
-        return self.parse_result.actions
-
-    @property
-    def parsing_valid(self) -> bool:
-        return self.parse_result.valid_json and self.parse_result.schema_valid
 
 
 def _view_payload(view: SharedCandidateView) -> dict[str, Any]:
@@ -129,62 +84,3 @@ def build_proposer_prompt(view: SharedCandidateView) -> str:
         "target_condition_id, replacement_belief_id, evidence_ids, rationale.\n\n"
         f"CONTEXT:\n{json.dumps(payload, ensure_ascii=False, indent=2)}\n\nACTIONS_JSON:"
     )
-
-
-def actions_to_json(actions: list[RevisionAction]) -> str:
-    """Render actions as the canonical JSON-array completion."""
-    return json.dumps([a.to_dict() for a in actions], ensure_ascii=False)
-
-
-class LearnedTypedRevisionProposer:
-    """Prompt a text model and parse its completion into typed actions."""
-
-    policy_variant = "learned_prompt"
-
-    def __init__(self, generate_fn: GENERATE_FN) -> None:
-        self._generate = generate_fn
-
-    def propose(
-        self,
-        view: SharedCandidateView,
-        *,
-        metadata: dict[str, Any] | None = None,
-    ) -> ProposalOutput:
-        prompt = build_proposer_prompt(view)
-        raw_text = self._generate(prompt)
-        return ProposalOutput(raw_text=raw_text, parse_result=parse_actions(raw_text))
-
-
-class ScriptedProposer:
-    """Replay a fixed list of actions (smoke test / oracle teacher forcing)."""
-
-    policy_variant = "scripted"
-
-    def __init__(self, actions: list[RevisionAction]) -> None:
-        self._actions = list(actions)
-
-    def propose(
-        self,
-        view: SharedCandidateView,
-        *,
-        metadata: dict[str, Any] | None = None,
-    ) -> ProposalOutput:
-        raw_text = actions_to_json(self._actions)
-        return ProposalOutput(raw_text=raw_text, parse_result=parse_actions(raw_text))
-
-
-class PromptProposer:
-    """Prompt-based proposer backed by a text ``generate_fn``."""
-
-    policy_variant = "prompt_proposer"
-
-    def __init__(self, generate_fn: GENERATE_FN) -> None:
-        self._proposer = LearnedTypedRevisionProposer(generate_fn)
-
-    def propose(
-        self,
-        view: SharedCandidateView,
-        *,
-        metadata: dict[str, Any] | None = None,
-    ) -> ProposalOutput:
-        return self._proposer.propose(view, metadata=metadata)

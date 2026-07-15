@@ -33,7 +33,11 @@ class OllamaClient:
         retries: int = 1,
         retry_sleep_seconds: float = 3.0,
     ) -> None:
-        self.base_url = (base_url or os.environ.get("OLLAMA_BASE_URL") or "http://localhost:11434").rstrip("/")
+        self.base_url = (
+            base_url
+            or os.environ.get("OLLAMA_BASE_URL")
+            or "http://localhost:11434"
+        ).rstrip("/")
         self.timeout_seconds = timeout_seconds
         self.retries = retries
         self.retry_sleep_seconds = retry_sleep_seconds
@@ -47,7 +51,10 @@ class OllamaClient:
             request = Request(
                 url,
                 data=data,
-                headers={"Content-Type": "application/json", "Accept": "application/json"},
+                headers={
+                    "Content-Type": "application/json",
+                    "Accept": "application/json",
+                },
                 method="POST",
             )
             try:
@@ -72,9 +79,18 @@ class OllamaClient:
         except Exception as exc:
             raise OllamaError(f"Ollama tags request failed: {exc}") from exc
 
-    def model_names(self) -> list[str]:
+    def model_inventory(self) -> dict[str, str]:
+        """Return installed model names and their immutable Ollama digests."""
         payload = self.tags()
-        return [str(row.get("name") or row.get("model")) for row in payload.get("models") or [] if row.get("name") or row.get("model")]
+        inventory: dict[str, str] = {}
+        for row in payload.get("models") or []:
+            name = str(row.get("name") or row.get("model") or "")
+            if name:
+                inventory[name] = str(row.get("digest") or "")
+        return inventory
+
+    def model_names(self) -> list[str]:
+        return list(self.model_inventory())
 
     def chat(
         self,
@@ -120,6 +136,9 @@ class OllamaClient:
 
     def unload(self, model: str) -> None:
         try:
-            self._post("/api/generate", {"model": model, "prompt": "", "stream": False, "keep_alive": 0})
+            self._post(
+                "/api/generate",
+                {"model": model, "prompt": "", "stream": False, "keep_alive": 0},
+            )
         except OllamaError:
             return

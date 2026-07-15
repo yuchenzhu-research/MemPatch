@@ -80,21 +80,6 @@ def _distractor_memory_ids(scenario_public_view: dict[str, Any] | None) -> set[s
     return ids
 
 
-def _condition_memory_ids(scenario_public_view: dict[str, Any] | None) -> set[str]:
-    """Heuristic for condition-rule memories used in release/restore scenarios."""
-    if not scenario_public_view:
-        return set()
-    ids: set[str] = set()
-    public_input = scenario_public_view.get("public_input") or {}
-    for memory in public_input.get("initial_memory") or public_input.get("initial_memories") or []:
-        if not isinstance(memory, dict) or not memory.get("memory_id"):
-            continue
-        text = _item_text(memory)
-        if text.startswith("Condition rule:"):
-            ids.add(str(memory["memory_id"]))
-    return ids
-
-
 def _dpa_status_to_benchmark(status: str) -> str:
     return BENCHMARK_STATUS_BY_DPA_STATUS.get(str(status), "unresolved")
 
@@ -299,6 +284,3 @@ def project_to_benchmark_response(
         ),
         "followup_answer": followup_answer,
     }
-
-
-ProjectToBenchmarkResponse = project_to_benchmark_response

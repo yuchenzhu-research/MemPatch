@@ -2,8 +2,8 @@
 
 Parses ``r_raw`` from the Revision Response Policy, routes through RevisionGate
 and ``authorize`` (DPA), and yields legal memory-state transitions ``T`` for
-``ProjectToBenchmarkResponse``. The model proposes; DPA authorizes; the
-benchmark evaluates the resulting ``memory_state``.
+benchmark projection. The model proposes; DPA authorizes; the benchmark
+evaluates the resulting ``memory_state``.
 
 This wraps the deterministic kernel (``mempatch.dpa.authorize``) with the
 MemPatch JSON parsing front-end. It is the program-only runtime that turns

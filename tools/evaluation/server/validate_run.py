@@ -16,15 +16,13 @@ from tools._root import bootstrap_from
 bootstrap_from(__file__)
 
 from mempatch.benchmark.api import evaluate_predictions, load_predictions, load_scenarios
-from mempatch.benchmark.contracts import validate_prediction
+from mempatch.benchmark.method_names import FINAL_METHODS, PAPER_METHODS
+from mempatch.benchmark.methods import build_method_view
 from mempatch.benchmark.public_view import public_scenario_view
+from mempatch.evaluation import repair_response
 
-try:
-    from .run_core import ALL_METHODS, BASELINE_METHODS
-    from .methods import build_method_view
-except ImportError:
-    from run_core import ALL_METHODS, BASELINE_METHODS
-    from methods import build_method_view
+ALL_METHODS = FINAL_METHODS
+BASELINE_METHODS = PAPER_METHODS[:-1]
 
 from mempatch.revision.runtime.dpa_runtime import run_from_text, parse_actions
 from mempatch.revision.runtime.scenario_revision import build_scenario_revision_view
@@ -48,12 +46,8 @@ def _classify_error(err: str) -> str:
     return "Other"
 
 
-def _valid_response(response: dict[str, Any] | None) -> bool:
-    return response is not None and not validate_prediction({"parsed": response})
-
-
 def _repair_response(direct_response: dict[str, Any], projected_response: dict[str, Any]) -> dict[str, Any]:
-    return direct_response if _valid_response(direct_response) else projected_response
+    return repair_response(direct_response, projected_response)[0]
 
 
 def _prediction(row: dict[str, Any], final_name: str, legacy_name: str | None = None) -> dict[str, Any]:
