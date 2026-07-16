@@ -118,9 +118,9 @@ The command verifies input hashes, prediction IDs and ordering, the
 Direct-versus-typed MemPatch branch, and the five-checkpoint macro displayed in
 Table 3. Its six main columns are Decision Macro-F1, Operation Macro-F1,
 State-map Exact Match, per-record State Accuracy, Evidence F1, and
-Transition-Joint; Diagnosis is retained only as an auxiliary diagnostic. The
-Scope-only row is a no-evidence control. The rebuild does not run model
-inference.
+Transition-Joint exact-hit count; Diagnosis is retained only as an auxiliary
+diagnostic. The Scope-only row is a no-evidence control. The rebuild does not
+run model inference.
 
 The former general reporting script was retired because it maintained a second,
 incompatible metric implementation. Use `MemPatch aggregate` for ordinary
