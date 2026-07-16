@@ -31,6 +31,12 @@ generalization. The source-backed artifact retains 184 of 300 mined public
 GitHub candidates after automated structural screening and manual acceptance
 review.
 
+The frozen controlled public rows retain the historical schema tag
+`mempatch_bench_v1.4`, while newly exported rows use
+`mempatch_bench_final`. Both tags identify the same core fields and are accepted
+by the release validators; v1.4 marks the auxiliary `followup_answer` required,
+whereas new exports mark it optional. Frozen rows are not rewritten.
+
 ## Core Contract
 
 A prediction row contains one response object with:
@@ -49,10 +55,16 @@ A prediction row contains one response object with:
 }
 ```
 
-The scorer checks schema validity, decision correctness, memory operation
-correctness, exact state-map match, memory-state accuracy, evidence F1, failure
-diagnosis, follow-up correctness, unsafe reuse, downstream contamination, and
-strict joint success.
+The paper-facing scorer reports Decision and Operation Macro-F1, exact
+state-map match, per-record state accuracy, Evidence F1, and Transition-Joint.
+Transition-Joint requires the decision, operation, complete state map, and
+evidence set to agree on the same case. Schema, diagnosis, follow-up, unsafe
+reuse, and downstream contamination remain auxiliary diagnostics.
+
+The public API accepts five decisions, ten operations, and eight states. The
+frozen controlled gold observes four, nine, and seven respectively; those
+observed cardinalities describe that split rather than narrowing the compatible
+API taxonomy.
 
 ## Main Methods
 
@@ -94,7 +106,7 @@ hazard reports use a different counting convention.
 ## Reproduce the Frozen Main Table
 
 The AAAI code-and-data archive contains the frozen controlled input, labels,
-all 5 x 7 main prediction cells, aggregate CSVs, and the no-inference rebuild
+all 5 x 7 main prediction cells, aggregate CSVs, and the deterministic rebuild
 script. From the cleanly extracted `artifacts/` directory, run:
 
 ```bash
@@ -104,9 +116,15 @@ python3 code/tools/reporting/rebuild_frozen_table3.py \
 
 The command verifies input hashes, prediction IDs and ordering, the
 Direct-versus-typed MemPatch branch, and the five-checkpoint macro displayed in
-Table 3. The five main columns are Decision Macro-F1, Operation Macro-F1,
-State-map Exact Match, per-record State Accuracy, and Evidence F1; Diagnosis is
-retained only as an auxiliary diagnostic. It does not run model inference.
+Table 3. Its six main columns are Decision Macro-F1, Operation Macro-F1,
+State-map Exact Match, per-record State Accuracy, Evidence F1, and
+Transition-Joint; Diagnosis is retained only as an auxiliary diagnostic. The
+Scope-only row is a no-evidence control. The rebuild does not run model
+inference.
+
+The former general reporting script was retired because it maintained a second,
+incompatible metric implementation. Use `MemPatch aggregate` for ordinary
+score rows and the frozen rebuild above for paper values.
 
 ## Minimal Use
 

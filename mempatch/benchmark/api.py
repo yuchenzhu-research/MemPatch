@@ -1,8 +1,8 @@
 """Official public scoring API for MemPatch-Bench.
 
 Stable entrypoint for evaluating benchmark-compatible ``response`` predictions
-against ``hidden_gold``. Wraps :mod:`mempatch.benchmark.scorers_general`
-with prediction loading, normalization, validation, and aggregate metrics.
+against ``hidden_gold``. Core control metrics delegate to
+:mod:`mempatch.benchmark.score`; free-text and safety signals remain auxiliary.
 
 Typical usage::
 
@@ -24,6 +24,7 @@ import json
 from pathlib import Path
 from typing import Any
 
+from mempatch.benchmark.contracts import RESPONSE_FIELDS
 from mempatch.benchmark.general_taxonomy import (
     DECISIONS,
     FAILURE_MODES,
@@ -32,11 +33,11 @@ from mempatch.benchmark.general_taxonomy import (
 )
 from mempatch.benchmark.scorers_general import (
     AUXILIARY_METRICS,
-    HEADLINE_METRICS,
-    aggregate_metrics,
+    aggregate_metrics as aggregate_auxiliary_metrics,
     normalize_failure_mode,
     score_prediction,
 )
+from mempatch.benchmark.score import HEADLINE_METRICS, aggregate_scores, score_row
 
 __all__ = [
     "load_scenarios",
@@ -53,31 +54,10 @@ __all__ = [
 
 SCENARIO_JSONL_NAME = "scenarios.jsonl"
 
-# Fields that make up a canonical prediction ``response`` object. In strict
-# evaluation every field is required so models cannot score through hidden-gold
-# shaped fallbacks or partial response objects.
-RESPONSE_FIELDS = (
-    "answer",
-    "decision",
-    "memory_operation",
-    "memory_state",
-    "evidence_event_ids",
-    "failure_diagnosis",
-    "followup_answer",
-)
-
-REQUIRED_RESPONSE_FIELDS = (
-    "answer",
-    "decision",
-    "memory_state",
-    "evidence_event_ids",
-    "failure_diagnosis",
-)
-
 
 def _normalize_response_object(response: dict[str, Any]) -> dict[str, Any]:
     normalized = dict(response)
-    for key in ("decision", "failure_diagnosis"):
+    for key in ("decision", "memory_operation", "failure_diagnosis"):
         value = normalized.get(key)
         if isinstance(value, (list, tuple)) and len(value) == 1:
             normalized[key] = value[0]
@@ -197,7 +177,9 @@ def _validate_response(
         )
 
     operation = response.get("memory_operation")
-    if operation is not None and (not is_hashable(operation) or operation not in MEMORY_OPERATIONS):
+    if operation is None:
+        errors.append(f"{scenario_id}: missing response field 'memory_operation'")
+    elif not is_hashable(operation) or operation not in MEMORY_OPERATIONS:
         errors.append(
             f"{scenario_id}: invalid memory_operation label {operation!r} "
             f"(expected one of {sorted(MEMORY_OPERATIONS)})"
@@ -324,6 +306,7 @@ def evaluate_predictions(
 
     # Validate + build scorable rows.
     scored_rows: list[dict[str, Any]] = []
+    paper_score_rows: list[dict[str, Any]] = []
     for sid, scenario in scenario_by_id.items():
         norm = normalized_by_id.get(sid)
         if norm is None:
@@ -360,6 +343,19 @@ def evaluate_predictions(
         }
         row["metrics"] = score_prediction(scenario, row)
         row["metrics"]["response_schema_compliance_rate"] = float(len(row_errors) == 0)
+        label = {
+            **gold,
+            "scenario_id": sid,
+            "split": scenario.get("public_split_name") or scenario.get("split"),
+            "expected_memory_states": (
+                gold.get("expected_memory_states")
+                or gold.get("expected_memory_state")
+                or {}
+            ),
+        }
+        paper_score = score_row(label, {"scenario_id": sid, "response": response})
+        row["paper_metrics"] = paper_score
+        paper_score_rows.append(paper_score)
         scored_rows.append(row)
 
     if strict and errors:
@@ -368,12 +364,21 @@ def evaluate_predictions(
             f"{len(errors)} error(s) in strict mode:\n  - " + "\n  - ".join(errors)
         )
 
-    aggregate = aggregate_metrics(scored_rows)
+    auxiliary_aggregate = aggregate_auxiliary_metrics(scored_rows)
+    paper_aggregate = aggregate_scores(paper_score_rows)
+    paper_metrics = paper_aggregate[0] if paper_aggregate else {}
+    headline_metrics = {
+        metric: paper_metrics.get(metric, 0.0)
+        for metric in HEADLINE_METRICS
+    }
+    auxiliary_metrics = auxiliary_aggregate["auxiliary_metrics"]
+    all_metrics = dict(auxiliary_aggregate["all_metrics"])
+    all_metrics.update(headline_metrics)
     return {
-        "count": aggregate["count"],
-        "headline_metrics": aggregate["headline_metrics"],
-        "auxiliary_metrics": aggregate["auxiliary_metrics"],
-        "all_metrics": aggregate["all_metrics"],
+        "count": len(scored_rows),
+        "headline_metrics": headline_metrics,
+        "auxiliary_metrics": auxiliary_metrics,
+        "all_metrics": all_metrics,
         "warnings": warnings,
         "errors": errors,
         "missing_prediction_count": len(missing_predictions),

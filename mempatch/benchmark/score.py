@@ -1,4 +1,9 @@
-"""Deterministic final scoring and aggregation."""
+"""Paper-authoritative deterministic scoring and aggregation.
+
+The core contract is decision, operation, complete original-ID state map, and
+minimal evidence.  Answer, diagnosis, follow-up, and safety checks remain
+auxiliary diagnostics and never enter ``transition_joint``.
+"""
 
 from __future__ import annotations
 
@@ -6,6 +11,17 @@ from collections import defaultdict
 from typing import Any
 
 from mempatch.benchmark.contracts import normalize_prediction, state_list_to_map, validate_prediction
+
+
+PRIMARY_MARGINAL_METRICS = (
+    "decision_macro_f1",
+    "operation_macro_f1",
+    "exact_state_map",
+    "memory_state_accuracy",
+    "evidence_f1",
+)
+JOINT_DIAGNOSTIC = "transition_joint"
+HEADLINE_METRICS = PRIMARY_MARGINAL_METRICS + (JOINT_DIAGNOSTIC,)
 
 
 def _set_f1(predicted: list[Any], expected: list[Any]) -> tuple[float, float, float]:
@@ -19,6 +35,28 @@ def _set_f1(predicted: list[Any], expected: list[Any]) -> tuple[float, float, fl
     recall = len(pred & exp) / len(exp) if exp else 0.0
     f1 = 0.0 if precision + recall == 0 else 2 * precision * recall / (precision + recall)
     return precision, recall, f1
+
+
+def macro_f1(expected: list[Any], predicted: list[Any]) -> float:
+    """Return standard macro-F1 over classes observed in gold labels."""
+    if len(expected) != len(predicted):
+        raise ValueError("macro-F1 inputs must have the same length")
+    classes = sorted(set(expected), key=str)
+    if not classes:
+        return 0.0
+    class_f1: list[float] = []
+    for cls in classes:
+        tp = sum(pred == cls and gold == cls for gold, pred in zip(expected, predicted))
+        fp = sum(pred == cls and gold != cls for gold, pred in zip(expected, predicted))
+        fn = sum(pred != cls and gold == cls for gold, pred in zip(expected, predicted))
+        precision = tp / (tp + fp) if tp + fp else 0.0
+        recall = tp / (tp + fn) if tp + fn else 0.0
+        class_f1.append(
+            2 * precision * recall / (precision + recall)
+            if precision + recall
+            else 0.0
+        )
+    return sum(class_f1) / len(class_f1)
 
 
 def _norm_text(value: Any) -> str:
@@ -76,13 +114,16 @@ def score_row(label: dict[str, Any], prediction_row: dict[str, Any]) -> dict[str
     decision_correct = parsed.get("decision") == label.get("expected_decision")
     exact_state_map = predicted_state == expected_state
     diagnosis_correct = parsed.get("failure_diagnosis") == label.get("expected_failure_diagnosis")
-    strict_joint = (
-        not errors
-        and decision_correct
+    transition_joint = (
+        decision_correct
         and exact_state_map
         and evidence_f1 == 1.0
-        and diagnosis_correct
         and memory_operation_correct
+    )
+    legacy_strict_joint = (
+        not errors
+        and transition_joint
+        and diagnosis_correct
         and followup_answer_correct
         and not unsafe_reuse
         and not downstream_contamination
@@ -100,9 +141,11 @@ def score_row(label: dict[str, Any], prediction_row: dict[str, Any]) -> dict[str
         "schema_errors": errors,
         "decision_correct": decision_correct,
         "decision_f1_class": label.get("expected_decision"),
+        "predicted_decision": parsed.get("decision"),
         "memory_operation_present": memory_operation_present,
         "memory_operation_correct": memory_operation_correct,
         "memory_operation_f1_class": expected_operation,
+        "predicted_memory_operation": predicted_operation,
         "exact_state_map": exact_state_map,
         "memory_state_accuracy": 1.0 if state_total == 0 else state_correct / state_total,
         "evidence_precision": evidence_precision,
@@ -111,7 +154,8 @@ def score_row(label: dict[str, Any], prediction_row: dict[str, Any]) -> dict[str
         "diagnosis_correct": diagnosis_correct,
         "followup_answer_present": followup_answer_present,
         "followup_answer_correct": followup_answer_correct,
-        "strict_joint": strict_joint,
+        "transition_joint": transition_joint,
+        "legacy_strict_joint": legacy_strict_joint,
         "unsafe_reuse": unsafe_reuse,
         "downstream_contamination": downstream_contamination,
     }
@@ -129,7 +173,8 @@ def aggregate_scores(rows: list[dict[str, Any]], group_by: list[str] | None = No
         "diagnosis_correct",
         "followup_answer_present",
         "followup_answer_correct",
-        "strict_joint",
+        "transition_joint",
+        "legacy_strict_joint",
         "unsafe_reuse",
         "downstream_contamination",
     )
@@ -146,5 +191,13 @@ def aggregate_scores(rows: list[dict[str, Any]], group_by: list[str] | None = No
             item[field] = value
         for field in fields:
             item[field] = sum(float(row.get(field, 0.0)) for row in bucket) / len(bucket)
+        item["decision_macro_f1"] = macro_f1(
+            [row.get("decision_f1_class") for row in bucket],
+            [row.get("predicted_decision") for row in bucket],
+        )
+        item["operation_macro_f1"] = macro_f1(
+            [row.get("memory_operation_f1_class") for row in bucket],
+            [row.get("predicted_memory_operation") for row in bucket],
+        )
         out.append(item)
     return out

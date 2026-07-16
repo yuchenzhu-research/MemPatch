@@ -16,7 +16,6 @@ from tools._root import bootstrap_from
 bootstrap_from(__file__)
 
 from mempatch.benchmark.general_taxonomy import (
-    BENCH_SCHEMA_VERSION,
     DECISIONS,
     DIFFICULTIES,
     DOMAINS,
@@ -30,6 +29,7 @@ from mempatch.benchmark.general_taxonomy import (
     normalize_difficulty,
 )
 from mempatch.benchmark.leakage import audit_public_rows
+from mempatch.benchmark.schema import SUPPORTED_PUBLIC_SCHEMA_VERSIONS
 
 
 def read_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -229,9 +229,10 @@ def validate_one(
 
     if packaging_final:
         schema_version = scenario.get("schema_version") or (scenario.get("metadata") or {}).get("schema_version")
-        if schema_version != BENCH_SCHEMA_VERSION:
+        if schema_version not in SUPPORTED_PUBLIC_SCHEMA_VERSIONS:
             errors.append(
-                f"{sid}: schema_version {schema_version!r} != {BENCH_SCHEMA_VERSION!r}"
+                f"{sid}: unsupported release schema_version {schema_version!r}; "
+                f"expected one of {sorted(SUPPORTED_PUBLIC_SCHEMA_VERSIONS)!r}"
             )
 
     return errors, warnings

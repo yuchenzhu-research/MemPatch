@@ -15,6 +15,13 @@ from urllib.parse import urlparse
 
 import yaml
 
+from mempatch.benchmark.general_taxonomy import (
+    DECISIONS,
+    FAILURE_MODES,
+    MEMORY_OPERATIONS,
+    MEMORY_STATUSES,
+)
+
 GITHUB_API = "https://api.github.com"
 GITHUB_WEB = "https://github.com"
 
@@ -101,51 +108,10 @@ OPERATIONS_BY_GROUP = {
     "platform": ["RESTRICT_SCOPE", "MARK_UNRESOLVED"],
 }
 
-VALID_DECISIONS = {
-    "use_current_memory",
-    "escalate",
-    "ask_clarification",
-    "refuse_due_to_policy",
-    "mark_unresolved",
-}
-
-VALID_OPERATIONS = {
-    "PRESERVE",
-    "REVISE",
-    "RESTRICT_SCOPE",
-    "BLOCK",
-    "MARK_UNRESOLVED",
-    "DELETE_OR_FORGET",
-    "RESTORE_OR_RELEASE",
-    "REJECT_NEW_MEMORY",
-    "NO_WRITE",
-    "ESCALATE",
-}
-
-VALID_STATUSES = {
-    "current",
-    "blocked",
-    "unresolved",
-    "out_of_scope",
-    "should_not_store",
-    "outdated",
-    "deleted",
-    "restored",
-}
-
-VALID_FAILURE_MODES = {
-    "stale_memory_reuse",
-    "under_update",
-    "over_update",
-    "conflict_collapse",
-    "scope_leakage",
-    "policy_violation",
-    "wrong_source_attribution",
-    "memory_hallucination",
-    "unnecessary_memory_write",
-    "failure_to_forget",
-    "failure_to_release_or_restore",
-}
+VALID_DECISIONS = set(DECISIONS)
+VALID_OPERATIONS = set(MEMORY_OPERATIONS)
+VALID_STATUSES = set(MEMORY_STATUSES)
+VALID_FAILURE_MODES = set(FAILURE_MODES)
 
 
 class PipelineError(RuntimeError):

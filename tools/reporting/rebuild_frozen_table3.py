@@ -29,7 +29,7 @@ from mempatch.benchmark.api import (  # noqa: E402
     _validate_response,
 )
 from mempatch.benchmark.contracts import validate_prediction  # noqa: E402
-from mempatch.benchmark.score import score_row  # noqa: E402
+from mempatch.benchmark.score import macro_f1, score_row  # noqa: E402
 from mempatch.benchmark.scorers_general import score_prediction  # noqa: E402
 
 
@@ -70,14 +70,14 @@ DISPLAY_NAMES = {
 }
 
 PAPER_TABLE3 = {
-    "direct_json": (20.9, 7.2, 11.9, 47.7, 48.6),
-    "full_context_json": (20.9, 7.5, 12.0, 47.9, 48.5),
-    "summary_memory_json": (15.0, 3.7, 15.6, 51.0, 29.7),
-    "bm25_rag_json": (19.9, 9.5, 9.8, 46.6, 34.9),
-    "dense_rag_json": (20.3, 8.6, 11.0, 47.4, 47.5),
-    "time_aware_rag_json": (18.6, 8.6, 10.2, 46.8, 33.5),
-    "mempatch": (24.1, 7.2, 12.3, 56.4, 47.4),
-    "scope_only": (17.6, 4.8, 36.4, 85.7, 0.0),
+    "direct_json": (20.9, 7.2, 11.9, 47.7, 48.6, 0),
+    "full_context_json": (20.9, 7.5, 12.0, 47.9, 48.5, 0),
+    "summary_memory_json": (15.0, 3.7, 15.6, 51.0, 29.7, 0),
+    "bm25_rag_json": (19.9, 9.5, 9.8, 46.6, 34.9, 5),
+    "dense_rag_json": (20.3, 8.6, 11.0, 47.4, 47.5, 25),
+    "time_aware_rag_json": (18.6, 8.6, 10.2, 46.8, 33.5, 10),
+    "mempatch": (24.1, 7.2, 12.3, 56.4, 47.4, 0),
+    "scope_only": (17.6, 4.8, 36.4, 85.7, 0.0, 0),
 }
 
 EXPECTED_TRANSITION_JOINT_HITS = {
@@ -103,7 +103,7 @@ ROW_METRICS = (
     "contamination",
 )
 
-PRIMARY_TABLE_METRICS = (
+PRIMARY_MARGINAL_METRICS = (
     "decision_macro_f1",
     "operation_macro_f1",
     "exact",
@@ -216,35 +216,13 @@ def scope_only_predictions(
     return rows
 
 
-def macro_f1(expected: list[Any], predicted: list[Any]) -> float:
-    """Return standard macro-F1 over classes observed in frozen gold labels."""
-    if len(expected) != len(predicted):
-        raise ValueError("macro-F1 inputs must have the same length")
-    classes = sorted(set(expected), key=str)
-    if not classes:
-        return 0.0
-    class_f1: list[float] = []
-    for cls in classes:
-        tp = sum(p == cls and y == cls for y, p in zip(expected, predicted))
-        fp = sum(p == cls and y != cls for y, p in zip(expected, predicted))
-        fn = sum(p != cls and y == cls for y, p in zip(expected, predicted))
-        precision = tp / (tp + fp) if tp + fp else 0.0
-        recall = tp / (tp + fn) if tp + fn else 0.0
-        class_f1.append(
-            2 * precision * recall / (precision + recall)
-            if precision + recall
-            else 0.0
-        )
-    return sum(class_f1) / len(class_f1)
-
-
 def row_metrics(
     scenario: dict[str, Any],
     label: dict[str, Any],
     prediction: dict[str, Any],
 ) -> dict[str, float]:
     label_metrics = score_row(label, prediction)
-    deployment_metrics = score_prediction(scenario, prediction)
+    auxiliary_metrics = score_prediction(scenario, prediction)
     response = prediction.get("response")
     return {
         # This is deliberately the same scenario-aware diagnostic for every
@@ -257,16 +235,8 @@ def row_metrics(
         "state": float(label_metrics["memory_state_accuracy"]),
         "evidence_f1": float(label_metrics["evidence_f1"]),
         "diagnosis": float(label_metrics["diagnosis_correct"]),
-        # Same-case exact control transition. This is narrower than the legacy
-        # strict_joint diagnostic, which also requires schema, diagnosis,
-        # follow-up correctness, and two unsafe-reuse checks.
-        "transition_joint": float(
-            label_metrics["decision_correct"]
-            and label_metrics["memory_operation_correct"]
-            and label_metrics["exact_state_map"]
-            and label_metrics["evidence_f1"] == 1.0
-        ),
-        "contamination": float(deployment_metrics["downstream_contamination_rate"]),
+        "transition_joint": float(label_metrics["transition_joint"]),
+        "contamination": float(auxiliary_metrics["downstream_contamination_rate"]),
     }
 
 
@@ -300,6 +270,14 @@ def build(artifact_root: Path, materialize: bool) -> dict[str, Any]:
     operation_classes = sorted(
         {row.get("expected_memory_operation") for row in labels}
     )
+    state_classes = sorted(
+        {
+            state.get("status")
+            for row in labels
+            for state in row.get("expected_memory_states") or []
+            if isinstance(state, dict)
+        }
+    )
     if len(decision_classes) != 4 or None in decision_classes:
         raise RuntimeError(
             f"frozen main split must contain four decision classes: {decision_classes}"
@@ -307,6 +285,10 @@ def build(artifact_root: Path, materialize: bool) -> dict[str, Any]:
     if len(operation_classes) != 9 or None in operation_classes:
         raise RuntimeError(
             f"frozen main split must contain nine operation classes: {operation_classes}"
+        )
+    if len(state_classes) != 7 or None in state_classes:
+        raise RuntimeError(
+            f"frozen main split must contain seven state classes: {state_classes}"
         )
 
     per_model: dict[str, dict[str, dict[str, float]]] = defaultdict(dict)
@@ -414,7 +396,7 @@ def build(artifact_root: Path, materialize: bool) -> dict[str, Any]:
                     )
 
     macro: dict[str, dict[str, float]] = {}
-    displayed: dict[str, list[float]] = {}
+    displayed: dict[str, list[float | int]] = {}
     for method in METHODS:
         macro[method] = {
             metric: mean(per_model[model][method][metric] for model in MODELS)
@@ -422,8 +404,8 @@ def build(artifact_root: Path, materialize: bool) -> dict[str, Any]:
         }
         displayed[method] = [
             round(100.0 * macro[method][metric], 1)
-            for metric in PRIMARY_TABLE_METRICS
-        ]
+            for metric in PRIMARY_MARGINAL_METRICS
+        ] + [sum(transition_joint_hits[model][method] for model in MODELS)]
         if tuple(displayed[method]) != PAPER_TABLE3[method]:
             raise RuntimeError(
                 f"{method}: rebuilt display {displayed[method]} != paper {PAPER_TABLE3[method]}"
@@ -455,8 +437,14 @@ def build(artifact_root: Path, materialize: bool) -> dict[str, Any]:
         "classification_labels": {
             "decision": decision_classes,
             "operation": operation_classes,
+            "state": state_classes,
         },
-        "metric_order": list(PRIMARY_TABLE_METRICS),
+        # Kept for consumers of the earlier five-marginal rebuild format.
+        "metric_order": list(PRIMARY_MARGINAL_METRICS),
+        "table3_column_order": [
+            *PRIMARY_MARGINAL_METRICS,
+            "transition_joint_hits",
+        ],
         "auxiliary_diagnosis_percent": {
             DISPLAY_NAMES[method]: round(100.0 * macro[method]["diagnosis"], 1)
             for method in METHODS
@@ -483,7 +471,7 @@ def build(artifact_root: Path, materialize: bool) -> dict[str, Any]:
         },
         "transition_joint": {
             "definition": "decision exact AND operation exact AND complete state map exact AND evidence-id set exact",
-            "note": "supplementary sparse diagnostic; distinct from legacy strict_joint",
+            "note": "same-case diagnostic included in Table 3; distinct from legacy strict_joint",
             "by_method": {
                 DISPLAY_NAMES[method]: transition_joint_summary[method]
                 for method in METHODS
@@ -492,6 +480,9 @@ def build(artifact_root: Path, materialize: bool) -> dict[str, Any]:
         "per_model": per_model,
         "macro": macro,
         "displayed_percent": {
+            DISPLAY_NAMES[method]: displayed[method][:-1] for method in METHODS
+        },
+        "displayed_table3": {
             DISPLAY_NAMES[method]: displayed[method] for method in METHODS
         },
     }

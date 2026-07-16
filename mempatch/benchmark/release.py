@@ -8,7 +8,11 @@ import math
 from pathlib import Path
 from typing import Any
 
-from mempatch.benchmark.contracts import state_map_to_list
+from mempatch.benchmark.contracts import (
+    OPTIONAL_RESPONSE_FIELDS,
+    REQUIRED_RESPONSE_FIELDS,
+    state_map_to_list,
+)
 from mempatch.benchmark.leakage import audit_public_rows, sanitize_public_value
 
 TASK_KEYS = (
@@ -162,15 +166,8 @@ def public_row(raw: dict[str, Any]) -> dict[str, Any]:
         "tasks": tasks,
         "output_contract": {
             "format": "json",
-            "required_fields": [
-                "answer",
-                "decision",
-                "memory_operation",
-                "memory_state",
-                "evidence_event_ids",
-                "failure_diagnosis",
-                "followup_answer",
-            ],
+            "required_fields": list(REQUIRED_RESPONSE_FIELDS),
+            "optional_fields": list(OPTIONAL_RESPONSE_FIELDS),
         },
     }
 

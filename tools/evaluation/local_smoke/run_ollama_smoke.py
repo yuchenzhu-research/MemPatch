@@ -362,7 +362,7 @@ def aggregate(score_rows: list[dict[str, Any]]) -> dict[str, Any]:
             "decision_accuracy": 0.0,
             "evidence_f1": 0.0,
             "diagnosis_accuracy": 0.0,
-            "strict_joint": 0.0,
+            "transition_joint": 0.0,
             "unsafe_reuse_rate": 0.0,
             "parse_failure_rate": 0.0,
         }
@@ -374,7 +374,7 @@ def aggregate(score_rows: list[dict[str, Any]]) -> dict[str, Any]:
         "decision_accuracy": sum(bool(r.get("decision_correct")) for r in score_rows) / n,
         "evidence_f1": sum(float(r.get("evidence_f1") or 0.0) for r in score_rows) / n,
         "diagnosis_accuracy": sum(bool(r.get("diagnosis_correct")) for r in score_rows) / n,
-        "strict_joint": sum(bool(r.get("strict_joint")) for r in score_rows) / n,
+        "transition_joint": sum(bool(r.get("transition_joint")) for r in score_rows) / n,
         "unsafe_reuse_rate": sum(bool(r.get("unsafe_reuse")) for r in score_rows) / n,
         "parse_failure_rate": sum(bool(r.get("parse_failure")) for r in score_rows) / n,
     }
@@ -443,14 +443,14 @@ def write_report(
         "",
         "## Aggregate Metrics",
         "",
-        "| model | method | split | n | schema_valid_rate | exact_state_map | contract_valid_state_success | decision_accuracy | evidence_f1 | diagnosis_accuracy | strict_joint | unsafe_reuse_rate | parse_failure_rate |",
+        "| model | method | split | n | schema_valid_rate | exact_state_map | contract_valid_state_success | decision_accuracy | evidence_f1 | diagnosis_accuracy | transition_joint | unsafe_reuse_rate | parse_failure_rate |",
         "|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|",
     ]
     for row in aggregate_rows:
         lines.append(
             "| {model} | {method} | {split} | {n} | {schema_valid_rate:.3f} | {exact_state_map:.3f} | "
             "{contract_valid_state_success:.3f} | {decision_accuracy:.3f} | {evidence_f1:.3f} | "
-            "{diagnosis_accuracy:.3f} | {strict_joint:.3f} | {unsafe_reuse_rate:.3f} | {parse_failure_rate:.3f} |".format(**row)
+            "{diagnosis_accuracy:.3f} | {transition_joint:.3f} | {unsafe_reuse_rate:.3f} | {parse_failure_rate:.3f} |".format(**row)
         )
     lines.extend(["", "## Parse Failure Examples", ""])
     failures = prediction_examples(all_predictions, failures=True)

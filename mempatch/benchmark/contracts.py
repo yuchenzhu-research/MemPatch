@@ -9,62 +9,23 @@ from __future__ import annotations
 
 from typing import Any
 
-DECISIONS = {
-    "use_current_memory",
-    "escalate",
-    "ask_clarification",
-    "refuse_due_to_policy",
-    "mark_unresolved",
-}
-
-MEMORY_OPERATIONS = {
-    "PRESERVE",
-    "REVISE",
-    "RESTRICT_SCOPE",
-    "BLOCK",
-    "MARK_UNRESOLVED",
-    "DELETE_OR_FORGET",
-    "RESTORE_OR_RELEASE",
-    "REJECT_NEW_MEMORY",
-    "NO_WRITE",
-    "ESCALATE",
-}
-
-MEMORY_STATUSES = {
-    "current",
-    "blocked",
-    "unresolved",
-    "out_of_scope",
-    "should_not_store",
-    "outdated",
-    "deleted",
-    "restored",
-}
-
-FAILURE_MODES = {
-    "stale_memory_reuse",
-    "under_update",
-    "over_update",
-    "conflict_collapse",
-    "scope_leakage",
-    "policy_violation",
-    "wrong_source_attribution",
-    "memory_hallucination",
-    "unnecessary_memory_write",
-    "failure_to_forget",
-    "failure_to_release_or_restore",
-}
+from mempatch.benchmark.general_taxonomy import (
+    DECISIONS,
+    FAILURE_MODES,
+    MEMORY_OPERATIONS,
+    MEMORY_STATUSES,
+)
 
 REQUIRED_RESPONSE_FIELDS = (
     "answer",
     "decision",
+    "memory_operation",
     "memory_state",
     "evidence_event_ids",
     "failure_diagnosis",
 )
 
 OPTIONAL_RESPONSE_FIELDS = (
-    "memory_operation",
     "followup_answer",
 )
 

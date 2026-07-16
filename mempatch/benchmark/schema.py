@@ -1,4 +1,4 @@
-"""Canonical MemPatch-Bench final / schema v1.0 release contracts.
+"""Canonical MemPatch-Bench release contracts and frozen-row compatibility.
 
 The release format remains plain JSON so rows can be published as JSONL and
 loaded by HuggingFace datasets without a custom builder.  These dataclasses are
@@ -24,7 +24,12 @@ from mempatch.benchmark.leakage import forbidden_paths
 
 CONTRACT_VERSION = "mempatch_bench_schema_v1.0"
 PUBLIC_SCHEMA_VERSION = "mempatch_bench_final"
-SUPPORTED_PUBLIC_SCHEMA_VERSIONS = {PUBLIC_SCHEMA_VERSION, CONTRACT_VERSION}
+FROZEN_LEGACY_PUBLIC_SCHEMA_VERSION = "mempatch_bench_v1.4"
+SUPPORTED_PUBLIC_SCHEMA_VERSIONS = {
+    PUBLIC_SCHEMA_VERSION,
+    CONTRACT_VERSION,
+    FROZEN_LEGACY_PUBLIC_SCHEMA_VERSION,
+}
 
 FORBIDDEN_PUBLIC_FIELDS = {
     "adjudication_notes",
@@ -154,8 +159,9 @@ def validate_prediction(row: dict[str, Any]) -> list[str]:
 
 
 def validate_score_record(row: dict[str, Any]) -> list[str]:
+    normalized = dict(row)
     errors = _errors_required(
-        row,
+        normalized,
         (
             "scenario_id",
             "split",
@@ -171,12 +177,13 @@ def validate_score_record(row: dict[str, Any]) -> list[str]:
             "evidence_recall",
             "evidence_f1",
             "diagnosis_correct",
-            "strict_joint",
             "unsafe_reuse",
         ),
     )
+    if "transition_joint" not in normalized and "strict_joint" not in normalized:
+        errors.append("missing transition_joint")
     for field_name in ("input_tokens", "output_tokens", "total_tokens"):
-        value = row.get(field_name)
+        value = normalized.get(field_name)
         if value is not None and not isinstance(value, (int, float)):
             errors.append(f"{field_name} must be numeric when present")
     return errors
@@ -382,9 +389,10 @@ class ScoreRecord:
     evidence_recall: float
     evidence_f1: float
     diagnosis_correct: bool
-    strict_joint: bool
+    transition_joint: bool | None
     unsafe_reuse: bool
     downstream_contamination: bool | None = None
+    legacy_strict_joint: bool | None = None
     decision_macro_f1_class: str | None = None
     input_tokens: int | None = None
     output_tokens: int | None = None
@@ -400,6 +408,12 @@ class ScoreRecord:
             bool(row.get("schema_valid")) and bool(row.get("exact_state_map")),
         )
         normalized.setdefault("decision_macro_f1_class", row.get("decision_f1_class"))
+        if "strict_joint" in row:
+            normalized.setdefault("legacy_strict_joint", row["strict_joint"])
+            # The historical joint is strictly narrower, so it cannot be
+            # relabelled as Transition-Joint. Preserve it and leave the new
+            # value explicitly unavailable for legacy score rows.
+            normalized.setdefault("transition_joint", None)
         if "total_tokens" not in normalized:
             input_tokens = normalized.get("input_tokens")
             output_tokens = normalized.get("output_tokens")
@@ -423,9 +437,14 @@ class ScoreRecord:
             evidence_recall=float(normalized["evidence_recall"]),
             evidence_f1=float(normalized["evidence_f1"]),
             diagnosis_correct=bool(normalized["diagnosis_correct"]),
-            strict_joint=bool(normalized["strict_joint"]),
+            transition_joint=(
+                bool(normalized["transition_joint"])
+                if normalized["transition_joint"] is not None
+                else None
+            ),
             unsafe_reuse=bool(normalized["unsafe_reuse"]),
             downstream_contamination=normalized.get("downstream_contamination"),
+            legacy_strict_joint=normalized.get("legacy_strict_joint"),
             decision_macro_f1_class=normalized.get("decision_macro_f1_class"),
             input_tokens=normalized.get("input_tokens"),
             output_tokens=normalized.get("output_tokens"),
@@ -450,7 +469,8 @@ class ScoreRecord:
             "evidence_recall": self.evidence_recall,
             "evidence_f1": self.evidence_f1,
             "diagnosis_correct": self.diagnosis_correct,
-            "strict_joint": self.strict_joint,
+            "transition_joint": self.transition_joint,
+            "legacy_strict_joint": self.legacy_strict_joint,
             "unsafe_reuse": self.unsafe_reuse,
             "downstream_contamination": self.downstream_contamination,
             "input_tokens": self.input_tokens,

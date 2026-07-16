@@ -12,27 +12,17 @@ from mempatch.benchmark.general_taxonomy import (
 )
 
 
-# Paper-facing headline metrics for MemPatch-Bench evaluation.
-# primary scores in tables; they are computed in aggregate_metrics() (not as
-# per-example raw signals). decision_macro_f1 is the primary decision metric
-# because it is robust to the dominant use_current_memory class.
-HEADLINE_METRICS = (
-    "joint_revision_success",
-    "decision_macro_f1",
-    "memory_operation_accuracy",
-    "memory_state_accuracy",
-    "evidence_f1",
+# Free-text and deployment diagnostics.  Paper-facing control metrics live in
+# mempatch.benchmark.score; this module deliberately does not define a second
+# headline contract.
+AUXILIARY_METRICS = (
     "failure_diagnosis_accuracy",
     "followup_task_accuracy",
     "downstream_contamination_rate",
     "stale_reuse_rate",
     "response_schema_compliance_rate",
-)
-
-# Appendix / Path-A diagnostics — not primary paper columns.
-AUXILIARY_METRICS = (
-    "structural_revision_success",
     "answer_key_fact_accuracy",
+    "answer_exact_match",
     "format_failure_rate",
     "non_answer_decision_accuracy",
 )
@@ -343,28 +333,6 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
     answer_state_consistency = float(decision_ok and key_fact_ok and memory_ok)
     evidence_f1 = _f1(response.get("evidence_event_ids", []), list(gold_ev))
 
-    joint_revision_success = float(
-        decision_ok
-        and operation_ok
-        and memory_ok
-        and evidence_f1 >= 1.0
-        and answer_state_consistency >= 1.0
-        and followup_ok
-        and not downstream_contamination
-        and float(stale_reuse) == 0.0
-    )
-
-    # Exact full-structure success for answer-free Revision Module evaluations.
-    # This intentionally requires exact/minimal evidence coverage via F1 == 1.0;
-    # softer evidence behavior remains visible through evidence_f1/precision.
-    structural_revision_success = float(
-        decision_ok
-        and operation_ok
-        and memory_ok
-        and evidence_f1 >= 1.0
-        and (expected_diag == predicted_diag)
-    )
-
     meta = scenario.get("metadata", {}) or {}
     is_scope_auth = (
         meta.get("authority_conflict", False)
@@ -386,12 +354,9 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
     latest_event_shortcut_failure_rate = float(is_shortcut_candidate)
 
     metrics = {
-        # Per-example raw signals. Paper-facing headline decision metrics
-        # (decision_macro_f1, non_answer_decision_accuracy, ...) are computed in
-        # aggregate_metrics(); see HEADLINE_METRICS / AUXILIARY_METRICS. Note
-        # that black_box_decision_accuracy is an auxiliary raw signal, not the
-        # headline decision metric, because it is dominated by the majority
-        # use_current_memory class.
+        # Per-example auxiliary signals. Paper-facing control metrics are
+        # computed in mempatch.benchmark.score. Raw decision accuracy remains
+        # here only as a diagnostic because the majority class dominates it.
         "black_box_decision_accuracy": float(decision_ok),
         "memory_operation_accuracy": float(operation_ok),
         "memory_operation_coverage_rate": float(predicted_operation is not None),
@@ -402,9 +367,6 @@ def score_prediction(scenario: dict[str, Any], prediction: dict[str, Any]) -> di
         "followup_task_coverage_rate": float(bool(_norm(followup_answer))),
         "downstream_contamination_rate": float(downstream_contamination),
         "stale_reuse_rate": float(stale_reuse),
-        # Headline metrics for paper-facing tables
-        "joint_revision_success": joint_revision_success,
-        "structural_revision_success": structural_revision_success,
         "minimal_evidence_exact_match": float(pred_ev == gold_ev),
         "evidence_precision": evidence_precision,
         "overcitation_rate": overcitation_rate,
@@ -538,7 +500,6 @@ def aggregate_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
         mode_rows = [r for r in rows if r.get("primary_failure_mode") == mode]
         per_failure_mode[mode] = {
             "count": len(mode_rows),
-            "joint_revision_success": sum(r.get("metrics", {}).get("joint_revision_success", 0.0) for r in mode_rows) / len(mode_rows),
             "memory_state_accuracy": sum(r.get("metrics", {}).get("memory_state_accuracy", 0.0) for r in mode_rows) / len(mode_rows),
             "evidence_f1": sum(r.get("metrics", {}).get("evidence_f1", 0.0) for r in mode_rows) / len(mode_rows),
             "failure_diagnosis_accuracy": sum(r.get("metrics", {}).get("failure_diagnosis_accuracy", 0.0) for r in mode_rows) / len(mode_rows),
@@ -558,22 +519,16 @@ def aggregate_metrics(rows: list[dict[str, Any]]) -> dict[str, Any]:
         domain_rows = [r for r in rows if r.get("domain") == domain]
         per_domain[domain] = {
             "count": len(domain_rows),
-            "joint_revision_success": sum(r.get("metrics", {}).get("joint_revision_success", 0.0) for r in domain_rows) / len(domain_rows),
             "memory_state_accuracy": sum(r.get("metrics", {}).get("memory_state_accuracy", 0.0) for r in domain_rows) / len(domain_rows),
             "evidence_f1": sum(r.get("metrics", {}).get("evidence_f1", 0.0) for r in domain_rows) / len(domain_rows),
             "failure_diagnosis_accuracy": sum(r.get("metrics", {}).get("failure_diagnosis_accuracy", 0.0) for r in domain_rows) / len(domain_rows),
         }
 
-    # Grouped views so paper-facing scripts know which numbers are headline vs.
-    # auxiliary without having to hard-code metric names. ``metrics`` is kept as
-    # the flat all-metrics dict for scripts that consume the full metric set.
-    headline_metrics = {k: metrics_dict[k] for k in HEADLINE_METRICS if k in metrics_dict}
     auxiliary_metrics = {k: metrics_dict[k] for k in AUXILIARY_METRICS if k in metrics_dict}
 
     return {
         "count": count,
         "metrics": metrics_dict,
-        "headline_metrics": headline_metrics,
         "auxiliary_metrics": auxiliary_metrics,
         "all_metrics": metrics_dict,
         "per_decision_counts": per_decision_counts,
